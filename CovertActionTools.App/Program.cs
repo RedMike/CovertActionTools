@@ -1,9 +1,53 @@
 ﻿using CovertActionTools.App;
+using CovertActionTools.App.ViewModels;
+using CovertActionTools.App.Windows;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 const string title = "CovertAction.Tools";
 const int w = 800;
 const int h = 600;
 
+IServiceCollection container = new ServiceCollection();
+container.AddLogging(o => o
+    .ClearProviders()
+    .SetMinimumLevel(LogLevel.Information)
+    .AddConsole()
+);
+//register all types
+var viewModelTypes = AppDomain.CurrentDomain
+    .GetAssemblies()
+    .Where(x => !x.IsDynamic)
+    .SelectMany(a => a.GetTypes()
+        .Where(t => t.IsClass &&
+            !t.IsAbstract &&
+            !t.ContainsGenericParameters &&
+            typeof(IViewModel).IsAssignableFrom(t)
+        )
+    ).ToList();
+foreach (var type in viewModelTypes)
+{
+    container.AddSingleton(type);
+}
+var windowTypes = AppDomain.CurrentDomain
+    .GetAssemblies()
+    .Where(x => !x.IsDynamic)
+    .SelectMany(a => a.GetTypes()
+        .Where(t => t.IsClass &&
+                    !t.IsAbstract &&
+                    !t.ContainsGenericParameters &&
+                    typeof(BaseWindow).IsAssignableFrom(t)
+        )
+    ).ToList();
+foreach (var type in windowTypes)
+{
+    container.AddSingleton(type);
+}
+
+var sp = container.BuildServiceProvider();
+var windows = windowTypes
+    .Select(t => (BaseWindow)(sp.GetService(t) ?? throw new Exception("Null window")))
+    .ToList();
 var renderWindow = new RenderWindow(title, w, h);
 while (renderWindow.IsOpen())
 {
@@ -12,8 +56,11 @@ while (renderWindow.IsOpen())
     {
         break;
     }
-    
-    //TODO: draw things
+
+    foreach (var window in windows)
+    {
+        window.Draw();
+    }
 
     renderWindow.Render();
 }
