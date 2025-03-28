@@ -1,0 +1,40 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="ImGui.NET" Version="1.91.6.1" />
+      <PackageReference Include="SkiaSharp" Version="3.116.1" />
+      <PackageReference Include="Veldrid" Version="4.9.0" />
+      <PackageReference Include="Veldrid.StartupUtilities" Version="4.9.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Remove="Shaders\imgui-frag.glsl" />
+        <EmbeddedResource Include="Shaders\imgui-frag.glsl" LogicalName="imgui-frag.glsl" />
+        <None Remove="Shaders\imgui-vertex.glsl" />
+        <EmbeddedResource Include="Shaders\imgui-vertex.glsl" LogicalName="imgui-vertex.glsl" />
+        <None Remove="Shaders\imgui-vertex.hlsl.bytes" />
+        <EmbeddedResource Include="Shaders\imgui-vertex.hlsl.bytes" LogicalName="imgui-vertex.hlsl.bytes" />
+        <None Remove="Shaders\imgui-frag.hlsl.bytes" />
+        <EmbeddedResource Include="Shaders\imgui-frag.hlsl.bytes" LogicalName="imgui-frag.hlsl.bytes" />
+        <None Remove="Shaders\imgui-frag.hlsl" />
+        <EmbeddedResource Include="Shaders\imgui-frag.hlsl" LogicalName="imgui-frag.hlsl" />
+        <None Remove="Shaders\imgui-vertex.hlsl" />
+        <EmbeddedResource Include="Shaders\imgui-vertex.hlsl" LogicalName="imgui-vertex.hlsl" />
+        <None Remove="Shaders\imgui-frag.metal" />
+        <EmbeddedResource Include="Shaders\imgui-frag.metal" LogicalName="imgui-frag.metal" />
+        <None Remove="Shaders\imgui-frag.metallib" />
+        <EmbeddedResource Include="Shaders\imgui-frag.metallib" LogicalName="imgui-frag.metallib" />
+        <None Remove="Shaders\imgui-vertex.metal" />
+        <EmbeddedResource Include="Shaders\imgui-vertex.metal" LogicalName="imgui-vertex.metal" />
+        <None Remove="Shaders\imgui-vertex.metallib" />
+        <EmbeddedResource Include="Shaders\imgui-vertex.metallib" LogicalName="imgui-vertex.metallib" />
+    </ItemGroup>
+
+</Project>
