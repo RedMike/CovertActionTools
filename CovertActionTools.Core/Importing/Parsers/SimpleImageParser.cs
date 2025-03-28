@@ -54,17 +54,13 @@ namespace CovertActionTools.Core.Importing.Parsers
             //LZW config
             var lzwMaxWordWidth = reader.ReadByte();
             
-            //data compressed in LZW
-            byte[] rawEncodedImageData;
+            //data compressed in LZW+RLE
+            var imageCompressedData = reader.ReadBytes(rawData.Length);
+            byte[] rawImageData;
             {
-                using var lzw = new LzwDecompression(lzwMaxWordWidth, reader);
-                rawEncodedImageData = lzw.Decompress();
+                using var lzw = new LzwDecompression(lzwMaxWordWidth, imageCompressedData);
+                rawImageData = lzw.Decompress(width * height);
             }
-            
-            //data then RLE encoded
-            byte[] rawImageData = rawEncodedImageData;
-            
-            //TODO: parse
             
             _logger.LogInformation($"Read image '{key}': {width}x{height}, Legacy Color Mapping = {legacyColorMappings != null}, Compressed Bytes = {rawData.Length}, Bytes = {rawImageData.Length}");
             return new SimpleImageModel()
