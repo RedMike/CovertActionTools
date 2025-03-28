@@ -8,23 +8,13 @@ namespace CovertActionTools.App.Windows;
 
 public class MainMenuWindow : BaseWindow
 {
-    #if DEBUG
-    //when running locally, just default to the known path with the original
-    private static readonly string DefaultSourcePath = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "./", "../../../../../../Original/MPS/COVERT"));
-    #else
-    private static readonly string DefaultSourcePath = Path.GetFullPath(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "./");
-    #endif
-    private static readonly string DefaultDestinationPath = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "./", "published"));
-
     private readonly ILogger<MainMenuWindow> _logger;
-    private readonly AppLoggingState _appLogging;
     private readonly MainEditorState _mainEditorState;
     private readonly ParsePublishedState _parsePublishedState;
 
-    public MainMenuWindow(ILogger<MainMenuWindow> logger, AppLoggingState appLogging, MainEditorState mainEditorState, ParsePublishedState parsePublishedState)
+    public MainMenuWindow(ILogger<MainMenuWindow> logger, MainEditorState mainEditorState, ParsePublishedState parsePublishedState)
     {
         _logger = logger;
-        _appLogging = appLogging;
         _mainEditorState = mainEditorState;
         _parsePublishedState = parsePublishedState;
     }
@@ -86,13 +76,13 @@ public class MainMenuWindow : BaseWindow
                 var now = DateTime.Now;
                 if (string.IsNullOrEmpty(_parsePublishedState.SourcePath))
                 {
-                    _parsePublishedState.SourcePath = DefaultSourcePath;
+                    _parsePublishedState.SourcePath = Constants.DefaultParseSourcePath;
                 }
 
                 if (string.IsNullOrEmpty(_parsePublishedState.DestinationPath))
                 {
                     var newName = $"package-{now:yyyy-MM-dd_HH-mm-ss}";
-                    _parsePublishedState.DestinationPath = Path.Combine(DefaultDestinationPath, newName);
+                    _parsePublishedState.DestinationPath = Path.Combine(Constants.DefaultParseDestinationPath, newName);
                 }
 
                 _logger.LogInformation($"Showing Parse Published dialog");

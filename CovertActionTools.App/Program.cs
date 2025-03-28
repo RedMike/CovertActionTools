@@ -9,6 +9,12 @@ const string title = "CovertAction.Tools";
 const int w = 1200;
 const int h = 800;
 
+//debug flags
+#if DEBUG
+//start by parsing the default
+const bool startWithParsePublishDefault = true;
+#endif
+
 IServiceCollection container = new ServiceCollection();
 //set up basic console logger
 container.AddLogging(o => o
@@ -52,6 +58,21 @@ var sp = container.BuildServiceProvider();
 var windows = windowTypes
     .Select(t => (BaseWindow)(sp.GetService(t) ?? throw new Exception("Null window")))
     .ToList();
+
+//debug pre-set options
+#if DEBUG
+if (startWithParsePublishDefault)
+{
+    var parsePublishState = sp.GetRequiredService<ParsePublishedState>();
+    parsePublishState.Show = true;
+    parsePublishState.Run = true;
+    var now = DateTime.Now;
+    parsePublishState.SourcePath = Constants.DefaultParseSourcePath;
+    var newName = $"package-{now:yyyy-MM-dd_HH-mm-ss}";
+    parsePublishState.DestinationPath = Path.Combine(Constants.DefaultParseDestinationPath, newName);
+}
+#endif
+
 var renderWindow = new RenderWindow(title, w, h);
 while (renderWindow.IsOpen())
 {
