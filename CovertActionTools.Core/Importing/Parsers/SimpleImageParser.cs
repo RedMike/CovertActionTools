@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using CovertActionTools.Core.Compression;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
 
@@ -25,10 +26,12 @@ namespace CovertActionTools.Core.Importing.Parsers
             using var memStream = new MemoryStream(rawData);
             using var reader = new BinaryReader(memStream);
 
+            //basic data
             var formatFlag = reader.ReadUInt16();
             var width = reader.ReadUInt16();
             var height = reader.ReadUInt16();
             
+            //legacy CGA colour mapping
             Dictionary<byte, byte>? legacyColorMappings = null;
             switch (formatFlag)
             {
@@ -47,14 +50,30 @@ namespace CovertActionTools.Core.Importing.Parsers
                 default:
                     throw new Exception($"Unsupported format flag: {formatFlag:X}");
             }
+            
+            //LZW config
+            var lzwMaxWordWidth = reader.ReadByte();
+            
+            //data compressed in LZW
+            byte[] rawEncodedImageData;
+            {
+                using var lzw = new LzwDecompression(lzwMaxWordWidth, reader);
+                rawEncodedImageData = lzw.Decompress();
+            }
+            
+            //data then RLE encoded
+            byte[] rawImageData = rawEncodedImageData;
+            
             //TODO: parse
             
-            _logger.LogInformation($"Read image '{key}': {width}x{height}, Legacy Color Mapping = {legacyColorMappings != null}");
+            _logger.LogInformation($"Read image '{key}': {width}x{height}, Legacy Color Mapping = {legacyColorMappings != null}, Compressed Bytes = {rawData.Length}, Bytes = {rawImageData.Length}");
             return new SimpleImageModel()
             {
                 Width = width,
                 Height = height,
                 LegacyColorMappings = legacyColorMappings,
+                CompressionDictionaryWidth = lzwMaxWordWidth,
+                RawImageData = rawImageData
             };
         }
     }
