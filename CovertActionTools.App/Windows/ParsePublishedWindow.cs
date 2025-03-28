@@ -1,5 +1,7 @@
 ﻿using System.Numerics;
 using CovertActionTools.App.ViewModels;
+using CovertActionTools.Core.Importing;
+using CovertActionTools.Core.Services;
 using ImGuiNET;
 using Microsoft.Extensions.Logging;
 
@@ -10,12 +12,14 @@ public class ParsePublishedWindow : BaseWindow
     private readonly ILogger<ParsePublishedWindow> _logger;
     private readonly AppLoggingState _appLogging;
     private readonly ParsePublishedState _parsePublishedState;
+    private readonly IImporterFactory _importerFactory;
 
-    public ParsePublishedWindow(ILogger<ParsePublishedWindow> logger, AppLoggingState appLogging, ParsePublishedState parsePublishedState)
+    public ParsePublishedWindow(ILogger<ParsePublishedWindow> logger, AppLoggingState appLogging, ParsePublishedState parsePublishedState, IImporterFactory importerFactory)
     {
         _logger = logger;
         _appLogging = appLogging;
         _parsePublishedState = parsePublishedState;
+        _importerFactory = importerFactory;
     }
 
     public override void Draw()
@@ -48,8 +52,13 @@ public class ParsePublishedWindow : BaseWindow
 
     private void DrawRunning()
     {
+        if (_parsePublishedState.Importer == null)
+        {
+            throw new Exception("Missing importer");
+        }
         var sourcePath = _parsePublishedState.SourcePath;
         var destinationPath = _parsePublishedState.DestinationPath;
+        var status = _parsePublishedState.Importer.CheckStatus() ?? new ImportStatus();
         
         ImGui.Text($"Parsing published folder: {sourcePath}");
         ImGui.Text($"Saving into package: {destinationPath}");
@@ -60,11 +69,32 @@ public class ParsePublishedWindow : BaseWindow
 
         var windowSize = ImGui.GetContentRegionMax();
 
-        var progress = 0.5f;
+        var progress = 0.1f;
+        switch (status.Stage)
+        {
+            case ImportStatus.ImportStage.ReadingIndex:
+                progress = 0.15f;
+                break;
+            case ImportStatus.ImportStage.ProcessingSimpleImages:
+                if (status.StageItems <= 0)
+                {
+                    progress = 0.2f;
+                }
+                else
+                {
+                    progress = 0.15f + ((float)status.StageItemsDone / status.StageItems) * 0.2f;
+                }
+                break;
+            //0.35f
+            //TODO: other stages
+            case ImportStatus.ImportStage.ImportDone:
+                progress = 1.0f;
+                break;
+        }
         var progressBarSize = new Vector2(windowSize.X - 20.0f, 15.0f);
         ImGui.ProgressBar(progress, progressBarSize);
         
-        var text = $"Loading Images 0/10";
+        var text = $"{status.StageMessage}";
         var textSize = ImGui.CalcTextSize(text);
         var oldCursorPos = ImGui.GetCursorPos();
         try
@@ -79,6 +109,16 @@ public class ParsePublishedWindow : BaseWindow
         }
 
         ImGui.Text("");
+        if (status.Stage == ImportStatus.ImportStage.Unknown || status.Stage == ImportStatus.ImportStage.FatalError ||
+            status.Stage == ImportStatus.ImportStage.ImportDone)
+        {
+            if (ImGui.Button("Save & Close"))
+            {
+                //TODO: trigger save
+                _parsePublishedState.Run = false;
+                _parsePublishedState.Show = false;
+            }
+        }
         ImGui.Text("");
         ImGui.Separator();
         ImGui.Text("");
@@ -87,7 +127,6 @@ public class ParsePublishedWindow : BaseWindow
         var logSize = new Vector2(windowSize.X - cursorPos.X, windowSize.Y - cursorPos.Y);
         ImGui.BeginChild("PublishLogs", logSize, true, ImGuiWindowFlags.ChildWindow);
         var logs = _appLogging.Logs.ToList();
-        logs.Reverse();
         foreach (var log in logs)
         {
             ImGui.TextUnformatted(log);
@@ -126,9 +165,11 @@ public class ParsePublishedWindow : BaseWindow
         if (ImGui.Button("Load"))
         {
             var now = DateTime.Now;
-            _parsePublishedState.Run = true;
+            _parsePublishedState.Importer = _importerFactory.Create();
             _appLogging.Clear(); //TODO: filter to publishing things
             _logger.LogInformation($"Starting publishing at: {now:s}");
+            _parsePublishedState.Importer.StartImport(destinationPath);
+            _parsePublishedState.Run = true;
         }
     }
 }

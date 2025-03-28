@@ -2,6 +2,8 @@
 using CovertActionTools.App.Logging;
 using CovertActionTools.App.ViewModels;
 using CovertActionTools.App.Windows;
+using CovertActionTools.Core;
+using CovertActionTools.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -24,6 +26,9 @@ container.AddLogging(o => o
 );
 //also add custom logger
 container.AddSingleton<ILoggerProvider, AppLoggerProvider>();
+
+//register core
+container.AddCovertActionsTools();
 //register all types
 var viewModelTypes = AppDomain.CurrentDomain
     .GetAssemblies()
@@ -65,11 +70,13 @@ if (startWithParsePublishDefault)
 {
     var parsePublishState = sp.GetRequiredService<ParsePublishedState>();
     parsePublishState.Show = true;
-    parsePublishState.Run = true;
     var now = DateTime.Now;
     parsePublishState.SourcePath = Constants.DefaultParseSourcePath;
     var newName = $"package-{now:yyyy-MM-dd_HH-mm-ss}";
     parsePublishState.DestinationPath = Path.Combine(Constants.DefaultParseDestinationPath, newName);
+    parsePublishState.Importer = sp.GetRequiredService<IImporterFactory>().Create();
+    parsePublishState.Importer.StartImport(parsePublishState.SourcePath);
+    parsePublishState.Run = true;
 }
 #endif
 
