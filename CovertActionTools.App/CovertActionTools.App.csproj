@@ -9,6 +9,8 @@
 
     <ItemGroup>
       <PackageReference Include="ImGui.NET" Version="1.89.7.1" />
+      <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.3" />
+      <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.3" />
       <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.3" />
       <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.3" />
       <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.3" />
@@ -42,6 +44,13 @@
 
     <ItemGroup>
       <ProjectReference Include="..\CovertActionTools.Core\CovertActionTools.Core.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="appsettings.json" />
+      <Content Include="appsettings.json">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
     </ItemGroup>
 
 </Project>

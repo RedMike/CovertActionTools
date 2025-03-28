@@ -4,6 +4,7 @@ using CovertActionTools.App.ViewModels;
 using CovertActionTools.App.Windows;
 using CovertActionTools.Core;
 using CovertActionTools.Core.Services;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -17,11 +18,17 @@ const int h = 800;
 const bool startWithParsePublishDefault = true;
 #endif
 
+var configuration = new ConfigurationBuilder()
+    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+    .Build();
+
 IServiceCollection container = new ServiceCollection();
+
+container.AddSingleton(configuration);
+
 //set up basic console logger
 container.AddLogging(o => o
-    .ClearProviders()
-    .SetMinimumLevel(LogLevel.Information)
+    .AddConfiguration(configuration.GetRequiredSection("Logging"))
     .AddConsole()
 );
 //also add custom logger
