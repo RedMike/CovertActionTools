@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using CovertActionTools.Core.Importing.Parsers;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
 
@@ -19,10 +20,12 @@ namespace CovertActionTools.Core.Importing
     internal class FolderImporter : IImporter
     {
         private readonly ILogger<FolderImporter> _logger;
+        private readonly ISimpleImageParser _simpleImageParser;
         
-        public FolderImporter(ILogger<FolderImporter> logger)
+        public FolderImporter(ILogger<FolderImporter> logger, ISimpleImageParser simpleImageParser)
         {
             _logger = logger;
+            _simpleImageParser = simpleImageParser;
         }
         
         private bool _importing = false; //only one import at a time
@@ -162,8 +165,7 @@ namespace CovertActionTools.Core.Importing
                         _logger.LogInformation($"Read image: {path} {rawData.Length} bytes");
 
                         //import the actual image
-                        //TODO:
-                        var imageModel = new SimpleImageModel();
+                        var imageModel = _simpleImageParser.Parse(rawData);
 
                         //update read list
                         //overwrite the entire list to keep it thread-safe
@@ -177,6 +179,7 @@ namespace CovertActionTools.Core.Importing
                     }
                     catch (Exception e)
                     {
+                        //individual image failures don't crash the entire import
                         _logger.LogError($"Error processing image: {path} {e}");
                         var newErrors = _errors.ToList();
                         newErrors.Add($"Image {path}: {e}");
