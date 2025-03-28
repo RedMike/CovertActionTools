@@ -149,7 +149,9 @@ namespace CovertActionTools.Core.Importing
                 _currentItemsCount = 0;
                 _currentItemsDoneCount = 0;
                 _errors = new List<string>();
-                _simpleImagesToRead = Directory.GetFiles(_sourcePath, "*.PIC").ToList();
+                _simpleImagesToRead = Directory.GetFiles(_sourcePath, "*.PIC")
+                    .OrderBy(x => x)
+                    .ToList();
                 _simpleImagesRead = new List<string>();
                 _logger.LogInformation($"Index: {_simpleImagesToRead.Count} images, ...");
                 await Task.Yield();
@@ -159,13 +161,14 @@ namespace CovertActionTools.Core.Importing
                 await Task.Yield();
                 foreach (var path in _simpleImagesToRead)
                 {
+                    var fileName = Path.GetFileNameWithoutExtension(path);
                     try
                     {
                         var rawData = File.ReadAllBytes(path);
-                        _logger.LogInformation($"Read image: {path} {rawData.Length} bytes");
+                        _logger.LogInformation($"Read image: {fileName} {rawData.Length} bytes");
 
                         //import the actual image
-                        var imageModel = _simpleImageParser.Parse(rawData);
+                        var imageModel = _simpleImageParser.Parse(fileName, rawData);
 
                         //update read list
                         //overwrite the entire list to keep it thread-safe
@@ -175,14 +178,14 @@ namespace CovertActionTools.Core.Importing
                         _currentItemsDoneCount = newReadList.Count;
 
                         //save to model
-                        model.SimpleImages[Path.GetFileNameWithoutExtension(path)] = imageModel;
+                        model.SimpleImages[fileName] = imageModel;
                     }
                     catch (Exception e)
                     {
                         //individual image failures don't crash the entire import
-                        _logger.LogError($"Error processing image: {path} {e}");
+                        _logger.LogError($"Error processing image: {fileName} {e}");
                         var newErrors = _errors.ToList();
-                        newErrors.Add($"Image {path}: {e}");
+                        newErrors.Add($"Image {fileName}: {e}");
                         _errors = newErrors;
                     }
 

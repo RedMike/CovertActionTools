@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
 
@@ -9,7 +8,7 @@ namespace CovertActionTools.Core.Importing.Parsers
 {
     public interface ISimpleImageParser
     {
-        SimpleImageModel Parse(byte[] rawData);
+        SimpleImageModel Parse(string key, byte[] rawData);
     }
     
     internal class SimpleImageParser : ISimpleImageParser
@@ -21,7 +20,7 @@ namespace CovertActionTools.Core.Importing.Parsers
             _logger = logger;
         }
 
-        public SimpleImageModel Parse(byte[] rawData)
+        public SimpleImageModel Parse(string key, byte[] rawData)
         {
             using var memStream = new MemoryStream(rawData);
             using var reader = new BinaryReader(memStream);
@@ -50,7 +49,7 @@ namespace CovertActionTools.Core.Importing.Parsers
             }
             //TODO: parse
             
-            _logger.LogInformation($"Read image: {width}x{height}, Legacy Color Mapping = {legacyColorMappings != null}");
+            _logger.LogInformation($"Read image '{key}': {width}x{height}, Legacy Color Mapping = {legacyColorMappings != null}");
             return new SimpleImageModel()
             {
                 Width = width,
