@@ -40,4 +40,8 @@
         <EmbeddedResource Include="Shaders\imgui-vertex.metallib" LogicalName="imgui-vertex.metallib" />
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\CovertActionTools.Core\CovertActionTools.Core.csproj" />
+    </ItemGroup>
+
 </Project>

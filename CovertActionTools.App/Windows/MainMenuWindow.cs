@@ -1,6 +1,8 @@
 ﻿using System.Reflection;
+using CovertActionTools.App.Logging;
 using CovertActionTools.App.ViewModels;
 using ImGuiNET;
+using Microsoft.Extensions.Logging;
 
 namespace CovertActionTools.App.Windows;
 
@@ -13,12 +15,16 @@ public class MainMenuWindow : BaseWindow
     private static readonly string DefaultSourcePath = Path.GetFullPath(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "./");
     #endif
     private static readonly string DefaultDestinationPath = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "./", "published"));
-    
+
+    private readonly ILogger<MainMenuWindow> _logger;
+    private readonly AppLoggingState _appLogging;
     private readonly MainEditorState _mainEditorState;
     private readonly ParsePublishedState _parsePublishedState;
 
-    public MainMenuWindow(MainEditorState mainEditorState, ParsePublishedState parsePublishedState)
+    public MainMenuWindow(ILogger<MainMenuWindow> logger, AppLoggingState appLogging, MainEditorState mainEditorState, ParsePublishedState parsePublishedState)
     {
+        _logger = logger;
+        _appLogging = appLogging;
         _mainEditorState = mainEditorState;
         _parsePublishedState = parsePublishedState;
     }
@@ -77,6 +83,7 @@ public class MainMenuWindow : BaseWindow
             }
             if (ImGui.MenuItem("Parse Published Folder"))
             {
+                var now = DateTime.Now;
                 if (string.IsNullOrEmpty(_parsePublishedState.SourcePath))
                 {
                     _parsePublishedState.SourcePath = DefaultSourcePath;
@@ -84,10 +91,11 @@ public class MainMenuWindow : BaseWindow
 
                 if (string.IsNullOrEmpty(_parsePublishedState.DestinationPath))
                 {
-                    var newName = $"package-{DateTime.UtcNow:yyyy-MM-dd_HH-mm-ss}";
+                    var newName = $"package-{now:yyyy-MM-dd_HH-mm-ss}";
                     _parsePublishedState.DestinationPath = Path.Combine(DefaultDestinationPath, newName);
                 }
 
+                _logger.LogInformation($"Showing Parse Published dialog");
                 _parsePublishedState.Show = true;
                 _parsePublishedState.Run = false;
             }

@@ -1,15 +1,20 @@
 ﻿using System.Numerics;
 using CovertActionTools.App.ViewModels;
 using ImGuiNET;
+using Microsoft.Extensions.Logging;
 
 namespace CovertActionTools.App.Windows;
 
 public class ParsePublishedWindow : BaseWindow
 {
+    private readonly ILogger<ParsePublishedWindow> _logger;
+    private readonly AppLoggingState _appLogging;
     private readonly ParsePublishedState _parsePublishedState;
 
-    public ParsePublishedWindow(ParsePublishedState parsePublishedState)
+    public ParsePublishedWindow(ILogger<ParsePublishedWindow> logger, AppLoggingState appLogging, ParsePublishedState parsePublishedState)
     {
+        _logger = logger;
+        _appLogging = appLogging;
         _parsePublishedState = parsePublishedState;
     }
 
@@ -81,7 +86,12 @@ public class ParsePublishedWindow : BaseWindow
         var cursorPos = ImGui.GetCursorPos();
         var logSize = new Vector2(windowSize.X - cursorPos.X, windowSize.Y - cursorPos.Y);
         ImGui.BeginChild("PublishLogs", logSize, true, ImGuiWindowFlags.ChildWindow);
-        //TODO: logs here
+        var logs = _appLogging.Logs.ToList();
+        logs.Reverse();
+        foreach (var log in logs)
+        {
+            ImGui.TextUnformatted(log);
+        }
         ImGui.EndChild();
     }
     
@@ -115,9 +125,10 @@ public class ParsePublishedWindow : BaseWindow
         ImGui.SameLine();
         if (ImGui.Button("Load"))
         {
-            //TODO: trigger parsing
+            var now = DateTime.Now;
             _parsePublishedState.Run = true;
-            //TODO: notification
+            _appLogging.Clear(); //TODO: filter to publishing things
+            _logger.LogInformation($"Starting publishing at: {now:s}");
         }
     }
 }

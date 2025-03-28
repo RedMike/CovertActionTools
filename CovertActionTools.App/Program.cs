@@ -1,19 +1,23 @@
 ﻿using CovertActionTools.App;
+using CovertActionTools.App.Logging;
 using CovertActionTools.App.ViewModels;
 using CovertActionTools.App.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 const string title = "CovertAction.Tools";
-const int w = 800;
-const int h = 600;
+const int w = 1200;
+const int h = 800;
 
 IServiceCollection container = new ServiceCollection();
+//set up basic console logger
 container.AddLogging(o => o
     .ClearProviders()
     .SetMinimumLevel(LogLevel.Information)
     .AddConsole()
 );
+//also add custom logger
+container.AddSingleton<ILoggerProvider, AppLoggerProvider>();
 //register all types
 var viewModelTypes = AppDomain.CurrentDomain
     .GetAssemblies()
