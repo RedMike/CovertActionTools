@@ -1,5 +1,6 @@
 ﻿using System.Numerics;
 using CovertActionTools.App.ViewModels;
+using CovertActionTools.Core.Exporting;
 using CovertActionTools.Core.Importing;
 using CovertActionTools.Core.Services;
 using ImGuiNET;
@@ -13,13 +14,15 @@ public class ParsePublishedWindow : BaseWindow
     private readonly AppLoggingState _appLogging;
     private readonly ParsePublishedState _parsePublishedState;
     private readonly IImporterFactory _importerFactory;
+    private readonly IExporterFactory _exporterFactory;
 
-    public ParsePublishedWindow(ILogger<ParsePublishedWindow> logger, AppLoggingState appLogging, ParsePublishedState parsePublishedState, IImporterFactory importerFactory)
+    public ParsePublishedWindow(ILogger<ParsePublishedWindow> logger, AppLoggingState appLogging, ParsePublishedState parsePublishedState, IImporterFactory importerFactory, IExporterFactory exporterFactory)
     {
         _logger = logger;
         _appLogging = appLogging;
         _parsePublishedState = parsePublishedState;
         _importerFactory = importerFactory;
+        _exporterFactory = exporterFactory;
     }
 
     public override void Draw()
@@ -56,9 +59,14 @@ public class ParsePublishedWindow : BaseWindow
         {
             throw new Exception("Missing importer");
         }
+        if (_parsePublishedState.Exporter == null)
+        {
+            throw new Exception("Missing exporter");
+        }
         var sourcePath = _parsePublishedState.SourcePath;
         var destinationPath = _parsePublishedState.DestinationPath;
-        var status = _parsePublishedState.Importer.CheckStatus() ?? new ImportStatus();
+        var importStatus = _parsePublishedState.Importer.CheckStatus() ?? new ImportStatus();
+        var exportStatus = _parsePublishedState.Exporter.CheckStatus() ?? new ExportStatus();
         
         ImGui.Text($"Parsing published folder: {sourcePath}");
         ImGui.Text($"Saving into package: {destinationPath}");
@@ -70,19 +78,19 @@ public class ParsePublishedWindow : BaseWindow
         var windowSize = ImGui.GetContentRegionMax();
 
         var progress = 0.1f;
-        switch (status.Stage)
+        switch (importStatus.Stage)
         {
             case ImportStatus.ImportStage.ReadingIndex:
                 progress = 0.15f;
                 break;
             case ImportStatus.ImportStage.ProcessingSimpleImages:
-                if (status.StageItems <= 0)
+                if (importStatus.StageItems <= 0)
                 {
                     progress = 0.2f;
                 }
                 else
                 {
-                    progress = 0.15f + ((float)status.StageItemsDone / status.StageItems) * 0.2f;
+                    progress = 0.15f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.2f;
                 }
                 break;
             //0.35f
@@ -91,10 +99,35 @@ public class ParsePublishedWindow : BaseWindow
                 progress = 1.0f;
                 break;
         }
+
+        if (importStatus.Stage == ImportStatus.ImportStage.ImportDone && _parsePublishedState.Export)
+        {
+            progress = 0.1f;
+            switch (exportStatus.Stage)
+            {
+                case ExportStatus.ExportStage.Preparing:
+                    progress = 0.15f;
+                    break;
+                case ExportStatus.ExportStage.ProcessingSimpleImages:
+                    progress = 0.2f;
+                    if (exportStatus.StageItems <= 0)
+                    {
+                        progress = 0.2f;
+                    }
+                    else
+                    {
+                        progress = 0.15f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.2f;
+                    }
+
+                    break;
+                //0.35f
+                //TODO: other stages
+            }
+        }
         var progressBarSize = new Vector2(windowSize.X - 20.0f, 15.0f);
         ImGui.ProgressBar(progress, progressBarSize);
         
-        var text = $"{status.StageMessage}";
+        var text = $"{importStatus.StageMessage}";
         var textSize = ImGui.CalcTextSize(text);
         var oldCursorPos = ImGui.GetCursorPos();
         try
@@ -109,13 +142,27 @@ public class ParsePublishedWindow : BaseWindow
         }
 
         ImGui.Text("");
-        if (status.Stage == ImportStatus.ImportStage.Unknown || status.Stage == ImportStatus.ImportStage.FatalError ||
-            status.Stage == ImportStatus.ImportStage.ImportDone)
+        if (!_parsePublishedState.Export && (
+                importStatus.Stage == ImportStatus.ImportStage.Unknown || 
+                importStatus.Stage == ImportStatus.ImportStage.FatalError ||
+                importStatus.Stage == ImportStatus.ImportStage.ImportDone)
+            )
         {
-            if (ImGui.Button("Save & Close"))
+            if (ImGui.Button("Save"))
             {
-                //TODO: trigger save
-                _parsePublishedState.Run = false;
+                _parsePublishedState.Export = true;
+                _parsePublishedState.Exporter.StartExport(_parsePublishedState.Importer.GetImportedModel(), destinationPath ?? string.Empty);
+            }
+        }
+
+        if (_parsePublishedState.Export && (
+                exportStatus.Stage == ExportStatus.ExportStage.Unknown ||
+                exportStatus.Stage == ExportStatus.ExportStage.FatalError ||
+                exportStatus.Stage == ExportStatus.ExportStage.ExportDone
+            ))
+        {
+            if (ImGui.Button("Close"))
+            {
                 _parsePublishedState.Show = false;
             }
         }
@@ -166,10 +213,12 @@ public class ParsePublishedWindow : BaseWindow
         {
             var now = DateTime.Now;
             _parsePublishedState.Importer = _importerFactory.Create();
+            _parsePublishedState.Exporter = _exporterFactory.Create();
             _appLogging.Clear(); //TODO: filter to publishing things
             _logger.LogInformation($"Starting publishing at: {now:s}");
-            _parsePublishedState.Importer.StartImport(destinationPath);
+            _parsePublishedState.Importer.StartImport(sourcePath);
             _parsePublishedState.Run = true;
+            _parsePublishedState.Export = false;
         }
     }
 }

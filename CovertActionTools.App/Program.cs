@@ -83,6 +83,7 @@ if (startWithParsePublishDefault)
     parsePublishState.DestinationPath = Path.Combine(Constants.DefaultParseDestinationPath, newName);
     parsePublishState.Importer = sp.GetRequiredService<IImporterFactory>().Create();
     parsePublishState.Importer.StartImport(parsePublishState.SourcePath);
+    parsePublishState.Exporter = sp.GetRequiredService<IExporterFactory>().Create();
     parsePublishState.Run = true;
 }
 #endif
