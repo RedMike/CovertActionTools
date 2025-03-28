@@ -8,7 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="ImGui.NET" Version="1.91.6.1" />
+      <PackageReference Include="ImGui.NET" Version="1.89.7.1" />
       <PackageReference Include="SkiaSharp" Version="3.116.1" />
       <PackageReference Include="Veldrid" Version="4.9.0" />
       <PackageReference Include="Veldrid.StartupUtilities" Version="4.9.0" />
