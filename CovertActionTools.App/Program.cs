@@ -15,7 +15,8 @@ const int h = 800;
 //debug flags
 #if DEBUG
 //start by parsing the default
-const bool startWithParsePublishDefault = true;
+const bool startWithParsePublishDefault = false;
+const bool startWithLoadSampleDefault = true;
 #endif
 
 var configuration = new ConfigurationBuilder()
@@ -85,6 +86,15 @@ if (startWithParsePublishDefault)
     parsePublishState.Importer.StartImport(parsePublishState.SourcePath);
     parsePublishState.Exporter = sp.GetRequiredService<IExporterFactory>().Create();
     parsePublishState.Run = true;
+}
+if (startWithLoadSampleDefault)
+{
+    var loadPackageState = sp.GetRequiredService<LoadPackageState>();
+    loadPackageState.Show = true;
+    loadPackageState.SourcePath = Path.GetFullPath(Path.Combine(Constants.DefaultParseSourcePath, "../../../Sample"));
+    loadPackageState.Importer = sp.GetRequiredService<IImporterFactory>().Create(false);
+    loadPackageState.Importer.StartImport(loadPackageState.SourcePath);
+    loadPackageState.Run = true;
 }
 #endif
 

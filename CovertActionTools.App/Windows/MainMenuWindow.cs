@@ -11,12 +11,14 @@ public class MainMenuWindow : BaseWindow
     private readonly ILogger<MainMenuWindow> _logger;
     private readonly MainEditorState _mainEditorState;
     private readonly ParsePublishedState _parsePublishedState;
+    private readonly LoadPackageState _loadPackageState;
 
-    public MainMenuWindow(ILogger<MainMenuWindow> logger, MainEditorState mainEditorState, ParsePublishedState parsePublishedState)
+    public MainMenuWindow(ILogger<MainMenuWindow> logger, MainEditorState mainEditorState, ParsePublishedState parsePublishedState, LoadPackageState loadPackageState)
     {
         _logger = logger;
         _mainEditorState = mainEditorState;
         _parsePublishedState = parsePublishedState;
+        _loadPackageState = loadPackageState;
     }
 
     public override void Draw()
@@ -69,7 +71,14 @@ public class MainMenuWindow : BaseWindow
         {
             if (ImGui.MenuItem("Open Package"))
             {
-                //TODO: show dialog for selecting location
+                if (string.IsNullOrEmpty(_loadPackageState.SourcePath))
+                {
+                    _loadPackageState.SourcePath = Constants.DefaultParseSourcePath;
+                }
+
+                _logger.LogInformation($"Showing Load Package dialog");
+                _loadPackageState.Show = true;
+                _loadPackageState.Run = false;
             }
             if (ImGui.MenuItem("Parse Published Folder"))
             {
