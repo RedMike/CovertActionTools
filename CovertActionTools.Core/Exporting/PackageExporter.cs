@@ -2,12 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using CovertActionTools.Core.Exporting.Exporters;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
-using SkiaSharp;
 
 namespace CovertActionTools.Core.Exporting
 {
