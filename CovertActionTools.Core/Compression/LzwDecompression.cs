@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Microsoft.Extensions.Logging;
 
 namespace CovertActionTools.Core.Compression
 {
-    //TODO: rework this to be more readable
     internal class LzwDecompression
     {
         private readonly ILogger _logger;
@@ -15,14 +15,12 @@ namespace CovertActionTools.Core.Compression
         private int _offsetInBits;
         private int _offsetInBytes;
         
-        private readonly Dictionary<ushort, (byte data, ushort next)> _dict = new();
-        private ushort[] _stack = new ushort[1024];
-        private int _stackTop;
-        private int _wordWidth;
-        private int _wordMask;
-        private int _dictTop;
-        private int _prevIndex;
-        private int _prevData;
+        private readonly Dictionary<ushort, List<byte>> _dict = new();
+        private readonly Stack<byte> _stack = new();
+        private byte _wordWidth;
+        private ushort _wordMask;
+        private ushort _prevIndex;
+        private byte _prevData;
         
 
         public LzwDecompression(ILogger logger, int maxWordWidth, byte[] data)
@@ -35,57 +33,60 @@ namespace CovertActionTools.Core.Compression
             _offsetInBits = 0;
             _offsetInBytes = 0;
             
-            _stackTop = 0;
+            _stack.Clear();
             Reset();
         }
 
-        private (byte data, ushort next) GetDict(int index)
+        private List<byte> GetDict(int index)
         {
             if (index > 2048)
             {
                 throw new Exception($"Reading beyond dictionary limit: {index}");
             }
-
+            
             var pIndex = (ushort)(index & 0xFFFF);
             if (_dict.TryGetValue(pIndex, out var val))
             {
                 return val;
             }
 
-            val = ((byte)(index & 0xFF), 0xFFFF);
+            val = new List<byte>() { (byte)(index & 0xFF) };
             _dict[pIndex] = val;
             return val;
         }
 
-        private void SetDict(int index, byte data, ushort next)
+        private void SetDict(int index, List<byte> bytes)
         {
             if (index > 2048)
             {
                 throw new Exception($"Writing beyond dictionary limit: {index}");
             }
             var pIndex = (ushort)(index & 0xFFFF);
-            _dict[pIndex] = (data, next);
+            _dict[pIndex] = bytes;
+        }
+
+        private ushort GetDictNextId()
+        {
+            return (ushort)(_dict.Keys.DefaultIfEmpty((ushort)0xFF).Max() + 1);
         }
 
         private void Reset()
         {
-            //_logger.LogInformation($"Triggering reset from {_prevIndex} {_wordWidth} {_wordMask} {_dictTop}");
             _prevIndex = 0;
             _prevData = 0;
             _wordWidth = 9;
-            _wordMask = (1 << _wordWidth) - 1;
-            _dictTop = 0x100;
+            _wordMask = (ushort)(((1 << _wordWidth) - 1) & 0xFFFF);
             _dict.Clear();
         }
 
-        private int ReadBytes(int bitsToRead)
+        private ushort ReadBytes(byte bitsToRead)
         {
-            int value = 0;
-            int bitsReadSoFar = 0;
+            ushort value = 0;
+            byte bitsReadSoFar = 0;
             
             while (bitsReadSoFar != bitsToRead)
             {
-                value >>= 1;
+                value = (ushort)(((short)value) >> 1); //we want arithmetic shift
 
                 if (_offsetInBytes >= _data.Length || _offsetInBytes < 0)
                 {
@@ -95,7 +96,7 @@ namespace CovertActionTools.Core.Compression
                 byte data = _data[_offsetInBytes];
                 if ((data & (1 << _offsetInBits)) != 0)
                 {
-                    value |= 1 << (bitsToRead - 1);
+                    value = (ushort)(value | 1 << (bitsToRead - 1));
                 }
 
                 _offsetInBits += 1;
@@ -109,94 +110,61 @@ namespace CovertActionTools.Core.Compression
                 bitsReadSoFar += 1;
             }
 
-            //_logger.LogInformation($"ReadBytes({bitsToRead}) read {value:b8}");
             return value;
         }
 
         private byte ReadNext()
         {
-            int tempIndex = 0;
-            int index = 0;
+            ushort index = 0;
 
-            if (_stackTop == 0)
+            if (_stack.Any())
             {
-                tempIndex = index = ReadBytes(_wordWidth);
-
-                if (index >= _dictTop)
-                {
-                    //_logger.LogInformation($"Adding new entry to dict for index {_dictTop} starting with index {_prevIndex}");
-                    tempIndex = _dictTop;
-                    index = _prevIndex;
-                    _stack[_stackTop] = (ushort)(_prevData & 0xFFFF);
-                    _stackTop += 1;
-                }
-
-                var preStoredValues = "";
-                while (GetDict(index).next != 0xFFFF)
-                {
-                    var (data, next) = GetDict(index);
-                    if (next != 0xFFFF)
-                    {
-                        var val = (byte)(_stack[_stackTop] & 0xFF);
-                        preStoredValues += $"{(byte)(val & 0x0F):X} ";
-                        preStoredValues += $"{(byte)((val >> 4) & 0x0F):X} ";
-                    }
-                    _stack[_stackTop] = (ushort)((index & 0xFF00) + data);
-
-                    _stackTop += 1;
-                    index = next;
-                }
-
-                _prevData = GetDict(index).data;
-                _stack[_stackTop] = (ushort)(_prevData & 0xFFFF);
-                _stackTop += 1;
-                
-                // var lastVal = (byte)(_stack[_stackTop - 1] & 0xFF);
-                // preStoredValues += $"{(byte)(lastVal & 0x0F):X} ";
-                // preStoredValues += $"{(byte)((lastVal >> 4) & 0x0F):X} ";
-                // var pos = $"{index}";
-                // if (index <= 0xFF)
-                // {
-                //     pos += $" ({index & 0xFF:X2})";
-                // }
-                //_logger.LogInformation($"Retrieved from dict at pos {pos} '{preStoredValues}'");
-
-                // var valuesToStore = "";
-                // var q = _stackTop;
-                // do
-                // {
-                //     q--;
-                //     var nextVal = (byte)(_stack[q] & 0xFF);
-                //     valuesToStore += $"{(byte)(nextVal & 0x0F):X} ";
-                //     valuesToStore += $"{(byte)((nextVal >> 4) & 0x0F):X} ";
-                // } while (q > 0);
-                //_logger.LogInformation($"Storing in dict at pos {_dictTop} '{valuesToStore}'");
-                SetDict(_dictTop, (byte)(_prevData & 0xFF), (ushort)(_prevIndex & 0xFFFF));
-
-                _prevIndex = tempIndex;
-
-                _dictTop += 1;
-                if (_dictTop > _wordMask)
-                {
-                    _wordWidth += 1;
-                    _wordMask <<= 1;
-                    _wordMask |= 1;
-                }
-
-                if (_wordWidth > _maxWordWidth)
-                {
-                    Reset();
-                }
+                //we're queueing a word
+                return _stack.Pop();
             }
-            // else
-            // {
-            //     _logger.LogInformation($"Reading from stack {_stackTop} {(byte)(_stack[_stackTop] & 0xFF):X}");
-            // }
 
-            _stackTop -= 1;
-            var ret = (byte)(_stack[_stackTop] & 0xFF);
-            //_logger.LogInformation($"Returning from stack {_stackTop} {ret:X}");
-            return ret;
+            index = ReadBytes(_wordWidth);
+
+            List<byte> existingWord;
+            var nextId = GetDictNextId();
+            if (index >= nextId)
+            {
+                index = nextId;
+                _stack.Push(_prevData);
+                existingWord = GetDict(_prevIndex); //it's a new index, so load the previous word
+            }
+            else
+            {
+                existingWord = GetDict(index); //it's an existing index, so load the current word
+            }
+            //now push the previous/current word
+            foreach (var b in existingWord)
+            {
+                _stack.Push(b);
+            }
+
+            _prevData = _stack.Peek();
+            
+            //and make a new word of the previous word plus the first character of the current word (or previous if new index)
+            var word = GetDict(_prevIndex).ToList();
+            word.Insert(0, _stack.Peek());
+            SetDict(nextId, word);
+
+            _prevIndex = index;
+
+            //if we've reached the limit of X bit indexes, increase by 1 bit
+            if (nextId >= _wordMask)
+            {
+                _wordWidth += 1;
+                _wordMask <<= 1;
+                _wordMask |= 1;
+            }
+
+            if (_wordWidth > _maxWordWidth)
+            {
+                Reset();
+            }
+            return ReadNext(); //recurse, we have something in the stack already
         }
 
         public byte[] Decompress(int length)
