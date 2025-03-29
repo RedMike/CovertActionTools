@@ -1,13 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Runtime.InteropServices;
+﻿using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
+using CovertActionTools.Core.Compression;
 using CovertActionTools.Core.Conversion;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
-using SkiaSharp;
 
 namespace CovertActionTools.Core.Exporting.Exporters
 {
@@ -16,8 +13,8 @@ namespace CovertActionTools.Core.Exporting.Exporters
     ///   * PIC file (legacy image)
     ///   * JSON file (metadata)
     ///   * PNG file (modern image)
-    ///   * PNG file VGA_ (VGA legacy image)
-    ///   * PNG file CGA_ (CGA replacement image)
+    ///   * PNG file _VGA (VGA legacy image)
+    ///   * PNG file _CGA (CGA replacement image)
     /// </summary>
     public interface ISimpleImageExporter
     {
@@ -36,10 +33,12 @@ namespace CovertActionTools.Core.Exporting.Exporters
         #endif
         
         private readonly ILogger<SimpleImageExporter> _logger;
+        private readonly ILoggerFactory _loggerFactory;
 
-        public SimpleImageExporter(ILogger<SimpleImageExporter> logger)
+        public SimpleImageExporter(ILogger<SimpleImageExporter> logger, ILoggerFactory loggerFactory)
         {
             _logger = logger;
+            _loggerFactory = loggerFactory;
         }
 
         public IDictionary<string, byte[]> Export(SimpleImageModel image)
@@ -48,7 +47,9 @@ namespace CovertActionTools.Core.Exporting.Exporters
             {
                 [$"{image.Key}.json"] = GetMetadata(image),
                 [$"{image.Key}.png"] = GetModernImageData(image),
-                [$"VGA_{image.Key}.png"] = GetVgaImageData(image),
+                [$"{image.Key}_VGA.png"] = GetVgaImageData(image),
+                //TODO: CGA
+                [$"{image.Key}.PIC"] = GetLegacyImageData(image) 
             };
             return dict;
         }
@@ -76,6 +77,18 @@ namespace CovertActionTools.Core.Exporting.Exporters
             var height = image.Height;
 
             return ImageConversion.RgbaToTexture(width, height, imageData);
+        }
+
+        private byte[] GetLegacyImageData(SimpleImageModel image)
+        {
+            var imageData = image.RawVgaImageData;
+            var width = image.Width;
+            var height = image.Height;
+
+            var compression = new LzwCompression(_loggerFactory.CreateLogger(typeof(LzwCompression)),
+                image.ExtraData.CompressionDictionaryWidth, imageData);
+            var bytes = compression.Compress(width * height);
+            return bytes;
         }
     }
 }

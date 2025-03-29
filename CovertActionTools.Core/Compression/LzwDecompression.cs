@@ -6,13 +6,11 @@ using Microsoft.Extensions.Logging;
 namespace CovertActionTools.Core.Compression
 {
     //TODO: rework this to be more readable
-    internal class LzwDecompression : IDisposable
+    internal class LzwDecompression
     {
         private readonly ILogger _logger;
         private readonly int _maxWordWidth;
         private readonly byte[] _data;
-        private readonly MemoryStream _memStream;
-        private readonly BinaryWriter _writer;
 
         private int _offsetInBits;
         private int _offsetInBytes;
@@ -33,9 +31,6 @@ namespace CovertActionTools.Core.Compression
             _maxWordWidth = maxWordWidth;
             _data = data;
             _logger.LogInformation($"Starting decompression from {data.Length} bytes, max word width {maxWordWidth}");
-
-            _memStream = new MemoryStream();
-            _writer = new BinaryWriter(_memStream);
 
             _offsetInBits = 0;
             _offsetInBytes = 0;
@@ -206,6 +201,9 @@ namespace CovertActionTools.Core.Compression
 
         public byte[] Decompress(int length)
         {
+            using var memStream = new MemoryStream();
+            using var writer = new BinaryWriter(memStream);
+            
             uint rleCount = 0;
             uint pixel = 0;
             
@@ -249,19 +247,13 @@ namespace CovertActionTools.Core.Compression
                 }
                 
                 //each byte is actually two pixels one after the other
-                _writer.Write((byte)(pixel & 0x0f));
-                _writer.Write((byte)((pixel >> 4) & 0x0f));
+                writer.Write((byte)(pixel & 0x0f));
+                writer.Write((byte)((pixel >> 4) & 0x0f));
             }
 
-            var decompressedBytes = _memStream.ToArray();
+            var decompressedBytes = memStream.ToArray();
             _logger.LogInformation($"Decompressed from {_data.Length} bytes to {decompressedBytes.Length}");
             return decompressedBytes;
-        }
-
-        public void Dispose()
-        {
-            _memStream.Dispose();
-            _writer.Dispose();
         }
     }
 }

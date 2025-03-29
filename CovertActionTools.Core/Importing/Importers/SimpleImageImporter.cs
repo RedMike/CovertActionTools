@@ -39,7 +39,7 @@ namespace CovertActionTools.Core.Importing.Importers
         
         private (byte[] raw, byte[] texture) ReadVgaImageData(string path, string filename, int width, int height)
         {
-            var filePath = Path.Combine(path, $"VGA_{filename}.png");
+            var filePath = Path.Combine(path, $"{filename}_VGA.png");
             if (!File.Exists(filePath))
             {
                 throw new Exception($"Missing PNG file: {filename}");

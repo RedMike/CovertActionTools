@@ -61,7 +61,7 @@ namespace CovertActionTools.Core.Importing.Parsers
             var imageCompressedData = reader.ReadBytes(rawData.Length);
             byte[] imageUncompressedData;
             {
-                using var lzw = new LzwDecompression(_loggerFactory.CreateLogger(typeof(LzwDecompression)), lzwMaxWordWidth, imageCompressedData);
+                var lzw = new LzwDecompression(_loggerFactory.CreateLogger(typeof(LzwDecompression)), lzwMaxWordWidth, imageCompressedData);
                 imageUncompressedData = lzw.Decompress(width * height);
             }
             
