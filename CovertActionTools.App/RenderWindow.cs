@@ -11,7 +11,8 @@ public class RenderWindow : IDisposable
     public enum RenderType
     {
         Unknown = 0,
-        Image = 1,
+        Primitive = 1,
+        Image = 2,
     }
     private static readonly Vector3 ClearColor = new Vector3(0.3f, 0.45f, 0.7f);
 
@@ -124,6 +125,41 @@ public class RenderWindow : IDisposable
         }
         
         return _controller.GetOrCreateImGuiBinding(_graphicsDevice.ResourceFactory, texture);
+    }
+    
+    public IntPtr RenderCheckerboardRectangle(int checkerWidth, int w, int h, (byte, byte, byte, byte) fillCol, (byte, byte, byte, byte) fillCol2)
+    {
+        var fillColId = $"{fillCol.Item1}-{fillCol.Item2}-{fillCol.Item3}-{fillCol.Item4}";
+        var fillCol2Id = $"{fillCol2.Item1}-{fillCol2.Item2}-{fillCol2.Item3}-{fillCol2.Item4}";
+        var id = $"checker_{checkerWidth}_{w}_{h}_{fillColId}_{fillCol2Id}";
+        if (DoesTextureExist(RenderType.Primitive, id))
+        {
+            var texture = GetTexture(RenderType.Primitive, id);
+            return _controller.GetOrCreateImGuiBinding(_graphicsDevice.ResourceFactory, texture);
+        }
+        var bytes = new byte[w * h * 4];
+        for (var i = 0; i < w; i++)
+        {
+            for (var j = 0; j < h; j++)
+            {
+                var x = i % (checkerWidth * 2);
+                var y = j % (checkerWidth * 2);
+                
+                var (r, g, b, a) = fillCol;
+                if (x < checkerWidth && y < checkerWidth ||
+                    (x >= checkerWidth && y >= checkerWidth))
+                {
+                    (r, g, b, a) = fillCol2;
+                }
+                
+                bytes[(j * w + i) * 4 + 0] = r;
+                bytes[(j * w + i) * 4 + 1] = g;
+                bytes[(j * w + i) * 4 + 2] = b;
+                bytes[(j * w + i) * 4 + 3] = a;
+            }
+        }
+
+        return RenderImage(RenderType.Primitive, id, w, h, bytes);
     }
     
     private void CreateWindow()

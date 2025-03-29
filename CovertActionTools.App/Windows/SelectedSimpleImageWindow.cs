@@ -165,14 +165,19 @@ public class SelectedSimpleImageWindow : BaseWindow
         var width = image.Width;
         var height = image.Height;
         var rawPixels = image.VgaImageData;
-        
+
+        var pos = ImGui.GetCursorPos();
+        var bgTexture = _renderWindow.RenderCheckerboardRectangle(25, width, height,
+            (40, 30, 40, 255), (50, 40, 50, 255));
+        ImGui.Image(bgTexture, new Vector2(width, height));
+
+        ImGui.SetCursorPos(pos);
         var id = $"image_vga_{image.Key}";
         //TODO: cache?
         var texture = _renderWindow.RenderImage(RenderWindow.RenderType.Image, id, width, height, rawPixels);
         
         ImGui.Image(texture, new Vector2(width, height));
     }
-
 #if MODERN_ENABLED
     private void DrawModernImageTab(PackageModel model, SimpleImageModel image)
     {
@@ -206,6 +211,13 @@ public class SelectedSimpleImageWindow : BaseWindow
     {
         var width = image.ExtraData.Width;
         var height = image.ExtraData.Height;
+        
+        var pos = ImGui.GetCursorPos();
+        var bgTexture = _renderWindow.RenderCheckerboardRectangle(25, width, height,
+            (40, 30, 40, 255), (50, 40, 50, 255));
+        ImGui.Image(bgTexture, new Vector2(width, height));
+
+        ImGui.SetCursorPos(pos);
         
         var id = $"image_{image.Key}";
         var rawPixels = image.ModernImageData;
