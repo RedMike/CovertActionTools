@@ -6,6 +6,10 @@ namespace CovertActionTools.Core.Models
     public class SimpleImageModel
     {
         /// <summary>
+        /// ID that also determines the filename
+        /// </summary>
+        public string Key { get; set; } = string.Empty;
+        /// <summary>
         /// Legacy: usually 320
         /// </summary>
         public int Width { get; set; }
@@ -23,10 +27,12 @@ namespace CovertActionTools.Core.Models
         /// </summary>
         public byte CompressionDictionaryWidth { get; set; }
         /// <summary>
-        /// Stored as one byte per pixel, left-to-right, top-to-bottom.
-        /// TODO: confirm this
-        /// Decompression already applied, so raw data is uncompressed.
+        /// Stored as 1 byte index into VGA palette, left-to-right, top-to-bottom.
         /// </summary>
         public byte[] RawImageData { get; set; } = Array.Empty<byte>();
+        /// <summary>
+        /// Stored as 4 bytes RGBA left-to-right, top-to-bottom.
+        /// </summary>
+        public byte[] ModernImageData { get; set; } = Array.Empty<byte>();
     }
 }

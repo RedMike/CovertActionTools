@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using CovertActionTools.Core.Exporting.Exporters;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
@@ -19,10 +20,12 @@ namespace CovertActionTools.Core.Exporting
     internal class PackageExporter : IExporter
     {
         private readonly ILogger<PackageExporter> _logger;
+        private readonly ISimpleImageExporter _simpleImageExporter;
 
-        public PackageExporter(ILogger<PackageExporter> logger)
+        public PackageExporter(ILogger<PackageExporter> logger, ISimpleImageExporter simpleImageExporter)
         {
             _logger = logger;
+            _simpleImageExporter = simpleImageExporter;
         }
         
         private bool _exporting = false; //only one export at a time
@@ -129,91 +132,25 @@ namespace CovertActionTools.Core.Exporting
                 _currentStage = ExportStatus.ExportStage.ProcessingSimpleImages;
                 _currentItemsCount = _simpleImagesToWrite.Count;
                 await Task.Yield();
-                foreach (var fileName in _simpleImagesToWrite)
+                foreach (var imageKey in _simpleImagesToWrite)
                 {
-                    var image = _package.SimpleImages[fileName];
-                    var path = $"{fileName}.png";
+                    var image = _package.SimpleImages[imageKey];
                     try
                     {
-                        var rawData = image.RawImageData;
-                        var width = image.Width;
-                        var height = image.Height;
-                        var imageData = new byte[width * height * 4];
-                        for (var i = 0; i < width; i++)
+                        var files = _simpleImageExporter.Export(image);
+                        foreach (var pair in files)
                         {
-                            for (var j = 0; j < height; j++)
-                            {
-                                byte r = 0;
-                                byte g = 0;
-                                byte b = 0;
-                                byte a = 255;
-                                var p = rawData[j * width + i];
-                                switch (p)
-                                {
-                                    case 0: a = 0; break;
-                                    case 1: b = 0xAA; break;
-                                    case 2: g = 0xAA; break;
-                                    case 3: g = 0xAA; b = 0xAA; break;
-                                    case 4: r = 0xAA; break;
-                                    case 5: break;
-                                    case 6: r = 0xAA; g = 0x55; break;
-                                    case 7: r = 0xAA; g = 0xAA; b = 0xAA; break;
-                                    case 8: r = 0x55; g = 0x55; b = 0x55; break;
-                                    case 9: r = 0x55; g = 0x55; b = 0xFF; break;
-                                    case 10: r = 0x55; g = 0xFF; b = 0x55; break;
-                                    case 11: r = 0x55; g = 0xFF; b = 0xFF; break;
-                                    case 12: r = 0xFF; g = 0x55; b = 0x55; break;
-                                    case 13: r = 0xFF; g = 0x55; b = 0xFF; break;
-                                    case 14: r = 0xFF; g = 0xFF; b = 0x55; break;
-                                    case 15: r = 0xFF; g = 0xFF; b = 0xFF; break;
-                                    default:
-                                        throw new Exception($"Unknown pixel value: {p}");
-                                }
-                                imageData[(j * width + i) * 4 + 0] = r;
-                                imageData[(j * width + i) * 4 + 1] = g;
-                                imageData[(j * width + i) * 4 + 2] = b;
-                                imageData[(j * width + i) * 4 + 3] = a;
-                            }
+                            var (fileName, bytes) = (pair.Key, pair.Value);
+                            File.WriteAllBytes(Path.Combine(_destinationPath, fileName), bytes);
+                            _logger.LogInformation($"Wrote image: {fileName} {bytes.Length}");
                         }
-
-                        // using var bitmap = SKBitmap.Decode(imageData,
-                        //     new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Unpremul));
-                        // using var imageObj = SKImage.FromBitmap(bitmap);
-                        using var bitmap = new SKBitmap(width, height, SKColorType.Rgba8888, SKAlphaType.Premul);
-                        IntPtr pixels = bitmap.GetPixels();
-                        int buffSize = bitmap.Height * bitmap.RowBytes;
-                        byte[] pixelBuffer = new byte[buffSize];
-                        int q = 0;
-                        int x = 0;
-                        int padding = bitmap.RowBytes - (4 * width);
-                        for (var row = 0; row < height; row++)
-                        {
-                            for (int col = 0; col < width; col++)
-                            {
-                                pixelBuffer[x++] = imageData[(row*width + col)*4];
-                                pixelBuffer[x++] = imageData[(row*width + col)*4+1];
-                                pixelBuffer[x++] = imageData[(row*width + col)*4+2];
-                                pixelBuffer[x++] = imageData[(row*width + col)*4+3];
-                            }
-
-                            x += padding;
-                        }
-
-                        Marshal.Copy(pixelBuffer, 0, pixels, buffSize);
-                        
-                        using var imageFile = SKImage.FromBitmap(bitmap).Encode(SKEncodedImageFormat.Png, 100);
-                        using var file = File.OpenWrite(Path.Combine(_destinationPath, path));
-                        imageFile.SaveTo(file);
-                        file.Flush();
-
-                        _logger.LogInformation($"Wrote image: {fileName}");
                     }
                     catch (Exception e)
                     {
                         //individual image failures don't crash the entire export
-                        _logger.LogError($"Error processing image: {path} {e}");
+                        _logger.LogError($"Error processing image: {imageKey} {e}");
                         var newErrors = _errors.ToList();
-                        newErrors.Add($"Image {fileName}: {e}");
+                        newErrors.Add($"Image {imageKey}: {e}");
                         _errors = newErrors;
                     }
                 }

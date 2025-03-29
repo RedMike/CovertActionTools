@@ -58,20 +58,42 @@ namespace CovertActionTools.Core.Importing.Parsers
             
             //data compressed in LZW+RLE
             var imageCompressedData = reader.ReadBytes(rawData.Length);
-            byte[] rawImageData;
+            byte[] imageUncompressedData;
             {
                 using var lzw = new LzwDecompression(_loggerFactory.CreateLogger(typeof(LzwDecompression)), lzwMaxWordWidth, imageCompressedData);
-                rawImageData = lzw.Decompress(width * height);
+                imageUncompressedData = lzw.Decompress(width * height);
             }
             
-            _logger.LogInformation($"Read image '{key}': {width}x{height}, Legacy Color Mapping = {legacyColorMappings != null}, Compressed Bytes = {rawData.Length}, Bytes = {rawImageData.Length}");
+            //the data is currently in VGA format, so convert to modern format
+            var imageModernData = new byte[width * height * 4];
+            for (var i = 0; i < width; i++)
+            {
+                for (var j = 0; j < height; j++)
+                {
+                    var pixel = imageUncompressedData[j * width + i];
+                    if (!Constants.VgaColorMapping.TryGetValue(pixel, out var col))
+                    {
+                        throw new Exception($"Invalid pixel value: {pixel}");
+                    }
+                    var (r, g, b, a) = col;
+                    imageModernData[(j * width + i) * 4 + 0] = r;
+                    imageModernData[(j * width + i) * 4 + 1] = g;
+                    imageModernData[(j * width + i) * 4 + 2] = b;
+                    imageModernData[(j * width + i) * 4 + 3] = a;
+                }
+            }
+
+            var fullByteSize = width * height * 4;
+            _logger.LogInformation($"Read image '{key}': {width}x{height}, Legacy Color Mapping = {legacyColorMappings != null}, Compressed Bytes = {rawData.Length}, Compression: {(100.0f - (float)rawData.Length/fullByteSize * 100.0f):F0}%");
             return new SimpleImageModel()
             {
+                Key = key,
                 Width = width,
                 Height = height,
                 LegacyColorMappings = legacyColorMappings,
                 CompressionDictionaryWidth = lzwMaxWordWidth,
-                RawImageData = rawImageData
+                RawImageData = imageUncompressedData,
+                ModernImageData = imageModernData
             };
         }
     }
