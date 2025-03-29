@@ -1,120 +1,182 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using Microsoft.Extensions.Logging;
 
 namespace CovertActionTools.Core.Compression
 {
+    //TODO: rework this to be more readable
     internal class LzwDecompression : IDisposable
     {
+        private readonly ILogger _logger;
         private readonly int _maxWordWidth;
         private readonly byte[] _data;
         private readonly MemoryStream _memStream;
         private readonly BinaryWriter _writer;
 
-        private int _state;
-        private int _offset;
+        private int _offsetInBits;
+        private int _offsetInBytes;
         
-        private Dictionary<ushort, (byte data, ushort next)> _dict = new();
+        private readonly Dictionary<ushort, (byte data, ushort next)> _dict = new();
         private ushort[] _stack = new ushort[1024];
         private int _stackTop;
-        private ushort _wordWidth;
-        private ushort _wordMask;
-        private ushort _dictTop;
-        private ushort _prevIndex;
-        private byte _prevData;
+        private int _wordWidth;
+        private int _wordMask;
+        private int _dictTop;
+        private int _prevIndex;
+        private int _prevData;
         
 
-        public LzwDecompression(int maxWordWidth, byte[] data)
+        public LzwDecompression(ILogger logger, int maxWordWidth, byte[] data)
         {
+            _logger = logger;
             _maxWordWidth = maxWordWidth;
             _data = data;
-            
+            _logger.LogInformation($"Starting decompression from {data.Length} bytes, max word width {maxWordWidth}");
+
             _memStream = new MemoryStream();
             _writer = new BinaryWriter(_memStream);
 
-            _state = 0;
-            _offset = 0;
+            _offsetInBits = 0;
+            _offsetInBytes = 0;
             
             _stackTop = 0;
             Reset();
         }
 
+        private (byte data, ushort next) GetDict(int index)
+        {
+            if (index > 2048)
+            {
+                throw new Exception($"Reading beyond dictionary limit: {index}");
+            }
+
+            var pIndex = (ushort)(index & 0xFFFF);
+            if (_dict.TryGetValue(pIndex, out var val))
+            {
+                return val;
+            }
+
+            val = ((byte)(index & 0xFF), 0xFFFF);
+            _dict[pIndex] = val;
+            return val;
+        }
+
+        private void SetDict(int index, byte data, ushort next)
+        {
+            if (index > 2048)
+            {
+                throw new Exception($"Writing beyond dictionary limit: {index}");
+            }
+            var pIndex = (ushort)(index & 0xFFFF);
+            _dict[pIndex] = (data, next);
+        }
+
         private void Reset()
         {
+            //_logger.LogInformation($"Triggering reset from {_prevIndex} {_wordWidth} {_wordMask} {_dictTop}");
             _prevIndex = 0;
             _prevData = 0;
             _wordWidth = 9;
-            _wordMask = (ushort)((1 << _wordWidth) - 1);
+            _wordMask = (1 << _wordWidth) - 1;
             _dictTop = 0x100;
-            for (ushort i = 0; i < 2048; i++)
-            {
-                _dict[i] = ((byte)(i & 0xff), 0xffff);
-            }
+            _dict.Clear();
         }
 
-        private int ReadBytes(int bits)
+        private int ReadBytes(int bitsToRead)
         {
-            int read = 0;
-            int bitsRead = 0;
+            int value = 0;
+            int bitsReadSoFar = 0;
             
-            while (bitsRead != bits)
+            while (bitsReadSoFar != bitsToRead)
             {
-                read >>= 1;
+                value >>= 1;
 
-                if (_offset >= _data.Length || _offset < 0)
+                if (_offsetInBytes >= _data.Length || _offsetInBytes < 0)
                 {
                     //TODO: why is this triggering?
                     break;
                 }
-                int data = _data[_offset];
-                if ((data & (1 << _state)) != 0)
+                byte data = _data[_offsetInBytes];
+                if ((data & (1 << _offsetInBits)) != 0)
                 {
-                    read |= (ushort)(1 << (bits - 1));
+                    value |= 1 << (bitsToRead - 1);
                 }
 
-                _state += 1;
+                _offsetInBits += 1;
 
-                if (_state == 8)
+                if (_offsetInBits == 8)
                 {
-                    _state = 0;
-                    _offset += 1;
+                    _offsetInBits = 0;
+                    _offsetInBytes += 1;
                 }
 
-                bitsRead += 1;
+                bitsReadSoFar += 1;
             }
 
-            return read;
+            //_logger.LogInformation($"ReadBytes({bitsToRead}) read {value:b8}");
+            return value;
         }
 
-        private int ReadNext()
+        private byte ReadNext()
         {
-            ushort tempIndex = 0;
-            ushort index = 0;
+            int tempIndex = 0;
+            int index = 0;
 
             if (_stackTop == 0)
             {
-                tempIndex = index = (ushort)ReadBytes(_wordWidth);
+                tempIndex = index = ReadBytes(_wordWidth);
 
                 if (index >= _dictTop)
                 {
+                    //_logger.LogInformation($"Adding new entry to dict for index {_dictTop} starting with index {_prevIndex}");
                     tempIndex = _dictTop;
                     index = _prevIndex;
-                    _stack[_stackTop] = _prevData;
+                    _stack[_stackTop] = (ushort)(_prevData & 0xFFFF);
                     _stackTop += 1;
                 }
 
-                while (_dict[index].next != 0xFFFF)
+                var preStoredValues = "";
+                while (GetDict(index).next != 0xFFFF)
                 {
-                    _stack[_stackTop] = (ushort)((index & 0xFF00) + _dict[index].data);
+                    var (data, next) = GetDict(index);
+                    if (next != 0xFFFF)
+                    {
+                        var val = (byte)(_stack[_stackTop] & 0xFF);
+                        preStoredValues += $"{(byte)(val & 0x0F):X} ";
+                        preStoredValues += $"{(byte)((val >> 4) & 0x0F):X} ";
+                    }
+                    _stack[_stackTop] = (ushort)((index & 0xFF00) + data);
+
                     _stackTop += 1;
-                    index = _dict[index].next;
+                    index = next;
                 }
 
-                _prevData = _dict[index].data;
-                _stack[_stackTop] = _prevData;
+                _prevData = GetDict(index).data;
+                _stack[_stackTop] = (ushort)(_prevData & 0xFFFF);
                 _stackTop += 1;
+                
+                // var lastVal = (byte)(_stack[_stackTop - 1] & 0xFF);
+                // preStoredValues += $"{(byte)(lastVal & 0x0F):X} ";
+                // preStoredValues += $"{(byte)((lastVal >> 4) & 0x0F):X} ";
+                // var pos = $"{index}";
+                // if (index <= 0xFF)
+                // {
+                //     pos += $" ({index & 0xFF:X2})";
+                // }
+                //_logger.LogInformation($"Retrieved from dict at pos {pos} '{preStoredValues}'");
 
-                _dict[_dictTop] = (_prevData, _prevIndex);
+                // var valuesToStore = "";
+                // var q = _stackTop;
+                // do
+                // {
+                //     q--;
+                //     var nextVal = (byte)(_stack[q] & 0xFF);
+                //     valuesToStore += $"{(byte)(nextVal & 0x0F):X} ";
+                //     valuesToStore += $"{(byte)((nextVal >> 4) & 0x0F):X} ";
+                // } while (q > 0);
+                //_logger.LogInformation($"Storing in dict at pos {_dictTop} '{valuesToStore}'");
+                SetDict(_dictTop, (byte)(_prevData & 0xFF), (ushort)(_prevIndex & 0xFFFF));
 
                 _prevIndex = tempIndex;
 
@@ -131,15 +193,21 @@ namespace CovertActionTools.Core.Compression
                     Reset();
                 }
             }
+            // else
+            // {
+            //     _logger.LogInformation($"Reading from stack {_stackTop} {(byte)(_stack[_stackTop] & 0xFF):X}");
+            // }
 
             _stackTop -= 1;
-            return _stack[_stackTop];
+            var ret = (byte)(_stack[_stackTop] & 0xFF);
+            //_logger.LogInformation($"Returning from stack {_stackTop} {ret:X}");
+            return ret;
         }
 
         public byte[] Decompress(int length)
         {
-            var rleCount = 0;
-            var pixel = 0;
+            uint rleCount = 0;
+            uint pixel = 0;
             
             for (var i = 0; i < length; i++)
             {
@@ -155,6 +223,7 @@ namespace CovertActionTools.Core.Compression
                     if (data != 0x90)
                     {
                         //no
+                        //_logger.LogInformation($"Non-RLE encoded bytes {((byte)pixel & 0x0F):X} {((byte)(pixel >> 4) & 0x0F):X}");
                         pixel = data;
                     }
                     else
@@ -169,7 +238,12 @@ namespace CovertActionTools.Core.Compression
                         }
                         else
                         {
-                            rleCount = repeat - 2;
+                            //_logger.LogInformation($"RLE encoded of bytes {((byte)pixel & 0x0F):X} {((byte)(pixel >> 4) & 0x0F):X} for {repeat}");
+                            if (repeat < 2)
+                            {
+                                throw new Exception($"Invalid RLE repeat byte: {repeat}");
+                            }
+                            rleCount = (uint)(repeat - 2);
                         }
                     }
                 }
@@ -178,8 +252,10 @@ namespace CovertActionTools.Core.Compression
                 _writer.Write((byte)(pixel & 0x0f));
                 _writer.Write((byte)((pixel >> 4) & 0x0f));
             }
-            
-            return _memStream.ToArray();
+
+            var decompressedBytes = _memStream.ToArray();
+            _logger.LogInformation($"Decompressed from {_data.Length} bytes to {decompressedBytes.Length}");
+            return decompressedBytes;
         }
 
         public void Dispose()

@@ -15,10 +15,12 @@ namespace CovertActionTools.Core.Importing.Parsers
     internal class SimpleImageParser : ISimpleImageParser
     {
         private readonly ILogger<SimpleImageParser> _logger;
+        private readonly ILoggerFactory _loggerFactory;
 
-        public SimpleImageParser(ILogger<SimpleImageParser> logger)
+        public SimpleImageParser(ILogger<SimpleImageParser> logger, ILoggerFactory loggerFactory)
         {
             _logger = logger;
+            _loggerFactory = loggerFactory;
         }
 
         public SimpleImageModel Parse(string key, byte[] rawData)
@@ -58,7 +60,7 @@ namespace CovertActionTools.Core.Importing.Parsers
             var imageCompressedData = reader.ReadBytes(rawData.Length);
             byte[] rawImageData;
             {
-                using var lzw = new LzwDecompression(lzwMaxWordWidth, imageCompressedData);
+                using var lzw = new LzwDecompression(_loggerFactory.CreateLogger(typeof(LzwDecompression)), lzwMaxWordWidth, imageCompressedData);
                 rawImageData = lzw.Decompress(width * height);
             }
             

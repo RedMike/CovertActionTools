@@ -160,13 +160,12 @@ namespace CovertActionTools.Core.Exporting
                                     case 7: r = 0xAA; g = 0xAA; b = 0xAA; break;
                                     case 8: r = 0x55; g = 0x55; b = 0x55; break;
                                     case 9: r = 0x55; g = 0x55; b = 0xFF; break;
-                                    case 10: r = 0x55; g = 0xAA; b = 0x55; break;
-                                    case 11: r = 0x55; g = 0xAA; b = 0xFF; break;
+                                    case 10: r = 0x55; g = 0xFF; b = 0x55; break;
+                                    case 11: r = 0x55; g = 0xFF; b = 0xFF; break;
                                     case 12: r = 0xFF; g = 0x55; b = 0x55; break;
-                                    case 13: r = 0xFF; g = 0xFF; b = 0x55; break;
-                                    case 14: r = 0xFF; g = 0x55; b = 0xFF; break;
-                                    case 15: r = 0xFF; g = 0xFF; b = 0x55; break;
-                                    case 16: r = 0xFF; g = 0xFF; b = 0xFF; break;
+                                    case 13: r = 0xFF; g = 0x55; b = 0xFF; break;
+                                    case 14: r = 0xFF; g = 0xFF; b = 0x55; break;
+                                    case 15: r = 0xFF; g = 0xFF; b = 0xFF; break;
                                     default:
                                         throw new Exception($"Unknown pixel value: {p}");
                                 }
@@ -191,10 +190,10 @@ namespace CovertActionTools.Core.Exporting
                         {
                             for (int col = 0; col < width; col++)
                             {
-                                pixelBuffer[x++] = imageData[q++];
-                                pixelBuffer[x++] = imageData[q++];
-                                pixelBuffer[x++] = imageData[q++];
-                                pixelBuffer[x++] = imageData[q++];
+                                pixelBuffer[x++] = imageData[(row*width + col)*4];
+                                pixelBuffer[x++] = imageData[(row*width + col)*4+1];
+                                pixelBuffer[x++] = imageData[(row*width + col)*4+2];
+                                pixelBuffer[x++] = imageData[(row*width + col)*4+3];
                             }
 
                             x += padding;
