@@ -61,7 +61,13 @@ public class PackageExplorerWindow : BaseWindow
                 {
                     nodeFlags |= ImGuiTreeNodeFlags.Selected;
                 }
-                if (ImGui.TreeNodeEx($"{image.Key}", nodeFlags))
+
+                var name = $"{image.Key}";
+                if (image.Value.ExtraData.Name != image.Key)
+                {
+                    name += $" ({image.Value.ExtraData.Name})";
+                }
+                if (ImGui.TreeNodeEx(name, nodeFlags))
                 {
                     if (ImGui.IsItemClicked())
                     {

@@ -37,7 +37,7 @@ public class SelectedSimpleImageWindow : BaseWindow
         var initialSize = new Vector2(screenSize.X - 300.0f, screenSize.Y - 200.0f);
         ImGui.SetNextWindowSize(initialSize);
         ImGui.SetNextWindowPos(initialPos);
-        ImGui.Begin($"Image {key}",
+        ImGui.Begin($"Image", //TODO: change label but not ID to prevent unfocusing
             ImGuiWindowFlags.NoResize |
             ImGuiWindowFlags.NoMove |
             ImGuiWindowFlags.NoNav | 
@@ -48,7 +48,7 @@ public class SelectedSimpleImageWindow : BaseWindow
             var model = _mainEditorState.LoadedPackage;
             if (model.SimpleImages.TryGetValue(key, out var image))
             {
-                DrawImageWindow(model, key, image);
+                DrawImageWindow(model, image);
             }
             else
             {
@@ -63,8 +63,70 @@ public class SelectedSimpleImageWindow : BaseWindow
         ImGui.End();
     }
 
-    private void DrawImageWindow(PackageModel model, string key, SimpleImageModel image)
+    private void DrawImageWindow(PackageModel model, SimpleImageModel image)
     {
+        //TODO: keep a pending model and have a save button?
         
+        var origKey = image.Key;
+        var key = origKey;
+        ImGui.SetNextItemWidth(100.0f);
+        ImGui.InputText("Key", ref key, 128, ImGuiInputTextFlags.CharsUppercase);
+        if (key != origKey)
+        {
+            if (model.SimpleImages.ContainsKey(key))
+            {
+                ImGui.SameLine();
+                ImGui.Text("Key already taken");
+            }
+            else
+            {
+                image.Key = key;
+                model.SimpleImages.Remove(origKey);
+                model.SimpleImages[image.Key] = image;
+                //we also have the change the "selected" item
+                _mainEditorState.SelectedItem = (MainEditorState.ItemType.SimpleImage, key);
+            }
+        }
+        
+        var origName = image.ExtraData.Name;
+        var name = origName;
+        ImGui.SetNextItemWidth(100.0f);
+        ImGui.InputText("Name", ref name, 128, ImGuiInputTextFlags.None);
+        if (name != origName)
+        {
+            image.ExtraData.Name = name;
+        }
+
+        var legacyWidth = image.Width;
+        var origLegacyWidth = legacyWidth;
+        ImGui.SetNextItemWidth(100.0f);
+        ImGui.InputInt("Legacy Width", ref legacyWidth);
+        if (legacyWidth != origLegacyWidth)
+        {
+            //TODO: resize? confirmation dialog?
+        }
+        
+        ImGui.SameLine();
+        
+        var legacyHeight = image.Height;
+        var origLegacyHeight = legacyHeight;
+        ImGui.SetNextItemWidth(100.0f);
+        ImGui.InputInt("Legacy Height", ref legacyHeight);
+        if (legacyHeight != origLegacyHeight)
+        {
+            //TODO: resize? confirmation dialog?
+        }
+        
+        var origComment = image.ExtraData.Comment;
+        var comment = origComment;
+        ImGui.InputTextMultiline("Comment", ref comment, 2048, new Vector2(400.0f, 50.0f), ImGuiInputTextFlags.None);
+        if (comment != origComment)
+        {
+            image.ExtraData.Comment = comment;
+        }
+
+        ImGui.Text("");
+        ImGui.Separator();
+        ImGui.Text("");
     }
 }
