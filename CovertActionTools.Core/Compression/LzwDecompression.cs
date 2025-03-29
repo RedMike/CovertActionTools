@@ -189,7 +189,7 @@ namespace CovertActionTools.Core.Compression
                     if (data != 0x90)
                     {
                         //no
-                        //_logger.LogInformation($"Non-RLE encoded bytes {((byte)pixel & 0x0F):X} {((byte)(pixel >> 4) & 0x0F):X}");
+                        //_logger.LogInformation($"Non-RLE encoded bytes {pixel:X2}");
                         pixel = data;
                     }
                     else
@@ -204,7 +204,7 @@ namespace CovertActionTools.Core.Compression
                         }
                         else
                         {
-                            //_logger.LogInformation($"RLE encoded of bytes {((byte)pixel & 0x0F):X} {((byte)(pixel >> 4) & 0x0F):X} for {repeat}");
+                            //_logger.LogInformation($"RLE encoded of bytes {pixel:X2} for {repeat}");
                             if (repeat < 2)
                             {
                                 throw new Exception($"Invalid RLE repeat byte: {repeat}");

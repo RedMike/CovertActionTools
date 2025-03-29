@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using CovertActionTools.Core.Compression;
@@ -49,7 +51,7 @@ namespace CovertActionTools.Core.Exporting.Exporters
                 [$"{image.Key}.png"] = GetModernImageData(image),
                 [$"{image.Key}_VGA.png"] = GetVgaImageData(image),
                 //TODO: CGA
-                [$"{image.Key}.PIC"] = GetLegacyImageData(image) 
+                [$"{image.Key}.PIC"] = GetLegacyFileData(image) 
             };
             return dict;
         }
@@ -79,16 +81,38 @@ namespace CovertActionTools.Core.Exporting.Exporters
             return ImageConversion.RgbaToTexture(width, height, imageData);
         }
 
-        private byte[] GetLegacyImageData(SimpleImageModel image)
+        private byte[] GetLegacyFileData(SimpleImageModel image)
         {
             var imageData = image.RawVgaImageData;
-            var width = image.Width;
-            var height = image.Height;
 
             var compression = new LzwCompression(_loggerFactory.CreateLogger(typeof(LzwCompression)),
                 image.ExtraData.CompressionDictionaryWidth, imageData);
-            var bytes = compression.Compress(width * height);
-            return bytes;
+            var imageBytes = compression.Compress();
+
+            using var memStream = new MemoryStream();
+            using var writer = new BinaryWriter(memStream);
+
+            ushort formatFlag = 0x07;
+            if (image.ExtraData.LegacyColorMappings != null)
+            {
+                formatFlag = 0x0F;
+            }
+
+            writer.Write(formatFlag);
+            writer.Write((ushort)image.Width);
+            writer.Write((ushort)image.Height);
+            if (image.ExtraData.LegacyColorMappings != null)
+            {
+                var mappingBytes = image.ExtraData.LegacyColorMappings
+                    .OrderBy(x => x.Key)
+                    .Select(x => x.Value)
+                    .ToArray();
+                writer.Write(mappingBytes);
+            }
+            writer.Write(image.ExtraData.CompressionDictionaryWidth);
+            writer.Write(imageBytes);
+            
+            return memStream.ToArray();
         }
     }
 }

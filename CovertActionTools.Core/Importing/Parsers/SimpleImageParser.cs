@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using CovertActionTools.Core.Compression;
 using CovertActionTools.Core.Conversion;
 using CovertActionTools.Core.Models;
