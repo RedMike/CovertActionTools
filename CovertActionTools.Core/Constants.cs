@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace CovertActionTools.Core
 {
@@ -24,5 +25,8 @@ namespace CovertActionTools.Core
             {14, (0xFF, 0xFF, 0x55, 255)},
             {15, (0xFF, 0xFF, 0xFF, 255)},
         };
+
+        public static readonly Dictionary<(byte r, byte g, byte b, byte a), byte> ReverseVgaColorMapping =
+            VgaColorMapping.ToDictionary(x => x.Value, x => x.Key);
     }
 }

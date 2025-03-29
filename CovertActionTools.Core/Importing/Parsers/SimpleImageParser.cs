@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using CovertActionTools.Core.Compression;
+using CovertActionTools.Core.Conversion;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
 
@@ -90,7 +91,8 @@ namespace CovertActionTools.Core.Importing.Parsers
                 Key = key,
                 Width = width,
                 Height = height,
-                RawImageData = imageUncompressedData,
+                RawVgaImageData = imageUncompressedData,
+                VgaImageData = ImageConversion.VgaToTexture(width, height, imageUncompressedData),
                 ModernImageData = imageModernData,
                 ExtraData = new SimpleImageModel.Metadata()
                 {

@@ -50,7 +50,12 @@ namespace CovertActionTools.Core.Models
         /// <summary>
         /// Stored as 1 byte index into VGA palette, left-to-right, top-to-bottom.
         /// </summary>
-        public byte[] RawImageData { get; set; } = Array.Empty<byte>();
+        public byte[] RawVgaImageData { get; set; } = Array.Empty<byte>();
+        /// <summary>
+        /// Stored as 4 bytes RGBA left-to-right, top-to-bottom.
+        /// Is the converted version of `RawVgaImageData`. 
+        /// </summary>
+        public byte[] VgaImageData { get; set; } = Array.Empty<byte>();
         /// <summary>
         /// Stored as 4 bytes RGBA left-to-right, top-to-bottom.
         /// </summary>

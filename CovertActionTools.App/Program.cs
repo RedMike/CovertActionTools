@@ -67,6 +67,9 @@ foreach (var type in windowTypes)
     container.AddSingleton(type);
 }
 
+var renderWindow = new RenderWindow(title, w, h);
+container.AddSingleton<RenderWindow>(renderWindow);
+
 var sp = container.BuildServiceProvider();
 var windows = windowTypes
     .Select(t => (BaseWindow)(sp.GetService(t) ?? throw new Exception("Null window")))
@@ -98,7 +101,6 @@ if (startWithLoadSampleDefault)
 }
 #endif
 
-var renderWindow = new RenderWindow(title, w, h);
 while (renderWindow.IsOpen())
 {
     renderWindow.ProcessInput();

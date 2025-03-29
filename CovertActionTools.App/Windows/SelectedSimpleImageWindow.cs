@@ -10,11 +10,13 @@ public class SelectedSimpleImageWindow : BaseWindow
 {
     private readonly ILogger<SelectedSimpleImageWindow> _logger;
     private readonly MainEditorState _mainEditorState;
+    private readonly RenderWindow _renderWindow;
 
-    public SelectedSimpleImageWindow(ILogger<SelectedSimpleImageWindow> logger, MainEditorState mainEditorState)
+    public SelectedSimpleImageWindow(ILogger<SelectedSimpleImageWindow> logger, MainEditorState mainEditorState, RenderWindow renderWindow)
     {
         _logger = logger;
         _mainEditorState = mainEditorState;
+        _renderWindow = renderWindow;
     }
 
     public override void Draw()
@@ -128,5 +130,89 @@ public class SelectedSimpleImageWindow : BaseWindow
         ImGui.Text("");
         ImGui.Separator();
         ImGui.Text("");
+
+        ImGui.BeginTabBar("ImageTabs", ImGuiTabBarFlags.NoCloseWithMiddleMouseButton);
+
+#if MODERN_ENABLED
+        if (ImGui.BeginTabItem("Modern"))
+        {
+            DrawModernImageTab(model, image);
+            
+            ImGui.EndTabItem();
+        }
+#endif
+        
+        if (ImGui.BeginTabItem("Legacy VGA"))
+        {
+            DrawVgaImageTab(model, image);
+            
+            ImGui.EndTabItem();
+        }
+        
+        if (ImGui.BeginTabItem("Legacy CGA"))
+        {
+            //TODO: CGA
+            ImGui.Text("TODO");
+            
+            ImGui.EndTabItem();
+        }
+        
+        ImGui.EndTabBar();
     }
+
+    private void DrawVgaImageTab(PackageModel model, SimpleImageModel image)
+    {
+        var width = image.Width;
+        var height = image.Height;
+        var rawPixels = image.VgaImageData;
+        
+        var id = $"image_vga_{image.Key}";
+        //TODO: cache?
+        var texture = _renderWindow.RenderImage(RenderWindow.RenderType.Image, id, width, height, rawPixels);
+        
+        ImGui.Image(texture, new Vector2(width, height));
+    }
+
+#if MODERN_ENABLED
+    private void DrawModernImageTab(PackageModel model, SimpleImageModel image)
+    {
+        ImGui.Text("Note: this image will only be used by a modern version, not the original game engine.");
+        var width = image.ExtraData.Width;
+        var origWidth = width;
+        ImGui.SetNextItemWidth(100.0f);
+        ImGui.InputInt("Width", ref width);
+        if (width != origWidth)
+        {
+            //TODO: resize? confirmation dialog?
+        }
+        
+        ImGui.SameLine();
+        
+        var height = image.ExtraData.Height;
+        var origHeight = height;
+        ImGui.SetNextItemWidth(100.0f);
+        ImGui.InputInt("Height", ref height);
+        if (height != origHeight)
+        {
+            //TODO: resize? confirmation dialog?
+        }
+
+        ImGui.Text("");
+
+        DrawModernImage(model, image);
+    }
+
+    private void DrawModernImage(PackageModel model, SimpleImageModel image)
+    {
+        var width = image.ExtraData.Width;
+        var height = image.ExtraData.Height;
+        
+        var id = $"image_{image.Key}";
+        var rawPixels = image.ModernImageData;
+        //TODO: cache?
+        var texture = _renderWindow.RenderImage(RenderWindow.RenderType.Image, id, width, height, rawPixels);
+        
+        ImGui.Image(texture, new Vector2(width, height));
+    }
+#endif
 }
