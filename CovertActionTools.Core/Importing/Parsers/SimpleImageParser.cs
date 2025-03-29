@@ -93,7 +93,15 @@ namespace CovertActionTools.Core.Importing.Parsers
                 LegacyColorMappings = legacyColorMappings,
                 CompressionDictionaryWidth = lzwMaxWordWidth,
                 RawImageData = imageUncompressedData,
-                ModernImageData = imageModernData
+                ModernImageData = imageModernData,
+                ExtraData = new SimpleImageModel.Metadata()
+                {
+                    //for legacy images, we populate data from the legacy info
+                    Name = key,
+                    Width = width,
+                    Height = height,
+                    Comment = "Legacy import"
+                }
             };
         }
     }
