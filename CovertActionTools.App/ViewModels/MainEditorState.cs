@@ -7,7 +7,13 @@ namespace CovertActionTools.App.ViewModels;
 /// </summary>
 public class MainEditorState : IViewModel
 {
+    public enum ItemType
+    {
+        Unknown = -1,
+        SimpleImage = 0,
+    }
     public string? LoadedPackagePath { get; set; }
     public PackageModel? LoadedPackage { get; set; }
     public bool IsPackageLoaded => !string.IsNullOrEmpty(LoadedPackagePath);
+    public (ItemType type, string id)? SelectedItem { get; set; }
 }
