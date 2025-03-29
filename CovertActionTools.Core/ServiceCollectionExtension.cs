@@ -14,10 +14,11 @@ namespace CovertActionTools.Core
             services.AddSingleton<IImporterFactory, ImporterFactory>();
             services.AddSingleton<IExporterFactory, ExporterFactory>();
             
-            services.AddSingleton<ISimpleImageParser, SimpleImageParser>();
+            services.AddSingleton<ILegacySimpleImageParser, LegacySimpleImageParser>();
             services.AddSingleton<ISimpleImageExporter, SimpleImageExporter>();
-                             
-            services.AddTransient<IImporter, FolderImporter>();
+            
+            services.AddTransient<LegacyFolderImporter>();
+            services.AddTransient<IImporter, LegacyFolderImporter>();
             services.AddTransient<IExporter, PackageExporter>();
         }
     }

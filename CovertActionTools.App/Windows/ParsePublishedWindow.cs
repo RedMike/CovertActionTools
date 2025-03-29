@@ -150,6 +150,8 @@ public class ParsePublishedWindow : BaseWindow
         {
             if (ImGui.Button("Save"))
             {
+                var now = DateTime.Now;
+                _logger.LogInformation($"Starting exporting at: {now:s}");
                 _parsePublishedState.Export = true;
                 _parsePublishedState.Exporter.StartExport(_parsePublishedState.Importer.GetImportedModel(), destinationPath ?? string.Empty);
             }
@@ -212,10 +214,10 @@ public class ParsePublishedWindow : BaseWindow
         if (ImGui.Button("Load"))
         {
             var now = DateTime.Now;
-            _parsePublishedState.Importer = _importerFactory.Create();
+            var isLegacy = !Directory.GetFiles(destinationPath, "*.png", SearchOption.TopDirectoryOnly).Any();
+            _parsePublishedState.Importer = _importerFactory.Create(isLegacy);
             _parsePublishedState.Exporter = _exporterFactory.Create();
-            _appLogging.Clear(); //TODO: filter to publishing things
-            _logger.LogInformation($"Starting publishing at: {now:s}");
+            _logger.LogInformation($"Starting importing at: {now:s}, legacy = {isLegacy}");
             _parsePublishedState.Importer.StartImport(sourcePath);
             _parsePublishedState.Run = true;
             _parsePublishedState.Export = false;

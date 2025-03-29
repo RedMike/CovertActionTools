@@ -7,17 +7,17 @@ using Microsoft.Extensions.Logging;
 
 namespace CovertActionTools.Core.Importing.Parsers
 {
-    public interface ISimpleImageParser
+    public interface ILegacySimpleImageParser
     {
         SimpleImageModel Parse(string key, byte[] rawData);
     }
     
-    internal class SimpleImageParser : ISimpleImageParser
+    internal class LegacySimpleImageParser : ILegacySimpleImageParser
     {
-        private readonly ILogger<SimpleImageParser> _logger;
+        private readonly ILogger<LegacySimpleImageParser> _logger;
         private readonly ILoggerFactory _loggerFactory;
 
-        public SimpleImageParser(ILogger<SimpleImageParser> logger, ILoggerFactory loggerFactory)
+        public LegacySimpleImageParser(ILogger<LegacySimpleImageParser> logger, ILoggerFactory loggerFactory)
         {
             _logger = logger;
             _loggerFactory = loggerFactory;

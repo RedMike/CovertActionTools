@@ -81,7 +81,7 @@ if (startWithParsePublishDefault)
     parsePublishState.SourcePath = Constants.DefaultParseSourcePath;
     var newName = $"package-{now:yyyy-MM-dd_HH-mm-ss}";
     parsePublishState.DestinationPath = Path.Combine(Constants.DefaultParseDestinationPath, newName);
-    parsePublishState.Importer = sp.GetRequiredService<IImporterFactory>().Create();
+    parsePublishState.Importer = sp.GetRequiredService<IImporterFactory>().Create(true);
     parsePublishState.Importer.StartImport(parsePublishState.SourcePath);
     parsePublishState.Exporter = sp.GetRequiredService<IExporterFactory>().Create();
     parsePublishState.Run = true;

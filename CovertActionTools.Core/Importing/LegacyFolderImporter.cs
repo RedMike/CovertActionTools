@@ -17,15 +17,15 @@ namespace CovertActionTools.Core.Importing
         PackageModel GetImportedModel();
     }
     
-    internal class FolderImporter : IImporter
+    internal class LegacyFolderImporter : IImporter
     {
-        private readonly ILogger<FolderImporter> _logger;
-        private readonly ISimpleImageParser _simpleImageParser;
+        private readonly ILogger<LegacyFolderImporter> _logger;
+        private readonly ILegacySimpleImageParser _legacySimpleImageParser;
         
-        public FolderImporter(ILogger<FolderImporter> logger, ISimpleImageParser simpleImageParser)
+        public LegacyFolderImporter(ILogger<LegacyFolderImporter> logger, ILegacySimpleImageParser legacySimpleImageParser)
         {
             _logger = logger;
-            _simpleImageParser = simpleImageParser;
+            _legacySimpleImageParser = legacySimpleImageParser;
         }
         
         private bool _importing = false; //only one import at a time
@@ -47,7 +47,13 @@ namespace CovertActionTools.Core.Importing
                 return false;
             }
 
-            //TODO: check for file existence
+            //must have at least one PIC file
+            //TODO: better check?
+            var legacyFiles = Directory.GetFiles(path, "*.PIC", SearchOption.TopDirectoryOnly);
+            if (legacyFiles.Length == 0)
+            {
+                return false;
+            }
             
             return true;
         }
@@ -168,7 +174,7 @@ namespace CovertActionTools.Core.Importing
                         _logger.LogInformation($"Read image: {fileName} {rawData.Length} bytes");
 
                         //import the actual image
-                        var imageModel = _simpleImageParser.Parse(fileName, rawData);
+                        var imageModel = _legacySimpleImageParser.Parse(fileName, rawData);
 
                         //update read list
                         //overwrite the entire list to keep it thread-safe
