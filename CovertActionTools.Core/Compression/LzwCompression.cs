@@ -12,8 +12,8 @@ namespace CovertActionTools.Core.Compression
         private readonly int _maxWordWidth;
         private readonly byte[] _data;
 
-        private int _state;
-        private int _offset;
+        private int _bitOffset;
+        private int _byteOffset;
         private int _partial;
         
         private readonly Dictionary<string, ushort> _dict = new();
@@ -29,29 +29,25 @@ namespace CovertActionTools.Core.Compression
             _logger.LogInformation($"Starting compression from {data.Length} bytes, max word width {maxWordWidth}");
 
             _partial = 0;
-            _state = 0;
-            _offset = 0;
+            _bitOffset = 0;
+            _byteOffset = 0;
             
             Reset();
         }
         
         private void WriteBytes(byte[] bytes, int data, byte bitsToWrite)
         {
-            _partial |= data << _state;
-            _state += bitsToWrite;
-            while (_state >= 8)
+            _partial |= data << _bitOffset;
+            _bitOffset += bitsToWrite;
+            while (_bitOffset >= 8)
             {
-                bytes[_offset] = (byte)(_partial & 0xFF);
-                //_logger.LogError($"test 1 {_offset}: {bytes[_offset]:X} {data:X} {bitsToWrite}");
+                bytes[_byteOffset] = (byte)(_partial & 0xFF);
                 _partial >>= 8;
-                _state -= 8;
-                _offset += 1;
+                _bitOffset -= 8;
+                _byteOffset += 1;
             }
 
-            bytes[_offset] = (byte)(_partial & 0xFF);
-            //_logger.LogError($"test 3 {_offset}: {bytes[_offset]:X} {data:X} {bitsToWrite}");
-            // writer.Write((byte)(_partial & 0xFF));
-            // writer.Seek(-1, SeekOrigin.Current);
+            bytes[_byteOffset] = (byte)(_partial & 0xFF);
         }
         
         private void Reset()
@@ -72,7 +68,6 @@ namespace CovertActionTools.Core.Compression
             var s = string.Join("", word.Select(x => $"{x:X2}"));
             if (!_dict.TryGetValue(s, out var index))
             {
-                //_logger.LogError($"{_offset} {_state}: {s}");
                 return null;
             }
 
@@ -124,8 +119,6 @@ namespace CovertActionTools.Core.Compression
             }
 
             var duplicatedBytes = duplicatedMemStream.ToArray();
-            //to test pixel splitting
-            //duplicatedBytes.LogDebugFirstBytes(_logger, 10, 10);
 
             //then we apply RLE
             using var encodingMemStream = new MemoryStream();
@@ -149,6 +142,7 @@ namespace CovertActionTools.Core.Compression
 
                 if (i == duplicatedBytes.Length - 1)
                 {
+                    //if we're reaching the end, forcefully write the RLE end
                     encodingWriter.Write((byte)0x90);
                     encodingWriter.Write((byte)(repeats + 2));
                     continue;
@@ -156,7 +150,7 @@ namespace CovertActionTools.Core.Compression
 
                 if (repeats == 0)
                 {
-                    //_logger.LogError($"Writing single pixel: {pixel:X2}");
+                    //it was a single pixel
                     encodingWriter.Write(pixel);
                     if (pixel == 0x90)
                     {
@@ -166,6 +160,7 @@ namespace CovertActionTools.Core.Compression
                 }
                 else if (repeats == 1)
                 {
+                    //we don't apply RLE for two pixels
                     encodingWriter.Write(lastPixel);
                     if (lastPixel == 0x90)
                     {
@@ -182,7 +177,7 @@ namespace CovertActionTools.Core.Compression
                 }
                 else if (repeats == 2)
                 {
-                    //we just write it twice
+                    //we also don't apply RLE for three pixels because that's what the legacy engine does
                     encodingWriter.Write(lastPixel);
                     if (lastPixel == 0x90)
                     {
@@ -204,9 +199,8 @@ namespace CovertActionTools.Core.Compression
                 }
                 else
                 {
-                    //_logger.LogError($"Writing RLE: {lastPixel:X2} for {repeats + 1}");
+                    //we apply RLE
                     encodingWriter.Write((byte)0x90);
-                    
                     encodingWriter.Write((byte)(repeats + 1));
                     encodingWriter.Write(pixel);
                     if (pixel == 0x90)
@@ -221,81 +215,24 @@ namespace CovertActionTools.Core.Compression
                 lastPixel = pixel;
             }
 
-            //to test RLE
-            //File.WriteAllBytes(@"", encodingMemStream.ToArray());
-            //encodingMemStream.ToArray().LogDebugFirstBytes(_logger, 16, 10, 300);
-
             //lastly we apply LZW
             var bytes = new byte[_data.Length]; //TODO: lower size
 
             using var readStream = new MemoryStream(encodingMemStream.ToArray());
             using var reader = new BinaryReader(readStream);
 
-            //Temporarily disable LZW, by doing the worst case (single codes)
-            // while (readStream.Position < readStream.Length)
-            // {
-            //     var next = reader.ReadByte();
-            //     WriteBytes(bytes, next, _wordWidth);
-            //     var nextId = GetDictNextId();
-            //     _dict[Guid.NewGuid().ToString()] = nextId;
-            //     if (nextId >= _wordMask)
-            //     {
-            //         _wordWidth += 1;
-            //         _wordMask <<= 1;
-            //         _wordMask |= 1;
-            //     }
-            //     
-            //     if (_wordWidth > _maxWordWidth)
-            //     {
-            //         Reset();
-            //     }
-            // }
-
             var first = true;
-            var wordCreations = 0;
-            var dictResets = 0;
-            var debug = false;
-            var justReset = false;
-            var _testBytes = new List<byte>();
             while (readStream.Position < readStream.Length)
             {
                 var next = reader.ReadByte();
-                if (_offset == 2198)
-                {
-                   //_logger.LogError($"next: {GetDictNextId():X4} {string.Join(" ", _currentWord.Select(x => $"{x:X2}"))} = {TryGetDict(new List<byte>(_currentWord)):X4}");
-                }
-
                 if (first)
                 {
                     //we add this fake first entry
                     SetDict(new List<byte>() { 0, next }, GetDictNextId());
                     first = false;
                 }
-
-                if (justReset)
-                {
-                    //_logger.LogError($"next id: {GetDictNextId()}");
-                }
-
-                if (justReset && GetDictNextId() == 0x105)
-                {
-                    justReset = false;
-                    _logger.LogError($"next: {next:X2} - {string.Join(" ", _currentWord.Select(x => $"{x:X2}"))}");
-                    for (ushort i = (ushort)(GetDictNextId() - 5); i < GetDictNextId(); i++)
-                    {
-                        _logger.LogError($"! {i:X4}: {string.Join(" ", _dict.First(x => x.Value == i).Key)}");    
-                    }
-                }
-                //_logger.LogError($"next byte: {next:X2}");
                 
                 var nextId = GetDictNextId();
-                if (nextId == 0x100)
-                {
-                    readStream.Seek(-2, SeekOrigin.Current);
-                    var t1 = reader.ReadByte();
-                    var t2 = reader.ReadByte();
-                    _logger.LogError($"!! {next:X2} {t1:X2} {t2:X2} - {string.Join(" ", _currentWord.Select(x => $"{x:X2}"))}");
-                }
 
                 var potentialNextWord = _currentWord.ToList();
                 potentialNextWord.Add(next);
@@ -304,92 +241,34 @@ namespace CovertActionTools.Core.Compression
                 if (index != null)
                 {
                     //it's an existing word
-                    //_logger.LogError($"existing word: {string.Join("", potentialNextWord.Select(x => $"{x:X2}"))}");
                     _currentWord = potentialNextWord.ToList();
-                    //_logger.LogError($"new word2 {nextId:X4}: {string.Join(" ", potentialNextWord.Select(x => $"{x:X2}"))}");
                 }
                 else
                 {
                     //it's a new word
-                    // var reversedWord = potentialNextWord.ToList();
-                    // reversedWord.Reverse();
-                    // _logger.LogError($"new word {nextId:X4}: {string.Join(" ", reversedWord.Select(x => $"{x:X2}"))}");
                     SetDict(potentialNextWord, nextId);
-                    wordCreations += 1;
-                    //to test word creation
-                    // testBytes.Add((byte)((nextId >> 8) & 0xFF));
-                    // testBytes.Add((byte)(nextId & 0xFF));
                     
                     var lastIndex = TryGetDict(_currentWord);
-                    //_logger.LogError($"new word writing existing: {string.Join("", _currentWord.Select(x => $"{x:X2}"))}");
                     if (lastIndex == null)
                     {
                         throw new Exception($"Last index missing: {string.Join("", _currentWord.Select(x => $"{x:X2}"))}");
                     }
                     
                     WriteBytes(bytes, lastIndex.Value, _wordWidth);
-                    //to test LZW without bit-shift
-                    _testBytes.Add((byte)((lastIndex.Value >> 8) & 0xFF));
-                    _testBytes.Add((byte)(lastIndex.Value & 0xFF));
-                    if (_testBytes.Count == 3638)
-                    {
-                        _testBytes.ToArray().LogDebugFirstBytes(_logger, 16, 8, _testBytes.Count-128);
-                        //_logger.LogError($"{_offset} {_state}");
-                        // for (ushort i = 0x00FF; i < 0x0105; i++)
-                        // {
-                        //     _logger.LogError($"{i:X4}: {string.Join(" ", _dict.First(x => x.Value == i).Key)}");    
-                        // }
-                        //229 is where it goes wrong
-                        //_logger.LogError($"last: {string.Join(" ", _testBytes.Skip(_testBytes.Count - 8).Select(x => $"{x:X2}"))}");
-                    }
-
-                    // if (nextId < 260 && _wordWidth == 9)
-                    // {
-                    //     var reversedWord = potentialNextWord.ToList();x
-                    //     reversedWord.Reverse();
-                    //     // if (nextId == 258)
-                    //     // {
-                    //     //     _logger.LogError($"256: word: {_dict.First(x => x.Value == 0x100)}");
-                    //     //     _logger.LogError($"257: word: {_dict.First(x => x.Value == 0x101)}");
-                    //     //     _logger.LogError($"258: word: {_dict.First(x => x.Value == 0x102)}");
-                    //     // }
-                    //
-                    //     _logger.LogError($"Reached ID {nextId} at offset: {_offset} {_state}; word: {string.Join(" ", reversedWord.Select(x => $"{x:X2}"))}");
-                    // }
                     
                     _currentWord = new List<byte>() { next };
                     if (nextId > _wordMask)
                     {
-                        _logger.LogError($"Reached ID {nextId} at offset: {_offset} {_state}, bumping word width to {_wordWidth + 1}");
-                        // for (ushort i = (ushort)(nextId - 5); i < nextId; i++)
-                        // {
-                        //     _logger.LogError($"!! {i:X4}: {string.Join(" ", _dict.First(x => x.Value == i).Key)}");    
-                        // }
                         _wordWidth += 1;
                         _wordMask <<= 1;
                         _wordMask |= 1;
-                        // _testBytes.Add(0xDE);
-                        // _testBytes.Add(0xAD);
-                        // _testBytes.Add(0xBE);
-                        // _testBytes.Add(0xEF);
                     }
                     if (_wordWidth > _maxWordWidth)
                     {
-                        _testBytes.ToArray().LogDebugFirstBytes(_logger, 16, 2, _testBytes.Count-32);
-                        _logger.LogError($"Resetting {next:X2} width {_wordWidth} at offset: {_offset} {_state} next ID: {nextId:X4} prev word: {string.Join(" ", _currentWord.Select(x => $"{x:X2}"))}");
-                        // _testBytes.Add(0xDE);
-                        // _testBytes.Add(0xAD);
-                        // _testBytes.Add(0xBE);
-                        // _testBytes.Add(0xEF);
-                        for (ushort i = (ushort)(nextId - 5); i < nextId; i++)
-                        {
-                            _logger.LogError($"! {i:X4}: {string.Join(" ", _dict.First(x => x.Value == i).Key)}");    
-                        }
                         Reset();
                         first = true;
-                        justReset = true;
                         _currentWord = new List<byte>() { };
-                        dictResets += 1;
+                        //for some reason we already processed the pixel once, just go back
                         readStream.Seek(-1, SeekOrigin.Current);
                     }
                 }
@@ -399,16 +278,9 @@ namespace CovertActionTools.Core.Compression
             if (finalIndex != null)
             {
                 WriteBytes(bytes, finalIndex.Value, _wordWidth);
-                //to test LZW without bit-shift
-                _testBytes.Add((byte)((finalIndex.Value >> 8) & 0xFF));
-                _testBytes.Add((byte)(finalIndex.Value & 0xFF));
             }
             
-            //to test LZW without bit-shift
-            //_testBytes.ToArray().LogDebugFirstBytes(_logger, 16, 10, 3944);
-            _logger.LogError($"words {wordCreations} resets {dictResets}");
-            
-            var compressedBytes = bytes.Take(_offset + (_state > 0 ? 1 : 0)).ToArray();
+            var compressedBytes = bytes.Take(_byteOffset + (_bitOffset > 0 ? 1 : 0)).ToArray();
 
             _logger.LogInformation($"Compressed from {_data.Length} bytes to {compressedBytes.Length}");
             return compressedBytes;

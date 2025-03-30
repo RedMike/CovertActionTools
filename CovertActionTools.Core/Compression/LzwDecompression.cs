@@ -85,7 +85,6 @@ namespace CovertActionTools.Core.Compression
 
         private ushort ReadBytes(byte bitsToRead)
         {
-            var origOffset = _offsetInBytes;
             ushort value = 0;
             byte bitsReadSoFar = 0;
             
@@ -93,11 +92,6 @@ namespace CovertActionTools.Core.Compression
             {
                 value = (ushort)(((short)value) >> 1); //we want arithmetic shift
 
-                if (_offsetInBytes >= _data.Length || _offsetInBytes < 0)
-                {
-                    //TODO: why is this triggering?
-                    //break;
-                }
                 byte data = _data[_offsetInBytes];
                 if ((data & (1 << _offsetInBits)) != 0)
                 {
@@ -118,11 +112,6 @@ namespace CovertActionTools.Core.Compression
             return value;
         }
 
-        private List<byte> _testBytes = new();
-        private int _wordCreations = 0;
-        private int _dictResets = 0;
-        private bool _justReset = false;
-
         private byte ReadNext()
         {
             ushort index = 0;
@@ -134,38 +123,9 @@ namespace CovertActionTools.Core.Compression
             }
 
             index = ReadBytes(_wordWidth);
-            //to test LZW without bit-shift
-            _testBytes.Add((byte)((index >> 8) & 0xFF));
-            _testBytes.Add((byte)(index & 0xFF));
-            if (_testBytes.Count == 3638)
-            {
-                _testBytes.ToArray().LogDebugFirstBytes(_logger, 16, 8, _testBytes.Count-128);
-                // _logger.LogError($"{_offsetInBytes} {_offsetInBits}");
-                // for (ushort i = 0x00FF; i < 0x0105; i++)
-                // {
-                //     _logger.LogError($"{i:X4}: {string.Join(" ", GetDict(i).Select(x => $"{x:X2}"))} = {index:X4}");    
-                // }
-                // _logger.LogError($"next: {GetDictNextId():X4} {string.Join(" ", GetDict(index).Select(x => $"{x:X2}"))} = {index:X4}");
-            }
-
-            if (_justReset && GetDictNextId() == 0x105)
-            {
-                _justReset = false;
-                _logger.LogError($"next: {index:X4}");
-                
-                for (ushort i = (ushort)(GetDictNextId() - 5); i < GetDictNextId(); i++)
-                {
-                    _logger.LogError($"! {i:X4}: {string.Join(" ", GetDict(i).Select(x => $"{x:X2}"))} = {_prevData:X4}");    
-                }
-                //_testBytes.ToArray().LogDebugFirstBytes(_logger, 16, 2, _testBytes.Count-32);
-            }
 
             List<byte> existingWord;
             var nextId = GetDictNextId();
-            if (nextId == 0x100)
-            {
-                _logger.LogError($"!! {index:X4} {_prevIndex:X4} {_prevData:X2}");
-            }
             if (index >= nextId)
             {
                 index = nextId;
@@ -188,57 +148,19 @@ namespace CovertActionTools.Core.Compression
             var word = GetDict(_prevIndex).ToList();
             word.Insert(0, _stack.Peek());
             SetDict(nextId, word);
-            _wordCreations += 1;
-            //_logger.LogError($"new word {nextId:X4}: {string.Join(" ", word.Select(x => $"{x:X2}"))}");
-            //to test word creation
-            // _testBytes.Add((byte)((nextId >> 8) & 0xFF));
-            // _testBytes.Add((byte)(nextId & 0xFF));
 
             _prevIndex = index;
-            
-            // if (nextId < 260 && _wordWidth == 9)
-            // {
-            //     // if (nextId == 258)
-            //     // {
-            //     //     _logger.LogError($"256: word: {string.Join(" ", GetDict(0x100).Select(x => $"{x:X2}"))}");
-            //     //     _logger.LogError($"257: word: {string.Join(" ", GetDict(0x101).Select(x => $"{x:X2}"))}");
-            //     //     _logger.LogError($"258: word: {string.Join(" ", GetDict(0x102).Select(x => $"{x:X2}"))}");
-            //     // }
-            //
-            //     _logger.LogError($"Reached ID {nextId} at offset: {_offsetInBytes} {_offsetInBits}; word: {string.Join(" ", word.Select(x => $"{x:X2}"))}");
-            // }
             //if we've reached the limit of X bit indexes, increase by 1 bit
             if (nextId >= _wordMask)
             {
-                _logger.LogError($"Reached ID {nextId} at offset: {_offsetInBytes} {_offsetInBits}, bumping word width to {_wordWidth + 1}");
                 _wordWidth += 1;
                 _wordMask <<= 1;
                 _wordMask |= 1;
-                // for (ushort i = (ushort)(nextId - 5); i < nextId; i++)
-                // {
-                //     _logger.LogError($"!! {i:X4}: {string.Join(" ", GetDict(i).Select(x => $"{x:X2}"))} = {_prevData:X4}");    
-                // }
-                // _testBytes.Add(0xDE);
-                // _testBytes.Add(0xAD);
-                // _testBytes.Add(0xBE);
-                // _testBytes.Add(0xEF);
             }
 
             if (_wordWidth > _maxWordWidth)
             {
-                _testBytes.ToArray().LogDebugFirstBytes(_logger, 16, 2, _testBytes.Count-32);
-                _logger.LogError($"Resetting width {_wordWidth} at offset: {_offsetInBytes} {_offsetInBits} next ID: {nextId:X4} prev index: {_prevIndex:X4} prev word: {string.Join(" ", word.Select(x => $"{x:X2}"))}");
-                // _testBytes.Add(0xDE);
-                // _testBytes.Add(0xAD);
-                // _testBytes.Add(0xBE);
-                // _testBytes.Add(0xEF);
-                _dictResets += 1;
-                for (ushort i = (ushort)(nextId - 5); i < nextId; i++)
-                {
-                    _logger.LogError($"! {i:X4}: {string.Join(" ", GetDict(i).Select(x => $"{x:X2}"))} = {_prevData:X4}");    
-                }
                 Reset();
-                _justReset = true;
             }
             return ReadNext(); //recurse, we have something in the stack already
         }
@@ -251,7 +173,6 @@ namespace CovertActionTools.Core.Compression
             uint rleCount = 0;
             byte pixel = 0;
 
-            var testBytes2 = new List<byte>();
             for (var i = 0; i < length; i++)
             {
                 if (rleCount > 0)
@@ -261,22 +182,17 @@ namespace CovertActionTools.Core.Compression
                 else
                 {
                     var data = ReadNext();
-                    //to test RLE
-                    testBytes2.Add(data);
                     
                     //is it RLE?
                     if (data != 0x90)
                     {
                         //no
-                        //_logger.LogInformation($"Non-RLE encoded bytes {pixel:X2}");
                         pixel = data;
                     }
                     else
                     {
                         //yes, check how many times
                         var repeat = ReadNext();
-                        //to test RLE
-                        testBytes2.Add(repeat);
 
                         if (repeat == 0)
                         {
@@ -295,22 +211,12 @@ namespace CovertActionTools.Core.Compression
                     }
                 }
 
-                //to test pixel splitting
-                //testBytes.Add(pixel);
-
                 //each byte is actually two pixels one after the other
                 writer.Write((byte)(pixel & 0x0f));
                 writer.Write((byte)((pixel >> 4) & 0x0f));
                 i += 1;
             }
             
-            //to test pixel splitting/RLE
-            //File.WriteAllBytes(@"", testBytes2.ToArray());
-            //testBytes2.ToArray().LogDebugFirstBytes(_logger, 16, 10, 300);
-            //to test LZW without bit-shift
-            //_testBytes.ToArray().LogDebugFirstBytes(_logger, 16, 10, 3944);
-            _logger.LogError($"words {_wordCreations} resets {_dictResets}");
-
             var decompressedBytes = memStream.ToArray();
             _logger.LogInformation($"Decompressed from {_data.Length} bytes to {decompressedBytes.Length}");
             return decompressedBytes;
