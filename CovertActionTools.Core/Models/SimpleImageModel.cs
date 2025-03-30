@@ -53,9 +53,14 @@ namespace CovertActionTools.Core.Models
         public byte[] RawVgaImageData { get; set; } = Array.Empty<byte>();
         /// <summary>
         /// Stored as 4 bytes RGBA left-to-right, top-to-bottom.
-        /// Is the converted version of `RawVgaImageData`. 
+        /// Is the converted version of `RawVgaImageData`. For display only, not saving.
         /// </summary>
         public byte[] VgaImageData { get; set; } = Array.Empty<byte>();
+        /// <summary>
+        /// Stored as 4 bytes RGBA left-to-right, top-to-bottom.
+        /// Is the converted version of `RawCgaImageData`. For display only, not saving.
+        /// </summary>
+        public byte[] CgaImageData { get; set; } = Array.Empty<byte>();
         /// <summary>
         /// Stored as 4 bytes RGBA left-to-right, top-to-bottom.
         /// </summary>

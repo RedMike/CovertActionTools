@@ -5,10 +5,12 @@ namespace CovertActionTools.Core
 {
     internal class Constants
     {
+        public static readonly (byte r, byte g, byte b, byte a) TransparentColor = (0, 0, 0, 0);
+        
         //VGA palette, with colour index 5 replaced with plain black at full alpha
         public static readonly Dictionary<byte, (byte r, byte g, byte b, byte a)> VgaColorMapping = new()
         {
-            {0, (0, 0, 0, 0)},
+            {0, TransparentColor},
             {1, (0, 0, 0xAA, 255)},
             {2, (0, 0xAA, 0, 255)},
             {3, (0, 0xAA, 0xAA, 255)},
@@ -24,6 +26,15 @@ namespace CovertActionTools.Core
             {13, (0xFF, 0x55, 0xFF, 255)},
             {14, (0xFF, 0xFF, 0x55, 255)},
             {15, (0xFF, 0xFF, 0xFF, 255)},
+        };
+        
+        //Reduced CGA palette, no 'transparent' colour because that comes from the VGA palette
+        public static readonly Dictionary<byte, (byte r, byte g, byte b, byte a)> CgaColorMapping = new()
+        {
+            {0, (0, 0, 0, 255)},
+            {1, (0, 0xFF, 0xFF, 255)},
+            {2, (0xFF, 0, 0xFF, 255)},
+            {3, (0xFF, 0xFF, 0xFF, 255)},
         };
 
         public static readonly Dictionary<(byte r, byte g, byte b, byte a), byte> ReverseVgaColorMapping =

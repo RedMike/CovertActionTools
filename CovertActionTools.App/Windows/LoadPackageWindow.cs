@@ -1,6 +1,5 @@
 ﻿using System.Numerics;
 using CovertActionTools.App.ViewModels;
-using CovertActionTools.Core.Exporting;
 using CovertActionTools.Core.Importing;
 using CovertActionTools.Core.Services;
 using ImGuiNET;
@@ -116,7 +115,6 @@ public class LoadPackageWindow : BaseWindow
             importStatus.Stage == ImportStatus.ImportStage.ImportDone)
         {
             var now = DateTime.Now;
-            _logger.LogInformation($"Done importing at: {now:s}");
             if (importStatus.Errors.Count == 0)
             {
                 _mainEditorState.LoadedPackagePath = sourcePath;
@@ -127,7 +125,6 @@ public class LoadPackageWindow : BaseWindow
             }
             else
             {
-                _logger.LogError($"Review errors above.");
                 if (ImGui.Button("Close"))
                 {
                     _loadPackageState.Show = false;

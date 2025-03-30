@@ -50,7 +50,6 @@ namespace CovertActionTools.Core.Exporting.Exporters
                 [$"{image.Key}.json"] = GetMetadata(image),
                 [$"{image.Key}.png"] = GetModernImageData(image),
                 [$"{image.Key}_VGA.png"] = GetVgaImageData(image),
-                //TODO: CGA
                 [$"{image.Key}.PIC"] = GetLegacyFileData(image) 
             };
             return dict;

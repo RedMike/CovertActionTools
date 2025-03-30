@@ -115,7 +115,6 @@ public class SavePackageWindow : BaseWindow
             exportStatus.Stage == ExportStatus.ExportStage.ExportDone)
         {
             var now = DateTime.Now;
-            _logger.LogInformation($"Done exporting at: {now:s}");
             if (exportStatus.Errors.Count == 0)
             {
                 _savePackageState.Show = false;
@@ -124,7 +123,6 @@ public class SavePackageWindow : BaseWindow
             }
             else
             {
-                _logger.LogError($"Review errors above.");
                 if (ImGui.Button("Close"))
                 {
                     _savePackageState.Show = false;

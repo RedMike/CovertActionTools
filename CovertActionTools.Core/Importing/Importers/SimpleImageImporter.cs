@@ -33,6 +33,14 @@ namespace CovertActionTools.Core.Importing.Importers
             model.Height = 200; //legacy height
             model.ExtraData = ReadMetadata(path, filename);
             (model.RawVgaImageData, model.VgaImageData) = ReadVgaImageData(path, filename, model.Width, model.Height);
+            model.CgaImageData = Array.Empty<byte>();
+            if (model.ExtraData.LegacyColorMappings != null)
+            {
+                var rawCgaImageData = ImageConversion.VgaToCgaTexture(model.Width, model.Height, model.RawVgaImageData, model.ExtraData.LegacyColorMappings);
+                using var skBitmap = SKBitmap.Decode(rawCgaImageData, new SKImageInfo(model.Width, model.Height, SKColorType.Rgba8888, SKAlphaType.Premul));
+                var textureBytes = skBitmap.Bytes.ToArray();
+                model.CgaImageData = textureBytes;
+            }
             model.ModernImageData = ReadModernImageData(path, filename, model.ExtraData.Width, model.ExtraData.Height);
             return model;
         }

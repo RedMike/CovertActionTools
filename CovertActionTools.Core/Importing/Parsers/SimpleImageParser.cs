@@ -87,6 +87,12 @@ namespace CovertActionTools.Core.Importing.Parsers
 
             var fullByteSize = width * height * 4;
             _logger.LogInformation($"Read image '{key}': {width}x{height}, Legacy Color Mapping = {legacyColorMappings != null}, Compressed Bytes = {rawData.Length}, Compression: {(100.0f - (float)rawData.Length/fullByteSize * 100.0f):F0}%");
+            byte[] cgaImageData = Array.Empty<byte>();
+            if (legacyColorMappings != null)
+            {
+                cgaImageData = ImageConversion.VgaToCgaTexture(width, height, imageUncompressedData, legacyColorMappings);
+            }
+
             return new SimpleImageModel()
             {
                 Key = key,
@@ -94,6 +100,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                 Height = height,
                 RawVgaImageData = imageUncompressedData,
                 VgaImageData = ImageConversion.VgaToTexture(width, height, imageUncompressedData),
+                CgaImageData = cgaImageData,
                 ModernImageData = imageModernData,
                 ExtraData = new SimpleImageModel.Metadata()
                 {

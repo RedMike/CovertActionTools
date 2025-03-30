@@ -151,8 +151,7 @@ public class SelectedSimpleImageWindow : BaseWindow
         
         if (ImGui.BeginTabItem("Legacy CGA"))
         {
-            //TODO: CGA
-            ImGui.Text("TODO");
+            DrawCgaImageTab(model, image);
             
             ImGui.EndTabItem();
         }
@@ -178,6 +177,48 @@ public class SelectedSimpleImageWindow : BaseWindow
         
         ImGui.Image(texture, new Vector2(width, height));
     }
+    
+    private void DrawCgaImageTab(PackageModel model, SimpleImageModel image)
+    {
+        if (image.ExtraData.LegacyColorMappings == null)
+        {
+            ImGui.Text("No CGA mapping, TODO");
+            return;
+        }
+        
+        var width = image.Width;
+        var height = image.Height;
+        var rawPixels = image.CgaImageData;
+
+        var pos = ImGui.GetCursorPos();
+        var bgTexture = _renderWindow.RenderCheckerboardRectangle(25, width, height,
+            (40, 30, 40, 255), (50, 40, 50, 255));
+        ImGui.Image(bgTexture, new Vector2(width, height));
+
+        ImGui.SetCursorPos(pos);
+        var id = $"image_cga_{image.Key}";
+        //TODO: cache?
+        var texture = _renderWindow.RenderImage(RenderWindow.RenderType.Image, id, width, height, rawPixels);
+        
+        ImGui.Image(texture, new Vector2(width, height));
+        
+        //TODO: allow changing CGA mapping
+        //TODO: split CGA mapping into separate colour choices for each pixel
+        for (byte i = 0; i < 8; i++)
+        {
+            var m = (int)image.ExtraData.LegacyColorMappings[i];
+            ImGui.SetNextItemWidth(100.0f);
+            ImGui.InputInt($"Color {i:00}", ref m);
+
+            ImGui.SameLine();
+            
+            var j = (byte)(i + 8);
+            var m2 = (int)image.ExtraData.LegacyColorMappings[j];
+            ImGui.SetNextItemWidth(100.0f);
+            ImGui.InputInt($"Color {j:00}", ref m2);
+        }
+    }
+    
 #if MODERN_ENABLED
     private void DrawModernImageTab(PackageModel model, SimpleImageModel image)
     {
