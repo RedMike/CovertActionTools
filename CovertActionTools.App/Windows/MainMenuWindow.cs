@@ -1,6 +1,5 @@
-﻿using System.Reflection;
-using CovertActionTools.App.Logging;
-using CovertActionTools.App.ViewModels;
+﻿using CovertActionTools.App.ViewModels;
+using CovertActionTools.Core.Services;
 using ImGuiNET;
 using Microsoft.Extensions.Logging;
 
@@ -12,13 +11,17 @@ public class MainMenuWindow : BaseWindow
     private readonly MainEditorState _mainEditorState;
     private readonly ParsePublishedState _parsePublishedState;
     private readonly LoadPackageState _loadPackageState;
-
-    public MainMenuWindow(ILogger<MainMenuWindow> logger, MainEditorState mainEditorState, ParsePublishedState parsePublishedState, LoadPackageState loadPackageState)
+    private readonly SavePackageState _savePackageState;
+    private readonly IExporterFactory _exporterFactory;
+    
+    public MainMenuWindow(ILogger<MainMenuWindow> logger, MainEditorState mainEditorState, ParsePublishedState parsePublishedState, LoadPackageState loadPackageState, SavePackageState savePackageState, IExporterFactory exporterFactory)
     {
         _logger = logger;
         _mainEditorState = mainEditorState;
         _parsePublishedState = parsePublishedState;
         _loadPackageState = loadPackageState;
+        _savePackageState = savePackageState;
+        _exporterFactory = exporterFactory;
     }
 
     public override void Draw()
@@ -53,12 +56,15 @@ public class MainMenuWindow : BaseWindow
 
             if (ImGui.MenuItem("Save Package"))
             {
-                //TODO: save
+                _savePackageState.Show = true;
+                _savePackageState.Run = true;
+                _savePackageState.Exporter = _exporterFactory.Create();
+                _savePackageState.Exporter.StartExport(_mainEditorState.LoadedPackage!, _mainEditorState.LoadedPackagePath!);
             }
 
-            if (ImGui.MenuItem("Publish to Folder"))
+            if (ImGui.MenuItem("Publish"))
             {
-                //TODO: dialog
+                //TODO: publish
             }
             
             ImGui.EndMenu();
