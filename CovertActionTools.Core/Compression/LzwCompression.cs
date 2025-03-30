@@ -40,18 +40,17 @@ namespace CovertActionTools.Core.Compression
         {
             _partial |= data << _state;
             _state += bitsToWrite;
-            if (_state >= 16)
-            {
-                _logger.LogError($"double state: {_partial:X} {_partial >> 8} {_partial >> 16}");
-            }
             while (_state >= 8)
             {
-                bytes[_offset] = (byte)(_partial & 0xFF); 
+                bytes[_offset] = (byte)(_partial & 0xFF);
+                //_logger.LogError($"test 1 {_offset}: {bytes[_offset]:X} {data:X} {bitsToWrite}");
                 _partial >>= 8;
                 _state -= 8;
                 _offset += 1;
             }
+
             bytes[_offset] = (byte)(_partial & 0xFF);
+            //_logger.LogError($"test 3 {_offset}: {bytes[_offset]:X} {data:X} {bitsToWrite}");
             // writer.Write((byte)(_partial & 0xFF));
             // writer.Seek(-1, SeekOrigin.Current);
         }
@@ -61,7 +60,7 @@ namespace CovertActionTools.Core.Compression
             _wordWidth = 9;
             _wordMask = (ushort)(((1 << _wordWidth) - 1) & 0xFFFF);
             _dict.Clear();
-            for (ushort i = 0; i < 0x100; i++)
+            for (ushort i = 0; i <= 0x100; i++)
             {
                 var b = (byte)i;
                 _dict[$"{b:X2}"] = i;
@@ -86,7 +85,11 @@ namespace CovertActionTools.Core.Compression
                 throw new Exception($"Writing beyond dictionary limit: {index}");
             }
             
-            var s = string.Join("", word.Select(x => $"{x:X}"));
+            var s = string.Join("", word.Select(x => $"{x:X2}"));
+            if (_dict.ContainsKey(s))
+            {
+                throw new Exception($"Found duplicate value for {s}");
+            }
             _dict[s] = index;
         }
 
@@ -120,6 +123,8 @@ namespace CovertActionTools.Core.Compression
             }
 
             var duplicatedBytes = duplicatedMemStream.ToArray();
+            //to test pixel splitting
+            //duplicatedBytes.LogDebugFirstBytes(_logger, 10, 10);
 
             //then we apply RLE
             using var encodingMemStream = new MemoryStream();
@@ -189,6 +194,8 @@ namespace CovertActionTools.Core.Compression
                 lastPixel = pixel;
             }
 
+            //to test RLE
+            //encodingMemStream.ToArray().LogDebugFirstBytes(_logger, 10, 10);
 
             //lastly we apply LZW
             var bytes = new byte[_data.Length]; //TODO: lower size
@@ -197,78 +204,92 @@ namespace CovertActionTools.Core.Compression
             using var reader = new BinaryReader(readStream);
 
             //Temporarily disable LZW, by doing the worst case (single codes)
+            // while (readStream.Position < readStream.Length)
+            // {
+            //     var next = reader.ReadByte();
+            //     WriteBytes(bytes, next, _wordWidth);
+            //     var nextId = GetDictNextId();
+            //     _dict[Guid.NewGuid().ToString()] = nextId;
+            //     if (nextId >= _wordMask)
+            //     {
+            //         _wordWidth += 1;
+            //         _wordMask <<= 1;
+            //         _wordMask |= 1;
+            //     }
+            //     
+            //     if (_wordWidth > _maxWordWidth)
+            //     {
+            //         Reset();
+            //     }
+            // }
+
+            //var testBytes = new List<byte>();
             while (readStream.Position < readStream.Length)
             {
                 var next = reader.ReadByte();
-                WriteBytes(bytes, next, _wordWidth);
+                //_logger.LogError($"next byte: {next:X2}");
+                
                 var nextId = GetDictNextId();
-                _dict[Guid.NewGuid().ToString()] = nextId;
-                if (nextId >= _wordMask)
+                if (nextId > _wordMask)
                 {
                     _wordWidth += 1;
                     _wordMask <<= 1;
                     _wordMask |= 1;
                 }
-                
                 if (_wordWidth > _maxWordWidth)
                 {
                     Reset();
+                    _currentWord = new List<byte>();
+                }
+                nextId = GetDictNextId();
+                
+                var potentialNextWord = _currentWord.ToList();
+                potentialNextWord.Add(next);
+            
+                var index = TryGetDict(potentialNextWord);
+                if (index != null)
+                {
+                    //it's an existing word
+                    //_logger.LogError($"existing word: {string.Join("", potentialNextWord.Select(x => $"{x:X2}"))}");
+                    _currentWord = potentialNextWord;
+                }
+                else
+                {
+                    //it's a new word
+                    //_logger.LogError($"new word: {string.Join("", potentialNextWord.Select(x => $"{x:X2}"))}");
+                    SetDict(potentialNextWord, nextId);
+                    //to test word creation
+                    // testBytes.Add((byte)((nextId >> 8) & 0xFF));
+                    // testBytes.Add((byte)(nextId & 0xFF));
+                    
+                    var lastIndex = TryGetDict(_currentWord);
+                    //_logger.LogError($"new word writing existing: {string.Join("", _currentWord.Select(x => $"{x:X2}"))}");
+                    if (lastIndex == null)
+                    {
+                        throw new Exception($"Last index missing: {string.Join("", _currentWord.Select(x => $"{x:X2}"))}");
+                    }
+            
+                    WriteBytes(bytes, lastIndex.Value, _wordWidth);
+                    //to test LZW without bit-shift
+                    // testBytes.Add((byte)((lastIndex.Value >> 8) & 0xFF));
+                    // testBytes.Add((byte)(lastIndex.Value & 0xFF));
+                    
+                   _currentWord = new List<byte>() { next };
                 }
             }
-
-
-            // while (readStream.Position < readStream.Length)
-            // {
-            //     var next = reader.ReadByte();
-            //     //_logger.LogError($"next byte: {next:X2}");
-            //     var potentialNextWord = _currentWord.ToList();
-            //     potentialNextWord.Add(next);
-            //
-            //     var index = TryGetDict(potentialNextWord);
-            //     if (index != null)
-            //     {
-            //         //it's an existing word
-            //         //_logger.LogError($"existing word: {string.Join("", potentialNextWord.Select(x => $"{x:X2}"))}");
-            //         _currentWord = potentialNextWord;
-            //     }
-            //     else
-            //     {
-            //         //it's a new word
-            //         //_logger.LogError($"new word: {string.Join("", potentialNextWord.Select(x => $"{x:X2}"))}");
-            //         var nextId = GetDictNextId();
-            //         SetDict(potentialNextWord, nextId);
-            //
-            //         var lastIndex = TryGetDict(_currentWord);
-            //         //_logger.LogError($"new word writing existing: {string.Join("", _currentWord.Select(x => $"{x:X2}"))}");
-            //         if (lastIndex == null)
-            //         {
-            //             throw new Exception("Last index missing");
-            //         }
-            //
-            //         WriteBytes(bytes, lastIndex.Value, _wordWidth);
-            //
-            //         if (nextId >= _wordMask)
-            //         {
-            //             _wordWidth += 1;
-            //             _wordMask <<= 1;
-            //             _wordMask |= 1;
-            //         }
-            //
-            //         if (_wordWidth > _maxWordWidth)
-            //         {
-            //             Reset();
-            //         }
-            //         
-            //         _currentWord = new List<byte>() { next };
-            //     }
-            // }
-            //
-            // var finalIndex = TryGetDict(_currentWord);
-            // if (finalIndex != null)
-            // {
-            //     WriteBytes(bytes, finalIndex.Value, _wordWidth);
-            // }
-            //
+            
+            var finalIndex = TryGetDict(_currentWord);
+            if (finalIndex != null)
+            {
+                WriteBytes(bytes, finalIndex.Value, _wordWidth);
+                //to test LZW without bit-shift
+                // testBytes.Add((byte)((finalIndex.Value >> 8) & 0xFF));
+                // testBytes.Add((byte)(finalIndex.Value & 0xFF));
+            }
+            
+            //to test LZW without bit-shift
+            // testBytes.ToArray().LogDebugFirstBytes(_logger, 10, 10);
+            
             var compressedBytes = bytes.Take(_offset + (_state > 0 ? 1 : 0)).ToArray();
 
             _logger.LogInformation($"Compressed from {_data.Length} bytes to {compressedBytes.Length}");

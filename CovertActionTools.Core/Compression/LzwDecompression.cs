@@ -113,6 +113,8 @@ namespace CovertActionTools.Core.Compression
             return value;
         }
 
+        //private List<byte> _testBytes = new();
+
         private byte ReadNext()
         {
             ushort index = 0;
@@ -124,6 +126,9 @@ namespace CovertActionTools.Core.Compression
             }
 
             index = ReadBytes(_wordWidth);
+            //to test LZW without bit-shift
+            // _testBytes.Add((byte)((index >> 8) & 0xFF));
+            // _testBytes.Add((byte)(index & 0xFF));
 
             List<byte> existingWord;
             var nextId = GetDictNextId();
@@ -149,6 +154,9 @@ namespace CovertActionTools.Core.Compression
             var word = GetDict(_prevIndex).ToList();
             word.Insert(0, _stack.Peek());
             SetDict(nextId, word);
+            //to test word creation
+            // _testBytes.Add((byte)((nextId >> 8) & 0xFF));
+            // _testBytes.Add((byte)(nextId & 0xFF));
 
             _prevIndex = index;
 
@@ -173,8 +181,9 @@ namespace CovertActionTools.Core.Compression
             using var writer = new BinaryWriter(memStream);
             
             uint rleCount = 0;
-            uint pixel = 0;
-            
+            byte pixel = 0;
+
+            //var testBytes = new List<byte>();
             for (var i = 0; i < length; i++)
             {
                 if (rleCount > 0)
@@ -184,6 +193,8 @@ namespace CovertActionTools.Core.Compression
                 else
                 {
                     var data = ReadNext();
+                    //to test RLE
+                    //testBytes.Add(data);
                     
                     //is it RLE?
                     if (data != 0x90)
@@ -196,6 +207,8 @@ namespace CovertActionTools.Core.Compression
                     {
                         //yes, check how many times
                         var repeat = ReadNext();
+                        //to test RLE
+                        //testBytes.Add(repeat);
 
                         if (repeat == 0)
                         {
@@ -213,11 +226,19 @@ namespace CovertActionTools.Core.Compression
                         }
                     }
                 }
-                
+
+                //to test pixel splitting
+                //testBytes.Add(pixel);
+
                 //each byte is actually two pixels one after the other
                 writer.Write((byte)(pixel & 0x0f));
                 writer.Write((byte)((pixel >> 4) & 0x0f));
             }
+            
+            //to test pixel splitting/RLE
+            //testBytes.ToArray().LogDebugFirstBytes(_logger, 10, 10);
+            //to test LZW without bit-shift
+            //_testBytes.ToArray().LogDebugFirstBytes(_logger, 10, 10);
 
             var decompressedBytes = memStream.ToArray();
             _logger.LogInformation($"Decompressed from {_data.Length} bytes to {decompressedBytes.Length}");

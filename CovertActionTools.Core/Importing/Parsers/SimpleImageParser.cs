@@ -64,6 +64,11 @@ namespace CovertActionTools.Core.Importing.Parsers
             {
                 var lzw = new LzwDecompression(_loggerFactory.CreateLogger(typeof(LzwDecompression)), lzwMaxWordWidth, imageCompressedData);
                 imageUncompressedData = lzw.Decompress(width * height);
+
+                var c = new LzwCompression(_loggerFactory.CreateLogger(typeof(LzwCompression)), lzwMaxWordWidth,
+                    imageUncompressedData);
+                var b = c.Compress();
+                _logger.LogError($"{rawData.Length} {b.Length}");
             }
             
             //the data is currently in VGA format, so convert to modern format
