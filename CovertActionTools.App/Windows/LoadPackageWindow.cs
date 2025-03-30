@@ -114,11 +114,9 @@ public class LoadPackageWindow : BaseWindow
             importStatus.Stage == ImportStatus.ImportStage.FatalError ||
             importStatus.Stage == ImportStatus.ImportStage.ImportDone)
         {
-            var now = DateTime.Now;
             if (importStatus.Errors.Count == 0)
             {
-                _mainEditorState.LoadedPackagePath = sourcePath;
-                _mainEditorState.LoadedPackage = _loadPackageState.Importer.GetImportedModel();
+                _mainEditorState.PackageWasLoaded(sourcePath!, _loadPackageState.Importer.GetImportedModel());
                 _loadPackageState.Show = false;
                 _loadPackageState.Run = false;
                 _loadPackageState.Importer = null;

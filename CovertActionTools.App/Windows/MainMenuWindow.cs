@@ -46,6 +46,7 @@ public class MainMenuWindow : BaseWindow
 
     private void DrawLoadedMenus()
     {
+        var packageModified = _mainEditorState.IsPackageModified();
         if (ImGui.BeginMenu("File"))
         {
             if (ImGui.MenuItem("Close Package"))
@@ -54,12 +55,9 @@ public class MainMenuWindow : BaseWindow
                 //TODO: close
             }
 
-            if (ImGui.MenuItem("Save Package"))
+            if (ImGui.MenuItem("Save Package", packageModified))
             {
-                _savePackageState.Show = true;
-                _savePackageState.Run = true;
-                _savePackageState.Exporter = _exporterFactory.Create();
-                _savePackageState.Exporter.StartExport(_mainEditorState.LoadedPackage!, _mainEditorState.LoadedPackagePath!);
+                SavePackage();
             }
 
             if (ImGui.MenuItem("Publish"))
@@ -69,6 +67,24 @@ public class MainMenuWindow : BaseWindow
             
             ImGui.EndMenu();
         }
+
+        if (packageModified)
+        {
+            if (ImGui.BeginMenu("Save Package"))
+            {
+                SavePackage();
+                
+                ImGui.EndMenu();
+            }
+        }
+    }
+
+    private void SavePackage()
+    {
+        _savePackageState.Show = true;
+        _savePackageState.Run = true;
+        _savePackageState.Exporter = _exporterFactory.Create();
+        _savePackageState.Exporter.StartExport(_mainEditorState.LoadedPackage!, _mainEditorState.LoadedPackagePath!);
     }
 
     private void DrawNotLoadedMenu()
