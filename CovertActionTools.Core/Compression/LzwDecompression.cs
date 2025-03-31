@@ -8,6 +8,13 @@ namespace CovertActionTools.Core.Compression
 {
     internal class LzwDecompression
     {
+        private const bool PrintDebugRawData = false;
+        private const bool PrintDebugMergedPixels = false;
+        private const bool PrintDebugRle = true;
+        private const bool PrintDebugLzw = true;
+        private static readonly string PrintDebugFolder = @"C:\Files\Projects\Decompiling\CovertAction\Original - Copy (2)\MPS\COVERT";
+        private static readonly HashSet<string> PrintDebugKeys = new HashSet<string>() { "BUGS" };
+        
         private readonly ILogger _logger;
         private readonly int _maxWordWidth;
         private readonly byte[] _data;
@@ -21,13 +28,20 @@ namespace CovertActionTools.Core.Compression
         private int _wordMask;
         private ushort _prevIndex;
         private byte _prevData;
-        
 
-        public LzwDecompression(ILogger logger, int maxWordWidth, byte[] data)
+        private readonly string _key;
+
+        private readonly List<byte> _rawBytes = new();
+        private readonly List<byte> _mergedBytes = new();
+        private readonly List<byte> _rleBytes = new();
+        private readonly List<byte> _lzwBytes = new();
+
+        public LzwDecompression(ILogger logger, int maxWordWidth, byte[] data, string key)
         {
             _logger = logger;
             _maxWordWidth = maxWordWidth;
             _data = data;
+            _key = key;
             _logger.LogInformation($"Starting decompression from {data.Length} bytes, max word width {maxWordWidth}");
 
             _offsetInBits = 0;
@@ -108,7 +122,12 @@ namespace CovertActionTools.Core.Compression
 
                 bitsReadSoFar += 1;
             }
-
+            
+            if (PrintDebugLzw)
+            {
+                _lzwBytes.Add((byte)((value >> 8) & 0xFF));
+                _lzwBytes.Add((byte)(value & 0xFF));
+            }
             return value;
         }
 
@@ -182,7 +201,11 @@ namespace CovertActionTools.Core.Compression
                 else
                 {
                     var data = ReadNext();
-                    
+                    if (PrintDebugRle)
+                    {
+                        _rleBytes.Add(data);
+                    }
+
                     //is it RLE?
                     if (data != 0x90)
                     {
@@ -193,6 +216,10 @@ namespace CovertActionTools.Core.Compression
                     {
                         //yes, check how many times
                         var repeat = ReadNext();
+                        if (PrintDebugRle)
+                        {
+                            _rleBytes.Add(repeat);
+                        }
 
                         if (repeat == 0)
                         {
@@ -214,7 +241,36 @@ namespace CovertActionTools.Core.Compression
                 //each byte is actually two pixels one after the other
                 writer.Write((byte)(pixel & 0x0f));
                 writer.Write((byte)((pixel >> 4) & 0x0f));
+                if (PrintDebugMergedPixels)
+                {
+                    _mergedBytes.Add((byte)pixel);
+                }
+                if (PrintDebugRawData)
+                {
+                    _rawBytes.Add((byte)(pixel & 0x0f));
+                    _rawBytes.Add((byte)((pixel >> 4) & 0x0f));
+                }
                 i += 1;
+            }
+
+            if (PrintDebugKeys.Contains(_key))
+            {
+                if (PrintDebugRawData)
+                {
+                    File.WriteAllBytes(Path.Combine(PrintDebugFolder, $"{_key}_decompress_raw.bin"), _rawBytes.ToArray());    
+                }
+                if (PrintDebugMergedPixels)
+                {
+                    File.WriteAllBytes(Path.Combine(PrintDebugFolder, $"{_key}_decompress_merged.bin"), _mergedBytes.ToArray());    
+                }
+                if (PrintDebugRle)
+                {
+                    File.WriteAllBytes(Path.Combine(PrintDebugFolder, $"{_key}_decompress_RLE.bin"), _rleBytes.ToArray());    
+                }
+                if (PrintDebugLzw)
+                {
+                    File.WriteAllBytes(Path.Combine(PrintDebugFolder, $"{_key}_decompress_LZW.bin"), _lzwBytes.ToArray());    
+                }
             }
             
             var decompressedBytes = memStream.ToArray();

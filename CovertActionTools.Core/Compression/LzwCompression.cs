@@ -8,6 +8,13 @@ namespace CovertActionTools.Core.Compression
 {
     public class LzwCompression
     {
+        private const bool PrintDebugRawData = false;
+        private const bool PrintDebugMergedPixels = false;
+        private const bool PrintDebugRle = true;
+        private const bool PrintDebugLzw = true;
+        private static readonly string PrintDebugFolder = @"C:\Files\Projects\Decompiling\CovertAction\Original - Copy (2)\MPS\COVERT";
+        private static readonly HashSet<string> PrintDebugKeys = new HashSet<string>() { "BUGS" };
+        
         private readonly ILogger _logger;
         private readonly int _maxWordWidth;
         private readonly byte[] _data;
@@ -21,11 +28,16 @@ namespace CovertActionTools.Core.Compression
         private int _wordMask;
         private List<byte> _currentWord = new();
 
-        public LzwCompression(ILogger logger, int maxWordWidth, byte[] data)
+        private readonly string _key;
+
+        private List<byte> _lzwBytes = new();
+
+        public LzwCompression(ILogger logger, int maxWordWidth, byte[] data, string key)
         {
             _logger = logger;
             _maxWordWidth = maxWordWidth;
             _data = data;
+            _key = key;
             _logger.LogInformation($"Starting compression from {data.Length} bytes, max word width {maxWordWidth}");
 
             _partial = 0;
@@ -37,6 +49,11 @@ namespace CovertActionTools.Core.Compression
         
         private void WriteBytes(byte[] bytes, int data, byte bitsToWrite)
         {
+            if (PrintDebugLzw)
+            {
+                _lzwBytes.Add((byte)((data >> 8) & 0xFF));
+                _lzwBytes.Add((byte)(data & 0xFF));
+            }
             _partial |= data << _bitOffset;
             _bitOffset += bitsToWrite;
             while (_bitOffset >= 8)
@@ -137,14 +154,6 @@ namespace CovertActionTools.Core.Compression
                    )
                 {
                     repeats++;
-                    continue;
-                }
-
-                if (i == duplicatedBytes.Length - 1)
-                {
-                    //if we're reaching the end, forcefully write the RLE end
-                    encodingWriter.Write((byte)0x90);
-                    encodingWriter.Write((byte)(repeats + 2));
                     continue;
                 }
 
@@ -281,6 +290,26 @@ namespace CovertActionTools.Core.Compression
             }
             
             var compressedBytes = bytes.Take(_byteOffset + (_bitOffset > 0 ? 1 : 0)).ToArray();
+            
+            if (PrintDebugKeys.Contains(_key))
+            {
+                if (PrintDebugRawData)
+                {
+                    File.WriteAllBytes(Path.Combine(PrintDebugFolder, $"{_key}_compress_raw.bin"), _data.ToArray());    
+                }
+                if (PrintDebugMergedPixels)
+                {
+                    File.WriteAllBytes(Path.Combine(PrintDebugFolder, $"{_key}_compress_merged.bin"), duplicatedBytes.ToArray());    
+                }
+                if (PrintDebugRle)
+                {
+                    File.WriteAllBytes(Path.Combine(PrintDebugFolder, $"{_key}_compress_RLE.bin"), encodingMemStream.ToArray());    
+                }
+                if (PrintDebugLzw)
+                {
+                    File.WriteAllBytes(Path.Combine(PrintDebugFolder, $"{_key}_compress_LZW.bin"), _lzwBytes.ToArray());    
+                }
+            }
 
             _logger.LogInformation($"Compressed from {_data.Length} bytes to {compressedBytes.Length}");
             return compressedBytes;

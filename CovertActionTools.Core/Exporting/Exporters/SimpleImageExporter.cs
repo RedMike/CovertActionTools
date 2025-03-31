@@ -85,7 +85,7 @@ namespace CovertActionTools.Core.Exporting.Exporters
             var imageData = image.RawVgaImageData;
 
             var compression = new LzwCompression(_loggerFactory.CreateLogger(typeof(LzwCompression)),
-                image.ExtraData.CompressionDictionaryWidth, imageData);
+                image.ExtraData.CompressionDictionaryWidth, imageData, image.Key);
             var imageBytes = compression.Compress();
 
             using var memStream = new MemoryStream();
