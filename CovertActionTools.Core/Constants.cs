@@ -5,27 +5,59 @@ namespace CovertActionTools.Core
 {
     internal class Constants
     {
+        /// <summary>
+        /// Color that is explicitly transparent
+        /// </summary>
         public static readonly (byte r, byte g, byte b, byte a) TransparentColor = (0, 0, 0, 0);
+
+        /// <summary>
+        /// Color that is used on particular sprites to replace enemy clothing colors (enemy allegiance)
+        /// Not applied automatically to all sprites, but decided by engine at sprite draw time.
+        /// </summary>
+        public const byte EnemyClothingColorId = 14;
+        /// <summary>
+        /// Color that is used on particular sprites to replace enemy clothing colors (enemy allegiance)
+        /// Not applied automatically to all sprites, but decided by engine at sprite draw time.
+        /// Legacy applies it to character sprites only, but includes the player; on map sprites it stays as-is.
+        /// </summary>
+        public static readonly (byte r, byte g, byte b, byte a) EnemyClothingColor = (0xFF, 0xFF, 0x55, 255);
+        
+        /// <summary>
+        /// Color that is used on particular sprites to replace player clothing colors (disguises)
+        /// Not applied automatically to all sprites, but decided by engine at sprite draw time.
+        /// Legacy applies it only to the big player sprite on the UI; on map sprites it becomes transparent!
+        /// </summary>
+        public const byte PlayerClothingColorId = 13;
+        /// <summary>
+        /// Color that is used on particular sprites to replace player clothing colors (disguises)
+        /// Not applied automatically to all sprites, but decided by engine at sprite draw time.
+        /// Legacy applies it only to the big player sprite on the UI; on map sprites it becomes transparent!
+        /// </summary>
+        public static readonly (byte r, byte g, byte b, byte a) PlayerClothingColor = (0xFF, 0x55, 0xFF, 255);
+        
+        
+        //wire tap active lines take effect on wire tap line sprites _and_ others symbols (plain palette shift)
+        //
         
         //VGA palette, with colour index 5 replaced with plain black at full alpha
         public static readonly Dictionary<byte, (byte r, byte g, byte b, byte a)> VgaColorMapping = new()
         {
             {0, TransparentColor},
-            {1, (0, 0, 0xAA, 255)},
-            {2, (0, 0xAA, 0, 255)},
-            {3, (0, 0xAA, 0xAA, 255)},
-            {4, (0xAA, 0, 0, 255)},
-            {5, (0, 0, 0, 255)},
+            {1, (0, 0, 0xAA, 255)}, //char sprite backgrounds where unused?
+            {2, (0, 0xAA, 0, 255)}, //wire tap background
+            {3, (0, 0xAA, 0xAA, 255)}, //wire tap background grid
+            {4, (0xAA, 0, 0, 255)}, //wire tap active line 1
+            {5, (0, 0, 0, 255)}, //wire tap active line 3
             {6, (0xAA, 0x55, 0, 255)},
-            {7, (0xAA, 0xAA, 0xAA, 255)},
-            {8, (0x55, 0x55, 0x55, 255)},
-            {9, (0x55, 0x55, 0xFF, 255)},
-            {10, (0x55, 0xFF, 0x55, 255)},
-            {11, (0x55, 0xFF, 0xFF, 255)},
-            {12, (0xFF, 0x55, 0x55, 255)},
-            {13, (0xFF, 0x55, 0xFF, 255)},
-            {14, (0xFF, 0xFF, 0x55, 255)},
-            {15, (0xFF, 0xFF, 0xFF, 255)},
+            {7, (0xAA, 0xAA, 0xAA, 255)}, //wire tap chip highlight
+            {8, (0x55, 0x55, 0x55, 255)}, //wire tap chip/locked
+            {9, (0x55, 0x55, 0xFF, 255)}, //char sprite separators(?), wire tap right connectors, wire tap symbols 2
+            {10, (0x55, 0xFF, 0x55, 255)}, //wire tap lines
+            {11, (0x55, 0xFF, 0xFF, 255)}, //wire tap symbols
+            {12, (0xFF, 0x55, 0x55, 255)}, //wire tap active line 2
+            {PlayerClothingColorId, PlayerClothingColor}, //wire tap active line 4
+            {EnemyClothingColorId, EnemyClothingColor},
+            {15, (0xFF, 0xFF, 0xFF, 255)}, //wire tap left connectors
         };
         
         //Reduced CGA palette, no 'transparent' colour because that comes from the VGA palette
