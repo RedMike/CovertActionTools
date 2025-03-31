@@ -9,6 +9,7 @@ namespace CovertActionTools.Core.Importing
             Unknown = -1,
             ReadingIndex = 0,
             ProcessingSimpleImages = 10,
+            ProcessingCrimes = 20,
             ImportDone = 100,
             
             FatalError = 999999,

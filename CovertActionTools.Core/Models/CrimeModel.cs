@@ -35,7 +35,7 @@ namespace CovertActionTools.Core.Models
             public int Exposure { get; set; }
             /// <summary>
             /// Printed role
-            /// Legacy limited to 16 chars
+            /// Legacy limited to 32 chars
             /// </summary>
             public string Role { get; set; } = string.Empty;
             /// <summary>
@@ -60,6 +60,10 @@ namespace CovertActionTools.Core.Models
             /// ?
             /// </summary>
             public int Unknown3 { get; set; }
+            /// <summary>
+            /// ?
+            /// </summary>
+            public int Unknown4 { get; set; }
         }
 
         public class Event
@@ -69,13 +73,13 @@ namespace CovertActionTools.Core.Models
 
             /// <summary>
             /// Printed description
-            /// Legacy limited to 16 chars
+            /// Legacy limited to 32 chars
             /// </summary>
             public string Description { get; set; } = string.Empty;
             /// <summary>
-            /// 0 for non-participant
+            /// Null for non-participant
             /// </summary>
-            public int TargetParticipantId { get; set; }
+            public int? TargetParticipantId { get; set; }
 
             public EventType EventType { get; set; } = EventType.Unknown;
             public List<int> ReceivedObjectIds { get; set; } = new();
@@ -90,7 +94,7 @@ namespace CovertActionTools.Core.Models
         {
             /// <summary>
             /// Printed name
-            /// Legacy limited to 16 chars
+            /// Legacy limited to 32 chars
             /// </summary>
             public string Name { get; set; } = string.Empty;
             /// <summary>
@@ -99,5 +103,9 @@ namespace CovertActionTools.Core.Models
             /// </summary>
             public int PictureId { get; set; }
         }
+
+        public List<Participant> Participants { get; set; } = new();
+        public List<Event> Events { get; set; } = new();
+        public List<Object> Objects { get; set; } = new();
     }
 }

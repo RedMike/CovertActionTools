@@ -9,6 +9,7 @@ namespace CovertActionTools.Core.Models
     public class PackageModel
     {
         public Dictionary<string, SimpleImageModel> SimpleImages { get; set; } = new();
+        public Dictionary<string, CrimeModel> Crimes { get; set; } = new();
 
         public bool IsModified(PackageModel other)
         {
