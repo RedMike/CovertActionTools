@@ -10,10 +10,13 @@ namespace CovertActionTools.Core.Compression
     {
         private const bool PrintDebugRawData = false;
         private const bool PrintDebugMergedPixels = false;
-        private const bool PrintDebugRle = true;
-        private const bool PrintDebugLzw = true;
-        private static readonly string PrintDebugFolder = @"C:\Files\Projects\Decompiling\CovertAction\Original - Copy (2)\MPS\COVERT";
-        private static readonly HashSet<string> PrintDebugKeys = new HashSet<string>() { "BUGS" };
+        private const bool PrintDebugRle = false;
+        private const bool PrintDebugLzw = false;
+
+        private const bool LogDebugLzwFirstDict = false;
+        
+        private static readonly string PrintDebugFolder = @"";
+        private static readonly HashSet<string> PrintDebugKeys = new HashSet<string>() { };
         
         private readonly ILogger _logger;
         private readonly int _maxWordWidth;
@@ -87,6 +90,11 @@ namespace CovertActionTools.Core.Compression
             {
                 return null;
             }
+            //bug in their implementation, 0x100 is never actually used
+            if (index == 0x100)
+            {
+                return null;
+            }
 
             return index;
         }
@@ -99,7 +107,8 @@ namespace CovertActionTools.Core.Compression
             }
             
             var s = string.Join("", word.Select(x => $"{x:X2}"));
-            if (_dict.ContainsKey(s))
+            //bug in their implementation, 0x100 is never actually used
+            if (_dict.TryGetValue(s, out var potentialIndex) && potentialIndex != 0x100)
             {
                 throw new Exception($"Found duplicate value for {s}");
             }
@@ -237,7 +246,15 @@ namespace CovertActionTools.Core.Compression
                 if (first)
                 {
                     //we add this fake first entry
-                    SetDict(new List<byte>() { 0, next }, GetDictNextId());
+                    var id = GetDictNextId();
+                    var tempBytes = new List<byte>() { 0, next };
+                    SetDict(tempBytes, id);
+                    if (LogDebugLzwFirstDict && _logger.IsEnabled(LogLevel.Debug))
+                    {
+                        var reversedWord = tempBytes;
+                        reversedWord.Reverse();
+                        _logger.LogDebug($"Dict word {id:X4} at offset {_byteOffset} {_bitOffset}: {string.Join("", reversedWord.Select(x => $"{x:X2}"))}");
+                    }
                     first = false;
                 }
                 
@@ -265,15 +282,34 @@ namespace CovertActionTools.Core.Compression
                     
                     WriteBytes(bytes, lastIndex.Value, _wordWidth);
                     
+                    if (LogDebugLzwFirstDict && nextId < 0x105)
+                    {
+                        if (_logger.IsEnabled(LogLevel.Debug))
+                        {
+                            var reversedWord = potentialNextWord.ToList();
+                            reversedWord.Reverse();
+                            _logger.LogDebug($"Dict word {nextId:X4} at offset {_byteOffset} {_bitOffset}: {string.Join("", reversedWord.Select(x => $"{x:X2}"))}");
+                        }
+                    }
+                    
                     _currentWord = new List<byte>() { next };
                     if (nextId > _wordMask)
                     {
+                        if (_logger.IsEnabled(LogLevel.Debug))
+                        {
+                            _logger.LogDebug($"Increasing word width to {_wordWidth} at offset {_byteOffset} {_bitOffset}");
+                        }
                         _wordWidth += 1;
                         _wordMask <<= 1;
                         _wordMask |= 1;
                     }
                     if (_wordWidth > _maxWordWidth)
                     {
+                        if (_logger.IsEnabled(LogLevel.Debug))
+                        {
+                            _logger.LogDebug($"Resetting dictionary at offset {_byteOffset} {_bitOffset}");
+                        }
+
                         Reset();
                         first = true;
                         _currentWord = new List<byte>() { };

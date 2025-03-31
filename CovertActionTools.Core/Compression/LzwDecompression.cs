@@ -10,17 +10,20 @@ namespace CovertActionTools.Core.Compression
     {
         private const bool PrintDebugRawData = false;
         private const bool PrintDebugMergedPixels = false;
-        private const bool PrintDebugRle = true;
-        private const bool PrintDebugLzw = true;
-        private static readonly string PrintDebugFolder = @"C:\Files\Projects\Decompiling\CovertAction\Original - Copy (2)\MPS\COVERT";
-        private static readonly HashSet<string> PrintDebugKeys = new HashSet<string>() { "BUGS" };
+        private const bool PrintDebugRle = false;
+        private const bool PrintDebugLzw = false;
+
+        private const bool LogDebugLzwFirstDict = false;
+        
+        private static readonly string PrintDebugFolder = @"";
+        private static readonly HashSet<string> PrintDebugKeys = new HashSet<string>() { };
         
         private readonly ILogger _logger;
         private readonly int _maxWordWidth;
         private readonly byte[] _data;
 
-        private int _offsetInBits;
-        private int _offsetInBytes;
+        private int _bitOffset;
+        private int _byteOffset;
         
         private readonly Dictionary<ushort, List<byte>> _dict = new();
         private readonly Stack<byte> _stack = new();
@@ -44,8 +47,8 @@ namespace CovertActionTools.Core.Compression
             _key = key;
             _logger.LogInformation($"Starting decompression from {data.Length} bytes, max word width {maxWordWidth}");
 
-            _offsetInBits = 0;
-            _offsetInBytes = 0;
+            _bitOffset = 0;
+            _byteOffset = 0;
             
             _stack.Clear();
             Reset();
@@ -106,18 +109,18 @@ namespace CovertActionTools.Core.Compression
             {
                 value = (ushort)(((short)value) >> 1); //we want arithmetic shift
 
-                byte data = _data[_offsetInBytes];
-                if ((data & (1 << _offsetInBits)) != 0)
+                byte data = _data[_byteOffset];
+                if ((data & (1 << _bitOffset)) != 0)
                 {
                     value = (ushort)(value | 1 << (bitsToRead - 1));
                 }
 
-                _offsetInBits += 1;
+                _bitOffset += 1;
 
-                if (_offsetInBits == 8)
+                if (_bitOffset == 8)
                 {
-                    _offsetInBits = 0;
-                    _offsetInBytes += 1;
+                    _bitOffset = 0;
+                    _byteOffset += 1;
                 }
 
                 bitsReadSoFar += 1;
@@ -166,12 +169,24 @@ namespace CovertActionTools.Core.Compression
             //and make a new word of the previous word plus the first character of the current word (or previous if new index)
             var word = GetDict(_prevIndex).ToList();
             word.Insert(0, _stack.Peek());
+            
             SetDict(nextId, word);
+            if (LogDebugLzwFirstDict && nextId < 0x105)
+            {
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug($"Dict word {nextId:X4} at offset {_byteOffset} {_bitOffset}: {string.Join("", word.Select(x => $"{x:X2}"))}");
+                }
+            }
 
             _prevIndex = index;
             //if we've reached the limit of X bit indexes, increase by 1 bit
             if (nextId >= _wordMask)
             {
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug($"Increasing word width to {_wordWidth} at offset {_byteOffset} {_bitOffset}");
+                }
                 _wordWidth += 1;
                 _wordMask <<= 1;
                 _wordMask |= 1;
@@ -179,6 +194,10 @@ namespace CovertActionTools.Core.Compression
 
             if (_wordWidth > _maxWordWidth)
             {
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug($"Resetting dictionary at offset {_byteOffset} {_bitOffset}");
+                }
                 Reset();
             }
             return ReadNext(); //recurse, we have something in the stack already
