@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
 
@@ -11,7 +12,7 @@ namespace CovertActionTools.Core.Importing.Parsers
         CrimeModel Parse(string key, byte[] rawData);
     }
     
-    public class LegacyCrimeParser : ILegacyCrimeParser
+    internal class LegacyCrimeParser : ILegacyCrimeParser
     {
         private readonly ILogger<LegacyCrimeParser> _logger;
 
@@ -31,9 +32,12 @@ namespace CovertActionTools.Core.Importing.Parsers
             var participants = ReadParticipants(key, reader, participantCount);
             var events = ReadEvents(key, reader, eventCount);
             var objects = ReadObjects(key, reader);
+
+            var id = int.Parse(key.Replace("CRIME", "").Replace(".DTA", ""));
             
             return new CrimeModel()
             {
+                Id = id,
                 Participants = participants,
                 Events = events,
                 Objects = objects
@@ -63,7 +67,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                 role = role.Trim();
 
                 var unknown1 = reader.ReadUInt16();
-                var mastermind = reader.ReadByte() != 0x00;
+                var unknown5 = reader.ReadUInt16();
                 var unknown2 = reader.ReadByte();
 
                 var clueType = (CrimeModel.ClueType)(int)reader.ReadUInt16();
@@ -71,14 +75,14 @@ namespace CovertActionTools.Core.Importing.Parsers
                 var rank = reader.ReadUInt16();
 
                 var unknown3 = reader.ReadUInt16();
-                var unknown4 = reader.ReadUInt16();
+                var unknown4 = reader.ReadByte();
                 
                 participants.Add(new CrimeModel.Participant()
                 {
                     Exposure = exposure,
                     Role = role,
                     Unknown1 = unknown1,
-                    Mastermind = mastermind,
+                    Unknown5 = unknown5,
                     Unknown2 = unknown2,
                     ClueType = clueType,
                     Rank = rank,
@@ -118,7 +122,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                 var type = (CrimeModel.EventType)(int)reader.ReadByte();
 
                 var receivedObjectBitmask = reader.ReadByte();
-                List<int> receivedObjects = new();
+                HashSet<int> receivedObjects = new();
                 for (var j = 0; j < 8; j++)
                 {
                     if ((receivedObjectBitmask & 0x1) == 1)
@@ -130,7 +134,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                 }
                 
                 var destroyedObjectBitmask = reader.ReadByte();
-                List<int> destroyedObjects = new();
+                HashSet<int> destroyedObjects = new();
                 for (var j = 0; j < 8; j++)
                 {
                     if ((destroyedObjectBitmask & 0x1) == 1)
@@ -163,12 +167,9 @@ namespace CovertActionTools.Core.Importing.Parsers
         {
             var objects = new List<CrimeModel.Object>();
 
-            for (var i = 0; i < 8; i++)
+            //always exactly 4 objects, but some are blank
+            for (var i = 0; i < 4; i++)
             {
-                if (reader.BaseStream.Position > reader.BaseStream.Length - 20)
-                {
-                    break;
-                }
                 var name = "";
                 for (var j = 0; j < 16; j++)
                 {
@@ -181,6 +182,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                 if (pictureId == 0xFF)
                 {
                     //it's not a real item
+                    reader.ReadByte();
                     continue;
                 }
 

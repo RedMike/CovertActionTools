@@ -43,9 +43,13 @@ namespace CovertActionTools.Core.Models
             /// </summary>
             public int Unknown1 { get; set; }
             /// <summary>
+            /// ?
+            /// </summary>
+            public int Unknown5 { get; set; }
+            /// <summary>
             /// Only one mastermind per crime
             /// </summary>
-            public bool Mastermind { get; set; }
+            public bool Mastermind => Unknown5 == (ushort)0x0001;
             /// <summary>
             /// ?
             /// </summary>
@@ -82,8 +86,8 @@ namespace CovertActionTools.Core.Models
             public int? TargetParticipantId { get; set; }
 
             public EventType EventType { get; set; } = EventType.Unknown;
-            public List<int> ReceivedObjectIds { get; set; } = new();
-            public List<int> DestroyedObjectIds { get; set; } = new();
+            public HashSet<int> ReceivedObjectIds { get; set; } = new();
+            public HashSet<int> DestroyedObjectIds { get; set; } = new();
             /// <summary>
             /// Only used for scoring
             /// </summary>
@@ -104,6 +108,7 @@ namespace CovertActionTools.Core.Models
             public int PictureId { get; set; }
         }
 
+        public int Id { get; set; }
         public List<Participant> Participants { get; set; } = new();
         public List<Event> Events { get; set; } = new();
         public List<Object> Objects { get; set; } = new();

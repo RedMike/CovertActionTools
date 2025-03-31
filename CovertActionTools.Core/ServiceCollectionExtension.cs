@@ -19,6 +19,7 @@ namespace CovertActionTools.Core
             services.AddSingleton<ILegacyCrimeParser, LegacyCrimeParser>();
             services.AddSingleton<ISimpleImageImporter, SimpleImageImporter>();
             services.AddSingleton<ISimpleImageExporter, SimpleImageExporter>();
+            services.AddSingleton<ICrimeExporter, CrimeExporter>();
             
             services.AddTransient<LegacyFolderImporter>();
             services.AddTransient<IImporter, PackageImporter>();

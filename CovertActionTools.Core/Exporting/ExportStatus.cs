@@ -9,6 +9,7 @@ namespace CovertActionTools.Core.Exporting
             Unknown = -1,
             Preparing = 0,
             ProcessingSimpleImages = 10,
+            ProcessingCrimes = 20,
             ExportDone = 100,
             
             FatalError = 999999,

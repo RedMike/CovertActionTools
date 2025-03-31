@@ -19,11 +19,13 @@ namespace CovertActionTools.Core.Exporting
     {
         private readonly ILogger<PackageExporter> _logger;
         private readonly ISimpleImageExporter _simpleImageExporter;
+        private readonly ICrimeExporter _crimeExporter;
 
-        public PackageExporter(ILogger<PackageExporter> logger, ISimpleImageExporter simpleImageExporter)
+        public PackageExporter(ILogger<PackageExporter> logger, ISimpleImageExporter simpleImageExporter, ICrimeExporter crimeExporter)
         {
             _logger = logger;
             _simpleImageExporter = simpleImageExporter;
+            _crimeExporter = crimeExporter;
         }
         
         private bool _exporting = false; //only one export at a time
@@ -36,6 +38,8 @@ namespace CovertActionTools.Core.Exporting
         private List<string> _errors = new List<string>();
         private List<string> _simpleImagesToWrite = new List<string>();
         private List<string> _simpleImagesWritten = new List<string>();
+        private List<string> _crimesToWrite = new List<string>();
+        private List<string> _crimesWritten = new List<string>();
 
         private Task? _exportTask = null;
 
@@ -92,6 +96,9 @@ namespace CovertActionTools.Core.Exporting
                 case ExportStatus.ExportStage.ProcessingSimpleImages:
                     msg = $"Processing simple images ({_simpleImagesWritten.Count}/{_simpleImagesToWrite.Count})";
                     break;
+                case ExportStatus.ExportStage.ProcessingCrimes:
+                    msg = $"Processing crimes ({_crimesWritten.Count}/{_crimesToWrite.Count})";
+                    break;
                 case ExportStatus.ExportStage.ExportDone:
                     msg = "Done";
                     break;
@@ -124,7 +131,11 @@ namespace CovertActionTools.Core.Exporting
 
                 _simpleImagesToWrite = _package.SimpleImages.Keys.OrderBy(x => x).ToList();
                 _simpleImagesWritten = new List<string>();
-                _logger.LogInformation($"Index: {_simpleImagesToWrite.Count} images, ...");
+
+                _crimesToWrite = _package.Crimes.Keys.OrderBy(x => x).ToList();
+                _crimesWritten = new List<string>();
+                
+                _logger.LogInformation($"Index: {_simpleImagesToWrite.Count} images, {_crimesToWrite.Count} crimes, ...");
                 await Task.Yield();
 
                 _currentStage = ExportStatus.ExportStage.ProcessingSimpleImages;
@@ -153,6 +164,33 @@ namespace CovertActionTools.Core.Exporting
                     }
                 }
                 
+                
+                _currentStage = ExportStatus.ExportStage.ProcessingCrimes;
+                _currentItemsCount = _crimesToWrite.Count;
+                await Task.Yield();
+                foreach (var crimeKey in _crimesToWrite)
+                {
+                    var crime = _package.Crimes[crimeKey];
+                    try
+                    {
+                        var files = _crimeExporter.Export(crime);
+                        foreach (var pair in files)
+                        {
+                            var (fileName, bytes) = (pair.Key, pair.Value);
+                            File.WriteAllBytes(Path.Combine(_destinationPath, fileName), bytes);
+                            _logger.LogInformation($"Wrote crime: {fileName} {bytes.Length}");
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        //individual crime failures don't crash the entire export
+                        _logger.LogError($"Error processing crime: {crimeKey} {e}");
+                        var newErrors = _errors.ToList();
+                        newErrors.Add($"Crime {crimeKey}: {e}");
+                        _errors = newErrors;
+                    }
+                }
+                
                 _currentStage = ExportStatus.ExportStage.ExportDone;
                 await Task.Yield();
             }
@@ -166,7 +204,7 @@ namespace CovertActionTools.Core.Exporting
                 _currentStage = ExportStatus.ExportStage.ExportDone;
             }
             
-            _logger.LogInformation($"Export done: {_package.SimpleImages.Count} images, ...");
+            _logger.LogInformation($"Export done: {_package.SimpleImages.Count} images, {_package.Crimes.Count} crimes, ...");
         }
     }
 }
