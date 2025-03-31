@@ -37,7 +37,10 @@ namespace CovertActionTools.Core
         
         
         //wire tap active lines take effect on wire tap line sprites _and_ others symbols (plain palette shift)
-        //
+        //wire tap background colour does not matter
+        //wire tap background grid colour does not matter
+        //wire tap line colour on outside of chip area is used to actually follow the trace...but the actual wires
+        //  that are active from the first chip don't match
         
         //VGA palette, with colour index 5 replaced with plain black at full alpha
         public static readonly Dictionary<byte, (byte r, byte g, byte b, byte a)> VgaColorMapping = new()
