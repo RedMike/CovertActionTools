@@ -67,6 +67,22 @@ public class SelectedSimpleImageWindow : BaseWindow
 
     private void DrawImageWindow(PackageModel model, SimpleImageModel image)
     {
+        var type = image.ExtraData.Type.ToString();
+        var types = Enum.GetValues<SimpleImageModel.ImageType>()
+            .OrderBy(x => (int)x)
+            .Select(x => $"{x}")
+            .ToArray();
+        var index = types.ToList().FindIndex(x => x == type);
+        var origIndex = index;
+        ImGui.SetNextItemWidth(300.0f);
+        ImGui.Combo("Type", ref index, types, types.Length);
+        if (origIndex != index)
+        {
+            var newTypeString = types[index];
+            var newType = Enum.Parse<SimpleImageModel.ImageType>(newTypeString);
+            image.ExtraData.Type = newType;
+        }
+        
         //TODO: keep a pending model and have a save button?
         
         var origKey = image.Key;

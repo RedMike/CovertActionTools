@@ -105,6 +105,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                 ExtraData = new SimpleImageModel.Metadata()
                 {
                     //for legacy images, we populate data from the legacy info
+                    Type = Constants.GetLikelyImageType(key),
                     Name = key,
                     Width = width,
                     Height = height,

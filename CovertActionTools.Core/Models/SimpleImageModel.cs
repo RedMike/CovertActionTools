@@ -5,12 +5,42 @@ namespace CovertActionTools.Core.Models
 {
     public class SimpleImageModel
     {
+        public enum ImageType
+        {
+            Unknown = -1,
+            QuitScreen = 0,
+            EuropeMap = 1, //right side menu
+            AfricaMap = 2, //right side menu
+            AmericaMap = 3, //right side menu
+            WireTapBoard = 4, 
+            WireTapSprites = 5,
+            CarScreen = 6, //selection colours
+            CarSprites = 7, //sprite sheet
+            EquipScreenBase = 8,
+            EquipScreenSprites = 9, //sprite sheet
+            FaceSprites = 10, //sprite sheeet
+            GenderSelect = 11, //centre menu
+            OutdoorTerrain = 12, //sprite sheet, no interactables
+            IndoorTerrain = 13, //sprite sheet
+            Hotel = 15, //menu top-left
+            Icons = 16, //sprite sheet
+            TransitionScreen = 17, 
+            CombatSprites = 18, //sprite sheet
+            CarViewScreen = 19, //sprite sheet
+            TrainingScreen = 20, //menu top
+        }
+        
         public class Metadata
         {
             /// <summary>
             /// Actual name separate from key/filename, for development
             /// </summary>
             public string Name { get; set; } = string.Empty;
+
+            /// <summary>
+            /// Type of image, mainly to correctly highlight areas on the editor
+            /// </summary>
+            public ImageType Type { get; set; } = ImageType.Unknown;
             /// <summary>
             /// Actual width/height, only modern images are saved in actual size
             /// </summary>

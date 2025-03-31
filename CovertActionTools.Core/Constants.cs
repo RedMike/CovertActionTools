@@ -1,10 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using CovertActionTools.Core.Models;
 
 namespace CovertActionTools.Core
 {
     internal class Constants
     {
+        #region Colors
         /// <summary>
         /// Color that is explicitly transparent
         /// </summary>
@@ -74,5 +76,110 @@ namespace CovertActionTools.Core
 
         public static readonly Dictionary<(byte r, byte g, byte b, byte a), byte> ReverseVgaColorMapping =
             VgaColorMapping.ToDictionary(x => x.Value, x => x.Key);
+        #endregion
+        
+        #region Filenames
+        public static SimpleImageModel.ImageType GetLikelyImageType(string fileName)
+        {
+            if (fileName.StartsWith("AD"))
+            {
+                return SimpleImageModel.ImageType.QuitScreen;
+            }
+
+            if (fileName.StartsWith("EUROPE"))
+            {
+                return SimpleImageModel.ImageType.EuropeMap;
+            }
+            if (fileName.StartsWith("AFRICA"))
+            {
+                return SimpleImageModel.ImageType.AfricaMap;
+            }
+            if (fileName.StartsWith("CENTRAL"))
+            {
+                return SimpleImageModel.ImageType.AmericaMap;
+            }
+
+            if (fileName.StartsWith("BOARD"))
+            {
+                return SimpleImageModel.ImageType.WireTapBoard;
+            }
+
+            if (fileName.StartsWith("BUGS"))
+            {
+                return SimpleImageModel.ImageType.WireTapSprites;
+            }
+
+            if (fileName.StartsWith("CARS"))
+            {
+                return SimpleImageModel.ImageType.CarScreen;
+            }
+            if (fileName.StartsWith("CHASE"))
+            {
+                return SimpleImageModel.ImageType.CarSprites;
+            }
+
+            if (fileName.StartsWith("EQUIP1"))
+            {
+                return SimpleImageModel.ImageType.EquipScreenBase;
+            }
+
+            if (fileName.StartsWith("EQUIP2"))
+            {
+                return SimpleImageModel.ImageType.EquipScreenSprites;
+            }
+
+            if (fileName.StartsWith("FACES"))
+            {
+                return SimpleImageModel.ImageType.FaceSprites;
+            }
+
+            if (fileName.StartsWith("GENDER"))
+            {
+                return SimpleImageModel.ImageType.GenderSelect;
+            }
+
+            if (fileName.StartsWith("GUYS2"))
+            {
+                return SimpleImageModel.ImageType.OutdoorTerrain;
+            }
+
+            if (fileName.StartsWith("GUYS3"))
+            {
+                return SimpleImageModel.ImageType.IndoorTerrain;
+            }
+
+            if (fileName.StartsWith("HOTEL"))
+            {
+                return SimpleImageModel.ImageType.Hotel;
+            }
+
+            if (fileName.StartsWith("ICONS"))
+            {
+                return SimpleImageModel.ImageType.Icons;
+            }
+
+            if (fileName.StartsWith("LABS") || fileName.StartsWith("SNEAKIN") || fileName.StartsWith("WIRETAP"))
+            {
+                return SimpleImageModel.ImageType.TransitionScreen;
+            }
+
+            if (fileName.StartsWith("SPRITES"))
+            {
+                return SimpleImageModel.ImageType.CombatSprites;
+            }
+
+            if (fileName.StartsWith("STREET"))
+            {
+                return SimpleImageModel.ImageType.CarViewScreen;
+            }
+
+            if (fileName.StartsWith("TRAINING"))
+            {
+                return SimpleImageModel.ImageType.TrainingScreen;
+            }
+
+            return SimpleImageModel.ImageType.Unknown;
+        }
+        #endregion
     }
 }
