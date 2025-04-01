@@ -13,6 +13,7 @@ public class RenderWindow : IDisposable
         Unknown = 0,
         Primitive = 1,
         Image = 2,
+        Icon = 3,
     }
     private static readonly Vector3 ClearColor = new Vector3(0.3f, 0.45f, 0.7f);
 

@@ -142,7 +142,7 @@ namespace CovertActionTools.Core.Models
         {
             /// <summary>
             /// Printed name
-            /// Legacy limited to 32 chars
+            /// Legacy limited to 16 chars
             /// </summary>
             public string Name { get; set; } = string.Empty;
             /// <summary>

@@ -128,6 +128,24 @@ public class SelectedCrimeWindow : BaseWindow
                 ImGui.Text("");
             }
         }
+        
+        if (ImGui.CollapsingHeader("Objects"))
+        {
+            if (crime.Objects.Count < 4)
+            {
+                if (ImGui.Button("Add Object"))
+                {
+                    crime.Objects.Add(new CrimeModel.Object());
+                }
+
+                ImGui.Text("");
+            }
+            
+            for (var i = 0; i < crime.Objects.Count; i++)
+            {
+                DrawObject(model, crime, i);
+            }
+        }
     }
 
     private void DrawParticipant(PackageModel model, CrimeModel crime, int i)
@@ -319,6 +337,61 @@ public class SelectedCrimeWindow : BaseWindow
             //TODO: change
         }
         
+        ImGui.EndChild();
+    }
+
+    private void DrawObject(PackageModel model, CrimeModel crime, int i)
+    {
+        var windowSize = ImGui.GetContentRegionAvail();
+        var obj = crime.Objects[i];
+        ImGui.BeginChild($"Object {i}", new Vector2(windowSize.X, 35.0f), true);
+        ImGui.SetNextItemWidth(150.0f);
+        var name = obj.Name;
+        var origName = name;
+        ImGui.InputText("Name", ref name, 16);
+        if (name != origName)
+        {
+            obj.Name = name;
+        }
+        
+        ImGui.SameLine();
+        ImGui.Text("  ");
+        ImGui.SameLine();
+        
+        
+        ImGui.SetNextItemWidth(150.0f);
+        var pictureId = obj.PictureId;
+        var origPictureId = pictureId;
+        ImGui.InputInt("Icon", ref pictureId);
+        if (pictureId != origPictureId && pictureId >= 0 && pictureId < 16)
+        {
+            obj.PictureId = pictureId;
+        }
+        
+        if (model.SimpleImages.TryGetValue("ICONS", out var iconImage))
+        {
+            ImGui.SameLine();
+            ImGui.Text("  ");
+            ImGui.SameLine();
+            
+            var iconImageId = $"icon_{pictureId}";
+            var iconBytes = new List<byte>();
+            var ox = 16 * pictureId;
+            for (var y = 0; y < 16; y++)
+            {
+                for (var x = 0; x < 16; x++)
+                {
+                    iconBytes.Add(iconImage.VgaImageData[(y * iconImage.Width + ox + x) * 4 + 0]);
+                    iconBytes.Add(iconImage.VgaImageData[(y * iconImage.Width + ox + x) * 4 + 1]);
+                    iconBytes.Add(iconImage.VgaImageData[(y * iconImage.Width + ox + x) * 4 + 2]);
+                    iconBytes.Add(iconImage.VgaImageData[(y * iconImage.Width + ox + x) * 4 + 3]);
+                }
+            }
+
+            var texture = _renderWindow.RenderImage(RenderWindow.RenderType.Icon, iconImageId, 16, 16, iconBytes.ToArray());
+
+            ImGui.Image(texture, new Vector2(16, 16));
+        }
         ImGui.EndChild();
     }
 }
