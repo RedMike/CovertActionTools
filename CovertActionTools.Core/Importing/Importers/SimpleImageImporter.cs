@@ -77,7 +77,7 @@ namespace CovertActionTools.Core.Importing.Importers
 
         private SimpleImageModel.Metadata ReadMetadata(string path, string filename)
         {
-            var filePath = Path.Combine(path, $"{filename}.json");
+            var filePath = Path.Combine(path, $"{filename}_image.json");
             if (!File.Exists(filePath))
             {
                 throw new Exception($"Missing JSON file: {filename}");

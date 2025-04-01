@@ -26,6 +26,19 @@ namespace CovertActionTools.Core.Models
             WasMetBy = 9, //must happen with 8
             Crime = 20, //major crime
         }
+
+        public class Metadata
+        {
+            /// <summary>
+            /// Actual name separate from key/filename, for development
+            /// </summary>
+            public string Name { get; set; } = string.Empty;
+            
+            /// <summary>
+            /// Arbitrary comment, for development
+            /// </summary>
+            public string Comment { get; set; } = string.Empty;
+        }
         
         public class Participant
         {
@@ -112,5 +125,6 @@ namespace CovertActionTools.Core.Models
         public List<Participant> Participants { get; set; } = new();
         public List<Event> Events { get; set; } = new();
         public List<Object> Objects { get; set; } = new();
+        public Metadata ExtraData { get; set; } = new();
     }
 }

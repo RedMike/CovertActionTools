@@ -13,6 +13,7 @@ namespace CovertActionTools.Core.Importing
     {
         private readonly ILogger<PackageImporter> _logger;
         private readonly ISimpleImageImporter _simpleImageImporter;
+        private readonly ICrimeImporter _crimeImporter;
         
         private bool _importing = false; //only one import at a time
         private string _sourcePath = string.Empty;
@@ -23,13 +24,16 @@ namespace CovertActionTools.Core.Importing
         private List<string> _errors = new List<string>();
         private List<string> _simpleImagesToRead = new List<string>();
         private List<string> _simpleImagesRead = new List<string>();
+        private List<string> _crimesToRead = new List<string>();
+        private List<string> _crimesRead = new List<string>();
 
         private Task<PackageModel?>? _importTask = null;
 
-        public PackageImporter(ILogger<PackageImporter> logger, ISimpleImageImporter simpleImageImporter)
+        public PackageImporter(ILogger<PackageImporter> logger, ISimpleImageImporter simpleImageImporter, ICrimeImporter crimeImporter)
         {
             _logger = logger;
             _simpleImageImporter = simpleImageImporter;
+            _crimeImporter = crimeImporter;
         }
 
         public bool CheckIfValidForImport(string path)
@@ -102,6 +106,9 @@ namespace CovertActionTools.Core.Importing
                 case ImportStatus.ImportStage.ProcessingSimpleImages:
                     msg = $"Processing simple images ({_simpleImagesRead.Count}/{_simpleImagesToRead.Count})";
                     break;
+                case ImportStatus.ImportStage.ProcessingCrimes:
+                    msg = $"Processing crimes ({_crimesRead.Count}/{_crimesToRead.Count})";
+                    break;
                 case ImportStatus.ImportStage.ImportDone:
                     msg = $"Done";
                     break;
@@ -147,11 +154,15 @@ namespace CovertActionTools.Core.Importing
                 _currentItemsCount = 0;
                 _currentItemsDoneCount = 0;
                 _errors = new List<string>();
-                _simpleImagesToRead = Directory.GetFiles(_sourcePath, "*.json")
+                _simpleImagesToRead = Directory.GetFiles(_sourcePath, "*_image.json")
                     .OrderBy(x => x)
                     .ToList();
                 _simpleImagesRead = new List<string>();
-                _logger.LogInformation($"Index: {_simpleImagesToRead.Count} images, ...");
+                _crimesToRead = Directory.GetFiles(_sourcePath, "*_crime.json")
+                    .OrderBy(x => x)
+                    .ToList();
+                _crimesRead = new List<string>();
+                _logger.LogInformation($"Index: {_simpleImagesToRead.Count} images, {_crimesToRead.Count} crimes, ...");
                 await Task.Yield();
 
                 _currentStage = ImportStatus.ImportStage.ProcessingSimpleImages;
@@ -159,7 +170,7 @@ namespace CovertActionTools.Core.Importing
                 await Task.Yield();
                 foreach (var path in _simpleImagesToRead)
                 {
-                    var fileName = Path.GetFileNameWithoutExtension(path);
+                    var fileName = Path.GetFileNameWithoutExtension(path).Replace("_image", "");
                     try
                     {
                         var imageModel = _simpleImageImporter.Import(_sourcePath, fileName);
@@ -186,6 +197,39 @@ namespace CovertActionTools.Core.Importing
 
                     await Task.Yield();
                 }
+                
+                _currentStage = ImportStatus.ImportStage.ProcessingCrimes;
+                _currentItemsCount = _crimesToRead.Count;
+                await Task.Yield();
+                foreach (var path in _crimesToRead)
+                {
+                    var fileName = Path.GetFileNameWithoutExtension(path).Replace("_crime", "");
+                    try
+                    {
+                        var crimeModel = _crimeImporter.Import(_sourcePath, fileName);
+                        _logger.LogInformation($"Read crime: {fileName}");
+
+                        //update read list
+                        //overwrite the entire list to keep it thread-safe
+                        var newReadList = _crimesRead.ToList();
+                        newReadList.Add(path);
+                        _crimesRead = newReadList;
+                        _currentItemsDoneCount = newReadList.Count;
+
+                        //save to model
+                        model.Crimes[fileName] = crimeModel;
+                    }
+                    catch (Exception e)
+                    {
+                        //individual image failures don't crash the entire import
+                        _logger.LogError($"Error processing crime: {fileName} {e}");
+                        var newErrors = _errors.ToList();
+                        newErrors.Add($"Crime {fileName}: {e}");
+                        _errors = newErrors;
+                    }
+
+                    await Task.Yield();
+                }
 
                 _currentStage = ImportStatus.ImportStage.ImportDone;
                 await Task.Yield();
@@ -200,7 +244,7 @@ namespace CovertActionTools.Core.Importing
                 _currentStage = ImportStatus.ImportStage.ImportDone;
             }
 
-            _logger.LogInformation($"Import done: {model.SimpleImages.Count} images, ...");
+            _logger.LogInformation($"Import done: {model.SimpleImages.Count} images, {model.Crimes.Count}, ...");
             return model;
         }
     }

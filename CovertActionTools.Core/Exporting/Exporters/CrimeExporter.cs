@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Text.Json;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -9,7 +10,7 @@ namespace CovertActionTools.Core.Exporting.Exporters
     /// <summary>
     /// Given a loaded model for a Crime, returns multiple assets to save:
     ///   * CRIMEx.DTA file (legacy)
-    ///   
+    ///   * CRIMEx.json file (modern + metadata)
     /// </summary>
     public interface ICrimeExporter
     {
@@ -38,10 +39,17 @@ namespace CovertActionTools.Core.Exporting.Exporters
         {
             var dict = new Dictionary<string, byte[]>()
             {
-                [$"CRIME{crime.Id}.DTA"] = GetLegacyCrimeData(crime)
+                [$"CRIME{crime.Id}.DTA"] = GetLegacyCrimeData(crime),
+                [$"CRIME{crime.Id}_crime.json"] = GetModernCrimeData(crime),
             };
 
             return dict;
+        }
+
+        private byte[] GetModernCrimeData(CrimeModel crime)
+        {
+            var json = JsonSerializer.Serialize(crime, JsonOptions);
+            return Encoding.UTF8.GetBytes(json);
         }
 
         private byte[] GetLegacyCrimeData(CrimeModel crime)

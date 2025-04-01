@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
 
@@ -40,7 +39,12 @@ namespace CovertActionTools.Core.Importing.Parsers
                 Id = id,
                 Participants = participants,
                 Events = events,
-                Objects = objects
+                Objects = objects,
+                ExtraData = new CrimeModel.Metadata()
+                {
+                    Name = key,
+                    Comment = "Legacy import"
+                }
             };
         }
 

@@ -13,7 +13,7 @@ namespace CovertActionTools.Core.Exporting.Exporters
     /// <summary>
     /// Given a loaded model for a SimpleImage, returns multiple assets to save:
     ///   * PIC file (legacy image)
-    ///   * JSON file (metadata)
+    ///   * JSON file _image (metadata)
     ///   * PNG file (modern image)
     ///   * PNG file _VGA (VGA legacy image)
     ///   * PNG file _CGA (CGA replacement image)
@@ -47,7 +47,7 @@ namespace CovertActionTools.Core.Exporting.Exporters
         {
             var dict = new Dictionary<string, byte[]>
             {
-                [$"{image.Key}.json"] = GetMetadata(image),
+                [$"{image.Key}_image.json"] = GetMetadata(image),
                 [$"{image.Key}.png"] = GetModernImageData(image),
                 [$"{image.Key}_VGA.png"] = GetVgaImageData(image),
                 [$"{image.Key}.PIC"] = GetLegacyFileData(image) 
