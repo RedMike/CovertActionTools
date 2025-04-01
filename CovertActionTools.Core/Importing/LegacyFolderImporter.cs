@@ -22,12 +22,14 @@ namespace CovertActionTools.Core.Importing
         private readonly ILogger<LegacyFolderImporter> _logger;
         private readonly ILegacySimpleImageParser _legacySimpleImageParser;
         private readonly ILegacyCrimeParser _legacyCrimeParser;
+        private readonly ILegacyTextParser _legacyTextParser;
         
-        public LegacyFolderImporter(ILogger<LegacyFolderImporter> logger, ILegacySimpleImageParser legacySimpleImageParser, ILegacyCrimeParser legacyCrimeParser)
+        public LegacyFolderImporter(ILogger<LegacyFolderImporter> logger, ILegacySimpleImageParser legacySimpleImageParser, ILegacyCrimeParser legacyCrimeParser, ILegacyTextParser legacyTextParser)
         {
             _logger = logger;
             _legacySimpleImageParser = legacySimpleImageParser;
             _legacyCrimeParser = legacyCrimeParser;
+            _legacyTextParser = legacyTextParser;
         }
         
         private bool _importing = false; //only one import at a time
@@ -41,6 +43,8 @@ namespace CovertActionTools.Core.Importing
         private List<string> _simpleImagesRead = new List<string>();
         private List<string> _crimesToRead = new List<string>();
         private List<string> _crimesRead = new List<string>();
+        private string? _textToRead = null;
+        private string? _textRead = null;
 
         private Task<PackageModel?>? _importTask = null;
 
@@ -117,6 +121,9 @@ namespace CovertActionTools.Core.Importing
                 case ImportStatus.ImportStage.ProcessingCrimes:
                     msg = $"Processing crimes ({_crimesRead.Count}/{_crimesToRead.Count})";
                     break;
+                case ImportStatus.ImportStage.ProcessingTexts:
+                    msg = $"Processing texts..";
+                    break;
                 case ImportStatus.ImportStage.ImportDone:
                     msg = $"Done";
                     break;
@@ -170,6 +177,13 @@ namespace CovertActionTools.Core.Importing
                     .OrderBy(x => x)
                     .ToList();
                 _crimesRead = new List<string>();
+                _textToRead = Directory.GetFiles(_sourcePath, "TEXT.DTA")
+                    .FirstOrDefault();
+                if (string.IsNullOrEmpty(_textToRead))
+                {
+                    _textToRead = null;
+                }
+                _textRead = null;
                 _logger.LogInformation($"Index: {_simpleImagesToRead.Count} images, Crimes: {_crimesToRead.Count}, ...");
                 await Task.Yield();
 
@@ -239,6 +253,38 @@ namespace CovertActionTools.Core.Importing
                         _logger.LogError($"Error processing crime: {fileName} {e}");
                         var newErrors = _errors.ToList();
                         newErrors.Add($"Crime {fileName}: {e}");
+                        _errors = newErrors;
+                    }
+
+                    await Task.Yield();
+                }
+                
+                
+                _currentStage = ImportStatus.ImportStage.ProcessingTexts;
+                _currentItemsCount = 1;
+                await Task.Yield();
+                if (_textToRead != null)
+                {
+                    var fileName = Path.GetFileNameWithoutExtension(_textToRead);
+                    try
+                    {
+                        var rawData = File.ReadAllBytes(_textToRead);
+                        _logger.LogInformation($"Read text {fileName} {rawData.Length} bytes");
+
+                        //import the actual image
+                        var textModels = _legacyTextParser.Parse(fileName, rawData);
+
+                        _textRead = _textToRead;
+
+                        //save to model
+                        model.Texts = textModels;
+                    }
+                    catch (Exception e)
+                    {
+                        //individual image failures don't crash the entire import
+                        _logger.LogError($"Error processing texts: {fileName} {e}");
+                        var newErrors = _errors.ToList();
+                        newErrors.Add($"Text {fileName}: {e}");
                         _errors = newErrors;
                     }
 

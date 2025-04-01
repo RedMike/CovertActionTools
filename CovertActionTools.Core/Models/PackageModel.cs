@@ -10,6 +10,7 @@ namespace CovertActionTools.Core.Models
     {
         public Dictionary<string, SimpleImageModel> SimpleImages { get; set; } = new();
         public Dictionary<string, CrimeModel> Crimes { get; set; } = new();
+        public Dictionary<string, TextModel> Texts { get; set; } = new();
 
         public bool IsModified(PackageModel other)
         {
