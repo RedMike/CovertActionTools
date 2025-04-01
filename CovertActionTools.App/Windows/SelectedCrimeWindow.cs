@@ -141,6 +141,20 @@ public class SelectedCrimeWindow : BaseWindow
         }
         
         ImGui.SetNextItemWidth(150.0f);
+        var participantTypes = Enum.GetValues<CrimeModel.ParticipantType>().Select(x => x.ToString()).ToArray();
+        var participantTypeIndex = participantTypes.ToList().FindIndex(x => x == participant.ParticipantType.ToString());
+        var origParticipantTypeIndex = participantTypeIndex;
+        ImGui.Combo("Type", ref participantTypeIndex, participantTypes, participantTypes.Length);
+        if (participantTypeIndex != origParticipantTypeIndex)
+        {
+            //TODO: change
+        }
+        
+        ImGui.SameLine();
+        ImGui.Text("  ");
+        ImGui.SameLine();
+        
+        ImGui.SetNextItemWidth(150.0f);
         var u1 = $"{participant.Unknown1:X4}";
         var origU1 = u1;
         ImGui.InputText("Unknown 1", ref u1, 4);
@@ -154,33 +168,18 @@ public class SelectedCrimeWindow : BaseWindow
         ImGui.SameLine();
         
         ImGui.SetNextItemWidth(150.0f);
-        var u2 = $"{participant.Unknown2:X2}";
+        var u2 = $"{participant.Unknown2:B8}";
         var origU2 = u2;
-        ImGui.InputText("Unknown 2", ref u2, 2);
+        ImGui.InputText("Unknown 2", ref u2, 8);
         if (u2 != origU2)
         {
             //TODO: change
         }
         
-        ImGui.SameLine();
-        ImGui.Text("  ");
-        ImGui.SameLine();
-        
-        ImGui.SetNextItemWidth(150.0f);
-        var participantTypes = Enum.GetValues<CrimeModel.ParticipantType>().Select(x => x.ToString()).ToArray();
-        var participantTypeIndex = participantTypes.ToList().FindIndex(x => x == participant.ParticipantType.ToString());
-        var origParticipantTypeIndex = participantTypeIndex;
-        ImGui.Combo("Type", ref participantTypeIndex, participantTypes, participantTypes.Length);
-        if (participantTypeIndex != origParticipantTypeIndex)
-        {
-            //TODO: change
-        }
-        
-        
         ImGui.SetNextItemWidth(150.0f);
         var u3 = $"{participant.Unknown3:X2}";
         var origU3 = u3;
-        ImGui.InputText("Unknown 2", ref u3, 2);
+        ImGui.InputText("Unknown 3", ref u3, 2);
         if (u3 != origU3)
         {
             //TODO: change

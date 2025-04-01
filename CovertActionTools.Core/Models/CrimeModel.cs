@@ -61,7 +61,14 @@ namespace CovertActionTools.Core.Models
             /// </summary>
             public string Role { get; set; } = string.Empty;
             /// <summary>
-            /// ?
+            /// Usually 1.
+            /// 13 = Initiated Plan in 0
+            /// 3 = Financed Operation in 0
+            /// 9 = Tailed Victim in 0
+            /// 65535 = Kidnapper in 0
+            /// 4 = Everyone but Mastermind in 2 and 3
+            /// Nothing but 1 in crimes after 3.
+            /// Maybe a legacy field that didn't get used in the end?
             /// </summary>
             public int Unknown1 { get; set; }
             /// <summary>
@@ -70,7 +77,12 @@ namespace CovertActionTools.Core.Models
             public ParticipantType ParticipantType { get; set; } = ParticipantType.Unknown;
             
             /// <summary>
-            /// ?
+            /// Always 0 for Mastermind
+            /// Values: 4C, 48, 08, 88, 20, A0, 02, 42, 21, 54, 0C, 86, 11, 50, 10
+            /// Definitely a bitmap of some sort.
+            /// Lowest bit marks inside contacts.
+            /// Fourth bit marks "will interact with items/money"?
+            /// 
             /// </summary>
             public int Unknown2 { get; set; }
 
@@ -80,15 +92,17 @@ namespace CovertActionTools.Core.Models
             /// </summary>
             public int Rank { get; set; }
             /// <summary>
-            /// ?
+            /// Always 0
             /// </summary>
             public int Unknown3 { get; set; }
             /// <summary>
-            /// ?
+            /// Values: 0, 0200, 0300, 0400, 0500, 0600, 0700
+            /// Nothing but 0600 in crimes after 3.
+            /// Maybe a legacy field that didn't get used in the end?
             /// </summary>
             public int Unknown4 { get; set; }
             /// <summary>
-            /// ?
+            /// Always 0
             /// </summary>
             public int Unknown5 { get; set; }
         }
