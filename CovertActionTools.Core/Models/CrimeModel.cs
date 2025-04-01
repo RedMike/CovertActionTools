@@ -20,11 +20,15 @@ namespace CovertActionTools.Core.Models
         public enum EventType
         {
             Unknown = -1,
+            ProcessItems = 0, //turns items into other items, not consistent
             SentMessage = 2, //must happen with 3
             ReceivedMessage = 3, //must happen with 2
+            SentPackage = 4, //must happen with 5
+            ReceivedPackage = 5, //must happen with 4
             MetWith = 8, //must happen with 9
             WasMetBy = 9, //must happen with 8
-            Crime = 20, //major crime
+            Crime = 32, //major or minor crime
+            
         }
         
         public enum ParticipantType //maybe a bitmask?

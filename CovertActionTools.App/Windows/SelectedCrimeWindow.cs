@@ -69,7 +69,7 @@ public class SelectedCrimeWindow : BaseWindow
     private void DrawCrimeWindow(PackageModel model, CrimeModel crime)
     {
         //TODO: keep a pending model and have a save button?
-        
+
         var origId = crime.Id;
         var id = origId;
         ImGui.SetNextItemWidth(100.0f);
@@ -80,7 +80,7 @@ public class SelectedCrimeWindow : BaseWindow
             {
                 ImGui.SameLine();
                 ImGui.Text("Only crimes 0-12 are supported");
-            } 
+            }
             else if (model.Crimes.ContainsKey($"CRIME{id}"))
             {
                 ImGui.SameLine();
@@ -95,26 +95,51 @@ public class SelectedCrimeWindow : BaseWindow
         ImGui.Text("");
         ImGui.Separator();
         ImGui.Text("");
-
-        if (ImGui.Button("Add Participant"))
-        {
-            crime.Participants.Add(new CrimeModel.Participant());
-        }
-        
-        ImGui.Text("");
-
         var windowSize = ImGui.GetContentRegionAvail();
-        for (var i = 0; i < crime.Participants.Count; i++)
+
+        if (ImGui.CollapsingHeader("Participants"))
         {
-            DrawParticipant(model, crime, i, windowSize.X);
+            if (ImGui.Button("Add Participant"))
+            {
+                crime.Participants.Add(new CrimeModel.Participant());
+            }
+
             ImGui.Text("");
+
+            ImGui.BeginChild($"ParticipantsList", new Vector2(windowSize.X, 300.0f));
+            for (var i = 0; i < crime.Participants.Count; i++)
+            {
+                DrawParticipant(model, crime, i);
+                ImGui.Text("");
+            }
+            ImGui.EndChild();
+        }
+
+        if (ImGui.CollapsingHeader("Events"))
+        {
+            if (ImGui.Button("Add Event"))
+            {
+                crime.Events.Add(new CrimeModel.Event());
+            }
+
+            ImGui.Text("");
+            
+            ImGui.BeginChild($"EventsList", new Vector2(windowSize.X, 400.0f));
+            for (var i = 0; i < crime.Events.Count; i++)
+            {
+                DrawEvent(model, crime, i);
+                ImGui.Text("");
+            }
+            ImGui.EndChild();
         }
     }
 
-    private void DrawParticipant(PackageModel model, CrimeModel crime, int i, float w)
+    private void DrawParticipant(PackageModel model, CrimeModel crime, int i)
     {
+        var windowSize = ImGui.GetContentRegionAvail();
+        
         var participant = crime.Participants[i];
-        ImGui.BeginChild($"Participant {i}", new Vector2(w, 100.0f), true);
+        ImGui.BeginChild($"Participant {i}", new Vector2(windowSize.X, 100.0f), true);
 
         ImGui.Text($"Participant {i + 1}");
 
@@ -207,6 +232,67 @@ public class SelectedCrimeWindow : BaseWindow
         var origU5 = u5;
         ImGui.InputText("Unknown 5", ref u5, 2);
         if (u5 != origU5)
+        {
+            //TODO: change
+        }
+        
+        ImGui.EndChild();
+    }
+
+    private void DrawEvent(PackageModel model, CrimeModel crime, int i)
+    {
+        var windowSize = ImGui.GetContentRegionAvail();
+        
+        var ev = crime.Events[i];
+        ImGui.BeginChild($"Event {i}", new Vector2(windowSize.X, 100.0f), true);
+
+        ImGui.Text($"Event {i + 1}");
+        
+        ImGui.SetNextItemWidth(250.0f);
+        var participantList = crime.Participants
+            .Select((x, idx) => string.IsNullOrEmpty(x.Role) ? $"Participant {idx + 1}" : x.Role)
+            .ToArray();
+        var participantIndex = ev.SourceParticipantId;
+        var origParticipantIndex = participantIndex;
+        ImGui.Combo("Participant", ref participantIndex, participantList, participantList.Length);
+        if (participantIndex != origParticipantIndex)
+        {
+            //TODO: change
+        }
+        
+        ImGui.SameLine();
+        ImGui.Text("  =>  ");
+        ImGui.SameLine();
+        
+        ImGui.SetNextItemWidth(250.0f);
+        var destParticipantList = new[] { "None" }.Concat(participantList).ToArray();
+        var destParticipantIndex = (ev.TargetParticipantId ?? -1) + 1;
+        var origDestParticipantIndex = destParticipantIndex;
+        ImGui.Combo("Target", ref destParticipantIndex, destParticipantList, destParticipantList.Length);
+        if (destParticipantIndex != origDestParticipantIndex)
+        {
+            //TODO: change
+        }
+        
+        ImGui.SetNextItemWidth(200.0f);
+        var description = ev.Description;
+        var origDescription = description;
+        ImGui.InputText("Description", ref description, 32);
+        if (description != origDescription)
+        {
+            ev.Description = description;
+        }
+        
+        ImGui.SameLine();
+        ImGui.Text("  =>  ");
+        ImGui.SameLine();
+        
+        ImGui.SetNextItemWidth(200.0f);
+        var eventTypes = Enum.GetValues<CrimeModel.EventType>().Select(x => x.ToString()).ToArray();
+        var eventType = eventTypes.ToList().FindIndex(x => x == ev.EventType.ToString());
+        var origEventType = eventType;
+        ImGui.Combo("Type", ref eventType, eventTypes, eventTypes.Length);
+        if (eventType != origEventType)
         {
             //TODO: change
         }

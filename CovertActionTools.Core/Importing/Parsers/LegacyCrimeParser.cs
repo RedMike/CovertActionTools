@@ -68,7 +68,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                     var ch = (char)reader.ReadByte();
                     role += ch;
                 }
-                role = role.Trim();
+                role = role.Trim().Trim('\0');
 
                 var unknown1 = reader.ReadUInt16();
                 var unknown2 = reader.ReadByte();
@@ -107,7 +107,9 @@ namespace CovertActionTools.Core.Importing.Parsers
             for (var i = 0; i < count; i++)
             {
                 var sourceParticipantId = reader.ReadUInt16();
-                
+
+                bool ignore = sourceParticipantId == (byte)0xFF;
+
                 var u = reader.ReadUInt16();
                 if (u != 0)
                 {
@@ -122,7 +124,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                     var ch = (char)reader.ReadByte();
                     description += ch;
                 }
-                description = description.Trim();
+                description = description.Trim().Trim('\0');
 
                 var targetParticipant = reader.ReadByte();
                 var type = (CrimeModel.EventType)(int)reader.ReadByte();
@@ -152,7 +154,11 @@ namespace CovertActionTools.Core.Importing.Parsers
                 }
 
                 var score = reader.ReadUInt16();
-                
+
+                if (ignore)
+                {
+                    continue;
+                }
                 events.Add(new CrimeModel.Event()
                 {
                     SourceParticipantId = sourceParticipantId,
@@ -182,7 +188,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                     var ch = (char)reader.ReadByte();
                     name += ch;
                 }
-                name = name.Trim();
+                name = name.Trim().Trim('\0');
 
                 var pictureId = reader.ReadByte();
                 if (pictureId == 0xFF)

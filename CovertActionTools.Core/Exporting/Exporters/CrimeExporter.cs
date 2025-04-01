@@ -64,7 +64,7 @@ namespace CovertActionTools.Core.Exporting.Exporters
             {
                 writer.Write((ushort)0xFFFF);
                 writer.Write((ushort)participant.Exposure);
-                foreach (var c in participant.Role.Trim().PadRight(32, (char)0))
+                foreach (var c in participant.Role.Trim().Trim('\0').PadRight(32, (char)0))
                 {
                     writer.Write(c);
                 }
@@ -84,7 +84,7 @@ namespace CovertActionTools.Core.Exporting.Exporters
                 writer.Write((ushort)ev.SourceParticipantId);
                 writer.Write((ushort)0x0000);
                 writer.Write((ushort)ev.MessageId);
-                foreach (var c in ev.Description.Trim().PadRight(32, (char)0))
+                foreach (var c in ev.Description.Trim().Trim('\0').PadRight(32, (char)0))
                 {
                     writer.Write(c);
                 }
@@ -117,7 +117,7 @@ namespace CovertActionTools.Core.Exporting.Exporters
 
             foreach (var obj in crime.Objects)
             {
-                foreach (var c in obj.Name.Trim().PadRight(16, (char)0))
+                foreach (var c in obj.Name.Trim().Trim('\0').PadRight(16, (char)0))
                 {
                     writer.Write(c);
                 }
