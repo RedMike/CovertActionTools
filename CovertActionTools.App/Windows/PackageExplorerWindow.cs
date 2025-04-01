@@ -50,7 +50,7 @@ public class PackageExplorerWindow : BaseWindow
 
     private void DrawTreeView(PackageModel model)
     {
-        if (ImGui.TreeNodeEx("Images", ImGuiTreeNodeFlags.DefaultOpen | ImGuiTreeNodeFlags.SpanAvailWidth))
+        if (ImGui.TreeNodeEx("Images", ImGuiTreeNodeFlags.SpanAvailWidth))
         {
             foreach (var image in model.SimpleImages.OrderBy(x => x.Key))
             {
@@ -72,6 +72,33 @@ public class PackageExplorerWindow : BaseWindow
                     if (ImGui.IsItemClicked())
                     {
                         _mainEditorState.SelectedItem = (MainEditorState.ItemType.SimpleImage, image.Key);
+                    }
+                    
+                    ImGui.TreePop();
+                }
+            }
+            
+            ImGui.TreePop();
+        }
+        
+        if (ImGui.TreeNodeEx("Crimes", ImGuiTreeNodeFlags.DefaultOpen | ImGuiTreeNodeFlags.SpanAvailWidth))
+        {
+            foreach (var crime in model.Crimes.OrderBy(x => x.Value.Id))
+            {
+                var nodeFlags = ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.SpanAvailWidth;
+                if (_mainEditorState.SelectedItem != null &&
+                    _mainEditorState.SelectedItem.Value.type == MainEditorState.ItemType.SimpleImage &&
+                    _mainEditorState.SelectedItem.Value.id == crime.Key)
+                {
+                    nodeFlags |= ImGuiTreeNodeFlags.Selected;
+                }
+
+                var name = $"{crime.Key}";
+                if (ImGui.TreeNodeEx(name, nodeFlags))
+                {
+                    if (ImGui.IsItemClicked())
+                    {
+                        _mainEditorState.SelectedItem = (MainEditorState.ItemType.Crime, crime.Key);
                     }
                     
                     ImGui.TreePop();

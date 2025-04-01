@@ -33,7 +33,7 @@ namespace CovertActionTools.Core.Importing.Parsers
             var events = ReadEvents(key, reader, eventCount);
             var objects = ReadObjects(key, reader);
 
-            var id = int.Parse(key.Replace("CRIME", "").Replace(".DTA", ""));
+            var id = int.Parse(key.Replace("CRIME", ""));
             
             return new CrimeModel()
             {
