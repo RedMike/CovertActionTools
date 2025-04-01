@@ -71,27 +71,29 @@ namespace CovertActionTools.Core.Importing.Parsers
                 role = role.Trim();
 
                 var unknown1 = reader.ReadUInt16();
-                var unknown5 = reader.ReadUInt16();
                 var unknown2 = reader.ReadByte();
+                var type = (CrimeModel.ParticipantType)(int)reader.ReadByte();
+                var unknown3 = reader.ReadByte();
 
                 var clueType = (CrimeModel.ClueType)(int)reader.ReadUInt16();
 
                 var rank = reader.ReadUInt16();
 
-                var unknown3 = reader.ReadUInt16();
-                var unknown4 = reader.ReadByte();
+                var unknown4 = reader.ReadUInt16();
+                var unknown5 = reader.ReadByte();
                 
                 participants.Add(new CrimeModel.Participant()
                 {
                     Exposure = exposure,
                     Role = role,
                     Unknown1 = unknown1,
-                    Unknown5 = unknown5,
+                    ParticipantType = type,
                     Unknown2 = unknown2,
                     ClueType = clueType,
                     Rank = rank,
                     Unknown3 = unknown3,
                     Unknown4 = unknown4,
+                    Unknown5 = unknown5,
                 });
             }
 

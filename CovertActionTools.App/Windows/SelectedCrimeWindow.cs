@@ -103,22 +103,115 @@ public class SelectedCrimeWindow : BaseWindow
         
         ImGui.Text("");
 
-        var windowSize = ImGui.GetContentRegionMax();
+        var windowSize = ImGui.GetContentRegionAvail();
         for (var i = 0; i < crime.Participants.Count; i++)
         {
-            var participant = crime.Participants[i];
-            ImGui.BeginChild($"Participant {i}", new Vector2(windowSize.X, 200.0f), true);
-
-            var role = participant.Role;
-            var origRole = role;
-            ImGui.InputText("Role", ref role, 32);
-            if (role != origRole)
-            {
-                participant.Role = role;
-            }
-            
-            ImGui.EndChild();
+            DrawParticipant(model, crime, i, windowSize.X);
             ImGui.Text("");
         }
+    }
+
+    private void DrawParticipant(PackageModel model, CrimeModel crime, int i, float w)
+    {
+        var participant = crime.Participants[i];
+        ImGui.BeginChild($"Participant {i}", new Vector2(w, 100.0f), true);
+
+        ImGui.Text($"Participant {i + 1}");
+
+        ImGui.SetNextItemWidth(150.0f);
+        var role = participant.Role;
+        var origRole = role;
+        ImGui.InputText("Role", ref role, 32);
+        if (role != origRole)
+        {
+            participant.Role = role;
+        }
+        
+        ImGui.SameLine();
+        ImGui.Text("  ");
+        ImGui.SameLine();
+        
+        ImGui.SetNextItemWidth(150.0f);
+        var exposure = participant.Exposure;
+        var origExposure = exposure;
+        ImGui.InputInt("Exposure", ref exposure);
+        if (exposure != origExposure)
+        {
+            //TODO: change
+        }
+        
+        ImGui.SetNextItemWidth(150.0f);
+        var u1 = $"{participant.Unknown1:X4}";
+        var origU1 = u1;
+        ImGui.InputText("Unknown 1", ref u1, 4);
+        if (u1 != origU1)
+        {
+            //TODO: change
+        }
+        
+        ImGui.SameLine();
+        ImGui.Text("  ");
+        ImGui.SameLine();
+        
+        ImGui.SetNextItemWidth(150.0f);
+        var u2 = $"{participant.Unknown2:X2}";
+        var origU2 = u2;
+        ImGui.InputText("Unknown 2", ref u2, 2);
+        if (u2 != origU2)
+        {
+            //TODO: change
+        }
+        
+        ImGui.SameLine();
+        ImGui.Text("  ");
+        ImGui.SameLine();
+        
+        ImGui.SetNextItemWidth(150.0f);
+        var participantTypes = Enum.GetValues<CrimeModel.ParticipantType>().Select(x => x.ToString()).ToArray();
+        var participantTypeIndex = participantTypes.ToList().FindIndex(x => x == participant.ParticipantType.ToString());
+        var origParticipantTypeIndex = participantTypeIndex;
+        ImGui.Combo("Type", ref participantTypeIndex, participantTypes, participantTypes.Length);
+        if (participantTypeIndex != origParticipantTypeIndex)
+        {
+            //TODO: change
+        }
+        
+        
+        ImGui.SetNextItemWidth(150.0f);
+        var u3 = $"{participant.Unknown3:X2}";
+        var origU3 = u3;
+        ImGui.InputText("Unknown 2", ref u3, 2);
+        if (u3 != origU3)
+        {
+            //TODO: change
+        }
+        
+        ImGui.SameLine();
+        ImGui.Text("  ");
+        ImGui.SameLine();
+        
+        ImGui.SetNextItemWidth(150.0f);
+        var u4 = $"{participant.Unknown4:X4}";
+        var origU4 = u4;
+        ImGui.InputText("Unknown 4", ref u4, 4);
+        if (u4 != origU4)
+        {
+            //TODO: change
+        }
+        
+        ImGui.SameLine();
+        ImGui.Text("  ");
+        ImGui.SameLine();
+        
+        ImGui.SetNextItemWidth(150.0f);
+        var u5 = $"{participant.Unknown5:X2}";
+        var origU5 = u5;
+        ImGui.InputText("Unknown 5", ref u5, 2);
+        if (u5 != origU5)
+        {
+            //TODO: change
+        }
+        
+        ImGui.EndChild();
     }
 }

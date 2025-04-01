@@ -26,6 +26,15 @@ namespace CovertActionTools.Core.Models
             WasMetBy = 9, //must happen with 8
             Crime = 20, //major crime
         }
+        
+        public enum ParticipantType //maybe a bitmask?
+        {
+            Unknown = -1,
+            Normal = 0,
+            Mastermind = 1, //only one per case
+            Widow = 2, //special logic?
+            Assassin = 64, //special logic?
+        }
 
         public class Metadata
         {
@@ -56,17 +65,14 @@ namespace CovertActionTools.Core.Models
             /// </summary>
             public int Unknown1 { get; set; }
             /// <summary>
-            /// ?
+            /// Affects some logic about clues? 
             /// </summary>
-            public int Unknown5 { get; set; }
-            /// <summary>
-            /// Only one mastermind per crime
-            /// </summary>
-            public bool Mastermind => Unknown5 == (ushort)0x0001;
+            public ParticipantType ParticipantType { get; set; } = ParticipantType.Unknown;
+            
             /// <summary>
             /// ?
             /// </summary>
-            public byte Unknown2 { get; set; }
+            public int Unknown2 { get; set; }
 
             public ClueType ClueType { get; set; } = ClueType.Unknown;
             /// <summary>
@@ -81,6 +87,10 @@ namespace CovertActionTools.Core.Models
             /// ?
             /// </summary>
             public int Unknown4 { get; set; }
+            /// <summary>
+            /// ?
+            /// </summary>
+            public int Unknown5 { get; set; }
         }
 
         public class Event

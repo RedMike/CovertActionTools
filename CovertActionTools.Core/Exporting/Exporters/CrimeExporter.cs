@@ -70,12 +70,13 @@ namespace CovertActionTools.Core.Exporting.Exporters
                 }
 
                 writer.Write((ushort)participant.Unknown1);
-                writer.Write((ushort)participant.Unknown5);
                 writer.Write((byte)participant.Unknown2);
+                writer.Write((byte)participant.ParticipantType);
+                writer.Write((byte)participant.Unknown3);
                 writer.Write((ushort)participant.ClueType);
                 writer.Write((ushort)participant.Rank);
-                writer.Write((ushort)participant.Unknown3);
-                writer.Write((byte)participant.Unknown4);
+                writer.Write((ushort)participant.Unknown4);
+                writer.Write((byte)participant.Unknown5);
             }
 
             foreach (var ev in crime.Events)
