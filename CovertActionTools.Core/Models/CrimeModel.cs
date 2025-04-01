@@ -114,6 +114,9 @@ namespace CovertActionTools.Core.Models
         public class Event
         {
             public int SourceParticipantId { get; set; }
+            /// <summary>
+            /// Reference into Texts, uses prefix from crime ID
+            /// </summary>
             public int MessageId { get; set; }
 
             /// <summary>

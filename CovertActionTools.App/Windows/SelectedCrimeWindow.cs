@@ -106,13 +106,11 @@ public class SelectedCrimeWindow : BaseWindow
 
             ImGui.Text("");
 
-            ImGui.BeginChild($"ParticipantsList", new Vector2(windowSize.X, 300.0f));
             for (var i = 0; i < crime.Participants.Count; i++)
             {
                 DrawParticipant(model, crime, i);
                 ImGui.Text("");
             }
-            ImGui.EndChild();
         }
 
         if (ImGui.CollapsingHeader("Events"))
@@ -124,13 +122,11 @@ public class SelectedCrimeWindow : BaseWindow
 
             ImGui.Text("");
             
-            ImGui.BeginChild($"EventsList", new Vector2(windowSize.X, 400.0f));
             for (var i = 0; i < crime.Events.Count; i++)
             {
                 DrawEvent(model, crime, i);
                 ImGui.Text("");
             }
-            ImGui.EndChild();
         }
     }
 
@@ -244,7 +240,7 @@ public class SelectedCrimeWindow : BaseWindow
         var windowSize = ImGui.GetContentRegionAvail();
         
         var ev = crime.Events[i];
-        ImGui.BeginChild($"Event {i}", new Vector2(windowSize.X, 100.0f), true);
+        ImGui.BeginChild($"Event {i}", new Vector2(windowSize.X, 150.0f), true);
 
         ImGui.Text($"Event {i + 1}");
         
@@ -275,6 +271,20 @@ public class SelectedCrimeWindow : BaseWindow
         }
         
         ImGui.SetNextItemWidth(200.0f);
+        var eventTypes = Enum.GetValues<CrimeModel.EventType>().Select(x => x.ToString()).ToArray();
+        var eventType = eventTypes.ToList().FindIndex(x => x == ev.EventType.ToString());
+        var origEventType = eventType;
+        ImGui.Combo("Type", ref eventType, eventTypes, eventTypes.Length);
+        if (eventType != origEventType)
+        {
+            //TODO: change
+        }
+        
+        ImGui.SameLine();
+        ImGui.Text(" ");
+        ImGui.SameLine();
+        
+        ImGui.SetNextItemWidth(200.0f);
         var description = ev.Description;
         var origDescription = description;
         ImGui.InputText("Description", ref description, 32);
@@ -283,16 +293,28 @@ public class SelectedCrimeWindow : BaseWindow
             ev.Description = description;
         }
         
-        ImGui.SameLine();
-        ImGui.Text("  =>  ");
-        ImGui.SameLine();
+        ImGui.SetNextItemWidth(100.0f);
+        var messageId = ev.MessageId;
+        var origMessageId = messageId;
+        ImGui.InputInt("Message ID", ref messageId);
+        if (messageId != origMessageId)
+        {
+            ev.MessageId = messageId;
+        }
         
-        ImGui.SetNextItemWidth(200.0f);
-        var eventTypes = Enum.GetValues<CrimeModel.EventType>().Select(x => x.ToString()).ToArray();
-        var eventType = eventTypes.ToList().FindIndex(x => x == ev.EventType.ToString());
-        var origEventType = eventType;
-        ImGui.Combo("Type", ref eventType, eventTypes, eventTypes.Length);
-        if (eventType != origEventType)
+        ImGui.SameLine();
+        ImGui.Text("    ");
+        ImGui.SameLine();
+
+        var message = "TODO"; //TODO: look up in Texts
+        ImGui.Text(message);
+        
+        //TODO: received/destroyed items
+
+        var score = ev.Score;
+        var origScore = score;
+        ImGui.InputInt("Score", ref score);
+        if (score != origScore)
         {
             //TODO: change
         }
