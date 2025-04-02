@@ -20,12 +20,14 @@ namespace CovertActionTools.Core.Exporting
         private readonly ILogger<PackageExporter> _logger;
         private readonly ISimpleImageExporter _simpleImageExporter;
         private readonly ICrimeExporter _crimeExporter;
+        private readonly ITextExporter _textExporter;
 
-        public PackageExporter(ILogger<PackageExporter> logger, ISimpleImageExporter simpleImageExporter, ICrimeExporter crimeExporter)
+        public PackageExporter(ILogger<PackageExporter> logger, ISimpleImageExporter simpleImageExporter, ICrimeExporter crimeExporter, ITextExporter textExporter)
         {
             _logger = logger;
             _simpleImageExporter = simpleImageExporter;
             _crimeExporter = crimeExporter;
+            _textExporter = textExporter;
         }
         
         private bool _exporting = false; //only one export at a time
@@ -40,6 +42,8 @@ namespace CovertActionTools.Core.Exporting
         private List<string> _simpleImagesWritten = new List<string>();
         private List<string> _crimesToWrite = new List<string>();
         private List<string> _crimesWritten = new List<string>();
+        private string? _textToWrite = null;
+        private string? _textWritten = null;
 
         private Task? _exportTask = null;
 
@@ -99,6 +103,9 @@ namespace CovertActionTools.Core.Exporting
                 case ExportStatus.ExportStage.ProcessingCrimes:
                     msg = $"Processing crimes ({_crimesWritten.Count}/{_crimesToWrite.Count})";
                     break;
+                case ExportStatus.ExportStage.ProcessingTexts:
+                    msg = $"Processing texts..";
+                    break;
                 case ExportStatus.ExportStage.ExportDone:
                     msg = "Done";
                     break;
@@ -134,6 +141,9 @@ namespace CovertActionTools.Core.Exporting
 
                 _crimesToWrite = _package.Crimes.Keys.OrderBy(x => x).ToList();
                 _crimesWritten = new List<string>();
+
+                _textToWrite = "text";
+                _textToWrite = null;
                 
                 _logger.LogInformation($"Index: {_simpleImagesToWrite.Count} images, {_crimesToWrite.Count} crimes, ...");
                 await Task.Yield();
@@ -189,6 +199,30 @@ namespace CovertActionTools.Core.Exporting
                         newErrors.Add($"Crime {crimeKey}: {e}");
                         _errors = newErrors;
                     }
+                }
+                
+                
+                _currentStage = ExportStatus.ExportStage.ProcessingTexts;
+                _currentItemsCount = 1;
+                await Task.Yield();
+                var text = _package.Texts;
+                try
+                {
+                    var files = _textExporter.Export(text);
+                    foreach (var pair in files)
+                    {
+                        var (fileName, bytes) = (pair.Key, pair.Value);
+                        File.WriteAllBytes(Path.Combine(_destinationPath, fileName), bytes);
+                        _logger.LogInformation($"Wrote text: {fileName} {bytes.Length}");
+                    }
+                }
+                catch (Exception e)
+                {
+                    //individual text failures don't crash the entire export
+                    _logger.LogError($"Error processing text: {e}");
+                    var newErrors = _errors.ToList();
+                    newErrors.Add($"Text: {e}");
+                    _errors = newErrors;
                 }
                 
                 _currentStage = ExportStatus.ExportStage.ExportDone;

@@ -10,6 +10,7 @@ namespace CovertActionTools.Core.Exporting
             Preparing = 0,
             ProcessingSimpleImages = 10,
             ProcessingCrimes = 20,
+            ProcessingTexts = 30,
             ExportDone = 100,
             
             FatalError = 999999,

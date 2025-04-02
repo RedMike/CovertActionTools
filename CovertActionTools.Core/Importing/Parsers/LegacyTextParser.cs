@@ -12,7 +12,7 @@ namespace CovertActionTools.Core.Importing.Parsers
         Dictionary<string, TextModel> Parse(string key, byte[] rawData);
     }
 
-    public class LegacyTextParser : ILegacyTextParser
+    internal class LegacyTextParser : ILegacyTextParser
     {
         private readonly ILogger<LegacyTextParser> _logger;
 
@@ -33,6 +33,9 @@ namespace CovertActionTools.Core.Importing.Parsers
             {
                 throw new Exception($"Invalid starting marker: {c}");
             }
+
+            var order = 1;
+            TextModel? queuedModel = null; 
             while (true)
             {
                 var type = TextModel.StringType.Unknown;
@@ -86,24 +89,56 @@ namespace CovertActionTools.Core.Importing.Parsers
                     message += reader.ReadChar();
                 } while (message.Last() != (byte)'*');
 
-                var prefix = "" + (char)prefixBytes[0] + (char)prefixBytes[1] + (char)prefixBytes[2];
-                if (type != TextModel.StringType.CrimeMessage)
+                //remove asterisk
+                message = message.Substring(0, message.Length - 1);
+                //only trim one set of \r\n at the end/start
+                var startsNewLine = message.StartsWith("\r\n");
+                var endsNewLine = message.EndsWith("\r\n") && message.Length > 4;
+                if (startsNewLine || endsNewLine)
                 {
-                    prefix += (char)prefixBytes[3];
-                }
-                else
-                {
-                    prefix += $"{crimeId!.Value:##}";
+                    var length = message.Length - (startsNewLine ? 2 : 0) - (endsNewLine ? 2 : 0);
+                    message = message.Substring(startsNewLine ? 2 : 0, length);
                 }
 
-                var stringId = $"{prefix}{id:##}";
-                dict[stringId] = new TextModel()
+                var model = new TextModel()
                 {
                     Id = id,
                     Type = type,
                     Message = message,
                     CrimeId = crimeId,
+                    Order = order++,
                 };
+
+                if (string.IsNullOrEmpty(message))
+                {
+                    //it seems to be a way for the same message to be used for two entries
+                    if (queuedModel != null)
+                    {
+                        throw new Exception($"Attempting to queue two models in a row: {queuedModel.GetMessagePrefix()} and {model.GetMessagePrefix()}");
+                    }
+                    queuedModel = model;
+                }
+                else
+                {
+                    var textKey = model.GetMessagePrefix();
+                    if (dict.TryGetValue(textKey, out var existingValue))
+                    {
+                        //TODO: figure out why the one key is triggering this and which message gets used
+                        _logger.LogError($"Duplicate text key: {textKey}\n'{existingValue.Message}'\n'{message}'");
+                        textKey += "TEMP";
+                        //throw new Exception($"Duplicate text key: {textKey}");
+                    }
+
+                    dict[textKey] = model;
+
+                    if (queuedModel != null)
+                    {
+                        _logger.LogInformation($"Queued text key {queuedModel.GetMessagePrefix()} as duplicate of {textKey}");
+                        queuedModel.Message = message;
+                        dict[queuedModel.GetMessagePrefix()] = queuedModel;
+                        queuedModel = null;
+                    }
+                }
             }
 
             return dict;
