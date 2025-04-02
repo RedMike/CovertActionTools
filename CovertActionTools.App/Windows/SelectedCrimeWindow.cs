@@ -258,7 +258,7 @@ public class SelectedCrimeWindow : BaseWindow
         var windowSize = ImGui.GetContentRegionAvail();
         
         var ev = crime.Events[i];
-        ImGui.BeginChild($"Event {i}", new Vector2(windowSize.X, 150.0f), true);
+        ImGui.BeginChild($"Event {i}", new Vector2(windowSize.X, 180.0f), true);
 
         ImGui.Text($"Event {i + 1}");
         
@@ -311,6 +311,19 @@ public class SelectedCrimeWindow : BaseWindow
             ev.Description = description;
         }
         
+        ImGui.SameLine();
+        ImGui.Text(" ");
+        ImGui.SameLine();
+        
+        ImGui.SetNextItemWidth(100.0f);
+        var score = ev.Score;
+        var origScore = score;
+        ImGui.InputInt("Score", ref score);
+        if (score != origScore)
+        {
+            //TODO: change
+        }
+        
         ImGui.SetNextItemWidth(100.0f);
         var messageId = ev.MessageId;
         var origMessageId = messageId;
@@ -319,23 +332,21 @@ public class SelectedCrimeWindow : BaseWindow
         {
             ev.MessageId = messageId;
         }
-        
-        ImGui.SameLine();
-        ImGui.Text("    ");
-        ImGui.SameLine();
 
-        var message = "TODO"; //TODO: look up in Texts
-        ImGui.Text(message);
+        ImGui.BeginChild($"Message text {messageId}", new Vector2(ImGui.GetContentRegionAvail().X, 50.0f), true);
+        var text = model.Texts.Values.FirstOrDefault(x => x.CrimeId == crime.Id && x.Id == messageId);
+        if (text != null)
+        {
+            ImGui.Text(text.Message);
+        }
+        else
+        {
+            ImGui.Text($"ERROR: Failed to find MSG{crime.Id:D2}{messageId:D2}");
+        }
+
+        ImGui.EndChild();
         
         //TODO: received/destroyed items
-
-        var score = ev.Score;
-        var origScore = score;
-        ImGui.InputInt("Score", ref score);
-        if (score != origScore)
-        {
-            //TODO: change
-        }
         
         ImGui.EndChild();
     }

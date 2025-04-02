@@ -21,6 +21,7 @@ namespace CovertActionTools.Core
             
             services.AddSingleton<ISimpleImageImporter, SimpleImageImporter>();
             services.AddSingleton<ICrimeImporter, CrimeImporter>();
+            services.AddSingleton<ITextImporter, TextImporter>();
             
             services.AddSingleton<ISimpleImageExporter, SimpleImageExporter>();
             services.AddSingleton<ICrimeExporter, CrimeExporter>();
