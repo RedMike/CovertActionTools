@@ -27,7 +27,7 @@ namespace CovertActionTools.Core.Models
             ReceivedPackage = 5, //must happen with 4
             MetWith = 8, //must happen with 9
             WasMetBy = 9, //must happen with 8
-            Crime = 32, //major or minor crime
+            Bulletin = 32, //shown to player directly
             
         }
         
