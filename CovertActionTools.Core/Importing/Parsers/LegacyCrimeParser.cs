@@ -73,9 +73,9 @@ namespace CovertActionTools.Core.Importing.Parsers
                 var unknown1 = reader.ReadUInt16();
                 var unknown2 = reader.ReadByte();
                 var type = (CrimeModel.ParticipantType)(int)reader.ReadByte();
-                var unknown3 = reader.ReadByte();
+                var unknown3 = reader.ReadUInt16();
 
-                var clueType = (CrimeModel.ClueType)(int)reader.ReadUInt16();
+                var clueType = (CrimeModel.ClueType)(int)reader.ReadByte();
 
                 var rank = reader.ReadUInt16();
 

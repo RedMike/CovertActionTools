@@ -216,9 +216,9 @@ public class SelectedCrimeWindow : BaseWindow
         }
         
         ImGui.SetNextItemWidth(150.0f);
-        var u3 = $"{participant.Unknown3:X2}";
+        var u3 = $"{participant.Unknown3:X4}";
         var origU3 = u3;
-        ImGui.InputText("Unknown 3", ref u3, 2);
+        ImGui.InputText("Unknown 3", ref u3, 4);
         if (u3 != origU3)
         {
             //TODO: change

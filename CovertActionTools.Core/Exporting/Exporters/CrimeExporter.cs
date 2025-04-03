@@ -58,7 +58,7 @@ namespace CovertActionTools.Core.Exporting.Exporters
             using var writer = new BinaryWriter(memStream);
 
             writer.Write((ushort)crime.Participants.Count);
-            writer.Write((ushort)crime.Events.Count);
+            writer.Write((ushort)(crime.Events.Count + 1));
 
             foreach (var participant in crime.Participants)
             {
@@ -72,8 +72,8 @@ namespace CovertActionTools.Core.Exporting.Exporters
                 writer.Write((ushort)participant.Unknown1);
                 writer.Write((byte)participant.Unknown2);
                 writer.Write((byte)participant.ParticipantType);
-                writer.Write((byte)participant.Unknown3);
-                writer.Write((ushort)participant.ClueType);
+                writer.Write((ushort)participant.Unknown3);
+                writer.Write((byte)participant.ClueType);
                 writer.Write((ushort)participant.Rank);
                 writer.Write((ushort)participant.Unknown4);
                 writer.Write((byte)participant.Unknown5);
@@ -113,6 +113,13 @@ namespace CovertActionTools.Core.Exporting.Exporters
                 writer.Write((byte)destroyedObjectBitmask);
 
                 writer.Write((ushort)ev.Score);
+            }
+            
+            //marker
+            writer.Write((byte)0xFF);
+            for (var i = 0; i < 43; i++)
+            {
+                writer.Write((byte)0x00);
             }
 
             foreach (var obj in crime.Objects)
