@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace CovertActionTools.Core.Importing
 {
-    internal class PackageImporter : IImporter
+    internal class PackageImporter : IPackageImporter
     {
         private readonly ILogger<PackageImporter> _logger;
         private readonly ISimpleImageImporter _simpleImageImporter;

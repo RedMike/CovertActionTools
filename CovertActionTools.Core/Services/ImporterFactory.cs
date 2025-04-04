@@ -6,7 +6,7 @@ namespace CovertActionTools.Core.Services
 {
     public interface IImporterFactory
     {
-        IImporter Create(bool legacy);
+        IPackageImporter Create(bool legacy);
     }
     
     internal class ImporterFactory : IImporterFactory
@@ -18,14 +18,14 @@ namespace CovertActionTools.Core.Services
             _serviceProvider = serviceProvider;
         }
 
-        public IImporter Create(bool legacy)
+        public IPackageImporter Create(bool legacy)
         {
             if (legacy)
             {
                 return _serviceProvider.GetRequiredService<LegacyFolderImporter>();
             }
 
-            return _serviceProvider.GetRequiredService<IImporter>();
+            return _serviceProvider.GetRequiredService<IPackageImporter>();
         }
     }
 }

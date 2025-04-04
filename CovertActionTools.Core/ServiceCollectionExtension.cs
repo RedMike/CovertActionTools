@@ -28,8 +28,8 @@ namespace CovertActionTools.Core
             services.AddSingleton<ITextExporter, TextExporter>();
             
             services.AddTransient<LegacyFolderImporter>();
-            services.AddTransient<IImporter, PackageImporter>();
-            services.AddTransient<IExporter, PackageExporter>();
+            services.AddTransient<IPackageImporter, PackageImporter>();
+            services.AddTransient<IPackageExporter, PackageExporter>();
         }
     }
 }

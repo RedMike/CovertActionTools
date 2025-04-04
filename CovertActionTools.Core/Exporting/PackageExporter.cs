@@ -9,13 +9,13 @@ using Microsoft.Extensions.Logging;
 
 namespace CovertActionTools.Core.Exporting
 {
-    public interface IExporter
+    public interface IPackageExporter
     {
         void StartExport(PackageModel model, string path);
         ExportStatus? CheckStatus();
     }
     
-    internal class PackageExporter : IExporter
+    internal class PackageExporter : IPackageExporter
     {
         private readonly ILogger<PackageExporter> _logger;
         private readonly ISimpleImageExporter _simpleImageExporter;

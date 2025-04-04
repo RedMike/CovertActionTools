@@ -7,5 +7,5 @@ public class LoadPackageState : IViewModel
     public bool Show { get; set; }
     public bool Run { get; set; }
     public string? SourcePath { get; set; }
-    public IImporter? Importer { get; set; }
+    public IPackageImporter? Importer { get; set; }
 }

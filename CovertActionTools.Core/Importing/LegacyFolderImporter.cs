@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace CovertActionTools.Core.Importing
 {
-    public interface IImporter
+    public interface IPackageImporter
     {
         bool CheckIfValidForImport(string path);
         void StartImport(string path);
@@ -17,7 +17,7 @@ namespace CovertActionTools.Core.Importing
         PackageModel GetImportedModel();
     }
     
-    internal class LegacyFolderImporter : IImporter
+    internal class LegacyFolderImporter : IPackageImporter
     {
         private readonly ILogger<LegacyFolderImporter> _logger;
         private readonly ILegacySimpleImageParser _legacySimpleImageParser;

@@ -7,7 +7,7 @@ namespace CovertActionTools.Core.Services
 {
     public interface IExporterFactory
     {
-        IExporter Create();
+        IPackageExporter Create();
     }
     
     internal class ExporterFactory : IExporterFactory
@@ -19,9 +19,9 @@ namespace CovertActionTools.Core.Services
             _serviceProvider = serviceProvider;
         }
 
-        public IExporter Create()
+        public IPackageExporter Create()
         {
-            return _serviceProvider.GetRequiredService<IExporter>();
+            return _serviceProvider.GetRequiredService<IPackageExporter>();
         }
     }
 }
