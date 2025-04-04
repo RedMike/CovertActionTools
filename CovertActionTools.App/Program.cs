@@ -16,8 +16,8 @@ const int h = 800;
 //debug flags
 #if DEBUG
 //start by parsing the default
-const bool startWithParsePublishDefault = false;
-const bool startWithLoadSampleDefault = true;
+const bool startWithParsePublishDefault = true;
+const bool startWithLoadSampleDefault = false;
 #endif
 
 var configuration = new ConfigurationBuilder()
@@ -86,6 +86,7 @@ if (startWithParsePublishDefault)
     parsePublishState.SourcePath = Constants.DefaultParseSourcePath;
     var newName = $"package-{now:yyyy-MM-dd_HH-mm-ss}";
     parsePublishState.DestinationPath = Path.Combine(Constants.DefaultParseDestinationPath, newName);
+    parsePublishState.Importer = sp.GetRequiredService<LegacyFolderImporter>();
     parsePublishState.Importer.StartImport(parsePublishState.SourcePath);
     parsePublishState.Exporter = sp.GetRequiredService<IPackageExporter>();
     parsePublishState.Run = true;

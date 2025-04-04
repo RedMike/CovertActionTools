@@ -9,74 +9,61 @@ using Microsoft.Extensions.Logging;
 
 namespace CovertActionTools.Core.Importing
 {
-    public interface IPackageImporter
-    {
-        bool CheckIfValidForImport(string path);
-        void StartImport(string path);
-        ImportStatus? CheckStatus();
-        PackageModel GetImportedModel();
-    }
-    
+    //TODO: replace with a base class
     public class LegacyFolderImporter : IPackageImporter
     {
         private readonly ILogger<LegacyFolderImporter> _logger;
-        private readonly ILegacySimpleImageParser _legacySimpleImageParser;
-        private readonly ILegacyCrimeParser _legacyCrimeParser;
-        private readonly ILegacyTextParser _legacyTextParser;
+        private readonly LegacySimpleImageParser _simpleImageImporter;
+        private readonly LegacyCrimeParser _crimeImporter;
+        private readonly LegacyTextParser _textImporter;
+        private readonly IReadOnlyList<IImporter> _importers;
         
-        public LegacyFolderImporter(ILogger<LegacyFolderImporter> logger, ILegacySimpleImageParser legacySimpleImageParser, ILegacyCrimeParser legacyCrimeParser, ILegacyTextParser legacyTextParser)
-        {
-            _logger = logger;
-            _legacySimpleImageParser = legacySimpleImageParser;
-            _legacyCrimeParser = legacyCrimeParser;
-            _legacyTextParser = legacyTextParser;
-        }
-        
-        private bool _importing = false; //only one import at a time
-        private string _sourcePath = string.Empty;
-        private ImportStatus.ImportStage _currentStage = ImportStatus.ImportStage.Unknown;
-        private int _currentItemsCount = 0;
-        private int _currentItemsDoneCount = 0;
-
         private List<string> _errors = new List<string>();
-        private List<string> _simpleImagesToRead = new List<string>();
-        private List<string> _simpleImagesRead = new List<string>();
-        private List<string> _crimesToRead = new List<string>();
-        private List<string> _crimesRead = new List<string>();
-        private string? _textToRead = null;
-        private string? _textRead = null;
 
         private Task<PackageModel?>? _importTask = null;
+        private ImportStatus.ImportStage _currentStage = ImportStatus.ImportStage.Unknown;
+        private IImporter? _currentImporter = null;
+        
+        public LegacyFolderImporter(ILogger<LegacyFolderImporter> logger, LegacySimpleImageParser simpleImageImporter, LegacyCrimeParser crimeImporter, LegacyTextParser textImporter)
+        {
+            _logger = logger;
+            _simpleImageImporter = simpleImageImporter;
+            _crimeImporter = crimeImporter;
+            _textImporter = textImporter;
+            _importers = new IImporter[] { _simpleImageImporter, _crimeImporter, _textImporter };
+        }
 
         public bool CheckIfValidForImport(string path)
         {
-            if (_importing)
+            if (_importTask != null && !_importTask.IsCompleted)
             {
                 return false;
             }
 
-            //must have at least one PIC file
-            //TODO: better check?
-            var legacyFiles = Directory.GetFiles(path, "*.PIC", SearchOption.TopDirectoryOnly);
-            if (legacyFiles.Length == 0)
+            foreach (var importer in _importers)
             {
-                return false;
+                if (!importer.CheckIfValid(path))
+                {
+                    _logger.LogWarning($"Importer {importer.GetType()} determined path is not valid: {path}");
+                    return false;
+                }
             }
-            
+
             return true;
         }
 
         public void StartImport(string path)
         {
-            if (_importing)
+            if (_importTask != null && !_importTask.IsCompleted)
             {
                 throw new Exception("Trying to import when already importing");
             }
 
-            _importing = true;
-            _sourcePath = path;
-            _currentStage = ImportStatus.ImportStage.ReadingIndex;
-            _logger.LogInformation($"Starting import from: {path}");
+            foreach (var importer in _importers)
+            {
+                importer.Start(path);
+                _logger.LogInformation($"Importer {importer.GetType()} starting import from: {path}");
+            }
             _importTask = ImportInternal();
         }
 
@@ -108,34 +95,20 @@ namespace CovertActionTools.Core.Importing
                     StageMessage = "Done!"
                 };
             }
-
-            var msg = "Unknown.";
-            switch (_currentStage)
-            {
-                case ImportStatus.ImportStage.ReadingIndex:
-                    msg = "Reading index..";
-                    break;
-                case ImportStatus.ImportStage.ProcessingSimpleImages:
-                    msg = $"Processing simple images ({_simpleImagesRead.Count}/{_simpleImagesToRead.Count})";
-                    break;
-                case ImportStatus.ImportStage.ProcessingCrimes:
-                    msg = $"Processing crimes ({_crimesRead.Count}/{_crimesToRead.Count})";
-                    break;
-                case ImportStatus.ImportStage.ProcessingTexts:
-                    msg = $"Processing texts..";
-                    break;
-                case ImportStatus.ImportStage.ImportDone:
-                    msg = $"Done";
-                    break;
-            }
             
+            if (_currentImporter == null)
+            {
+                throw new Exception("Missing importer");
+            }
+
+            var (current, total) = _currentImporter.GetItemCount(); 
             return new ImportStatus()
             {
                 Errors = errors,
                 Stage = _currentStage,
-                StageMessage = msg,
-                StageItems = _currentItemsCount,
-                StageItemsDone = _currentItemsDoneCount,
+                StageMessage = _currentImporter.GetMessage(),
+                StageItems = total,
+                StageItemsDone = current,
             };
         }
 
@@ -166,130 +139,66 @@ namespace CovertActionTools.Core.Importing
             try
             {
                 _currentStage = ImportStatus.ImportStage.ReadingIndex;
-                _currentItemsCount = 0;
-                _currentItemsDoneCount = 0;
                 _errors = new List<string>();
-                _simpleImagesToRead = Directory.GetFiles(_sourcePath, "*.PIC")
-                    .OrderBy(x => x)
-                    .ToList();
-                _simpleImagesRead = new List<string>();
-                _crimesToRead = Directory.GetFiles(_sourcePath, "CRIME*.DTA")
-                    .OrderBy(x => x)
-                    .ToList();
-                _crimesRead = new List<string>();
-                _textToRead = Directory.GetFiles(_sourcePath, "TEXT.DTA")
-                    .FirstOrDefault();
-                if (string.IsNullOrEmpty(_textToRead))
-                {
-                    _textToRead = null;
-                }
-                _textRead = null;
-                _logger.LogInformation($"Index: {_simpleImagesToRead.Count} images, Crimes: {_crimesToRead.Count}, ...");
+                //_logger.LogInformation($"Index: {_simpleImagesToRead.Count} images, {_crimesToRead.Count} crimes, ...");
                 await Task.Yield();
 
+                //images
                 _currentStage = ImportStatus.ImportStage.ProcessingSimpleImages;
-                _currentItemsCount = _simpleImagesToRead.Count;
-                await Task.Yield();
-                foreach (var path in _simpleImagesToRead)
+                _currentImporter = _simpleImageImporter;
+                var done = false;
+                do
                 {
-                    var fileName = Path.GetFileNameWithoutExtension(path);
+                    await Task.Yield();
                     try
                     {
-                        var rawData = File.ReadAllBytes(path);
-                        _logger.LogInformation($"Read image: {fileName} {rawData.Length} bytes");
-
-                        //import the actual image
-                        var imageModel = _legacySimpleImageParser.Parse(fileName, rawData);
-
-                        //update read list
-                        //overwrite the entire list to keep it thread-safe
-                        var newReadList = _simpleImagesRead.ToList();
-                        newReadList.Add(path);
-                        _simpleImagesRead = newReadList;
-                        _currentItemsDoneCount = newReadList.Count;
-
-                        //save to model
-                        model.SimpleImages[fileName] = imageModel;
+                        done |= _simpleImageImporter.RunStep();
                     }
                     catch (Exception e)
                     {
-                        //individual image failures don't crash the entire import
-                        _logger.LogError($"Error processing image: {fileName} {e}");
-                        var newErrors = _errors.ToList();
-                        newErrors.Add($"Image {fileName}: {e}");
-                        _errors = newErrors;
+                        _logger.LogError($"Exception while running step: {e}");
+                        _errors.Add(e.ToString());
                     }
-
-                    await Task.Yield();
-                }
+                } while (!done);
+                model.SimpleImages = _simpleImageImporter.GetResult();
                 
+                //crimes
                 _currentStage = ImportStatus.ImportStage.ProcessingCrimes;
-                _currentItemsCount = _crimesToRead.Count;
-                await Task.Yield();
-                foreach (var path in _crimesToRead)
+                _currentImporter = _crimeImporter;
+                done = false;
+                do
                 {
-                    var fileName = Path.GetFileNameWithoutExtension(path);
+                    await Task.Yield();
                     try
                     {
-                        var rawData = File.ReadAllBytes(path);
-                        _logger.LogInformation($"Read crime {fileName} {rawData.Length} bytes");
-
-                        //import the actual image
-                        var crimeModel = _legacyCrimeParser.Parse(fileName, rawData);
-
-                        //update read list
-                        //overwrite the entire list to keep it thread-safe
-                        var newReadList = _crimesRead.ToList();
-                        newReadList.Add(path);
-                        _crimesRead = newReadList;
-                        _currentItemsDoneCount = newReadList.Count;
-
-                        //save to model
-                        model.Crimes[int.Parse(fileName.Replace("CRIME", ""))] = crimeModel;
+                        done |= _crimeImporter.RunStep();
                     }
                     catch (Exception e)
                     {
-                        //individual image failures don't crash the entire import
-                        _logger.LogError($"Error processing crime: {fileName} {e}");
-                        var newErrors = _errors.ToList();
-                        newErrors.Add($"Crime {fileName}: {e}");
-                        _errors = newErrors;
+                        _logger.LogError($"Exception while running step: {e}");
+                        _errors.Add(e.ToString());
                     }
+                } while (!done);
+                model.Crimes = _crimeImporter.GetResult();
 
-                    await Task.Yield();
-                }
-                
-                
+                //texts
                 _currentStage = ImportStatus.ImportStage.ProcessingTexts;
-                _currentItemsCount = 1;
-                await Task.Yield();
-                if (_textToRead != null)
+                _currentImporter = _textImporter;
+                done = false;
+                do
                 {
-                    var fileName = Path.GetFileNameWithoutExtension(_textToRead);
+                    await Task.Yield();
                     try
                     {
-                        var rawData = File.ReadAllBytes(_textToRead);
-                        _logger.LogInformation($"Read text {fileName} {rawData.Length} bytes");
-
-                        //import the actual image
-                        var textModels = _legacyTextParser.Parse(fileName, rawData);
-
-                        _textRead = _textToRead;
-
-                        //save to model
-                        model.Texts = textModels;
+                        done |= _textImporter.RunStep();
                     }
                     catch (Exception e)
                     {
-                        //individual image failures don't crash the entire import
-                        _logger.LogError($"Error processing texts: {fileName} {e}");
-                        var newErrors = _errors.ToList();
-                        newErrors.Add($"Text {fileName}: {e}");
-                        _errors = newErrors;
+                        _logger.LogError($"Exception while running step: {e}");
+                        _errors.Add(e.ToString());
                     }
-
-                    await Task.Yield();
-                }
+                } while (!done);
+                model.Texts = _textImporter.GetResult();
 
                 _currentStage = ImportStatus.ImportStage.ImportDone;
                 await Task.Yield();
@@ -304,7 +213,7 @@ namespace CovertActionTools.Core.Importing
                 _currentStage = ImportStatus.ImportStage.ImportDone;
             }
 
-            _logger.LogInformation($"Import done: {model.SimpleImages.Count} images, {model.Crimes} crimes, ...");
+            _logger.LogInformation($"Import done: {model.SimpleImages.Count} images, {model.Crimes.Count} crimes, {model.Texts.Count} texts, ...");
             return model;
         }
     }

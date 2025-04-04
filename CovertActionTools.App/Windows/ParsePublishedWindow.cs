@@ -85,14 +85,34 @@ public class ParsePublishedWindow : BaseWindow
             case ImportStatus.ImportStage.ProcessingSimpleImages:
                 if (importStatus.StageItems <= 0)
                 {
-                    progress = 0.2f;
+                    progress = 0.15f;
                 }
                 else
                 {
                     progress = 0.15f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.2f;
                 }
                 break;
-            //0.35f
+            case ImportStatus.ImportStage.ProcessingCrimes:
+                if (importStatus.StageItems <= 0)
+                {
+                    progress = 0.35f;
+                }
+                else
+                {
+                    progress = 0.35f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.2f;
+                }
+                break;
+            case ImportStatus.ImportStage.ProcessingTexts:
+                if (importStatus.StageItems <= 0)
+                {
+                    progress = 0.55f;
+                }
+                else
+                {
+                    progress = 0.55f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
+                }
+                break;
+            //0.65f
             //TODO: other stages
             case ImportStatus.ImportStage.ImportDone:
                 progress = 1.0f;
@@ -213,10 +233,9 @@ public class ParsePublishedWindow : BaseWindow
         if (ImGui.Button("Load"))
         {
             var now = DateTime.Now;
-            var isLegacy = !Directory.GetFiles(destinationPath, "*.png", SearchOption.TopDirectoryOnly).Any();
             _parsePublishedState.Importer = _importer;
             _parsePublishedState.Exporter = _exporter;
-            _logger.LogInformation($"Starting importing at: {now:s}, legacy = {isLegacy}");
+            _logger.LogInformation($"Starting importing at: {now:s}");
             _parsePublishedState.Importer.StartImport(sourcePath);
             _parsePublishedState.Run = true;
             _parsePublishedState.Export = false;

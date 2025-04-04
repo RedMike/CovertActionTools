@@ -1,54 +1,106 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
 
 namespace CovertActionTools.Core.Importing.Parsers
 {
-    public interface ILegacyCrimeParser
-    {
-        CrimeModel Parse(string key, byte[] rawData);
-    }
-    
-    internal class LegacyCrimeParser : ILegacyCrimeParser
+    public class LegacyCrimeParser : BaseImporter<Dictionary<int, CrimeModel>>
     {
         private readonly ILogger<LegacyCrimeParser> _logger;
+        
+        private readonly List<int> _keys = new();
+        private readonly Dictionary<int, CrimeModel> _result = new Dictionary<int, CrimeModel>();
+        
+        private int _index = 0;
 
         public LegacyCrimeParser(ILogger<LegacyCrimeParser> logger)
         {
             _logger = logger;
         }
 
-        public CrimeModel Parse(string key, byte[] rawData)
+        protected override string Message => "Processing crimes..";
+        protected override bool CheckIfValidForImportInternal(string path)
         {
+            if (Directory.GetFiles(path, "CRIME*.DTA").Length == 0)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        protected override int GetTotalItemCountInPath()
+        {
+            return GetKeys(Path).Count;
+        }
+
+        protected override int RunImportStepInternal()
+        {
+            var nextKey = _keys[_index];
+
+            _result[nextKey] = Parse(Path, nextKey);
+
+            return _index++;
+        }
+
+        protected override Dictionary<int, CrimeModel> GetResultInternal()
+        {
+            return _result;
+        }
+
+        protected override void OnImportStart()
+        {
+            _keys.AddRange(GetKeys(Path));
+            _index = 0;
+        }
+        
+        private List<int> GetKeys(string path)
+        {
+            return Directory.GetFiles(path, "CRIME*.DTA")
+                .Select(System.IO.Path.GetFileNameWithoutExtension)
+                .Select(x => int.TryParse(x.Replace("CRIME", ""), out var index) ? index : -1)
+                .Where(x => x >= 0)
+                .ToList();
+        }
+
+        private CrimeModel Parse(string path, int key)
+        {
+            var filePath = System.IO.Path.Combine(path, $"CRIME{key}.DTA");
+            if (!File.Exists(filePath))
+            {
+                throw new Exception($"Missing JSON file: {key}");
+            }
+
+            var rawData = File.ReadAllBytes(filePath);
+            
             using var memStream = new MemoryStream(rawData);
             using var reader = new BinaryReader(memStream);
 
             var participantCount = reader.ReadUInt16();
             var eventCount = reader.ReadUInt16();
 
-            var participants = ReadParticipants(key, reader, participantCount);
-            var events = ReadEvents(key, reader, eventCount);
-            var objects = ReadObjects(key, reader);
-
-            var id = int.Parse(key.Replace("CRIME", ""));
+            var participants = ReadParticipants(reader, participantCount);
+            var events = ReadEvents(reader, eventCount);
+            var objects = ReadObjects(reader);
             
             return new CrimeModel()
             {
-                Id = id,
+                Id = key,
                 Participants = participants,
                 Events = events,
                 Objects = objects,
                 ExtraData = new CrimeModel.Metadata()
                 {
-                    Name = key,
+                    Name = $"CRIME{key}",
                     Comment = "Legacy import"
                 }
             };
         }
 
-        private List<CrimeModel.Participant> ReadParticipants(string key, BinaryReader reader, int count)
+        private List<CrimeModel.Participant> ReadParticipants(BinaryReader reader, int count)
         {
             var participants = new List<CrimeModel.Participant>();
 
@@ -100,7 +152,7 @@ namespace CovertActionTools.Core.Importing.Parsers
             return participants;
         }
 
-        private List<CrimeModel.Event> ReadEvents(string key, BinaryReader reader, int count)
+        private List<CrimeModel.Event> ReadEvents(BinaryReader reader, int count)
         {
             var events = new List<CrimeModel.Event>();
             
@@ -175,7 +227,7 @@ namespace CovertActionTools.Core.Importing.Parsers
             return events;
         }
 
-        private List<CrimeModel.Object> ReadObjects(string key, BinaryReader reader)
+        private List<CrimeModel.Object> ReadObjects(BinaryReader reader)
         {
             var objects = new List<CrimeModel.Object>();
 

@@ -9,15 +9,15 @@ using Microsoft.Extensions.Logging;
 
 namespace CovertActionTools.Core.Importing.Parsers
 {
-    public interface ILegacySimpleImageParser
-    {
-        SimpleImageModel Parse(string key, byte[] rawData);
-    }
-    
-    internal class LegacySimpleImageParser : ILegacySimpleImageParser
+    public class LegacySimpleImageParser : BaseImporter<Dictionary<string, SimpleImageModel>>
     {
         private readonly ILogger<LegacySimpleImageParser> _logger;
         private readonly ILoggerFactory _loggerFactory;
+        
+        private readonly List<string> _keys = new();
+        private readonly Dictionary<string, SimpleImageModel> _result = new Dictionary<string, SimpleImageModel>();
+        
+        private int _index = 0;
 
         public LegacySimpleImageParser(ILogger<LegacySimpleImageParser> logger, ILoggerFactory loggerFactory)
         {
@@ -25,8 +25,59 @@ namespace CovertActionTools.Core.Importing.Parsers
             _loggerFactory = loggerFactory;
         }
 
-        public SimpleImageModel Parse(string key, byte[] rawData)
+        protected override string Message => "Processing simple images..";
+        protected override bool CheckIfValidForImportInternal(string path)
         {
+            if (Directory.GetFiles(path, "*.PIC").Length == 0)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        protected override int GetTotalItemCountInPath()
+        {
+            return _keys.Count;
+        }
+
+        protected override int RunImportStepInternal()
+        {
+            var nextKey = _keys[_index];
+
+            _result[nextKey] = Parse(Path, nextKey);
+
+            return _index++;
+        }
+
+        protected override Dictionary<string, SimpleImageModel> GetResultInternal()
+        {
+            return _result;
+        }
+
+        protected override void OnImportStart()
+        {
+            _keys.AddRange(GetKeys(Path));
+            _index = 0;
+        }
+        
+        private List<string> GetKeys(string path)
+        {
+            return Directory.GetFiles(path, "*.PIC")
+                .Select(System.IO.Path.GetFileNameWithoutExtension)
+                .ToList();
+        }
+
+        private SimpleImageModel Parse(string path, string key)
+        {
+            var filePath = System.IO.Path.Combine(path, $"{key}.PIC");
+            if (!File.Exists(filePath))
+            {
+                throw new Exception($"Missing PIC file: {key}");
+            }
+
+            var rawData = File.ReadAllBytes(filePath);
+            
             using var memStream = new MemoryStream(rawData);
             using var reader = new BinaryReader(memStream);
 

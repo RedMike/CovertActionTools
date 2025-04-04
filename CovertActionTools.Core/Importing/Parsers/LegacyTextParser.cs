@@ -7,22 +7,66 @@ using Microsoft.Extensions.Logging;
 
 namespace CovertActionTools.Core.Importing.Parsers
 {
-    public interface ILegacyTextParser
-    {
-        Dictionary<string, TextModel> Parse(string key, byte[] rawData);
-    }
-
-    internal class LegacyTextParser : ILegacyTextParser
+    public class LegacyTextParser : BaseImporter<Dictionary<string, TextModel>>
     {
         private readonly ILogger<LegacyTextParser> _logger;
+        
+        private Dictionary<string, TextModel> _result = new Dictionary<string, TextModel>();
+        private bool _done = false;
 
         public LegacyTextParser(ILogger<LegacyTextParser> logger)
         {
             _logger = logger;
         }
 
-        public Dictionary<string, TextModel> Parse(string key, byte[] rawData)
+        protected override string Message => "Processing texts..";
+        protected override bool CheckIfValidForImportInternal(string path)
         {
+            if (Directory.GetFiles(path, "TEXT.DTA").Length == 0)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        protected override int GetTotalItemCountInPath()
+        {
+            return Directory.GetFiles(Path, "TEXT.DTA").Length;
+        }
+
+        protected override int RunImportStepInternal()
+        {
+            if (_done)
+            {
+                return 1;
+            }
+
+            _result = Parse(Path);
+            _done = true;
+            return 1;
+        }
+
+        protected override Dictionary<string, TextModel> GetResultInternal()
+        {
+            return _result;
+        }
+
+        protected override void OnImportStart()
+        {
+            _done = false;
+        }
+
+        private Dictionary<string, TextModel> Parse(string path)
+        {
+            var filePath = System.IO.Path.Combine(path, $"TEXT.DTA");
+            if (!File.Exists(filePath))
+            {
+                throw new Exception($"Missing JSON file: TEXT.DTA");
+            }
+
+            var rawData = File.ReadAllBytes(filePath);
+            
             var dict = new Dictionary<string, TextModel>();
             
             using var memStream = new MemoryStream(rawData);

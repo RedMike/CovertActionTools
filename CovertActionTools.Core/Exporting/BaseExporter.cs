@@ -2,7 +2,7 @@
 
 namespace CovertActionTools.Core.Importing
 {
-    public interface IImporter
+    public interface IExporter
     {
         bool CheckIfValid(string path);
         void Start(string path);
@@ -15,14 +15,14 @@ namespace CovertActionTools.Core.Importing
         string GetMessage();
     }
 
-    public interface IImporter<out TData> : IImporter
+    public interface IExporter<out TData> : IExporter
     {
         TData GetResult();
     }
 
-    public abstract class BaseImporter<TData>: IImporter<TData>
+    public abstract class BaseExporter<TData>: IExporter<TData>
     {
-        private bool _importing = false;
+        private bool _exporting = false;
         private bool _done = false;
         private int _totalItems = 0;
         private int _currentItem = 0;
@@ -35,37 +35,37 @@ namespace CovertActionTools.Core.Importing
         
         public bool CheckIfValid(string path)
         {
-            if (_importing)
+            if (_exporting)
             {
-                throw new Exception("Already importing");
+                throw new Exception("Already exporting");
             }
 
-            return CheckIfValidForImportInternal(path);
+            return CheckIfValidForExportInternal(path);
         }
 
         public void Start(string path)
         {
-            if (_importing)
+            if (_exporting)
             {
-                throw new Exception("Already importing");
+                throw new Exception("Already exporting");
             }
             Path = path;
-            _importing = true;
-            OnImportStart();
+            _exporting = true;
+            OnExportStart();
             _totalItems = GetTotalItemCountInPath();
             _currentItem = 0;
         }
 
         public bool RunStep()
         {
-            if (!_importing)
+            if (!_exporting)
             {
-                throw new Exception("Import not started");
+                throw new Exception("Export not started");
             }
 
             try
             {
-                var currentItem = RunImportStepInternal();
+                var currentItem = RunExportStepInternal();
                 _currentItem = currentItem;
                 _done = _currentItem >= _totalItems - 1;
             }
@@ -91,13 +91,13 @@ namespace CovertActionTools.Core.Importing
         {
             if (!_done)
             {
-                throw new Exception("Import not finished");
+                throw new Exception("Export not finished");
             }
 
             return GetResultInternal();
         }
 
-        protected abstract bool CheckIfValidForImportInternal(string path);
+        protected abstract bool CheckIfValidForExportInternal(string path);
         /// <summary>
         /// Get the total number of items that the path will process.
         /// </summary>
@@ -107,11 +107,11 @@ namespace CovertActionTools.Core.Importing
         /// Returns the item index that got processed; when it matches the total number, import will be over.
         /// </summary>
         /// <returns></returns>
-        protected abstract int RunImportStepInternal();
+        protected abstract int RunExportStepInternal();
         protected abstract TData GetResultInternal();
         /// <summary>
         /// Load index/etc
         /// </summary>
-        protected abstract void OnImportStart();
+        protected abstract void OnExportStart();
     }
 }
