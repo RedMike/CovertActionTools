@@ -33,7 +33,7 @@ public class SelectedCrimeWindow : BaseWindow
             return;
         }
         
-        var key = _mainEditorState.SelectedItem.Value.id;
+        var key = int.Parse(_mainEditorState.SelectedItem.Value.id);
         
         var screenSize = ImGui.GetMainViewport().Size;
         var initialPos = new Vector2(300.0f, 20.0f);
@@ -81,7 +81,7 @@ public class SelectedCrimeWindow : BaseWindow
                 ImGui.SameLine();
                 ImGui.Text("Only crimes 0-12 are supported");
             }
-            else if (model.Crimes.ContainsKey($"CRIME{id}"))
+            else if (model.Crimes.ContainsKey(id))
             {
                 ImGui.SameLine();
                 ImGui.Text("Key already taken");

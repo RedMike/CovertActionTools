@@ -245,7 +245,7 @@ namespace CovertActionTools.Core.Importing
                         _currentItemsDoneCount = newReadList.Count;
 
                         //save to model
-                        model.Crimes[fileName] = crimeModel;
+                        model.Crimes[int.Parse(fileName.Replace("CRIME", ""))] = crimeModel;
                     }
                     catch (Exception e)
                     {

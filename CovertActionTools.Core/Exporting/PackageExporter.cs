@@ -40,8 +40,8 @@ namespace CovertActionTools.Core.Exporting
         private List<string> _errors = new List<string>();
         private List<string> _simpleImagesToWrite = new List<string>();
         private List<string> _simpleImagesWritten = new List<string>();
-        private List<string> _crimesToWrite = new List<string>();
-        private List<string> _crimesWritten = new List<string>();
+        private List<int> _crimesToWrite = new List<int>();
+        private List<int> _crimesWritten = new List<int>();
         private string? _textToWrite = null;
         private string? _textWritten = null;
 
@@ -140,7 +140,7 @@ namespace CovertActionTools.Core.Exporting
                 _simpleImagesWritten = new List<string>();
 
                 _crimesToWrite = _package.Crimes.Keys.OrderBy(x => x).ToList();
-                _crimesWritten = new List<string>();
+                _crimesWritten = new List<int>();
 
                 _textToWrite = "text";
                 _textToWrite = null;
