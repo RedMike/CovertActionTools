@@ -5,7 +5,6 @@ using CovertActionTools.Core.Importing;
 using CovertActionTools.Core.Importing.Importers;
 using CovertActionTools.Core.Importing.Parsers;
 using CovertActionTools.Core.Models;
-using CovertActionTools.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CovertActionTools.Core
@@ -14,9 +13,6 @@ namespace CovertActionTools.Core
     {
         public static void AddCovertActionsTools(this IServiceCollection services)
         {
-            services.AddSingleton<IImporterFactory, ImporterFactory>();
-            services.AddSingleton<IExporterFactory, ExporterFactory>();
-            
             services.AddSingleton<ILegacySimpleImageParser, LegacySimpleImageParser>();
             services.AddSingleton<ILegacyCrimeParser, LegacyCrimeParser>();
             services.AddSingleton<ILegacyTextParser, LegacyTextParser>();

@@ -93,7 +93,7 @@ public class PackageExplorerWindow : BaseWindow
                     nodeFlags |= ImGuiTreeNodeFlags.Selected;
                 }
 
-                var name = $"{crime.Key} ({crime.Value.Participants.Count} p, {crime.Value.Events.Count} e, {crime.Value.Objects.Count} o)";
+                var name = $"Crime {crime.Key} ({crime.Value.Participants.Count} p, {crime.Value.Events.Count} e, {crime.Value.Objects.Count} o)";
                 if (ImGui.TreeNodeEx(name, nodeFlags))
                 {
                     if (ImGui.IsItemClicked())

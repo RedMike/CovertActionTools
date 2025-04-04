@@ -3,7 +3,8 @@ using CovertActionTools.App.Logging;
 using CovertActionTools.App.ViewModels;
 using CovertActionTools.App.Windows;
 using CovertActionTools.Core;
-using CovertActionTools.Core.Services;
+using CovertActionTools.Core.Exporting;
+using CovertActionTools.Core.Importing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -85,9 +86,8 @@ if (startWithParsePublishDefault)
     parsePublishState.SourcePath = Constants.DefaultParseSourcePath;
     var newName = $"package-{now:yyyy-MM-dd_HH-mm-ss}";
     parsePublishState.DestinationPath = Path.Combine(Constants.DefaultParseDestinationPath, newName);
-    parsePublishState.Importer = sp.GetRequiredService<IImporterFactory>().Create(true);
     parsePublishState.Importer.StartImport(parsePublishState.SourcePath);
-    parsePublishState.Exporter = sp.GetRequiredService<IExporterFactory>().Create();
+    parsePublishState.Exporter = sp.GetRequiredService<IPackageExporter>();
     parsePublishState.Run = true;
 }
 if (startWithLoadSampleDefault)
@@ -95,7 +95,7 @@ if (startWithLoadSampleDefault)
     var loadPackageState = sp.GetRequiredService<LoadPackageState>();
     loadPackageState.Show = true;
     loadPackageState.SourcePath = Path.GetFullPath(Path.Combine(Constants.DefaultParseSourcePath, "../../../Sample"));
-    loadPackageState.Importer = sp.GetRequiredService<IImporterFactory>().Create(false);
+    loadPackageState.Importer = sp.GetRequiredService<IPackageImporter>();
     loadPackageState.Importer.StartImport(loadPackageState.SourcePath);
     loadPackageState.Run = true;
 }

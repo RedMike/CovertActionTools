@@ -17,7 +17,7 @@ namespace CovertActionTools.Core.Importing
         PackageModel GetImportedModel();
     }
     
-    internal class LegacyFolderImporter : IPackageImporter
+    public class LegacyFolderImporter : IPackageImporter
     {
         private readonly ILogger<LegacyFolderImporter> _logger;
         private readonly ILegacySimpleImageParser _legacySimpleImageParser;

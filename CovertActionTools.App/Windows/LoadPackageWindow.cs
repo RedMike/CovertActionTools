@@ -1,7 +1,6 @@
 ﻿using System.Numerics;
 using CovertActionTools.App.ViewModels;
 using CovertActionTools.Core.Importing;
-using CovertActionTools.Core.Services;
 using ImGuiNET;
 using Microsoft.Extensions.Logging;
 
@@ -12,16 +11,16 @@ public class LoadPackageWindow : BaseWindow
     private readonly ILogger<LoadPackageWindow> _logger;
     private readonly AppLoggingState _appLogging;
     private readonly LoadPackageState _loadPackageState;
-    private readonly IImporterFactory _importerFactory;
     private readonly MainEditorState _mainEditorState;
+    private readonly IPackageImporter _importer;
 
-    public LoadPackageWindow(ILogger<LoadPackageWindow> logger, AppLoggingState appLogging, LoadPackageState loadPackageState, IImporterFactory importerFactory, MainEditorState mainEditorState)
+    public LoadPackageWindow(ILogger<LoadPackageWindow> logger, AppLoggingState appLogging, LoadPackageState loadPackageState, MainEditorState mainEditorState, IPackageImporter importer)
     {
         _logger = logger;
         _appLogging = appLogging;
         _loadPackageState = loadPackageState;
-        _importerFactory = importerFactory;
         _mainEditorState = mainEditorState;
+        _importer = importer;
     }
 
     public override void Draw()
@@ -189,7 +188,7 @@ public class LoadPackageWindow : BaseWindow
         if (ImGui.Button("Load"))
         {
             var now = DateTime.Now;
-            _loadPackageState.Importer = _importerFactory.Create(false);
+            _loadPackageState.Importer = _importer;
             _logger.LogInformation($"Starting importing at: {now:s}");
             _loadPackageState.Importer.StartImport(sourcePath);
             _loadPackageState.Run = true;

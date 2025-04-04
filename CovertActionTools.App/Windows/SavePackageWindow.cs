@@ -1,7 +1,6 @@
 ﻿using System.Numerics;
 using CovertActionTools.App.ViewModels;
 using CovertActionTools.Core.Exporting;
-using CovertActionTools.Core.Services;
 using ImGuiNET;
 using Microsoft.Extensions.Logging;
 
@@ -12,16 +11,16 @@ public class SavePackageWindow : BaseWindow
     private readonly ILogger<SavePackageWindow> _logger;
     private readonly AppLoggingState _appLogging;
     private readonly SavePackageState _savePackageState;
-    private readonly IExporterFactory _exporterFactory;
     private readonly MainEditorState _mainEditorState;
+    private readonly IPackageExporter _exporter;
 
-    public SavePackageWindow(ILogger<SavePackageWindow> logger, AppLoggingState appLogging, SavePackageState savePackageState, IExporterFactory exporterFactory, MainEditorState mainEditorState)
+    public SavePackageWindow(ILogger<SavePackageWindow> logger, AppLoggingState appLogging, SavePackageState savePackageState, MainEditorState mainEditorState, IPackageExporter exporter)
     {
         _logger = logger;
         _appLogging = appLogging;
         _savePackageState = savePackageState;
-        _exporterFactory = exporterFactory;
         _mainEditorState = mainEditorState;
+        _exporter = exporter;
     }
 
     public override void Draw()
@@ -169,7 +168,7 @@ public class SavePackageWindow : BaseWindow
         if (ImGui.Button("Save"))
         {
             var now = DateTime.Now;
-            _savePackageState.Exporter = _exporterFactory.Create();
+            _savePackageState.Exporter = _exporter;
             _logger.LogInformation($"Starting exporting at: {now:s}");
             _savePackageState.Exporter.StartExport(_mainEditorState.LoadedPackage!, destPath);
             _savePackageState.Run = true;

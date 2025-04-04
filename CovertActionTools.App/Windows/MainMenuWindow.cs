@@ -1,5 +1,5 @@
 ﻿using CovertActionTools.App.ViewModels;
-using CovertActionTools.Core.Services;
+using CovertActionTools.Core.Exporting;
 using ImGuiNET;
 using Microsoft.Extensions.Logging;
 
@@ -12,16 +12,16 @@ public class MainMenuWindow : BaseWindow
     private readonly ParsePublishedState _parsePublishedState;
     private readonly LoadPackageState _loadPackageState;
     private readonly SavePackageState _savePackageState;
-    private readonly IExporterFactory _exporterFactory;
+    private readonly IPackageExporter _exporter;
     
-    public MainMenuWindow(ILogger<MainMenuWindow> logger, MainEditorState mainEditorState, ParsePublishedState parsePublishedState, LoadPackageState loadPackageState, SavePackageState savePackageState, IExporterFactory exporterFactory)
+    public MainMenuWindow(ILogger<MainMenuWindow> logger, MainEditorState mainEditorState, ParsePublishedState parsePublishedState, LoadPackageState loadPackageState, SavePackageState savePackageState, IPackageExporter exporter)
     {
         _logger = logger;
         _mainEditorState = mainEditorState;
         _parsePublishedState = parsePublishedState;
         _loadPackageState = loadPackageState;
         _savePackageState = savePackageState;
-        _exporterFactory = exporterFactory;
+        _exporter = exporter;
     }
 
     public override void Draw()
@@ -83,7 +83,7 @@ public class MainMenuWindow : BaseWindow
     {
         _savePackageState.Show = true;
         _savePackageState.Run = true;
-        _savePackageState.Exporter = _exporterFactory.Create();
+        _savePackageState.Exporter = _exporter;
         _savePackageState.Exporter.StartExport(_mainEditorState.LoadedPackage!, _mainEditorState.LoadedPackagePath!);
     }
 

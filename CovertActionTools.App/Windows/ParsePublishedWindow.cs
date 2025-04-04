@@ -2,7 +2,6 @@
 using CovertActionTools.App.ViewModels;
 using CovertActionTools.Core.Exporting;
 using CovertActionTools.Core.Importing;
-using CovertActionTools.Core.Services;
 using ImGuiNET;
 using Microsoft.Extensions.Logging;
 
@@ -13,16 +12,16 @@ public class ParsePublishedWindow : BaseWindow
     private readonly ILogger<ParsePublishedWindow> _logger;
     private readonly AppLoggingState _appLogging;
     private readonly ParsePublishedState _parsePublishedState;
-    private readonly IImporterFactory _importerFactory;
-    private readonly IExporterFactory _exporterFactory;
+    private readonly LegacyFolderImporter _importer;
+    private readonly IPackageExporter _exporter;
 
-    public ParsePublishedWindow(ILogger<ParsePublishedWindow> logger, AppLoggingState appLogging, ParsePublishedState parsePublishedState, IImporterFactory importerFactory, IExporterFactory exporterFactory)
+    public ParsePublishedWindow(ILogger<ParsePublishedWindow> logger, AppLoggingState appLogging, ParsePublishedState parsePublishedState, LegacyFolderImporter importer, IPackageExporter exporter)
     {
         _logger = logger;
         _appLogging = appLogging;
         _parsePublishedState = parsePublishedState;
-        _importerFactory = importerFactory;
-        _exporterFactory = exporterFactory;
+        _importer = importer;
+        _exporter = exporter;
     }
 
     public override void Draw()
@@ -215,8 +214,8 @@ public class ParsePublishedWindow : BaseWindow
         {
             var now = DateTime.Now;
             var isLegacy = !Directory.GetFiles(destinationPath, "*.png", SearchOption.TopDirectoryOnly).Any();
-            _parsePublishedState.Importer = _importerFactory.Create(isLegacy);
-            _parsePublishedState.Exporter = _exporterFactory.Create();
+            _parsePublishedState.Importer = _importer;
+            _parsePublishedState.Exporter = _exporter;
             _logger.LogInformation($"Starting importing at: {now:s}, legacy = {isLegacy}");
             _parsePublishedState.Importer.StartImport(sourcePath);
             _parsePublishedState.Run = true;
