@@ -116,29 +116,46 @@ public class PackageExplorerWindow : BaseWindow
             
             foreach (var textType in types)
             {
-                var texts = model.Texts.Values
-                    .Where(x => x.Type == textType)
-                    .OrderBy(x => x.Id)
-                    .ThenBy(x => x.CrimeId)
-                    .ToList();
-                
-                var nodeFlags = ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.SpanAvailWidth;
-                if (_mainEditorState.SelectedItem != null &&
-                    _mainEditorState.SelectedItem.Value.type == MainEditorState.ItemType.Text &&
-                    _mainEditorState.SelectedItem.Value.id == textType.ToString())
+                var secondaryIds = new List<string>() { "" };
+                if (textType == TextModel.StringType.CrimeMessage)
                 {
-                    nodeFlags |= ImGuiTreeNodeFlags.Selected;
+                    secondaryIds = model.Crimes.Keys.OrderBy(x => x).Select(x => $"{x}").ToList();
                 }
 
-                var name = $"{textType} ({texts.Count})";
-                if (ImGui.TreeNodeEx(name, nodeFlags))
+                foreach (var secondaryId in secondaryIds)
                 {
-                    if (ImGui.IsItemClicked())
+                    var textTypeString = $"{textType}";
+                    if (textType == TextModel.StringType.CrimeMessage)
                     {
-                        _mainEditorState.SelectedItem = (MainEditorState.ItemType.Text, textType.ToString());
+                        textTypeString += $" {secondaryId}";
                     }
                     
-                    ImGui.TreePop();
+                    var texts = model.Texts.Values
+                        .Where(x => x.Type == textType && 
+                            (string.IsNullOrEmpty(secondaryId) || int.Parse(secondaryId) == x.CrimeId)
+                        )
+                        .OrderBy(x => x.Id)
+                        .ThenBy(x => x.CrimeId)
+                        .ToList();
+
+                    var nodeFlags = ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.SpanAvailWidth;
+                    if (_mainEditorState.SelectedItem != null &&
+                        _mainEditorState.SelectedItem.Value.type == MainEditorState.ItemType.Text &&
+                        _mainEditorState.SelectedItem.Value.id == textTypeString)
+                    {
+                        nodeFlags |= ImGuiTreeNodeFlags.Selected;
+                    }
+
+                    var name = $"{textTypeString} ({texts.Count})";
+                    if (ImGui.TreeNodeEx(name, nodeFlags))
+                    {
+                        if (ImGui.IsItemClicked())
+                        {
+                            _mainEditorState.SelectedItem = (MainEditorState.ItemType.Text, textTypeString);
+                        }
+
+                        ImGui.TreePop();
+                    }
                 }
             }
             
