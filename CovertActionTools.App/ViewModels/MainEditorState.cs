@@ -13,6 +13,7 @@ public class MainEditorState : IViewModel
         SimpleImage = 0,
         Crime = 1,
         Text = 2,
+        Clue = 3,
     }
     public string? LoadedPackagePath { get; private set; }
     public PackageModel? OriginalLoadedPackage { get; private set; }

@@ -81,7 +81,7 @@ public class PackageExplorerWindow : BaseWindow
             ImGui.TreePop();
         }
         
-        if (ImGui.TreeNodeEx("Crimes", ImGuiTreeNodeFlags.DefaultOpen | ImGuiTreeNodeFlags.SpanAvailWidth))
+        if (ImGui.TreeNodeEx("Crimes", ImGuiTreeNodeFlags.SpanAvailWidth))
         {
             foreach (var crime in model.Crimes.OrderBy(x => x.Key))
             {
@@ -108,7 +108,7 @@ public class PackageExplorerWindow : BaseWindow
             ImGui.TreePop();
         }
         
-        if (ImGui.TreeNodeEx("Texts", ImGuiTreeNodeFlags.DefaultOpen | ImGuiTreeNodeFlags.SpanAvailWidth))
+        if (ImGui.TreeNodeEx("Texts", ImGuiTreeNodeFlags.SpanAvailWidth))
         {
             var types = Enum.GetValues<TextModel.StringType>()
                 .Where(x => x != TextModel.StringType.Unknown)
@@ -156,6 +156,40 @@ public class PackageExplorerWindow : BaseWindow
 
                         ImGui.TreePop();
                     }
+                }
+            }
+            
+            ImGui.TreePop();
+        }
+
+        if (ImGui.TreeNodeEx("Clues", ImGuiTreeNodeFlags.DefaultOpen | ImGuiTreeNodeFlags.SpanAvailWidth))
+        {
+            var crimeIds = model.Clues.Values.Select(x => x.CrimeId).Distinct().OrderBy(x => x ?? int.MinValue).ToList();
+            foreach (var crimeId in crimeIds)
+            {
+                var crimeString = "Any Crime";
+                if (crimeId != null)
+                {
+                    crimeString = $"Crime {crimeId}";
+                }
+                
+                var nodeFlags = ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.SpanAvailWidth;
+                if (_mainEditorState.SelectedItem != null &&
+                    _mainEditorState.SelectedItem.Value.type == MainEditorState.ItemType.Clue &&
+                    _mainEditorState.SelectedItem.Value.id == crimeString)
+                {
+                    nodeFlags |= ImGuiTreeNodeFlags.Selected;
+                }
+
+                var name = $"{crimeString} ({model.Clues.Count(x => x.Value.CrimeId == crimeId)})";
+                if (ImGui.TreeNodeEx(name, nodeFlags))
+                {
+                    if (ImGui.IsItemClicked())
+                    {
+                        _mainEditorState.SelectedItem = (MainEditorState.ItemType.Clue, crimeString);
+                    }
+
+                    ImGui.TreePop();
                 }
             }
             
