@@ -119,8 +119,10 @@ public class ParsePublishedWindow : BaseWindow
                 break;
         }
 
+        var text = $"{importStatus.StageMessage} {importStatus.StageItemsDone}/{importStatus.StageItems}";
         if (importStatus.Stage == ImportStatus.ImportStage.ImportDone && _parsePublishedState.Export)
         {
+            text = $"{exportStatus.StageMessage} {exportStatus.StageItemsDone}/{exportStatus.StageItems}";
             progress = 0.1f;
             switch (exportStatus.Stage)
             {
@@ -128,7 +130,6 @@ public class ParsePublishedWindow : BaseWindow
                     progress = 0.15f;
                     break;
                 case ExportStatus.ExportStage.ProcessingSimpleImages:
-                    progress = 0.2f;
                     if (exportStatus.StageItems <= 0)
                     {
                         progress = 0.2f;
@@ -137,16 +138,34 @@ public class ParsePublishedWindow : BaseWindow
                     {
                         progress = 0.15f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.2f;
                     }
-
                     break;
-                //0.35f
+                case ExportStatus.ExportStage.ProcessingCrimes:
+                    if (exportStatus.StageItems <= 0)
+                    {
+                        progress = 0.35f;
+                    }
+                    else
+                    {
+                        progress = 0.35f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.2f;
+                    }
+                    break;
+                case ExportStatus.ExportStage.ProcessingTexts:
+                    if (exportStatus.StageItems <= 0)
+                    {
+                        progress = 0.55f;
+                    }
+                    else
+                    {
+                        progress = 0.55f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.1f;
+                    }
+                    break;
+                //0.65f
                 //TODO: other stages
             }
         }
         var progressBarSize = new Vector2(windowSize.X - 20.0f, 15.0f);
         ImGui.ProgressBar(progress, progressBarSize);
         
-        var text = $"{importStatus.StageMessage}";
         var textSize = ImGui.CalcTextSize(text);
         var oldCursorPos = ImGui.GetCursorPos();
         try

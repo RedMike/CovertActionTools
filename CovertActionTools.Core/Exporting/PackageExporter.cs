@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using CovertActionTools.Core.Exporting.Exporters;
+using CovertActionTools.Core.Importing;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
 
@@ -18,11 +19,11 @@ namespace CovertActionTools.Core.Exporting
     internal class PackageExporter : IPackageExporter
     {
         private readonly ILogger<PackageExporter> _logger;
-        private readonly ISimpleImageExporter _simpleImageExporter;
-        private readonly ICrimeExporter _crimeExporter;
-        private readonly ITextExporter _textExporter;
+        private readonly IExporter<Dictionary<string, SimpleImageModel>> _simpleImageExporter;
+        private readonly IExporter<Dictionary<int, CrimeModel>> _crimeExporter;
+        private readonly IExporter<Dictionary<string, TextModel>> _textExporter;
 
-        public PackageExporter(ILogger<PackageExporter> logger, ISimpleImageExporter simpleImageExporter, ICrimeExporter crimeExporter, ITextExporter textExporter)
+        public PackageExporter(ILogger<PackageExporter> logger, IExporter<Dictionary<string, SimpleImageModel>> simpleImageExporter, IExporter<Dictionary<int, CrimeModel>> crimeExporter, IExporter<Dictionary<string, TextModel>> textExporter)
         {
             _logger = logger;
             _simpleImageExporter = simpleImageExporter;
@@ -30,35 +31,27 @@ namespace CovertActionTools.Core.Exporting
             _textExporter = textExporter;
         }
         
-        private bool _exporting = false; //only one export at a time
-        private PackageModel? _package = null;
-        private string _destinationPath = string.Empty;
-        private ExportStatus.ExportStage _currentStage = ExportStatus.ExportStage.Unknown;
-        private int _currentItemsCount = 0;
-        private int _currentItemsDoneCount = 0;
-
         private List<string> _errors = new List<string>();
-        private List<string> _simpleImagesToWrite = new List<string>();
-        private List<string> _simpleImagesWritten = new List<string>();
-        private List<int> _crimesToWrite = new List<int>();
-        private List<int> _crimesWritten = new List<int>();
-        private string? _textToWrite = null;
-        private string? _textWritten = null;
-
+        
         private Task? _exportTask = null;
+        private ExportStatus.ExportStage _currentStage = ExportStatus.ExportStage.Unknown;
+        private IExporter? _currentExporter = null;
+        private string _path = string.Empty;
 
         public void StartExport(PackageModel model, string path)
         {
-            if (_exporting)
+            if (_exportTask != null && !_exportTask.IsCompleted)
             {
                 throw new Exception("Trying to export when already exporting");
             }
 
-            _exporting = true;
-            _destinationPath = path;
-            _package = model;
-            _currentStage = ExportStatus.ExportStage.Preparing;
-            _logger.LogInformation($"Starting export to: {path}");
+            _path = path;
+            _simpleImageExporter.Start(path, model.SimpleImages);
+            _logger.LogInformation($"Exporter {_simpleImageExporter.GetType()} starting export to: {path}");
+            _crimeExporter.Start(path, model.Crimes);
+            _logger.LogInformation($"Exporter {_crimeExporter.GetType()} starting export to: {path}");
+            _textExporter.Start(path, model.Texts);
+            _logger.LogInformation($"Exporter {_textExporter.GetType()} starting export to: {path}");
             _exportTask = ExportInternal();
         }
 
@@ -91,140 +84,90 @@ namespace CovertActionTools.Core.Exporting
                 };
             }
 
-            var msg = "Unknown.";
-            switch (_currentStage)
+            if (_currentExporter == null)
             {
-                case ExportStatus.ExportStage.Preparing:
-                    msg = "Preparing..";
-                    break;
-                case ExportStatus.ExportStage.ProcessingSimpleImages:
-                    msg = $"Processing simple images ({_simpleImagesWritten.Count}/{_simpleImagesToWrite.Count})";
-                    break;
-                case ExportStatus.ExportStage.ProcessingCrimes:
-                    msg = $"Processing crimes ({_crimesWritten.Count}/{_crimesToWrite.Count})";
-                    break;
-                case ExportStatus.ExportStage.ProcessingTexts:
-                    msg = $"Processing texts..";
-                    break;
-                case ExportStatus.ExportStage.ExportDone:
-                    msg = "Done";
-                    break;
+                throw new Exception("Missing exporter");
             }
 
+            var (current, total) = _currentExporter.GetItemCount(); 
             return new ExportStatus()
             {
                 Errors = errors,
                 Stage = _currentStage,
-                StageMessage = msg,
-                StageItems = _currentItemsCount,
-                StageItemsDone = _currentItemsDoneCount
+                StageMessage = _currentExporter.GetMessage(),
+                StageItems = total,
+                StageItemsDone = current
             };
         }
 
         private async Task ExportInternal()
         {
-            if (_package == null)
-            {
-                throw new Exception("Missing package");
-            }
-            
             try
             {
                 _currentStage = ExportStatus.ExportStage.Preparing;
-                Directory.CreateDirectory(_destinationPath);
-                _currentItemsCount = 0;
-                _currentItemsDoneCount = 0;
+                Directory.CreateDirectory(_path);
                 _errors = new List<string>();
-
-                _simpleImagesToWrite = _package.SimpleImages.Keys.OrderBy(x => x).ToList();
-                _simpleImagesWritten = new List<string>();
-
-                _crimesToWrite = _package.Crimes.Keys.OrderBy(x => x).ToList();
-                _crimesWritten = new List<int>();
-
-                _textToWrite = "text";
-                _textToWrite = null;
-                
-                _logger.LogInformation($"Index: {_simpleImagesToWrite.Count} images, {_crimesToWrite.Count} crimes, ...");
+                //_logger.LogInformation($"Index: {_simpleImagesToWrite.Count} images, {_crimesToWrite.Count} crimes, ...");
                 await Task.Yield();
 
+                //images
                 _currentStage = ExportStatus.ExportStage.ProcessingSimpleImages;
-                _currentItemsCount = _simpleImagesToWrite.Count;
+                _currentExporter = _simpleImageExporter;
                 await Task.Yield();
-                foreach (var imageKey in _simpleImagesToWrite)
+                var done = false;
+                do
                 {
-                    var image = _package.SimpleImages[imageKey];
+                    await Task.Yield();
                     try
                     {
-                        var files = _simpleImageExporter.Export(image);
-                        foreach (var pair in files)
-                        {
-                            var (fileName, bytes) = (pair.Key, pair.Value);
-                            File.WriteAllBytes(Path.Combine(_destinationPath, fileName), bytes);
-                            _logger.LogInformation($"Wrote image: {fileName} {bytes.Length}");
-                        }
+                        done |= _simpleImageExporter.RunStep();
                     }
                     catch (Exception e)
                     {
-                        //individual image failures don't crash the entire export
-                        _logger.LogError($"Error processing image: {imageKey} {e}");
-                        var newErrors = _errors.ToList();
-                        newErrors.Add($"Image {imageKey}: {e}");
-                        _errors = newErrors;
+                        _logger.LogError($"Exception while running step: {e}");
+                        _errors.Add(e.ToString());
                     }
-                }
+                } while (!done);
                 
-                
+                //crimes
                 _currentStage = ExportStatus.ExportStage.ProcessingCrimes;
-                _currentItemsCount = _crimesToWrite.Count;
+                _currentExporter = _simpleImageExporter;
                 await Task.Yield();
-                foreach (var crimeKey in _crimesToWrite)
+                done = false;
+                do
                 {
-                    var crime = _package.Crimes[crimeKey];
+                    await Task.Yield();
                     try
                     {
-                        var files = _crimeExporter.Export(crime);
-                        foreach (var pair in files)
-                        {
-                            var (fileName, bytes) = (pair.Key, pair.Value);
-                            File.WriteAllBytes(Path.Combine(_destinationPath, fileName), bytes);
-                            _logger.LogInformation($"Wrote crime: {fileName} {bytes.Length}");
-                        }
+                        done |= _crimeExporter.RunStep();
                     }
                     catch (Exception e)
                     {
-                        //individual crime failures don't crash the entire export
-                        _logger.LogError($"Error processing crime: {crimeKey} {e}");
-                        var newErrors = _errors.ToList();
-                        newErrors.Add($"Crime {crimeKey}: {e}");
-                        _errors = newErrors;
+                        _logger.LogError($"Exception while running step: {e}");
+                        _errors.Add(e.ToString());
                     }
-                }
+                } while (!done);
                 
-                
+                //texts
                 _currentStage = ExportStatus.ExportStage.ProcessingTexts;
-                _currentItemsCount = 1;
+                _currentExporter = _simpleImageExporter;
                 await Task.Yield();
-                var text = _package.Texts;
-                try
+                done = false;
+                do
                 {
-                    var files = _textExporter.Export(text);
-                    foreach (var pair in files)
+                    await Task.Yield();
+                    try
                     {
-                        var (fileName, bytes) = (pair.Key, pair.Value);
-                        File.WriteAllBytes(Path.Combine(_destinationPath, fileName), bytes);
-                        _logger.LogInformation($"Wrote text: {fileName} {bytes.Length}");
+                        done |= _textExporter.RunStep();
                     }
-                }
-                catch (Exception e)
-                {
-                    //individual text failures don't crash the entire export
-                    _logger.LogError($"Error processing text: {e}");
-                    var newErrors = _errors.ToList();
-                    newErrors.Add($"Text: {e}");
-                    _errors = newErrors;
-                }
+                    catch (Exception e)
+                    {
+                        _logger.LogError($"Exception while running step: {e}");
+                        _errors.Add(e.ToString());
+                    }
+                } while (!done);
                 
+                await Task.Yield();
                 _currentStage = ExportStatus.ExportStage.ExportDone;
                 await Task.Yield();
             }
@@ -238,7 +181,7 @@ namespace CovertActionTools.Core.Exporting
                 _currentStage = ExportStatus.ExportStage.ExportDone;
             }
             
-            _logger.LogInformation($"Export done: {_package.SimpleImages.Count} images, {_package.Crimes.Count} crimes, ...");
+            //_logger.LogInformation($"Export done: {.SimpleImages.Count} images, {_package.Crimes.Count} crimes, ...");
         }
     }
 }

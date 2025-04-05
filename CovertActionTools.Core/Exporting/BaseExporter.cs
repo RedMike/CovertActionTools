@@ -4,8 +4,6 @@ namespace CovertActionTools.Core.Importing
 {
     public interface IExporter
     {
-        bool CheckIfValid(string path);
-        void Start(string path);
         /// <summary>
         /// Returns true when process is finished
         /// </summary>
@@ -15,9 +13,9 @@ namespace CovertActionTools.Core.Importing
         string GetMessage();
     }
 
-    public interface IExporter<out TData> : IExporter
+    public interface IExporter<in TData> : IExporter
     {
-        TData GetResult();
+        void Start(string path, TData data);
     }
 
     public abstract class BaseExporter<TData>: IExporter<TData>
@@ -27,29 +25,21 @@ namespace CovertActionTools.Core.Importing
         private int _totalItems = 0;
         private int _currentItem = 0;
         protected string Path = string.Empty;
+        protected TData Data = default!;
         
         /// <summary>
         /// Should be static
         /// </summary>
         protected abstract string Message { get; }
-        
-        public bool CheckIfValid(string path)
-        {
-            if (_exporting)
-            {
-                throw new Exception("Already exporting");
-            }
 
-            return CheckIfValidForExportInternal(path);
-        }
-
-        public void Start(string path)
+        public void Start(string path, TData data)
         {
             if (_exporting)
             {
                 throw new Exception("Already exporting");
             }
             Path = path;
+            Data = data;
             _exporting = true;
             OnExportStart();
             _totalItems = GetTotalItemCountInPath();
@@ -87,17 +77,6 @@ namespace CovertActionTools.Core.Importing
             return Message;
         }
 
-        public TData GetResult()
-        {
-            if (!_done)
-            {
-                throw new Exception("Export not finished");
-            }
-
-            return GetResultInternal();
-        }
-
-        protected abstract bool CheckIfValidForExportInternal(string path);
         /// <summary>
         /// Get the total number of items that the path will process.
         /// </summary>
@@ -108,7 +87,6 @@ namespace CovertActionTools.Core.Importing
         /// </summary>
         /// <returns></returns>
         protected abstract int RunExportStepInternal();
-        protected abstract TData GetResultInternal();
         /// <summary>
         /// Load index/etc
         /// </summary>

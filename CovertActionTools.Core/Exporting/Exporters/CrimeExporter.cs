@@ -1,7 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
+using CovertActionTools.Core.Importing;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
 
@@ -12,12 +14,7 @@ namespace CovertActionTools.Core.Exporting.Exporters
     ///   * CRIMEx.DTA file (legacy)
     ///   * CRIMEx.json file (modern + metadata)
     /// </summary>
-    public interface ICrimeExporter
-    {
-        IDictionary<string, byte[]> Export(CrimeModel crime);
-    }
-    
-    internal class CrimeExporter : ICrimeExporter
+    internal class CrimeExporter : BaseExporter<Dictionary<int, CrimeModel>>
     {
 #if DEBUG
         private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions()
@@ -29,13 +26,47 @@ namespace CovertActionTools.Core.Exporting.Exporters
 #endif
 
         private readonly ILogger<CrimeExporter> _logger;
+        
+        private readonly List<int> _keys = new();
+        private int _index = 0;
 
         public CrimeExporter(ILogger<CrimeExporter> logger)
         {
             _logger = logger;
         }
 
-        public IDictionary<string, byte[]> Export(CrimeModel crime)
+        protected override string Message => "Processing crimes..";
+        protected override int GetTotalItemCountInPath()
+        {
+            return _keys.Count;
+        }
+
+        protected override int RunExportStepInternal()
+        {
+            var nextKey = _keys[_index];
+
+            var files = Export(Data[nextKey]);
+            foreach (var pair in files)
+            {
+                File.WriteAllBytes(System.IO.Path.Combine(Path, pair.Key), pair.Value);
+            }
+
+            return _index++;
+        }
+
+        protected override void OnExportStart()
+        {
+            _keys.AddRange(GetKeys());
+            _index = 0;
+            _logger.LogInformation($"Starting export of crimes: {_keys.Count}");
+        }
+        
+        private List<int> GetKeys()
+        {
+            return Data.Keys.ToList();
+        }
+
+        private IDictionary<string, byte[]> Export(CrimeModel crime)
         {
             var dict = new Dictionary<string, byte[]>()
             {

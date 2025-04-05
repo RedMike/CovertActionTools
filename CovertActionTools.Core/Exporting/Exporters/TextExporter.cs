@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using CovertActionTools.Core.Importing;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
 
@@ -14,12 +15,7 @@ namespace CovertActionTools.Core.Exporting.Exporters
     ///   * TEXT.DTA file (legacy)
     ///   * TEXT.json file (modern + metadata)
     /// </summary>
-    public interface ITextExporter
-    {
-        IDictionary<string, byte[]> Export(Dictionary<string, TextModel> texts);
-    }
-    
-    internal class TextExporter : ITextExporter
+    internal class TextExporter : BaseExporter<Dictionary<string, TextModel>>
     {
 #if DEBUG
         private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions()
@@ -31,13 +27,43 @@ namespace CovertActionTools.Core.Exporting.Exporters
 #endif
 
         private readonly ILogger<TextExporter> _logger;
+        
+        private bool _done = false;
 
         public TextExporter(ILogger<TextExporter> logger)
         {
             _logger = logger;
         }
 
-        public IDictionary<string, byte[]> Export(Dictionary<string, TextModel> texts)
+        protected override string Message => "Processing texts..";
+        protected override int GetTotalItemCountInPath()
+        {
+            return Data.Count > 0 ? 1 : 0;
+        }
+
+        protected override int RunExportStepInternal()
+        {
+            if (Data.Count == 0 || _done)
+            {
+                return 1;
+            }
+            var files = Export(Data);
+            foreach (var pair in files)
+            {
+                File.WriteAllBytes(System.IO.Path.Combine(Path, pair.Key), pair.Value);
+            }
+
+            _done = true;
+            return 1;
+        }
+
+        protected override void OnExportStart()
+        {
+            _done = false;
+            _logger.LogInformation($"Starting export of texts");
+        }
+
+        private IDictionary<string, byte[]> Export(Dictionary<string, TextModel> texts)
         {
             var dict = new Dictionary<string, byte[]>()
             {

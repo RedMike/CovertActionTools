@@ -83,18 +83,38 @@ public class SavePackageWindow : BaseWindow
                 {
                     progress = 0.15f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.2f;
                 }
+
                 break;
-            //0.35f
+            case ExportStatus.ExportStage.ProcessingCrimes:
+                if (exportStatus.StageItems <= 0)
+                {
+                    progress = 0.35f;
+                }
+                else
+                {
+                    progress = 0.35f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.2f;
+                }
+
+                break;
+            case ExportStatus.ExportStage.ProcessingTexts:
+                if (exportStatus.StageItems <= 0)
+                {
+                    progress = 0.55f;
+                }
+                else
+                {
+                    progress = 0.55f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.1f;
+                }
+
+                break;
+            //0.65f
             //TODO: other stages
-            case ExportStatus.ExportStage.ExportDone:
-                progress = 1.0f;
-                break;
         }
 
         var progressBarSize = new Vector2(windowSize.X - 20.0f, 15.0f);
         ImGui.ProgressBar(progress, progressBarSize);
         
-        var text = $"{exportStatus.StageMessage}";
+        var text = $"{exportStatus.StageMessage} {exportStatus.StageItemsDone}/{exportStatus.StageItems}";
         var textSize = ImGui.CalcTextSize(text);
         var oldCursorPos = ImGui.GetCursorPos();
         try

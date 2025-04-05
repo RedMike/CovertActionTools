@@ -20,18 +20,10 @@ namespace CovertActionTools.Core
             services.AddSingleton<IImporter<Dictionary<string, SimpleImageModel>>, SimpleImageImporter>();
             services.AddSingleton<IImporter<Dictionary<int, CrimeModel>>, CrimeImporter>();
             services.AddSingleton<IImporter<Dictionary<string, TextModel>>, TextImporter>();
-            services.AddSingleton<IReadOnlyList<IImporter>>(s => 
-                new IImporter[]
-                {
-                    s.GetRequiredService<IImporter<Dictionary<string, SimpleImageModel>>>(),
-                    s.GetRequiredService<IImporter<Dictionary<int, CrimeModel>>>(),
-                    s.GetRequiredService<IImporter<Dictionary<string, TextModel>>>(),
-                }
-            );
             
-            services.AddSingleton<ISimpleImageExporter, SimpleImageExporter>();
-            services.AddSingleton<ICrimeExporter, CrimeExporter>();
-            services.AddSingleton<ITextExporter, TextExporter>();
+            services.AddSingleton<IExporter<Dictionary<string, SimpleImageModel>>, SimpleImageExporter>();
+            services.AddSingleton<IExporter<Dictionary<int, CrimeModel>>, CrimeExporter>();
+            services.AddSingleton<IExporter<Dictionary<string, TextModel>>, TextExporter>();
             
             services.AddTransient<LegacyFolderImporter>();
             services.AddTransient<IPackageImporter, PackageImporter>();

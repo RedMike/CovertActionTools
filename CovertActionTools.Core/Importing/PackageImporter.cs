@@ -21,13 +21,18 @@ namespace CovertActionTools.Core.Importing
         private ImportStatus.ImportStage _currentStage = ImportStatus.ImportStage.Unknown;
         private IImporter? _currentImporter = null;
 
-        public PackageImporter(ILogger<PackageImporter> logger, IReadOnlyList<IImporter> importers, IImporter<Dictionary<string, SimpleImageModel>> simpleImageImporter, IImporter<Dictionary<int, CrimeModel>> crimeImporter, IImporter<Dictionary<string, TextModel>> textImporter)
+        public PackageImporter(ILogger<PackageImporter> logger, IImporter<Dictionary<string, SimpleImageModel>> simpleImageImporter, IImporter<Dictionary<int, CrimeModel>> crimeImporter, IImporter<Dictionary<string, TextModel>> textImporter)
         {
             _logger = logger;
-            _importers = importers;
             _simpleImageImporter = simpleImageImporter;
             _crimeImporter = crimeImporter;
             _textImporter = textImporter;
+            _importers = new IImporter[]
+            {
+                _simpleImageImporter,
+                _crimeImporter,
+                _textImporter
+            };
         }
 
         public bool CheckIfValidForImport(string path)

@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using CovertActionTools.Core.Compression;
 using CovertActionTools.Core.Conversion;
+using CovertActionTools.Core.Importing;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
 
@@ -18,12 +19,7 @@ namespace CovertActionTools.Core.Exporting.Exporters
     ///   * PNG file _VGA (VGA legacy image)
     ///   * PNG file _CGA (CGA replacement image)
     /// </summary>
-    public interface ISimpleImageExporter
-    {
-        IDictionary<string, byte[]> Export(SimpleImageModel image);
-    }
-    
-    internal class SimpleImageExporter : ISimpleImageExporter
+    internal class SimpleImageExporter : BaseExporter<Dictionary<string, SimpleImageModel>>
     {
         #if DEBUG
         private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions()
@@ -36,6 +32,9 @@ namespace CovertActionTools.Core.Exporting.Exporters
         
         private readonly ILogger<SimpleImageExporter> _logger;
         private readonly ILoggerFactory _loggerFactory;
+        
+        private readonly List<string> _keys = new();
+        private int _index = 0;
 
         public SimpleImageExporter(ILogger<SimpleImageExporter> logger, ILoggerFactory loggerFactory)
         {
@@ -43,7 +42,39 @@ namespace CovertActionTools.Core.Exporting.Exporters
             _loggerFactory = loggerFactory;
         }
 
-        public IDictionary<string, byte[]> Export(SimpleImageModel image)
+        protected override string Message => "Processing simple images..";
+
+        protected override int GetTotalItemCountInPath()
+        {
+            return _keys.Count;
+        }
+
+        protected override int RunExportStepInternal()
+        {
+            var nextKey = _keys[_index];
+
+            var files = Export(Data[nextKey]);
+            foreach (var pair in files)
+            {
+                File.WriteAllBytes(System.IO.Path.Combine(Path, pair.Key), pair.Value);
+            }
+
+            return _index++;
+        }
+
+        protected override void OnExportStart()
+        {
+            _keys.AddRange(GetKeys());
+            _index = 0;
+            _logger.LogInformation($"Starting export of images: {_keys.Count}");
+        }
+        
+        private List<string> GetKeys()
+        {
+            return Data.Keys.ToList();
+        }
+
+        private IDictionary<string, byte[]> Export(SimpleImageModel image)
         {
             var dict = new Dictionary<string, byte[]>
             {
