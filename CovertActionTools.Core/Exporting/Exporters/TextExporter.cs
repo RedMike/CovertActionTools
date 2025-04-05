@@ -102,7 +102,6 @@ namespace CovertActionTools.Core.Exporting.Exporters
                 .ToDictionary(x => x.Last().GetMessagePrefix(), 
                     x => x.Take(x.Count - 1).Select(t => t.GetMessagePrefix()).ToList());
             
-            //TODO: find out if the ordering matters
             var orderedTexts = texts
                 .Values
                 .OrderBy(x => x.Type)

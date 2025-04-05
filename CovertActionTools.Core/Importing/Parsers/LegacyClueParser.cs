@@ -183,6 +183,11 @@ namespace CovertActionTools.Core.Importing.Parsers
                             foreach (var queuedModel in queuedModels)
                             {
                                 queuedModel.Message = message;
+                                if (queuedModel.CrimeId != null)
+                                {
+                                    queuedModel.Unknown1 = model.Unknown1;
+                                    queuedModel.Type = model.Type;
+                                }
                                 dict[queuedModel.GetMessagePrefix()] = queuedModel;
                             }
                             queuedModels.Clear();
@@ -198,6 +203,11 @@ namespace CovertActionTools.Core.Importing.Parsers
                         {
                             _logger.LogInformation($"Queued text key {queuedModel.GetMessagePrefix()} as duplicate of {textKey}");
                             queuedModel.Message = message;
+                            if (queuedModel.CrimeId != null)
+                            {
+                                queuedModel.Unknown1 = model.Unknown1;
+                                queuedModel.Type = model.Type;
+                            }
                             dict[queuedModel.GetMessagePrefix()] = queuedModel;
                         }
                         queuedModels.Clear();
