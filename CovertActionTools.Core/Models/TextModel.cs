@@ -31,30 +31,54 @@ namespace CovertActionTools.Core.Models
         /// </summary>
         public int Order { get; set; }
 
-        internal string GetMessagePrefix()
+        public static string GetTypePrefix(StringType type)
+        {
+            switch (type)
+            {
+                case StringType.CrimeMessage:
+                    return "MSG";
+                case StringType.SenderOrganisation:
+                    return "SORG";
+                case StringType.ReceiverOrganisation:
+                    return "RORG";
+                case StringType.SenderLocation:
+                    return "SLOC";
+                case StringType.ReceiverLocation:
+                    return "RLOC";
+                case StringType.Fluff:
+                    return "FLUF";
+                case StringType.Alert:
+                    return "ALRT";
+                case StringType.AidingOrganisation:
+                    return "AIDD";
+                default:
+                    throw new Exception($"Unknown type: {type}");
+            }
+        }
+
+        public string GetMessagePrefix()
         {
             switch (Type)
             {
                 case StringType.CrimeMessage:
-                    return $"MSG{CrimeId:D2}{Id:D2}";
+                    return $"{GetTypePrefix(Type)}{CrimeId:D2}{Id:D2}";
                 case StringType.SenderOrganisation:
-                    return $"SORG{Id:D2}";
+                    return $"{GetTypePrefix(Type)}{Id:D2}";
                 case StringType.ReceiverOrganisation:
-                    return $"RORG{Id:D2}";
+                    return $"{GetTypePrefix(Type)}{Id:D2}";
                 case StringType.SenderLocation:
-                    return $"SLOC{Id:D2}";
+                    return $"{GetTypePrefix(Type)}{Id:D2}";
                 case StringType.ReceiverLocation:
-                    return $"RLOC{Id:D2}";
+                    return $"{GetTypePrefix(Type)}{Id:D2}";
                 case StringType.Fluff:
-                    return $"FLUF{Id:D2}";
+                    return $"{GetTypePrefix(Type)}{Id:D2}";
                 case StringType.Alert:
-                    return $"ALRT{Id:D2}";
+                    return $"{GetTypePrefix(Type)}{Id:D2}";
                 case StringType.AidingOrganisation:
-                    return $"AIDD{Id:D2}";
+                    return $"{GetTypePrefix(Type)}{Id:D2}";
                 default:
                     throw new Exception($"Unknown type: {Type}");
             }
         }
-
     }
 }

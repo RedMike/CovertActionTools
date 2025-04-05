@@ -12,6 +12,7 @@ public class MainEditorState : IViewModel
         Unknown = -1,
         SimpleImage = 0,
         Crime = 1,
+        Text = 2,
     }
     public string? LoadedPackagePath { get; private set; }
     public PackageModel? OriginalLoadedPackage { get; private set; }

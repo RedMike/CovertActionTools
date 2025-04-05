@@ -107,5 +107,42 @@ public class PackageExplorerWindow : BaseWindow
             
             ImGui.TreePop();
         }
+        
+        if (ImGui.TreeNodeEx("Texts", ImGuiTreeNodeFlags.DefaultOpen | ImGuiTreeNodeFlags.SpanAvailWidth))
+        {
+            var types = Enum.GetValues<TextModel.StringType>()
+                .Where(x => x != TextModel.StringType.Unknown)
+                .ToList();
+            
+            foreach (var textType in types)
+            {
+                var texts = model.Texts.Values
+                    .Where(x => x.Type == textType)
+                    .OrderBy(x => x.Id)
+                    .ThenBy(x => x.CrimeId)
+                    .ToList();
+                
+                var nodeFlags = ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.SpanAvailWidth;
+                if (_mainEditorState.SelectedItem != null &&
+                    _mainEditorState.SelectedItem.Value.type == MainEditorState.ItemType.Text &&
+                    _mainEditorState.SelectedItem.Value.id == textType.ToString())
+                {
+                    nodeFlags |= ImGuiTreeNodeFlags.Selected;
+                }
+
+                var name = $"{textType} ({texts.Count})";
+                if (ImGui.TreeNodeEx(name, nodeFlags))
+                {
+                    if (ImGui.IsItemClicked())
+                    {
+                        _mainEditorState.SelectedItem = (MainEditorState.ItemType.Text, textType.ToString());
+                    }
+                    
+                    ImGui.TreePop();
+                }
+            }
+            
+            ImGui.TreePop();
+        }
     }
 }
