@@ -78,7 +78,6 @@ namespace CovertActionTools.Core.Importing.Parsers
                 throw new Exception($"Invalid starting marker: {c}");
             }
 
-            var order = 1;
             TextModel? queuedModel = null; 
             while (true)
             {
@@ -149,8 +148,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                     Id = id,
                     Type = type,
                     Message = message,
-                    CrimeId = crimeId,
-                    Order = order++,
+                    CrimeId = crimeId
                 };
 
                 if (string.IsNullOrEmpty(message))
@@ -168,9 +166,15 @@ namespace CovertActionTools.Core.Importing.Parsers
                     if (dict.TryGetValue(textKey, out var existingValue))
                     {
                         //TODO: figure out why the one key is triggering this and which message gets used
-                        _logger.LogError($"Duplicate text key: {textKey}\n'{existingValue.Message}'\n'{message}'");
-                        textKey += "TEMP";
-                        //throw new Exception($"Duplicate text key: {textKey}");
+                        _logger.LogError($"Duplicate text key {queuedModel?.GetMessagePrefix()}, ignoring: {textKey}\n'{existingValue.Message}'\n'{message}'");
+                        if (queuedModel != null)
+                        {
+                            //it wasn't really a duplicate
+                            queuedModel.Message = message;
+                            dict[queuedModel.GetMessagePrefix()] = queuedModel;
+                            queuedModel = null;
+                        }
+                        continue;
                     }
 
                     dict[textKey] = model;

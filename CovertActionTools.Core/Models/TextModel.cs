@@ -24,12 +24,6 @@ namespace CovertActionTools.Core.Models
         /// Only used for CrimeMessage types, identifies the crime the text will be used in
         /// </summary>
         public int? CrimeId { get; set; }
-        
-        /// <summary>
-        /// Used to maintain ordering in the file
-        /// TODO: find out if a reordered file still works correctly
-        /// </summary>
-        public int Order { get; set; }
 
         public static string GetTypePrefix(StringType type)
         {

@@ -84,55 +84,61 @@ namespace CovertActionTools.Core.Exporting.Exporters
                 throw new Exception("Attempting to write Unknown text type");
             }
 
-            //the texts are written in order of prefix and then ID
+            //the texts are written in order of type, then crime ID, then ID
+            //however duplicate texts get sorted and prefixed onto their last occurrence
+            var duplicateTextIds = texts.Values
+                .Where(x => texts.Count(t => 
+                        t.Value.Message == x.Message && 
+                        t.Value.Type == x.Type &&
+                        (t.Value.Type != TextModel.StringType.CrimeMessage || t.Value.Id == x.Id)
+                    ) > 1
+                )
+                .GroupBy(x => x.Message)
+                .Select(x =>  x
+                    .OrderBy(t => t.CrimeId)
+                    .ThenBy(t => t.Id)
+                    .ToList()
+                )
+                .ToDictionary(x => x.Last().GetMessagePrefix(), 
+                    x => x.Take(x.Count - 1).Select(t => t.GetMessagePrefix()).ToList());
+            
             //TODO: find out if the ordering matters
-            // var textsByPrefix = texts
-            //     .Values
-            //     .GroupBy(t => t.Type)
-            //     .OrderBy(x => x.Key);
-            // foreach (var group in textsByPrefix)
-            // {
-            //     var type = group.Key;
-            //     IEnumerable<TextModel> orderedTexts;
-            //     if (type == TextModel.StringType.CrimeMessage)
-            //     {
-            //         //crime messages are in order of crime IDs first
-            //         orderedTexts = group
-            //             .OrderBy(x => x.CrimeId)
-            //             .ThenBy(x => x.Id);
-            //     }
-            //     else
-            //     {
-            //         orderedTexts = group
-            //             .OrderBy(x => x.Id);
-            //     }
-            //
-            //     foreach (var text in orderedTexts)
-            //     {
-            //         var prefix = text.GetMessagePrefix();
-            //         var message = "\r\n" + text.Message + "\r\n"; 
-            //                             
-            //         writer.Write('*');
-            //         writer.Write(prefix.ToArray());
-            //         writer.Write(message.ToArray());
-            //     }
-            // }
-            var orderedTexts = texts.Values.OrderBy(x => x.Order).ToList();
-            for (var i = 0; i < orderedTexts.Count; i++)
+            var orderedTexts = texts
+                .Values
+                .OrderBy(x => x.Type)
+                .ThenBy(x => x.CrimeId)
+                .ThenBy(x => x.Id);
+            foreach (var text in orderedTexts)
             {
-                var text = orderedTexts[i];
                 var prefix = text.GetMessagePrefix();
-                writer.Write('*');
-                writer.Write(prefix.ToArray());
-                if (i < orderedTexts.Count - 1 && orderedTexts[i + 1].Message == text.Message)
+                if (duplicateTextIds.Values.Any(x => x.Contains(prefix)))
                 {
-                    //we instead print just one \r\n
-                    writer.Write('\r');
-                    writer.Write('\n');
+                    //it's a duplicate text so it'll be handled when we reach the key
                     continue;
                 }
-
-                var message = "\r\n" + text.Message + "\r\n";
+                writer.Write('*');
+                writer.Write(prefix.ToArray());
+                if (duplicateTextIds.TryGetValue(prefix, out var duplicates))
+                {
+                    writer.Write('\r');
+                    writer.Write('\n');
+                    //it's a text that has duplicates, so write those first
+                    foreach (var duplicate in duplicates)
+                    {
+                        writer.Write('*');
+                        writer.Write(duplicate.ToArray());
+                        writer.Write('\r');
+                        writer.Write('\n');
+                    }
+                }
+                else
+                {
+                    writer.Write('\r');
+                    writer.Write('\n');
+                }
+                
+                //now we're writing the actual text
+                var message = text.Message + "\r\n";
                 writer.Write(message.ToArray());
             }
 

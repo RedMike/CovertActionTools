@@ -142,7 +142,7 @@ public class SelectedTextWindow : BaseWindow
             var windowSize = ImGui.GetContentRegionAvail();
             var message = text.Message.Replace("\r", ""); //strip out \r and re-add after, for consistency across OS
             var origMessage = message;
-            ImGui.InputTextMultiline($"Message {text.GetMessagePrefix()}{text.Order}", ref message, 1024, new Vector2(windowSize.X, 50.0f),
+            ImGui.InputTextMultiline($"Message {text.GetMessagePrefix()}", ref message, 1024, new Vector2(windowSize.X, 50.0f),
                 ImGuiInputTextFlags.NoHorizontalScroll | ImGuiInputTextFlags.CtrlEnterForNewLine);
             if (message != origMessage)
             {
