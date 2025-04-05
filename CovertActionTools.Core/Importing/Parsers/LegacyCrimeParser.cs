@@ -127,7 +127,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                 var type = (CrimeModel.ParticipantType)(int)reader.ReadByte();
                 var unknown3 = reader.ReadUInt16();
 
-                var clueType = (CrimeModel.ClueType)(int)reader.ReadByte();
+                var clueType = (ClueType)(int)reader.ReadByte();
 
                 var rank = reader.ReadUInt16();
 
