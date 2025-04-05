@@ -94,7 +94,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                 ClueType type = ClueType.Unknown;
                 int id = 0;
                 int? crimeId = null;
-                int u1 = 0;
+                int source = 0;
                 var duplicate = false;
                 if (prefixBytes[3] == '\r' && prefixBytes[4] == '\n')
                 {
@@ -107,7 +107,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                     {
                         next = reader.ReadChar();
                     }
-                    u1 = int.Parse($"{next}");
+                    source = int.Parse($"{next}");
                 }
                 else
                 {
@@ -127,7 +127,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                     }
                     else
                     {
-                        u1 = int.Parse($"{next}");
+                        source = int.Parse($"{next}");
                         type = (ClueType)int.Parse($"{reader.ReadChar()}");    
                     }
                 }
@@ -161,7 +161,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                     Type = type,
                     Id = id,
                     CrimeId = crimeId,
-                    Unknown1 = u1,
+                    Source = (ClueModel.ClueSource)source,
                     Message = message
                 };
 
@@ -185,7 +185,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                                 queuedModel.Message = message;
                                 if (queuedModel.CrimeId != null)
                                 {
-                                    queuedModel.Unknown1 = model.Unknown1;
+                                    queuedModel.Source = model.Source;
                                     queuedModel.Type = model.Type;
                                 }
                                 dict[queuedModel.GetMessagePrefix()] = queuedModel;
@@ -205,7 +205,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                             queuedModel.Message = message;
                             if (queuedModel.CrimeId != null)
                             {
-                                queuedModel.Unknown1 = model.Unknown1;
+                                queuedModel.Source = model.Source;
                                 queuedModel.Type = model.Type;
                             }
                             dict[queuedModel.GetMessagePrefix()] = queuedModel;

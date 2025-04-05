@@ -118,7 +118,7 @@ public class SelectedClueWindow : BaseWindow
             ImGui.Text("");
             ImGui.SameLine();
 
-            ImGui.SetNextItemWidth(200.0f);
+            ImGui.SetNextItemWidth(150.0f);
             var types = Enum.GetValues<ClueType>()
                 .Where(x => x != ClueType.Unknown)
                 .Select(x => $"{x}")
@@ -135,11 +135,15 @@ public class SelectedClueWindow : BaseWindow
             ImGui.Text("");
             ImGui.SameLine();
 
-            ImGui.SetNextItemWidth(100.0f);
-            var u1 = clue.Unknown1;
-            var origU1 = u1;
-            ImGui.InputInt("Unknown 1", ref u1);
-            if (u1 != origU1)
+            ImGui.SetNextItemWidth(150.0f);
+            var sourceTypes = Enum.GetValues<ClueModel.ClueSource>()
+                .Where(x => x != ClueModel.ClueSource.Unknown)
+                .Select(x => $"{x}")
+                .ToArray();
+            var sourceIndex = sourceTypes.ToList().FindIndex(x => x == clue.Source.ToString());
+            var origSourceIndex = sourceIndex;
+            ImGui.Combo("Source", ref sourceIndex, sourceTypes, sourceTypes.Length);
+            if (sourceIndex != origSourceIndex)
             {
                 //TODO: change
             }

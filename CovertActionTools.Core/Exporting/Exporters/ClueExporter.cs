@@ -146,7 +146,7 @@ namespace CovertActionTools.Core.Exporting.Exporters
                 }
                 
                 //then we write the flags
-                writer.Write($"{clue.Unknown1}"[0]);
+                writer.Write($"{clue.Source:D}"[0]);
                 if (clue.CrimeId != null)
                 {
                     writer.Write($"{clue.Type:D}"[0]);
