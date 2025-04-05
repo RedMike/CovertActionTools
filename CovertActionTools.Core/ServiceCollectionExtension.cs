@@ -21,6 +21,7 @@ namespace CovertActionTools.Core
             services.AddSingleton<IImporter<Dictionary<string, SimpleImageModel>>, SimpleImageImporter>();
             services.AddSingleton<IImporter<Dictionary<int, CrimeModel>>, CrimeImporter>();
             services.AddSingleton<IImporter<Dictionary<string, TextModel>>, TextImporter>();
+            services.AddSingleton<IImporter<Dictionary<string, ClueModel>>, ClueImporter>();
             
             services.AddSingleton<IExporter<Dictionary<string, SimpleImageModel>>, SimpleImageExporter>();
             services.AddSingleton<IExporter<Dictionary<int, CrimeModel>>, CrimeExporter>();

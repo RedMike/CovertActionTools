@@ -14,6 +14,7 @@ namespace CovertActionTools.Core.Importing
         private readonly IImporter<Dictionary<string, SimpleImageModel>> _simpleImageImporter;
         private readonly IImporter<Dictionary<int, CrimeModel>> _crimeImporter;
         private readonly IImporter<Dictionary<string, TextModel>> _textImporter;
+        private readonly IImporter<Dictionary<string, ClueModel>> _clueImporter;
         
         private List<string> _errors = new List<string>();
 
@@ -21,17 +22,19 @@ namespace CovertActionTools.Core.Importing
         private ImportStatus.ImportStage _currentStage = ImportStatus.ImportStage.Unknown;
         private IImporter? _currentImporter = null;
 
-        public PackageImporter(ILogger<PackageImporter> logger, IImporter<Dictionary<string, SimpleImageModel>> simpleImageImporter, IImporter<Dictionary<int, CrimeModel>> crimeImporter, IImporter<Dictionary<string, TextModel>> textImporter)
+        public PackageImporter(ILogger<PackageImporter> logger, IImporter<Dictionary<string, SimpleImageModel>> simpleImageImporter, IImporter<Dictionary<int, CrimeModel>> crimeImporter, IImporter<Dictionary<string, TextModel>> textImporter, IImporter<Dictionary<string, ClueModel>> clueImporter)
         {
             _logger = logger;
             _simpleImageImporter = simpleImageImporter;
             _crimeImporter = crimeImporter;
             _textImporter = textImporter;
+            _clueImporter = clueImporter;
             _importers = new IImporter[]
             {
                 _simpleImageImporter,
                 _crimeImporter,
-                _textImporter
+                _textImporter,
+                _clueImporter
             };
         }
 
@@ -154,7 +157,7 @@ namespace CovertActionTools.Core.Importing
                     await Task.Yield();
                     try
                     {
-                        done |= _simpleImageImporter.RunStep();
+                        done |= _currentImporter.RunStep();
                     }
                     catch (Exception e)
                     {
@@ -173,7 +176,7 @@ namespace CovertActionTools.Core.Importing
                     await Task.Yield();
                     try
                     {
-                        done |= _crimeImporter.RunStep();
+                        done |= _currentImporter.RunStep();
                     }
                     catch (Exception e)
                     {
@@ -192,7 +195,7 @@ namespace CovertActionTools.Core.Importing
                     await Task.Yield();
                     try
                     {
-                        done |= _textImporter.RunStep();
+                        done |= _currentImporter.RunStep();
                     }
                     catch (Exception e)
                     {
@@ -201,6 +204,25 @@ namespace CovertActionTools.Core.Importing
                     }
                 } while (!done);
                 model.Texts = _textImporter.GetResult();
+                
+                //clues
+                _currentStage = ImportStatus.ImportStage.ProcessingClues;
+                _currentImporter = _clueImporter;
+                done = false;
+                do
+                {
+                    await Task.Yield();
+                    try
+                    {
+                        done |= _currentImporter.RunStep();
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError($"Exception while running step: {e}");
+                        _errors.Add(e.ToString());
+                    }
+                } while (!done);
+                model.Clues = _clueImporter.GetResult();
 
                 _currentStage = ImportStatus.ImportStage.ImportDone;
                 await Task.Yield();
@@ -215,7 +237,10 @@ namespace CovertActionTools.Core.Importing
                 _currentStage = ImportStatus.ImportStage.ImportDone;
             }
 
-            _logger.LogInformation($"Import done: {model.SimpleImages.Count} images, {model.Crimes.Count} crimes, {model.Texts.Count} texts, ...");
+            _logger.LogInformation($"Import done: {model.SimpleImages.Count} images, " +
+                                   $"{model.Crimes.Count} crimes, " +
+                                   $"{model.Texts.Count} texts, " +
+                                   $"{model.Clues.Count} clues, ...");
             return model;
         }
     }
