@@ -107,7 +107,17 @@ public class SavePackageWindow : BaseWindow
                 }
 
                 break;
-            //0.65f
+            case ExportStatus.ExportStage.ProcessingClues:
+                if (exportStatus.StageItems <= 0)
+                {
+                    progress = 0.65f;
+                }
+                else
+                {
+                    progress = 0.65f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.1f;
+                }
+                break;
+            //0.75f
             //TODO: other stages
         }
 

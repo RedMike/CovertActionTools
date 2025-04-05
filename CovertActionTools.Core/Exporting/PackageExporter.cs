@@ -22,13 +22,15 @@ namespace CovertActionTools.Core.Exporting
         private readonly IExporter<Dictionary<string, SimpleImageModel>> _simpleImageExporter;
         private readonly IExporter<Dictionary<int, CrimeModel>> _crimeExporter;
         private readonly IExporter<Dictionary<string, TextModel>> _textExporter;
+        private readonly IExporter<Dictionary<string, ClueModel>> _clueExporter;
 
-        public PackageExporter(ILogger<PackageExporter> logger, IExporter<Dictionary<string, SimpleImageModel>> simpleImageExporter, IExporter<Dictionary<int, CrimeModel>> crimeExporter, IExporter<Dictionary<string, TextModel>> textExporter)
+        public PackageExporter(ILogger<PackageExporter> logger, IExporter<Dictionary<string, SimpleImageModel>> simpleImageExporter, IExporter<Dictionary<int, CrimeModel>> crimeExporter, IExporter<Dictionary<string, TextModel>> textExporter, IExporter<Dictionary<string, ClueModel>> clueExporter)
         {
             _logger = logger;
             _simpleImageExporter = simpleImageExporter;
             _crimeExporter = crimeExporter;
             _textExporter = textExporter;
+            _clueExporter = clueExporter;
         }
         
         private List<string> _errors = new List<string>();
@@ -52,6 +54,8 @@ namespace CovertActionTools.Core.Exporting
             _logger.LogInformation($"Exporter {_crimeExporter.GetType()} starting export to: {path}");
             _textExporter.Start(path, model.Texts);
             _logger.LogInformation($"Exporter {_textExporter.GetType()} starting export to: {path}");
+            _clueExporter.Start(path, model.Clues);
+            _logger.LogInformation($"Exporter {_clueExporter.GetType()} starting export to: {path}");
             _exportTask = ExportInternal();
         }
 
@@ -120,7 +124,7 @@ namespace CovertActionTools.Core.Exporting
                     await Task.Yield();
                     try
                     {
-                        done |= _simpleImageExporter.RunStep();
+                        done |= _currentExporter.RunStep();
                     }
                     catch (Exception e)
                     {
@@ -131,7 +135,7 @@ namespace CovertActionTools.Core.Exporting
                 
                 //crimes
                 _currentStage = ExportStatus.ExportStage.ProcessingCrimes;
-                _currentExporter = _simpleImageExporter;
+                _currentExporter = _crimeExporter;
                 await Task.Yield();
                 done = false;
                 do
@@ -139,7 +143,7 @@ namespace CovertActionTools.Core.Exporting
                     await Task.Yield();
                     try
                     {
-                        done |= _crimeExporter.RunStep();
+                        done |= _currentExporter.RunStep();
                     }
                     catch (Exception e)
                     {
@@ -150,7 +154,7 @@ namespace CovertActionTools.Core.Exporting
                 
                 //texts
                 _currentStage = ExportStatus.ExportStage.ProcessingTexts;
-                _currentExporter = _simpleImageExporter;
+                _currentExporter = _textExporter;
                 await Task.Yield();
                 done = false;
                 do
@@ -158,7 +162,26 @@ namespace CovertActionTools.Core.Exporting
                     await Task.Yield();
                     try
                     {
-                        done |= _textExporter.RunStep();
+                        done |= _currentExporter.RunStep();
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError($"Exception while running step: {e}");
+                        _errors.Add(e.ToString());
+                    }
+                } while (!done);
+                
+                //texts
+                _currentStage = ExportStatus.ExportStage.ProcessingClues;
+                _currentExporter = _clueExporter;
+                await Task.Yield();
+                done = false;
+                do
+                {
+                    await Task.Yield();
+                    try
+                    {
+                        done |= _currentExporter.RunStep();
                     }
                     catch (Exception e)
                     {

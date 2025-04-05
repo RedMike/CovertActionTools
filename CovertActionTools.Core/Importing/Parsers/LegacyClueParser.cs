@@ -100,9 +100,14 @@ namespace CovertActionTools.Core.Importing.Parsers
                 {
                     //it's a non-crime specific clue
                     //C<clue type><numeric id>\r\n<u1><msg>
-                    type = (ClueType)prefixBytes[1];
-                    id = prefixBytes[2];
-                    u1 = reader.ReadByte();
+                    type = (ClueType)int.Parse($"{prefixBytes[1]}");
+                    id = int.Parse($"{prefixBytes[2]}");
+                    var next = reader.ReadChar();
+                    while (next == '\r' || next == '\n' || next == ' ')
+                    {
+                        next = reader.ReadChar();
+                    }
+                    u1 = int.Parse($"{next}");
                 }
                 else
                 {
@@ -111,32 +116,18 @@ namespace CovertActionTools.Core.Importing.Parsers
                     crimeId = int.Parse($"{prefixBytes[1]}{prefixBytes[2]}");
                     id = int.Parse($"{prefixBytes[3]}{prefixBytes[4]}");
                     var next = reader.ReadChar();
-                    if (next != '\r')
+                    while (next == '\r' || next == '\n' || next == ' ')
                     {
-                        //for some reason C0904 in the legacy file has a 0x20 before the \r\n
-                        if (next == (char)0x20)
-                        {
-                            reader.ReadChar();
-                        }
-                        else
-                        {
-                            throw new Exception($"Invalid next char: {(byte)next:X}");
-                        }
-                    }
-                    next = reader.ReadChar();
-                    if (next != '\n')
-                    {
-                        throw new Exception($"Invalid next char: {(byte)next:X}");
+                        next = reader.ReadChar();
                     }
 
-                    next = reader.ReadChar();
                     if (next == '*')
                     {
                         duplicate = true;
                     }
                     else
                     {
-                        u1 = (byte)next;
+                        u1 = int.Parse($"{next}");
                         type = (ClueType)int.Parse($"{reader.ReadChar()}");    
                     }
                 }
