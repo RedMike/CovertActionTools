@@ -124,20 +124,6 @@ public class SelectedTextWindow : BaseWindow
             ImGui.SameLine();
             ImGui.Text("");
             ImGui.SameLine();
-
-            ImGui.SetNextItemWidth(50.0f);
-            if (ImGui.ArrowButton("MoveUp", ImGuiDir.Up))
-            {
-                //TODO: reorder
-            }
-            
-            ImGui.SameLine();
-
-            ImGui.SetNextItemWidth(50.0f);
-            if (ImGui.ArrowButton("MoveDown", ImGuiDir.Down))
-            {
-                //TODO: reorder
-            }
             
             var windowSize = ImGui.GetContentRegionAvail();
             var message = text.Message.Replace("\r", ""); //strip out \r and re-add after, for consistency across OS

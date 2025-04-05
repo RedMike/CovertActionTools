@@ -168,15 +168,17 @@ public class PackageExplorerWindow : BaseWindow
             foreach (var crimeId in crimeIds)
             {
                 var crimeString = "Any Crime";
+                var id = "any";
                 if (crimeId != null)
                 {
                     crimeString = $"Crime {crimeId}";
+                    id = $"{crimeId}";
                 }
                 
                 var nodeFlags = ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.SpanAvailWidth;
                 if (_mainEditorState.SelectedItem != null &&
                     _mainEditorState.SelectedItem.Value.type == MainEditorState.ItemType.Clue &&
-                    _mainEditorState.SelectedItem.Value.id == crimeString)
+                    _mainEditorState.SelectedItem.Value.id == id)
                 {
                     nodeFlags |= ImGuiTreeNodeFlags.Selected;
                 }
@@ -186,7 +188,7 @@ public class PackageExplorerWindow : BaseWindow
                 {
                     if (ImGui.IsItemClicked())
                     {
-                        _mainEditorState.SelectedItem = (MainEditorState.ItemType.Clue, crimeString);
+                        _mainEditorState.SelectedItem = (MainEditorState.ItemType.Clue, id);
                     }
 
                     ImGui.TreePop();
