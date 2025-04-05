@@ -7,22 +7,22 @@ using Microsoft.Extensions.Logging;
 
 namespace CovertActionTools.Core.Importing.Parsers
 {
-    public class LegacyTextParser : BaseImporter<Dictionary<string, TextModel>>
+    public class LegacyClueParser : BaseImporter<Dictionary<string, ClueModel>>
     {
-        private readonly ILogger<LegacyTextParser> _logger;
+        private readonly ILogger<LegacyClueParser> _logger;
         
-        private Dictionary<string, TextModel> _result = new Dictionary<string, TextModel>();
+        private Dictionary<string, ClueModel> _result = new Dictionary<string, ClueModel>();
         private bool _done = false;
 
-        public LegacyTextParser(ILogger<LegacyTextParser> logger)
+        public LegacyClueParser(ILogger<LegacyClueParser> logger)
         {
             _logger = logger;
         }
 
-        protected override string Message => "Processing texts..";
+        protected override string Message => "Processing clues..";
         protected override bool CheckIfValidForImportInternal(string path)
         {
-            if (Directory.GetFiles(path, "TEXT.DTA").Length == 0)
+            if (Directory.GetFiles(path, "CLUES.TXT").Length == 0)
             {
                 return false;
             }
@@ -32,7 +32,7 @@ namespace CovertActionTools.Core.Importing.Parsers
 
         protected override int GetTotalItemCountInPath()
         {
-            return Directory.GetFiles(Path, "TEXT.DTA").Length;
+            return Directory.GetFiles(Path, "CLUES.TXT").Length;
         }
 
         protected override int RunImportStepInternal()
@@ -47,7 +47,7 @@ namespace CovertActionTools.Core.Importing.Parsers
             return 1;
         }
 
-        protected override Dictionary<string, TextModel> GetResultInternal()
+        protected override Dictionary<string, ClueModel> GetResultInternal()
         {
             return _result;
         }
@@ -56,18 +56,18 @@ namespace CovertActionTools.Core.Importing.Parsers
         {
             _done = false;
         }
-
-        private Dictionary<string, TextModel> Parse(string path)
+        
+        private Dictionary<string, ClueModel> Parse(string path)
         {
-            var filePath = System.IO.Path.Combine(path, $"TEXT.DTA");
+            var filePath = System.IO.Path.Combine(path, $"CLUES.TXT");
             if (!File.Exists(filePath))
             {
-                throw new Exception($"Missing JSON file: TEXT.DTA");
+                throw new Exception($"Missing JSON file: CLUES.TXT");
             }
 
             var rawData = File.ReadAllBytes(filePath);
             
-            var dict = new Dictionary<string, TextModel>();
+            var dict = new Dictionary<string, ClueModel>();
             
             using var memStream = new MemoryStream(rawData);
             using var reader = new BinaryReader(memStream);
@@ -78,59 +78,81 @@ namespace CovertActionTools.Core.Importing.Parsers
                 throw new Exception($"Invalid starting marker: {c}");
             }
 
-            List<TextModel> queuedModels = new(); 
+            List<ClueModel> queuedModels = new(); 
             while (true)
             {
-                var type = TextModel.StringType.Unknown;
-                int? crimeId = null;
-                var prefixBytes = reader.ReadChars(4);
-                if (prefixBytes[0] == 'M' && prefixBytes[1] == 'S' && prefixBytes[2] == 'G')
+                var prefixBytes = reader.ReadChars(5);
+                if (prefixBytes[0] != 'C')
                 {
-                    type = TextModel.StringType.CrimeMessage;
-                    var rawCrimeId = "" + (char)prefixBytes[3] + reader.ReadChar();
-                    crimeId = int.Parse(rawCrimeId);
-                    if (crimeId < 0 || crimeId > 12)
+                    if (prefixBytes[0] == '\r' && prefixBytes[1] == '\n' && prefixBytes[2] == (char)0x1A)
                     {
-                        throw new Exception($"Invalid crime ID: {rawCrimeId}");
+                        //it's the end marker
+                        break;
                     }
-                } else if (prefixBytes[0] == 'S' && prefixBytes[1] == 'O' && prefixBytes[2] == 'R')
+                    throw new Exception($"Invalid prefix start: {string.Join(" ", prefixBytes)}");
+                }
+                ClueType type = ClueType.Unknown;
+                int id = 0;
+                int? crimeId = null;
+                int u1 = 0;
+                var duplicate = false;
+                if (prefixBytes[3] == '\r' && prefixBytes[4] == '\n')
                 {
-                    type = TextModel.StringType.SenderOrganisation;
-                } else if (prefixBytes[0] == 'R' && prefixBytes[1] == 'O' && prefixBytes[2] == 'R')
-                {
-                    type = TextModel.StringType.ReceiverOrganisation;
-                } else if (prefixBytes[0] == 'S' && prefixBytes[1] == 'L' && prefixBytes[2] == 'O')
-                {
-                    type = TextModel.StringType.SenderLocation;
-                } else if (prefixBytes[0] == 'R' && prefixBytes[1] == 'L' && prefixBytes[2] == 'O')
-                {
-                    type = TextModel.StringType.ReceiverLocation;
-                } else if (prefixBytes[0] == 'F' && prefixBytes[1] == 'L' && prefixBytes[2] == 'U')
-                {
-                    type = TextModel.StringType.Fluff;
-                } else if (prefixBytes[0] == 'A' && prefixBytes[1] == 'L' && prefixBytes[2] == 'R')
-                {
-                    type = TextModel.StringType.Alert;
-                } else if (prefixBytes[0] == 'A' && prefixBytes[1] == 'I' && prefixBytes[2] == 'D')
-                {
-                    type = TextModel.StringType.AidingOrganisation;
-                } else if (prefixBytes[0] == 'E' && prefixBytes[1] == 'N' && prefixBytes[2] == 'D')
-                {
-                    break;
+                    //it's a non-crime specific clue
+                    //C<clue type><numeric id>\r\n<u1><msg>
+                    type = (ClueType)prefixBytes[1];
+                    id = prefixBytes[2];
+                    u1 = reader.ReadByte();
                 }
                 else
                 {
-                    throw new Exception($"Invalid prefix: {"" + (char)(prefixBytes[0]) + (char)(prefixBytes[1]) + (char)(prefixBytes[2])}");
+                    //it's a crime-specific clue
+                    //C<crime ID><participant ID>\r\n<u1><clue type><msg>
+                    crimeId = int.Parse($"{prefixBytes[1]}{prefixBytes[2]}");
+                    id = int.Parse($"{prefixBytes[3]}{prefixBytes[4]}");
+                    var next = reader.ReadChar();
+                    if (next != '\r')
+                    {
+                        //for some reason C0904 in the legacy file has a 0x20 before the \r\n
+                        if (next == (char)0x20)
+                        {
+                            reader.ReadChar();
+                        }
+                        else
+                        {
+                            throw new Exception($"Invalid next char: {(byte)next:X}");
+                        }
+                    }
+                    next = reader.ReadChar();
+                    if (next != '\n')
+                    {
+                        throw new Exception($"Invalid next char: {(byte)next:X}");
+                    }
+
+                    next = reader.ReadChar();
+                    if (next == '*')
+                    {
+                        duplicate = true;
+                    }
+                    else
+                    {
+                        u1 = (byte)next;
+                        type = (ClueType)int.Parse($"{reader.ReadChar()}");    
+                    }
                 }
-                
-                var rawId = "" + reader.ReadChar() + reader.ReadChar();
-                var id = int.Parse(rawId);
 
                 var message = "";
-                do
+                if (duplicate)
                 {
-                    message += reader.ReadChar();
-                } while (message.Last() != (byte)'*');
+                    message = "*";
+                }
+                else
+                {
+                    do
+                    {
+                        message += reader.ReadChar();
+                    } while (message.Last() != (byte)'*');
+                }
 
                 //remove asterisk
                 message = message.Substring(0, message.Length - 1);
@@ -143,12 +165,13 @@ namespace CovertActionTools.Core.Importing.Parsers
                     message = message.Substring(startsNewLine ? 2 : 0, length);
                 }
 
-                var model = new TextModel()
+                var model = new ClueModel()
                 {
-                    Id = id,
                     Type = type,
-                    Message = message,
-                    CrimeId = crimeId
+                    Id = id,
+                    CrimeId = crimeId,
+                    Unknown1 = u1,
+                    Message = message
                 };
 
                 if (string.IsNullOrEmpty(message))

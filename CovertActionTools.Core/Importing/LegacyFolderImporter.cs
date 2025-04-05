@@ -16,6 +16,7 @@ namespace CovertActionTools.Core.Importing
         private readonly LegacySimpleImageParser _simpleImageImporter;
         private readonly LegacyCrimeParser _crimeImporter;
         private readonly LegacyTextParser _textImporter;
+        private readonly LegacyClueParser _clueImporter;
         private readonly IReadOnlyList<IImporter> _importers;
         
         private List<string> _errors = new List<string>();
@@ -24,13 +25,14 @@ namespace CovertActionTools.Core.Importing
         private ImportStatus.ImportStage _currentStage = ImportStatus.ImportStage.Unknown;
         private IImporter? _currentImporter = null;
         
-        public LegacyFolderImporter(ILogger<LegacyFolderImporter> logger, LegacySimpleImageParser simpleImageImporter, LegacyCrimeParser crimeImporter, LegacyTextParser textImporter)
+        public LegacyFolderImporter(ILogger<LegacyFolderImporter> logger, LegacySimpleImageParser simpleImageImporter, LegacyCrimeParser crimeImporter, LegacyTextParser textImporter, LegacyClueParser clueImporter)
         {
             _logger = logger;
             _simpleImageImporter = simpleImageImporter;
             _crimeImporter = crimeImporter;
             _textImporter = textImporter;
-            _importers = new IImporter[] { _simpleImageImporter, _crimeImporter, _textImporter };
+            _clueImporter = clueImporter;
+            _importers = new IImporter[] { _simpleImageImporter, _crimeImporter, _textImporter, _clueImporter };
         }
 
         public bool CheckIfValidForImport(string path)
@@ -152,7 +154,7 @@ namespace CovertActionTools.Core.Importing
                     await Task.Yield();
                     try
                     {
-                        done |= _simpleImageImporter.RunStep();
+                        done |= _currentImporter.RunStep();
                     }
                     catch (Exception e)
                     {
@@ -171,7 +173,7 @@ namespace CovertActionTools.Core.Importing
                     await Task.Yield();
                     try
                     {
-                        done |= _crimeImporter.RunStep();
+                        done |= _currentImporter.RunStep();
                     }
                     catch (Exception e)
                     {
@@ -190,7 +192,7 @@ namespace CovertActionTools.Core.Importing
                     await Task.Yield();
                     try
                     {
-                        done |= _textImporter.RunStep();
+                        done |= _currentImporter.RunStep();
                     }
                     catch (Exception e)
                     {
@@ -199,6 +201,25 @@ namespace CovertActionTools.Core.Importing
                     }
                 } while (!done);
                 model.Texts = _textImporter.GetResult();
+                
+                //clues
+                _currentStage = ImportStatus.ImportStage.ProcessingClues;
+                _currentImporter = _clueImporter;
+                done = false;
+                do
+                {
+                    await Task.Yield();
+                    try
+                    {
+                        done |= _currentImporter.RunStep();
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError($"Exception while running step: {e}");
+                        _errors.Add(e.ToString());
+                    }
+                } while (!done);
+                model.Clues = _clueImporter.GetResult();
 
                 _currentStage = ImportStatus.ImportStage.ImportDone;
                 await Task.Yield();
@@ -213,7 +234,7 @@ namespace CovertActionTools.Core.Importing
                 _currentStage = ImportStatus.ImportStage.ImportDone;
             }
 
-            _logger.LogInformation($"Import done: {model.SimpleImages.Count} images, {model.Crimes.Count} crimes, {model.Texts.Count} texts, ...");
+            _logger.LogInformation($"Import done: {model.SimpleImages.Count} images, {model.Crimes.Count} crimes, {model.Texts.Count} texts, {model.Clues.Count} clues, ...");
             return model;
         }
     }
