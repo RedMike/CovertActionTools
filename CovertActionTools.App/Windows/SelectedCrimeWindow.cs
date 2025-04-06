@@ -158,48 +158,84 @@ public class SelectedCrimeWindow : BaseWindow
                 var i = 0;
                 foreach (var ev in timeline)
                 {
+                    if (ev.Type == CrimeTimelineEvent.CrimeTimelineEventType.Error)
+                    {
+                        ImGui.Text($"Error: {ev.ErrorMessage}");
+                        
+                        ImGui.Text("");
+                        ImGui.Separator();
+                        ImGui.Text("");
+                        continue;
+                    }
+
+                    if (ev.Type == CrimeTimelineEvent.CrimeTimelineEventType.ItemUpdate)
+                    {
+                        
+                        ImGui.Text($"Item update: {ev.ErrorMessage}");
+                        
+                        ImGui.Text("");
+                        ImGui.Separator();
+                        ImGui.Text("");
+                        continue;
+                    }
+                    
                     i++;
                     ImGui.SetNextItemWidth(100.0f);
                     ImGui.Text($"Event {i} {ev.Type}");
                     ImGui.SameLine();
+                    var source = crime.Participants[ev.SourceParticipantId].Role.Trim() + $" ({ev.SourceParticipantId})";
+                    var target = "";
+                    if (ev.TargetParticipantId != null)
+                    {
+                        target = crime.Participants[ev.TargetParticipantId.Value].Role.Trim() + $" ({ev.TargetParticipantId})";
+                    }
+                    var message = model.Texts.Values.FirstOrDefault(x =>
+                        x.Type == TextModel.StringType.CrimeMessage && 
+                        x.CrimeId == crime.Id && 
+                        x.Id == ev.MessageId)?.Message ?? $"Missing message ID {ev.MessageId}";
+                    
                     ImGui.SetNextItemWidth(100.0f);
                     ImGui.Text($"({string.Join(", ", ev.EventIds)})");
                     ImGui.SameLine();
                     ImGui.SetNextItemWidth(100.0f);
-                    ImGui.Text($"From {ev.SourceParticipantId}");
+                    ImGui.Text($"from {source}");
                     ImGui.SameLine();
                     if (ev.TargetParticipantId != null)
                     {
                         ImGui.SetNextItemWidth(100.0f);
-                        ImGui.Text($"To {ev.TargetParticipantId}");
+                        ImGui.Text($"to {target}");
                         ImGui.SameLine();
                     }
 
                     if (ev.ItemsCreated.Count > 0)
                     {
                         ImGui.SetNextItemWidth(100.0f);
-                        ImGui.Text($"Created: [{string.Join(", ", ev.ItemsCreated)}]");
+                        ImGui.Text($"Created: [{string.Join(", ", ev.ItemsCreated.Select(x => crime.Objects[x].Name.Trim()))}]");
                         ImGui.SameLine();
                     }
                     if (ev.ItemsTransferred.Count > 0)
                     {
                         ImGui.SetNextItemWidth(100.0f);
-                        ImGui.Text($"Transferred: [{string.Join(", ", ev.ItemsTransferred)}]");
+                        ImGui.Text($"Transferred: [{string.Join(", ", ev.ItemsTransferred.Select(x => crime.Objects[x].Name.Trim()))}]");
                         ImGui.SameLine();
                     }
                     if (ev.ItemsDestroyed.Count > 0)
                     {
                         ImGui.SetNextItemWidth(100.0f);
-                        ImGui.Text($"Destroyed: [{string.Join(", ", ev.ItemsDestroyed)}]");
+                        ImGui.Text($"Destroyed: [{string.Join(", ", ev.ItemsDestroyed.Select(x => crime.Objects[x].Name.Trim()))}]");
                         ImGui.SameLine();
                     }
 
                     ImGui.Text("");
 
-                    if (!string.IsNullOrEmpty(ev.ErrorMessage))
-                    {
-                        ImGui.Text($"Error: {ev.ErrorMessage}");
-                    }
+                    var messageSize = ImGui.GetContentRegionAvail();
+                    ImGui.BeginChild($"Timeline message {i}", new Vector2(messageSize.X, 50.0f), true);
+                    ImGui.Text(message);
+                    ImGui.EndChild();
+
+                    ImGui.Text("");
+                    ImGui.Separator();
+                    ImGui.Text("");
                 }
             }
             catch (Exception e)
@@ -393,6 +429,30 @@ public class SelectedCrimeWindow : BaseWindow
         {
             ev.MessageId = messageId;
         }
+        
+        ImGui.SameLine();
+        ImGui.Text(" ");
+        ImGui.SameLine();
+
+        if (ev.ReceivedObjectIds.Count > 0)
+        {
+            ImGui.Text($"Received: [{string.Join(", ", ev.ReceivedObjectIds.Select(x => crime.Objects[x].Name))}]");
+            
+            ImGui.SameLine();
+            ImGui.Text(" ");
+            ImGui.SameLine();
+        }
+        
+        if (ev.DestroyedObjectIds.Count > 0)
+        {
+            ImGui.Text($"Destroyed: [{string.Join(", ", ev.DestroyedObjectIds.Select(x => crime.Objects[x].Name))}]");
+            
+            ImGui.SameLine();
+            ImGui.Text(" ");
+            ImGui.SameLine();
+        }
+
+        ImGui.Text("");
 
         ImGui.BeginChild($"Message text {messageId}", new Vector2(ImGui.GetContentRegionAvail().X, 50.0f), true);
         var text = model.Texts.Values.FirstOrDefault(x => x.CrimeId == crime.Id && x.Id == messageId);
