@@ -122,7 +122,17 @@ public class ParsePublishedWindow : BaseWindow
                     progress = 0.65f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
                 }
                 break;
-            //0.75f
+            case ImportStatus.ImportStage.ProcessingPlots:
+                if (importStatus.StageItems <= 0)
+                {
+                    progress = 0.75f;
+                }
+                else
+                {
+                    progress = 0.75f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
+                }
+                break;
+            //0.85f
             //TODO: other stages
             case ImportStatus.ImportStage.ImportDone:
                 progress = 1.0f;
@@ -179,7 +189,17 @@ public class ParsePublishedWindow : BaseWindow
                         progress = 0.65f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.1f;
                     }
                     break;
-                //0.75f
+                case ExportStatus.ExportStage.ProcessingPlots:
+                    if (exportStatus.StageItems <= 0)
+                    {
+                        progress = 0.75f;
+                    }
+                    else
+                    {
+                        progress = 0.75f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.1f;
+                    }
+                    break;
+                //0.85f
                 //TODO: other stages
                 case ExportStatus.ExportStage.ExportDone:
                     progress = 1.0f;

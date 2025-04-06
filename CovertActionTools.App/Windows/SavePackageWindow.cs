@@ -117,7 +117,17 @@ public class SavePackageWindow : BaseWindow
                     progress = 0.65f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.1f;
                 }
                 break;
-            //0.75f
+            case ExportStatus.ExportStage.ProcessingPlots:
+                if (exportStatus.StageItems <= 0)
+                {
+                    progress = 0.75f;
+                }
+                else
+                {
+                    progress = 0.75f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.1f;
+                }
+                break;
+            //0.85f
             //TODO: other stages
         }
 
