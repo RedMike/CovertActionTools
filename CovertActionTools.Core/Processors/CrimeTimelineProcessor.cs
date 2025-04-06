@@ -107,7 +107,9 @@ namespace CovertActionTools.Core.Processors
                         isSplitEvent = true;
                         partnerEventId = potentiallyValidEvents.FirstOrDefault(x =>
                             x.Value.MessageId == ev.MessageId &&
-                            x.Value.EventType == CrimeModel.EventType.ReceivedPackage).Key;
+                            x.Value.EventType == CrimeModel.EventType.ReceivedPackage &&
+                            (x.Value.TargetParticipantId == null || x.Value.TargetParticipantId == ev.SourceParticipantId)
+                        ).Key;
                         sourceParticipant = ev.SourceParticipantId;
                         sourceRequiredItems.UnionWith(ev.DestroyedObjectIds);
                         itemsToAddOrTransfer.UnionWith(ev.ReceivedObjectIds);
@@ -124,7 +126,8 @@ namespace CovertActionTools.Core.Processors
                         isSplitEvent = true;
                         partnerEventId = potentiallyValidEvents.FirstOrDefault(x =>
                             x.Value.MessageId == ev.MessageId &&
-                            x.Value.EventType == CrimeModel.EventType.SentPackage).Key;
+                            x.Value.EventType == CrimeModel.EventType.SentPackage &&
+                            (x.Value.TargetParticipantId == null || x.Value.TargetParticipantId == ev.SourceParticipantId)).Key;
                         targetParticipant = ev.SourceParticipantId;
                         sourceRequiredItems.UnionWith(ev.ReceivedObjectIds);
                         itemsToAddOrTransfer.UnionWith(ev.ReceivedObjectIds);
@@ -143,7 +146,8 @@ namespace CovertActionTools.Core.Processors
                             x.Value.MessageId == ev.MessageId &&
                             (x.Value.EventType == CrimeModel.EventType.ReceivedMessage ||
                              x.Value.EventType == CrimeModel.EventType.OddReceivedMessage
-                            )).Key;
+                            ) &&
+                            (x.Value.TargetParticipantId == null || x.Value.TargetParticipantId == ev.SourceParticipantId)).Key;
                         sourceParticipant = ev.SourceParticipantId;
                         sourceRequiredItems.UnionWith(ev.DestroyedObjectIds);
                         itemsToAddOrTransfer.UnionWith(ev.ReceivedObjectIds);
@@ -160,7 +164,8 @@ namespace CovertActionTools.Core.Processors
                         isSplitEvent = true;
                         partnerEventId = potentiallyValidEvents.FirstOrDefault(x =>
                             x.Value.MessageId == ev.MessageId &&
-                            x.Value.EventType == CrimeModel.EventType.SentMessage).Key;
+                            x.Value.EventType == CrimeModel.EventType.SentMessage &&
+                            (x.Value.TargetParticipantId == null || x.Value.TargetParticipantId == ev.SourceParticipantId)).Key;
                         targetParticipant = ev.SourceParticipantId;
                         sourceRequiredItems.UnionWith(ev.ReceivedObjectIds);
                         itemsToAddOrTransfer.UnionWith(ev.ReceivedObjectIds);
@@ -178,7 +183,8 @@ namespace CovertActionTools.Core.Processors
                         isMeeting = true; //meetings activate people in reverse
                         partnerEventId = potentiallyValidEvents.FirstOrDefault(x =>
                             x.Value.MessageId == ev.MessageId &&
-                            x.Value.EventType == CrimeModel.EventType.WasMetBy).Key;
+                            x.Value.EventType == CrimeModel.EventType.WasMetBy &&
+                            (x.Value.TargetParticipantId == null || x.Value.TargetParticipantId == ev.SourceParticipantId)).Key;
                         //sourceParticipant = ev.SourceParticipantId;
                         targetParticipant = ev.SourceParticipantId;
                         sourceRequiredItems.UnionWith(ev.ReceivedObjectIds);
@@ -201,7 +207,8 @@ namespace CovertActionTools.Core.Processors
                         isMeeting = true; //meetings activate people in reverse
                         partnerEventId = potentiallyValidEvents.FirstOrDefault(x =>
                             x.Value.MessageId == ev.MessageId &&
-                            x.Value.EventType == CrimeModel.EventType.MetWith).Key;
+                            x.Value.EventType == CrimeModel.EventType.MetWith &&
+                            (x.Value.TargetParticipantId == null || x.Value.TargetParticipantId == ev.SourceParticipantId)).Key;
                         //targetParticipant = ev.SourceParticipantId;
                         sourceParticipant = ev.SourceParticipantId;
                         sourceRequiredItems.UnionWith(ev.ReceivedObjectIds);
@@ -251,15 +258,15 @@ namespace CovertActionTools.Core.Processors
                             }
                         }
                         
-                        //for meetings, either source or target can have the required items
+                        //for meetings, required items aren't actually checked...instead they'll magically appear in the actual game
+                        //unfortunately the actual game data has many instances of this
                         if (transferItems)
                         {
-                            //TODO: at least in some crimes that work, neither source nor target have items, but they're magically produced
-                            if (sourceRequiredItems.Any(x => !sourceItems.Contains(x) && !targetItems.Contains(x)))
-                            {
-                                //required items not owned
-                                continue;
-                            }
+                            // if (sourceRequiredItems.Any(x => !sourceItems.Contains(x) && !targetItems.Contains(x)))
+                            // {
+                            //     //required items not owned
+                            //     continue;
+                            // }
 
                             if (sourceRequiredItems.Any(x => !sourceItems.Contains(x)))
                             {
@@ -274,11 +281,6 @@ namespace CovertActionTools.Core.Processors
                                 //required items not owned
                                 continue;
                             }
-                        }
-                        if (!participantItems.TryGetValue(sourceParticipant, out var items) || sourceRequiredItems.Any(x => !items.Contains(x)))
-                        {
-                            //required items not owned
-                            continue;
                         }
                     }
 
