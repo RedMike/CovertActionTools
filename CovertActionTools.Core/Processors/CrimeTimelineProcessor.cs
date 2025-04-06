@@ -254,6 +254,7 @@ namespace CovertActionTools.Core.Processors
                         //for meetings, either source or target can have the required items
                         if (transferItems)
                         {
+                            //TODO: at least in some crimes that work, neither source nor target have items, but they're magically produced
                             if (sourceRequiredItems.Any(x => !sourceItems.Contains(x) && !targetItems.Contains(x)))
                             {
                                 //required items not owned
