@@ -5,6 +5,7 @@ using CovertActionTools.Core.Importing;
 using CovertActionTools.Core.Importing.Importers;
 using CovertActionTools.Core.Importing.Parsers;
 using CovertActionTools.Core.Models;
+using CovertActionTools.Core.Processors;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CovertActionTools.Core
@@ -34,6 +35,8 @@ namespace CovertActionTools.Core
             services.AddTransient<LegacyFolderImporter>();
             services.AddTransient<IPackageImporter, PackageImporter>();
             services.AddTransient<IPackageExporter, PackageExporter>();
+
+            services.AddSingleton<ICrimeTimelineProcessor, CrimeTimelineProcessor>();
         }
     }
 }

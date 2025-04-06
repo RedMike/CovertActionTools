@@ -1,6 +1,7 @@
 ﻿using System.Numerics;
 using CovertActionTools.App.ViewModels;
 using CovertActionTools.Core.Models;
+using CovertActionTools.Core.Processors;
 using ImGuiNET;
 using Microsoft.Extensions.Logging;
 
@@ -11,12 +12,14 @@ public class SelectedCrimeWindow : BaseWindow
     private readonly ILogger<SelectedCrimeWindow> _logger;
     private readonly MainEditorState _mainEditorState;
     private readonly RenderWindow _renderWindow;
+    private readonly ICrimeTimelineProcessor _crimeTimelineProcessor;
 
-    public SelectedCrimeWindow(ILogger<SelectedCrimeWindow> logger, MainEditorState mainEditorState, RenderWindow renderWindow)
+    public SelectedCrimeWindow(ILogger<SelectedCrimeWindow> logger, MainEditorState mainEditorState, RenderWindow renderWindow, ICrimeTimelineProcessor crimeTimelineProcessor)
     {
         _logger = logger;
         _mainEditorState = mainEditorState;
         _renderWindow = renderWindow;
+        _crimeTimelineProcessor = crimeTimelineProcessor;
     }
 
 
@@ -144,6 +147,64 @@ public class SelectedCrimeWindow : BaseWindow
             for (var i = 0; i < crime.Objects.Count; i++)
             {
                 DrawObject(model, crime, i);
+            }
+        }
+
+        if (ImGui.CollapsingHeader("Timeline"))
+        {
+            try
+            {   
+                var timeline = _crimeTimelineProcessor.ProcessCrimeIntoTimeline(model, crime);
+                var i = 0;
+                foreach (var ev in timeline)
+                {
+                    i++;
+                    ImGui.SetNextItemWidth(100.0f);
+                    ImGui.Text($"Event {i} {ev.Type}");
+                    ImGui.SameLine();
+                    ImGui.SetNextItemWidth(100.0f);
+                    ImGui.Text($"({string.Join(", ", ev.EventIds)})");
+                    ImGui.SameLine();
+                    ImGui.SetNextItemWidth(100.0f);
+                    ImGui.Text($"From {ev.SourceParticipantId}");
+                    ImGui.SameLine();
+                    if (ev.TargetParticipantId != null)
+                    {
+                        ImGui.SetNextItemWidth(100.0f);
+                        ImGui.Text($"To {ev.TargetParticipantId}");
+                        ImGui.SameLine();
+                    }
+
+                    if (ev.ItemsCreated.Count > 0)
+                    {
+                        ImGui.SetNextItemWidth(100.0f);
+                        ImGui.Text($"Created: [{string.Join(", ", ev.ItemsCreated)}]");
+                        ImGui.SameLine();
+                    }
+                    if (ev.ItemsTransferred.Count > 0)
+                    {
+                        ImGui.SetNextItemWidth(100.0f);
+                        ImGui.Text($"Transferred: [{string.Join(", ", ev.ItemsTransferred)}]");
+                        ImGui.SameLine();
+                    }
+                    if (ev.ItemsDestroyed.Count > 0)
+                    {
+                        ImGui.SetNextItemWidth(100.0f);
+                        ImGui.Text($"Destroyed: [{string.Join(", ", ev.ItemsDestroyed)}]");
+                        ImGui.SameLine();
+                    }
+
+                    ImGui.Text("");
+
+                    if (!string.IsNullOrEmpty(ev.ErrorMessage))
+                    {
+                        ImGui.Text($"Error: {ev.ErrorMessage}");
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                ImGui.Text($"Exception while processing: {e}");
             }
         }
     }
