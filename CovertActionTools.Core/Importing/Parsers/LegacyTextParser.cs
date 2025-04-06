@@ -182,7 +182,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                     {
                         foreach (var queuedModel in queuedModels)
                         {
-                            _logger.LogInformation($"Queued text key {queuedModel.GetMessagePrefix()} as duplicate of {textKey}");
+                            _logger.LogDebug($"Queued text key {queuedModel.GetMessagePrefix()} as duplicate of {textKey}");
                             queuedModel.Message = message;
                             dict[queuedModel.GetMessagePrefix()] = queuedModel;
                         }

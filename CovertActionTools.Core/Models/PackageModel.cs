@@ -12,6 +12,7 @@ namespace CovertActionTools.Core.Models
         public Dictionary<int, CrimeModel> Crimes { get; set; } = new();
         public Dictionary<string, TextModel> Texts { get; set; } = new();
         public Dictionary<string, ClueModel> Clues { get; set; } = new();
+        public Dictionary<string, PlotModel> Plots { get; set; } = new();
 
         public bool IsModified(PackageModel other)
         {

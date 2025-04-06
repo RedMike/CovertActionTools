@@ -17,6 +17,7 @@ namespace CovertActionTools.Core.Importing
         private readonly LegacyCrimeParser _crimeImporter;
         private readonly LegacyTextParser _textImporter;
         private readonly LegacyClueParser _clueImporter;
+        private readonly LegacyPlotParser _plotImporter;
         private readonly IReadOnlyList<IImporter> _importers;
         
         private List<string> _errors = new List<string>();
@@ -25,14 +26,15 @@ namespace CovertActionTools.Core.Importing
         private ImportStatus.ImportStage _currentStage = ImportStatus.ImportStage.Unknown;
         private IImporter? _currentImporter = null;
         
-        public LegacyFolderImporter(ILogger<LegacyFolderImporter> logger, LegacySimpleImageParser simpleImageImporter, LegacyCrimeParser crimeImporter, LegacyTextParser textImporter, LegacyClueParser clueImporter)
+        public LegacyFolderImporter(ILogger<LegacyFolderImporter> logger, LegacySimpleImageParser simpleImageImporter, LegacyCrimeParser crimeImporter, LegacyTextParser textImporter, LegacyClueParser clueImporter, LegacyPlotParser plotImporter)
         {
             _logger = logger;
             _simpleImageImporter = simpleImageImporter;
             _crimeImporter = crimeImporter;
             _textImporter = textImporter;
             _clueImporter = clueImporter;
-            _importers = new IImporter[] { _simpleImageImporter, _crimeImporter, _textImporter, _clueImporter };
+            _plotImporter = plotImporter;
+            _importers = new IImporter[] { _simpleImageImporter, _crimeImporter, _textImporter, _clueImporter, _plotImporter };
         }
 
         public bool CheckIfValidForImport(string path)
@@ -220,6 +222,25 @@ namespace CovertActionTools.Core.Importing
                     }
                 } while (!done);
                 model.Clues = _clueImporter.GetResult();
+                
+                //plots
+                _currentStage = ImportStatus.ImportStage.ProcessingPlots;
+                _currentImporter = _plotImporter;
+                done = false;
+                do
+                {
+                    await Task.Yield();
+                    try
+                    {
+                        done |= _currentImporter.RunStep();
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError($"Exception while running step: {e}");
+                        _errors.Add(e.ToString());
+                    }
+                } while (!done);
+                model.Plots = _plotImporter.GetResult();
 
                 _currentStage = ImportStatus.ImportStage.ImportDone;
                 await Task.Yield();
