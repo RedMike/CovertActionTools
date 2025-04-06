@@ -97,6 +97,7 @@ namespace CovertActionTools.Core.Processors
                     var isMeeting = false;
                     var sourceRequiredItems = new HashSet<int>();
                     var itemsToAddOrTransfer = new HashSet<int>();
+                    var transferItems = false;
                     var itemsToRemove = new HashSet<int>();
                     
                     int? partnerEventId = null;
@@ -140,7 +141,9 @@ namespace CovertActionTools.Core.Processors
                         isSplitEvent = true;
                         partnerEventId = potentiallyValidEvents.FirstOrDefault(x =>
                             x.Value.MessageId == ev.MessageId &&
-                            x.Value.EventType == CrimeModel.EventType.ReceivedMessage).Key;
+                            (x.Value.EventType == CrimeModel.EventType.ReceivedMessage ||
+                             x.Value.EventType == CrimeModel.EventType.OddReceivedMessage
+                            )).Key;
                         sourceParticipant = ev.SourceParticipantId;
                         sourceRequiredItems.UnionWith(ev.DestroyedObjectIds);
                         itemsToAddOrTransfer.UnionWith(ev.ReceivedObjectIds);
@@ -152,7 +155,7 @@ namespace CovertActionTools.Core.Processors
                             itemsToAddOrTransfer.UnionWith(crime.Events[partnerEventId.Value].ReceivedObjectIds);
                             itemsToRemove.UnionWith(crime.Events[partnerEventId.Value].DestroyedObjectIds);
                         }
-                    } else if (ev.EventType == CrimeModel.EventType.ReceivedMessage)
+                    } else if (ev.EventType == CrimeModel.EventType.ReceivedMessage || ev.EventType == CrimeModel.EventType.OddReceivedMessage)
                     {
                         isSplitEvent = true;
                         partnerEventId = potentiallyValidEvents.FirstOrDefault(x =>
@@ -179,12 +182,15 @@ namespace CovertActionTools.Core.Processors
                         //sourceParticipant = ev.SourceParticipantId;
                         targetParticipant = ev.SourceParticipantId;
                         sourceRequiredItems.UnionWith(ev.ReceivedObjectIds);
+                        sourceRequiredItems.UnionWith(ev.DestroyedObjectIds);
+                        transferItems = true;
                         itemsToAddOrTransfer.UnionWith(ev.ReceivedObjectIds);
                         itemsToRemove.UnionWith(ev.DestroyedObjectIds);
                         if (partnerEventId != null)
                         {
                             //targetParticipant = crime.Events[partnerEventId.Value].SourceParticipantId;
                             sourceParticipant = crime.Events[partnerEventId.Value].SourceParticipantId;
+                            sourceRequiredItems.UnionWith(crime.Events[partnerEventId.Value].ReceivedObjectIds);
                             sourceRequiredItems.UnionWith(crime.Events[partnerEventId.Value].DestroyedObjectIds);
                             itemsToAddOrTransfer.UnionWith(crime.Events[partnerEventId.Value].ReceivedObjectIds);
                             itemsToRemove.UnionWith(crime.Events[partnerEventId.Value].DestroyedObjectIds);
@@ -198,7 +204,9 @@ namespace CovertActionTools.Core.Processors
                             x.Value.EventType == CrimeModel.EventType.MetWith).Key;
                         //targetParticipant = ev.SourceParticipantId;
                         sourceParticipant = ev.SourceParticipantId;
+                        sourceRequiredItems.UnionWith(ev.ReceivedObjectIds);
                         sourceRequiredItems.UnionWith(ev.DestroyedObjectIds);
+                        transferItems = true;
                         itemsToAddOrTransfer.UnionWith(ev.ReceivedObjectIds);
                         itemsToRemove.UnionWith(ev.DestroyedObjectIds);
                         if (partnerEventId != null)
@@ -206,6 +214,7 @@ namespace CovertActionTools.Core.Processors
                             //sourceParticipant = crime.Events[partnerEventId.Value].SourceParticipantId;
                             targetParticipant = crime.Events[partnerEventId.Value].SourceParticipantId;
                             sourceRequiredItems.UnionWith(crime.Events[partnerEventId.Value].ReceivedObjectIds);
+                            sourceRequiredItems.UnionWith(crime.Events[partnerEventId.Value].DestroyedObjectIds);
                             itemsToAddOrTransfer.UnionWith(crime.Events[partnerEventId.Value].ReceivedObjectIds);
                             itemsToRemove.UnionWith(crime.Events[partnerEventId.Value].DestroyedObjectIds);
                         }
@@ -223,21 +232,59 @@ namespace CovertActionTools.Core.Processors
                         //it was one half of a message
                         continue;
                     }
-
-                    if ((!isMeeting && !activeParticipants.Contains(sourceParticipant)) ||
-                        (targetParticipant != null && isMeeting && !activeParticipants.Contains(targetParticipant.Value)))
-                    {
-                        //the sender is not active
-                        continue;
-                    }
-
+                    
                     if (sourceRequiredItems.Count > 0)
                     {
+                        participantItems.TryGetValue(sourceParticipant, out var sourceItems);
+                        if (sourceItems == null)
+                        {
+                            sourceItems = new HashSet<int>();
+                        }
+
+                        var targetItems = new HashSet<int>();
+                        if (targetParticipant != null)
+                        {
+                            participantItems.TryGetValue(targetParticipant!.Value, out targetItems);
+                            if (targetItems == null)
+                            {
+                                targetItems = new HashSet<int>();
+                            }
+                        }
+                        
+                        //for meetings, either source or target can have the required items
+                        if (transferItems)
+                        {
+                            if (sourceRequiredItems.Any(x => !sourceItems.Contains(x) && !targetItems.Contains(x)))
+                            {
+                                //required items not owned
+                                continue;
+                            }
+
+                            if (sourceRequiredItems.Any(x => !sourceItems.Contains(x)))
+                            {
+                                //the source and target are flipped
+                                (sourceParticipant, targetParticipant) = (targetParticipant!.Value, sourceParticipant);
+                            }
+                        }
+                        else
+                        {
+                            if (sourceRequiredItems.Any(x => !sourceItems.Contains(x)))
+                            {
+                                //required items not owned
+                                continue;
+                            }
+                        }
                         if (!participantItems.TryGetValue(sourceParticipant, out var items) || sourceRequiredItems.Any(x => !items.Contains(x)))
                         {
                             //required items not owned
                             continue;
                         }
+                    }
+
+                    if (!activeParticipants.Contains(sourceParticipant))
+                    {
+                        //the sender is not active
+                        continue;
                     }
                     
                     //it's valid
@@ -264,7 +311,8 @@ namespace CovertActionTools.Core.Processors
                     {
                         type = CrimeTimelineEvent.CrimeTimelineEventType.Meeting;
                     } else if (ev.EventType == CrimeModel.EventType.SentMessage ||
-                               ev.EventType == CrimeModel.EventType.ReceivedMessage)
+                               ev.EventType == CrimeModel.EventType.ReceivedMessage || 
+                               ev.EventType == CrimeModel.EventType.OddReceivedMessage)
                     {
                         type = CrimeTimelineEvent.CrimeTimelineEventType.Message;
                     } else if (ev.EventType == CrimeModel.EventType.ReceivedPackage ||
@@ -315,7 +363,9 @@ namespace CovertActionTools.Core.Processors
                                 participantItems[targetParticipant.Value] = new HashSet<int>();
                             }
 
-                            if (true || !isMeeting)
+                            var itemInSource = itemsToAddOrTransfer.All(x => participantItems[sourceParticipant].Contains(x));
+
+                            if (itemInSource)
                             {
                                 timeline.Add(new CrimeTimelineEvent()
                                 {

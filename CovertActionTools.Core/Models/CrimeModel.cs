@@ -14,7 +14,7 @@ namespace CovertActionTools.Core.Models
             ReceivedPackage = 5, //must happen with 4
             MetWith = 8, //must happen with 9
             WasMetBy = 9, //must happen with 8
-            //OddReceivedMessage = 19, //must happen with 2? Used in some place instead of 3
+            OddReceivedMessage = 19, //must happen with 2? Used in some place instead of 3
             Bulletin = 32, //shown to player directly
             //TODO: is this meant to be split into two bitfields?
         }
