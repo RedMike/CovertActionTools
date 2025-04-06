@@ -23,14 +23,16 @@ namespace CovertActionTools.Core.Exporting
         private readonly IExporter<Dictionary<int, CrimeModel>> _crimeExporter;
         private readonly IExporter<Dictionary<string, TextModel>> _textExporter;
         private readonly IExporter<Dictionary<string, ClueModel>> _clueExporter;
+        private readonly IExporter<Dictionary<string, PlotModel>> _plotExporter;
 
-        public PackageExporter(ILogger<PackageExporter> logger, IExporter<Dictionary<string, SimpleImageModel>> simpleImageExporter, IExporter<Dictionary<int, CrimeModel>> crimeExporter, IExporter<Dictionary<string, TextModel>> textExporter, IExporter<Dictionary<string, ClueModel>> clueExporter)
+        public PackageExporter(ILogger<PackageExporter> logger, IExporter<Dictionary<string, SimpleImageModel>> simpleImageExporter, IExporter<Dictionary<int, CrimeModel>> crimeExporter, IExporter<Dictionary<string, TextModel>> textExporter, IExporter<Dictionary<string, ClueModel>> clueExporter, IExporter<Dictionary<string, PlotModel>> plotExporter)
         {
             _logger = logger;
             _simpleImageExporter = simpleImageExporter;
             _crimeExporter = crimeExporter;
             _textExporter = textExporter;
             _clueExporter = clueExporter;
+            _plotExporter = plotExporter;
         }
         
         private List<string> _errors = new List<string>();
@@ -56,6 +58,8 @@ namespace CovertActionTools.Core.Exporting
             _logger.LogInformation($"Exporter {_textExporter.GetType()} starting export to: {path}");
             _clueExporter.Start(path, model.Clues);
             _logger.LogInformation($"Exporter {_clueExporter.GetType()} starting export to: {path}");
+            _plotExporter.Start(path, model.Plots);
+            _logger.LogInformation($"Exporter {_plotExporter.GetType()} starting export to: {path}");
             _exportTask = ExportInternal();
         }
 
@@ -171,9 +175,28 @@ namespace CovertActionTools.Core.Exporting
                     }
                 } while (!done);
                 
-                //texts
+                //clues
                 _currentStage = ExportStatus.ExportStage.ProcessingClues;
                 _currentExporter = _clueExporter;
+                await Task.Yield();
+                done = false;
+                do
+                {
+                    await Task.Yield();
+                    try
+                    {
+                        done |= _currentExporter.RunStep();
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError($"Exception while running step: {e}");
+                        _errors.Add(e.ToString());
+                    }
+                } while (!done);
+                
+                //plots
+                _currentStage = ExportStatus.ExportStage.ProcessingPlots;
+                _currentExporter = _plotExporter;
                 await Task.Yield();
                 done = false;
                 do
