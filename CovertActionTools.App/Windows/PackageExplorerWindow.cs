@@ -162,7 +162,7 @@ public class PackageExplorerWindow : BaseWindow
             ImGui.TreePop();
         }
 
-        if (ImGui.TreeNodeEx("Clues", ImGuiTreeNodeFlags.DefaultOpen | ImGuiTreeNodeFlags.SpanAvailWidth))
+        if (ImGui.TreeNodeEx("Clues", ImGuiTreeNodeFlags.SpanAvailWidth))
         {
             var crimeIds = model.Clues.Values.Select(x => x.CrimeId).Distinct().OrderBy(x => x ?? int.MinValue).ToList();
             foreach (var crimeId in crimeIds)
@@ -189,6 +189,37 @@ public class PackageExplorerWindow : BaseWindow
                     if (ImGui.IsItemClicked())
                     {
                         _mainEditorState.SelectedItem = (MainEditorState.ItemType.Clue, id);
+                    }
+
+                    ImGui.TreePop();
+                }
+            }
+            
+            ImGui.TreePop();
+        }
+        
+        if (ImGui.TreeNodeEx("Plots", ImGuiTreeNodeFlags.DefaultOpen | ImGuiTreeNodeFlags.SpanAvailWidth))
+        {
+            var missionSetIds = model.Plots.Values.Select(x => x.MissionSetId)
+                .Distinct()
+                .OrderBy(x => x)
+                .ToList();
+            foreach (var missionSetId in missionSetIds)
+            {
+                var nodeFlags = ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.SpanAvailWidth;
+                if (_mainEditorState.SelectedItem != null &&
+                    _mainEditorState.SelectedItem.Value.type == MainEditorState.ItemType.Plot &&
+                    _mainEditorState.SelectedItem.Value.id == missionSetId.ToString())
+                {
+                    nodeFlags |= ImGuiTreeNodeFlags.Selected;
+                }
+
+                var name = $"Mission Set {missionSetId}";
+                if (ImGui.TreeNodeEx(name, nodeFlags))
+                {
+                    if (ImGui.IsItemClicked())
+                    {
+                        _mainEditorState.SelectedItem = (MainEditorState.ItemType.Plot, missionSetId.ToString());
                     }
 
                     ImGui.TreePop();
