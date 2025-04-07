@@ -21,6 +21,7 @@ namespace CovertActionTools.Core.Processors
         }
 
         public CrimeTimelineEventType Type { get; set; } = CrimeTimelineEventType.Unknown;
+        public int Iteration { get; set; }
         public List<int> EventIds { get; set; } = new();
         public int SourceParticipantId { get; set; } = -1;
         public int? TargetParticipantId { get; set; } = null;
@@ -51,9 +52,10 @@ namespace CovertActionTools.Core.Processors
             var timeline = new List<CrimeTimelineEvent>();
 
             var activeParticipants = new HashSet<int>();
+            //TODO: how does the game figure out who is first active?
             for (var i = 0; i < crime.Participants.Count; i++)
             {
-                if (crime.Participants[i].ParticipantType == CrimeModel.ParticipantType.Mastermind)
+                if (crime.Participants[i].IsMastermind)
                 {
                     activeParticipants.Add(i);
                 }
@@ -62,9 +64,11 @@ namespace CovertActionTools.Core.Processors
             var participantItems = new Dictionary<int, HashSet<int>>();
             var processedEvents = new HashSet<int>();
             var safetyCheck = 0;
+            var iteration = 0;
             
             do
             {
+                iteration++;
                 //exclude any events we've already processed
                 var potentiallyValidEvents = crime
                     .Events
@@ -91,327 +95,97 @@ namespace CovertActionTools.Core.Processors
                     var id = pair.Key;
                     var ev = pair.Value;
                     
-                    //figure out the actual source/target and requirements/item changes (because of the sent/received split)
-                    var sourceParticipant = ev.SourceParticipantId;
-                    var targetParticipant = ev.TargetParticipantId;
-                    var isMeeting = false;
-                    var sourceRequiredItems = new HashSet<int>();
-                    var itemsToAddOrTransfer = new HashSet<int>();
-                    var transferItems = false;
-                    var itemsToRemove = new HashSet<int>();
-                    
-                    int? partnerEventId = null;
-                    var isSplitEvent = false;
-                    if (ev.EventType == CrimeModel.EventType.SentPackage)
+                    var itemParticipant = ev.MainParticipantId;
+                    var otherParticipant = ev.SecondaryParticipantId ?? ev.MainParticipantId;
+                    if (ev.ItemsToSecondary)
                     {
-                        isSplitEvent = true;
-                        partnerEventId = potentiallyValidEvents.FirstOrDefault(x =>
-                            x.Value.MessageId == ev.MessageId &&
-                            x.Value.EventType == CrimeModel.EventType.ReceivedPackage &&
-                            (x.Value.TargetParticipantId == null || x.Value.TargetParticipantId == ev.SourceParticipantId)
-                        ).Key;
-                        sourceParticipant = ev.SourceParticipantId;
-                        sourceRequiredItems.UnionWith(ev.DestroyedObjectIds);
-                        itemsToAddOrTransfer.UnionWith(ev.ReceivedObjectIds);
-                        itemsToRemove.UnionWith(ev.DestroyedObjectIds);
-                        if (partnerEventId != null)
-                        {
-                            targetParticipant = crime.Events[partnerEventId.Value].SourceParticipantId;
-                            sourceRequiredItems.UnionWith(crime.Events[partnerEventId.Value].ReceivedObjectIds);
-                            itemsToAddOrTransfer.UnionWith(crime.Events[partnerEventId.Value].ReceivedObjectIds);
-                            itemsToRemove.UnionWith(crime.Events[partnerEventId.Value].DestroyedObjectIds);
-                        }
-                    } else if (ev.EventType == CrimeModel.EventType.ReceivedPackage)
-                    {
-                        isSplitEvent = true;
-                        partnerEventId = potentiallyValidEvents.FirstOrDefault(x =>
-                            x.Value.MessageId == ev.MessageId &&
-                            x.Value.EventType == CrimeModel.EventType.SentPackage &&
-                            (x.Value.TargetParticipantId == null || x.Value.TargetParticipantId == ev.SourceParticipantId)).Key;
-                        targetParticipant = ev.SourceParticipantId;
-                        sourceRequiredItems.UnionWith(ev.ReceivedObjectIds);
-                        itemsToAddOrTransfer.UnionWith(ev.ReceivedObjectIds);
-                        itemsToRemove.UnionWith(ev.DestroyedObjectIds);
-                        if (partnerEventId != null)
-                        {
-                            sourceParticipant = crime.Events[partnerEventId.Value].SourceParticipantId;
-                            sourceRequiredItems.UnionWith(crime.Events[partnerEventId.Value].DestroyedObjectIds);
-                            itemsToAddOrTransfer.UnionWith(crime.Events[partnerEventId.Value].ReceivedObjectIds);
-                            itemsToRemove.UnionWith(crime.Events[partnerEventId.Value].DestroyedObjectIds);
-                        }
-                    } else if (ev.EventType == CrimeModel.EventType.SentMessage)
-                    {
-                        isSplitEvent = true;
-                        partnerEventId = potentiallyValidEvents.FirstOrDefault(x =>
-                            x.Value.MessageId == ev.MessageId &&
-                            (x.Value.EventType == CrimeModel.EventType.ReceivedMessage ||
-                             x.Value.EventType == CrimeModel.EventType.OddReceivedMessage
-                            ) &&
-                            (x.Value.TargetParticipantId == null || x.Value.TargetParticipantId == ev.SourceParticipantId)).Key;
-                        sourceParticipant = ev.SourceParticipantId;
-                        sourceRequiredItems.UnionWith(ev.DestroyedObjectIds);
-                        itemsToAddOrTransfer.UnionWith(ev.ReceivedObjectIds);
-                        itemsToRemove.UnionWith(ev.DestroyedObjectIds);
-                        if (partnerEventId != null)
-                        {
-                            targetParticipant = crime.Events[partnerEventId.Value].SourceParticipantId;
-                            sourceRequiredItems.UnionWith(crime.Events[partnerEventId.Value].ReceivedObjectIds);
-                            itemsToAddOrTransfer.UnionWith(crime.Events[partnerEventId.Value].ReceivedObjectIds);
-                            itemsToRemove.UnionWith(crime.Events[partnerEventId.Value].DestroyedObjectIds);
-                        }
-                    } else if (ev.EventType == CrimeModel.EventType.ReceivedMessage || ev.EventType == CrimeModel.EventType.OddReceivedMessage)
-                    {
-                        isSplitEvent = true;
-                        partnerEventId = potentiallyValidEvents.FirstOrDefault(x =>
-                            x.Value.MessageId == ev.MessageId &&
-                            x.Value.EventType == CrimeModel.EventType.SentMessage &&
-                            (x.Value.TargetParticipantId == null || x.Value.TargetParticipantId == ev.SourceParticipantId)).Key;
-                        targetParticipant = ev.SourceParticipantId;
-                        sourceRequiredItems.UnionWith(ev.ReceivedObjectIds);
-                        itemsToAddOrTransfer.UnionWith(ev.ReceivedObjectIds);
-                        itemsToRemove.UnionWith(ev.DestroyedObjectIds);
-                        if (partnerEventId != null)
-                        {
-                            sourceParticipant = crime.Events[partnerEventId.Value].SourceParticipantId;
-                            sourceRequiredItems.UnionWith(crime.Events[partnerEventId.Value].DestroyedObjectIds);
-                            itemsToAddOrTransfer.UnionWith(crime.Events[partnerEventId.Value].ReceivedObjectIds);
-                            itemsToRemove.UnionWith(crime.Events[partnerEventId.Value].DestroyedObjectIds);
-                        }
-                    } else if (ev.EventType == CrimeModel.EventType.MetWith)
-                    {
-                        isSplitEvent = true;
-                        isMeeting = true; //meetings activate people in reverse
-                        partnerEventId = potentiallyValidEvents.FirstOrDefault(x =>
-                            x.Value.MessageId == ev.MessageId &&
-                            x.Value.EventType == CrimeModel.EventType.WasMetBy &&
-                            (x.Value.TargetParticipantId == null || x.Value.TargetParticipantId == ev.SourceParticipantId)).Key;
-                        //sourceParticipant = ev.SourceParticipantId;
-                        targetParticipant = ev.SourceParticipantId;
-                        sourceRequiredItems.UnionWith(ev.ReceivedObjectIds);
-                        sourceRequiredItems.UnionWith(ev.DestroyedObjectIds);
-                        transferItems = true;
-                        itemsToAddOrTransfer.UnionWith(ev.ReceivedObjectIds);
-                        itemsToRemove.UnionWith(ev.DestroyedObjectIds);
-                        if (partnerEventId != null)
-                        {
-                            //targetParticipant = crime.Events[partnerEventId.Value].SourceParticipantId;
-                            sourceParticipant = crime.Events[partnerEventId.Value].SourceParticipantId;
-                            sourceRequiredItems.UnionWith(crime.Events[partnerEventId.Value].ReceivedObjectIds);
-                            sourceRequiredItems.UnionWith(crime.Events[partnerEventId.Value].DestroyedObjectIds);
-                            itemsToAddOrTransfer.UnionWith(crime.Events[partnerEventId.Value].ReceivedObjectIds);
-                            itemsToRemove.UnionWith(crime.Events[partnerEventId.Value].DestroyedObjectIds);
-                        }
-                    } else if (ev.EventType == CrimeModel.EventType.WasMetBy)
-                    {
-                        isSplitEvent = true;
-                        isMeeting = true; //meetings activate people in reverse
-                        partnerEventId = potentiallyValidEvents.FirstOrDefault(x =>
-                            x.Value.MessageId == ev.MessageId &&
-                            x.Value.EventType == CrimeModel.EventType.MetWith &&
-                            (x.Value.TargetParticipantId == null || x.Value.TargetParticipantId == ev.SourceParticipantId)).Key;
-                        //targetParticipant = ev.SourceParticipantId;
-                        sourceParticipant = ev.SourceParticipantId;
-                        sourceRequiredItems.UnionWith(ev.ReceivedObjectIds);
-                        sourceRequiredItems.UnionWith(ev.DestroyedObjectIds);
-                        transferItems = true;
-                        itemsToAddOrTransfer.UnionWith(ev.ReceivedObjectIds);
-                        itemsToRemove.UnionWith(ev.DestroyedObjectIds);
-                        if (partnerEventId != null)
-                        {
-                            //sourceParticipant = crime.Events[partnerEventId.Value].SourceParticipantId;
-                            targetParticipant = crime.Events[partnerEventId.Value].SourceParticipantId;
-                            sourceRequiredItems.UnionWith(crime.Events[partnerEventId.Value].ReceivedObjectIds);
-                            sourceRequiredItems.UnionWith(crime.Events[partnerEventId.Value].DestroyedObjectIds);
-                            itemsToAddOrTransfer.UnionWith(crime.Events[partnerEventId.Value].ReceivedObjectIds);
-                            itemsToRemove.UnionWith(crime.Events[partnerEventId.Value].DestroyedObjectIds);
-                        }
-                    } else if (ev.EventType == CrimeModel.EventType.Bulletin ||
-                               ev.EventType == CrimeModel.EventType.ProcessItems)
-                    {
-                        sourceRequiredItems.UnionWith(ev.DestroyedObjectIds);
-                        itemsToAddOrTransfer.UnionWith(ev.ReceivedObjectIds);
-                        itemsToRemove.UnionWith(ev.DestroyedObjectIds);
+                        itemParticipant = ev.SecondaryParticipantId ?? ev.MainParticipantId;
+                        otherParticipant = ev.MainParticipantId;
                     }
-                    
-                    //if it's half a message but the other half isn't in the list, it's not valid
-                    if (isSplitEvent && partnerEventId == null)
-                    {
-                        //it was one half of a message
-                        continue;
-                    }
-                    
-                    if (sourceRequiredItems.Count > 0)
-                    {
-                        participantItems.TryGetValue(sourceParticipant, out var sourceItems);
-                        if (sourceItems == null)
-                        {
-                            sourceItems = new HashSet<int>();
-                        }
-
-                        var targetItems = new HashSet<int>();
-                        if (targetParticipant != null)
-                        {
-                            participantItems.TryGetValue(targetParticipant!.Value, out targetItems);
-                            if (targetItems == null)
-                            {
-                                targetItems = new HashSet<int>();
-                            }
-                        }
-                        
-                        //for meetings, required items aren't actually checked...instead they'll magically appear in the actual game
-                        //unfortunately the actual game data has many instances of this
-                        if (transferItems)
-                        {
-                            // if (sourceRequiredItems.Any(x => !sourceItems.Contains(x) && !targetItems.Contains(x)))
-                            // {
-                            //     //required items not owned
-                            //     continue;
-                            // }
-
-                            if (sourceRequiredItems.Any(x => !sourceItems.Contains(x)))
-                            {
-                                //the source and target are flipped
-                                (sourceParticipant, targetParticipant) = (targetParticipant!.Value, sourceParticipant);
-                            }
-                        }
-                        else
-                        {
-                            if (sourceRequiredItems.Any(x => !sourceItems.Contains(x)))
-                            {
-                                //required items not owned
-                                continue;
-                            }
-                        }
-                    }
-
-                    if (!activeParticipants.Contains(sourceParticipant))
+                    if ((ev.IsPairedEvent && !activeParticipants.Contains(otherParticipant)) ||
+                        (!ev.IsPairedEvent && !activeParticipants.Contains(ev.MainParticipantId)))
                     {
                         //the sender is not active
                         continue;
                     }
+
+                    if (!participantItems.ContainsKey(ev.MainParticipantId))
+                    {
+                        participantItems[ev.MainParticipantId] = new HashSet<int>();
+                    }
+
+                    if (ev.SecondaryParticipantId != null)
+                    {
+                        if (!participantItems.ContainsKey(ev.SecondaryParticipantId.Value))
+                        {
+                            participantItems[ev.SecondaryParticipantId.Value] = new HashSet<int>();
+                        }
+                    }
+
+                    //destroyed objects must exist on the right participant before being allowed
+                    if (ev.DestroyedObjectIds.Any())
+                    {
+                        if (ev.DestroyedObjectIds.Any(x => !participantItems[itemParticipant].Contains(x)))
+                        {
+                            //not owned destroyed item
+                            continue;
+                        }
+                    }
+                    
+                    //received items on paired events must either not exist on any participant OR exist on the right participant before being allowed
+                    if (ev.ReceivedObjectIds.Any() && ev.IsPairedEvent)
+                    {
+                        var alreadyExistingItems = ev.ReceivedObjectIds.Where(x => participantItems.Values.Any(i => i.Contains(x))).ToList();
+                        if (alreadyExistingItems.Any(x => !participantItems[otherParticipant].Contains(x)))
+                        {
+                            //not owned received item
+                            continue;
+                        }
+                    }
                     
                     //it's valid
+                    foundAtLeastOneEvent = true;
                     processedEvents.Add(id.Value);
-                    //so is the partner event if that exists
-                    if (partnerEventId != null)
-                    {
-                        processedEvents.Add(partnerEventId.Value);
-                    }
 
-                    activeParticipants.Add(sourceParticipant);
-                    if (targetParticipant != null)
+                    //activate both participants
+                    activeParticipants.Add(ev.MainParticipantId);
+                    if (ev.SecondaryParticipantId != null)
                     {
-                        activeParticipants.Add(targetParticipant.Value);
-                    }
-
-                    var type = CrimeTimelineEvent.CrimeTimelineEventType.Unknown;
-                    if (ev.EventType == CrimeModel.EventType.Bulletin || 
-                        ev.EventType == CrimeModel.EventType.ProcessItems)
-                    {
-                        type = CrimeTimelineEvent.CrimeTimelineEventType.Action;
-                    } else if (ev.EventType == CrimeModel.EventType.MetWith ||
-                               ev.EventType == CrimeModel.EventType.WasMetBy)
-                    {
-                        type = CrimeTimelineEvent.CrimeTimelineEventType.Meeting;
-                    } else if (ev.EventType == CrimeModel.EventType.SentMessage ||
-                               ev.EventType == CrimeModel.EventType.ReceivedMessage || 
-                               ev.EventType == CrimeModel.EventType.OddReceivedMessage)
-                    {
-                        type = CrimeTimelineEvent.CrimeTimelineEventType.Message;
-                    } else if (ev.EventType == CrimeModel.EventType.ReceivedPackage ||
-                               ev.EventType == CrimeModel.EventType.SentPackage)
-                    {
-                        type = CrimeTimelineEvent.CrimeTimelineEventType.Package;
+                        activeParticipants.Add(ev.SecondaryParticipantId.Value);
                     }
                     
-                    foundAtLeastOneEvent = true;
-                    var eventIds = new List<int>() { id.Value };
-                    if (partnerEventId != null)
+                    //add/move items
+                    participantItems[itemParticipant].UnionWith(ev.ReceivedObjectIds);
+                    foreach (var participantPair in participantItems)
                     {
-                        eventIds.Add(partnerEventId.Value);
+                        if (participantPair.Key == itemParticipant)
+                        {
+                            continue;
+                        }
+
+                        participantPair.Value.RemoveWhere(x => ev.DestroyedObjectIds.Contains(x));
+                        participantPair.Value.RemoveWhere(x => ev.ReceivedObjectIds.Contains(x));
                     }
+                    
                     timeline.Add(new CrimeTimelineEvent()
                     {
-                        EventIds = eventIds,
-                        Type = type,
-                        SourceParticipantId = sourceParticipant,
-                        TargetParticipantId = targetParticipant,
+                        Iteration = iteration,
+                        EventIds = new List<int>() { id.Value },
+                        Type = ev.Type switch
+                        {
+                            CrimeModel.EventType.Individual => CrimeTimelineEvent.CrimeTimelineEventType.Action,
+                            CrimeModel.EventType.Message => CrimeTimelineEvent.CrimeTimelineEventType.Message,
+                            CrimeModel.EventType.Package => CrimeTimelineEvent.CrimeTimelineEventType.Package,
+                            CrimeModel.EventType.Meeting => CrimeTimelineEvent.CrimeTimelineEventType.Meeting,
+                            _ => CrimeTimelineEvent.CrimeTimelineEventType.Unknown
+                        },
+                        SourceParticipantId = ev.IsPairedEvent ? ev.SecondaryParticipantId ?? ev.MainParticipantId : ev.MainParticipantId,
+                        TargetParticipantId = ev.IsPairedEvent ? ev.MainParticipantId : null,
                         MessageId = ev.MessageId,
-                        ItemsCreated = isSplitEvent ? new List<int>() : itemsToAddOrTransfer.ToList(),
-                        ItemsDestroyed = itemsToRemove.ToList(),
-                        ItemsTransferred = isSplitEvent ? itemsToAddOrTransfer.ToList() : new List<int>()
+                        ItemsCreated = ev.IsPairedEvent ? new() : ev.ReceivedObjectIds.OrderBy(x => x).ToList(),
+                        ItemsDestroyed = ev.DestroyedObjectIds.OrderBy(x => x).ToList(),
+                        ItemsTransferred = ev.IsPairedEvent ? ev.ReceivedObjectIds.OrderBy(x => x).ToList() : new(),
                     });
-
-                    if (!participantItems.ContainsKey(sourceParticipant))
-                    {
-                        participantItems[sourceParticipant] = new HashSet<int>();
-                    }
-
-                    if (itemsToAddOrTransfer.Count > 0)
-                    {
-                        if (!isSplitEvent)
-                        {
-                            timeline.Add(new CrimeTimelineEvent()
-                            {
-                                Type = CrimeTimelineEvent.CrimeTimelineEventType.ItemUpdate,
-                                ErrorMessage =
-                                    $"{crime.Participants[sourceParticipant].Role.Trim()} now has [{string.Join(", ", itemsToAddOrTransfer.Select(x => crime.Objects[x].Name.Trim()))}]"
-                            });
-                            participantItems[sourceParticipant].UnionWith(itemsToAddOrTransfer);
-                        }
-                        else
-                        {
-                            if (!participantItems.ContainsKey(targetParticipant!.Value))
-                            {
-                                participantItems[targetParticipant.Value] = new HashSet<int>();
-                            }
-
-                            var itemInSource = itemsToAddOrTransfer.All(x => participantItems[sourceParticipant].Contains(x));
-
-                            if (itemInSource)
-                            {
-                                timeline.Add(new CrimeTimelineEvent()
-                                {
-                                    Type = CrimeTimelineEvent.CrimeTimelineEventType.ItemUpdate,
-                                    ErrorMessage = $"{crime.Participants[targetParticipant.Value].Role.Trim()} now has [{string.Join(", ", itemsToAddOrTransfer.Select(x => crime.Objects[x].Name.Trim()))}]"
-                                });
-                                participantItems[targetParticipant.Value].UnionWith(itemsToAddOrTransfer);
-                                participantItems[sourceParticipant].RemoveWhere(x => itemsToAddOrTransfer.Contains(x));
-                            }
-                            else
-                            {
-                                timeline.Add(new CrimeTimelineEvent()
-                                {
-                                    Type = CrimeTimelineEvent.CrimeTimelineEventType.ItemUpdate,
-                                    ErrorMessage = $"{crime.Participants[sourceParticipant].Role.Trim()} now has [{string.Join(", ", itemsToAddOrTransfer.Select(x => crime.Objects[x].Name.Trim()))}]"
-                                });
-                                participantItems[sourceParticipant].UnionWith(itemsToAddOrTransfer);
-                                participantItems[targetParticipant.Value].RemoveWhere(x => itemsToAddOrTransfer.Contains(x));
-                            }
-                        }
-                    }
-
-                    if (itemsToRemove.Count > 0)
-                    {
-                        if (false && isMeeting)
-                        {
-                            timeline.Add(new CrimeTimelineEvent()
-                            {
-                                Type = CrimeTimelineEvent.CrimeTimelineEventType.ItemUpdate,
-                                ErrorMessage = $"{crime.Participants[targetParticipant!.Value].Role.Trim()} no longer has [{string.Join(", ", itemsToRemove.Select(x => crime.Objects[x].Name.Trim()))}]"
-                            });
-                            participantItems[targetParticipant!.Value].RemoveWhere(x => itemsToRemove.Contains(x));
-                        }
-                        else
-                        {
-                            timeline.Add(new CrimeTimelineEvent()
-                            {
-                                Type = CrimeTimelineEvent.CrimeTimelineEventType.ItemUpdate,
-                                ErrorMessage = $"{crime.Participants[sourceParticipant].Role.Trim()} no longer has [{string.Join(", ", itemsToRemove.Select(x => crime.Objects[x].Name.Trim()))}]"
-                            });
-                            participantItems[sourceParticipant].RemoveWhere(x => itemsToRemove.Contains(x));
-                        }
-                    }
                 }
                 
                 if (!foundAtLeastOneEvent)
@@ -426,7 +200,7 @@ namespace CovertActionTools.Core.Processors
                                 timeline.Add(new CrimeTimelineEvent()
                                 {
                                     Type = CrimeTimelineEvent.CrimeTimelineEventType.Error,
-                                    ErrorMessage = $"Event {i} was never processed: {crime.Events[i].EventType} {crime.Events[i].SourceParticipantId} to {crime.Events[i].TargetParticipantId} {crime.Events[i].MessageId} received [{string.Join(", ", crime.Events[i].ReceivedObjectIds)}] destroyed [{string.Join(", ", crime.Events[i].DestroyedObjectIds)}]"
+                                    ErrorMessage = $"Event {i + 1} was never processed"
                                 });
                             }
                         }
@@ -442,7 +216,7 @@ namespace CovertActionTools.Core.Processors
                                 timeline.Add(new CrimeTimelineEvent()
                                 {
                                     Type = CrimeTimelineEvent.CrimeTimelineEventType.Error,
-                                    ErrorMessage = $"Participant {i} was never activated"
+                                    ErrorMessage = $"Participant {i + 1} was never activated"
                                 });
                             }
                         }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using CovertActionTools.Core.Models;
@@ -86,7 +87,7 @@ namespace CovertActionTools.Core.Importing.Parsers
             var events = ReadEvents(reader, eventCount);
             var objects = ReadObjects(reader);
             
-            return new CrimeModel()
+            var intermediateModel = new IntermediateCrimeModel()
             {
                 Id = key,
                 Participants = participants,
@@ -98,11 +99,144 @@ namespace CovertActionTools.Core.Importing.Parsers
                     Comment = "Legacy import"
                 }
             };
+
+            return Convert(intermediateModel);
         }
 
-        private List<CrimeModel.Participant> ReadParticipants(BinaryReader reader, int count)
+        private CrimeModel Convert(IntermediateCrimeModel intermediate)
         {
-            var participants = new List<CrimeModel.Participant>();
+            var model = new CrimeModel()
+            {
+                Id = intermediate.Id,
+                Objects = intermediate.Objects,
+                ExtraData = intermediate.ExtraData
+            };
+
+            //participants are a simple 1-to-1
+            foreach (var intermediateParticipant in intermediate.Participants)
+            {
+                var participant = new CrimeModel.Participant()
+                {
+                    Exposure = intermediateParticipant.Exposure,
+                    Role = intermediateParticipant.Role,
+                    IsMastermind = (intermediateParticipant.ParticipantType & IntermediateCrimeModel.ParticipantType.Mastermind) > 0,
+                    IsWidow = (intermediateParticipant.ParticipantType & IntermediateCrimeModel.ParticipantType.Widow) > 0,
+                    IsAssassin = (intermediateParticipant.ParticipantType & IntermediateCrimeModel.ParticipantType.Assassin) > 0,
+                    IsInsideContact = (intermediateParticipant.Unknown2 & 0x01) > 0,
+                    Unknown2 = intermediateParticipant.Unknown2,
+                    ClueType = intermediateParticipant.ClueType,
+                    Rank = intermediateParticipant.Rank,
+                    Unknown1 = intermediateParticipant.Unknown1,
+                    Unknown3 = intermediateParticipant.Unknown3,
+                    Unknown4 = intermediateParticipant.Unknown4,
+                    Unknown5 = intermediateParticipant.Unknown5,
+                };
+                model.Participants.Add(participant);
+            }
+            
+            //events get their pairs merged together
+            var processedEvents = new HashSet<int>();
+            for (var i = 0; i < intermediate.Events.Count; i++)
+            {
+                if (!processedEvents.Add(i))
+                {
+                    continue;
+                }
+
+                var intermediateEvent = intermediate.Events[i];
+                if (((int)intermediateEvent.EventType & 0x0F) == 0)
+                {
+                    //it's an individual event with no pair
+                    if (intermediateEvent.TargetParticipantId != null)
+                    {
+                        _logger.LogError($"Found event {i} that is Individual but has target participant");
+                    }
+                    var individualEvent = new CrimeModel.Event()
+                    {
+                        MainParticipantId = intermediateEvent.SourceParticipantId,
+                        SecondaryParticipantId = null,
+                        ReceiveDescription = intermediateEvent.Description,
+                        SendDescription = intermediateEvent.Description,
+                        MessageId = intermediateEvent.MessageId,
+                        IsMessage = false,
+                        IsPackage = false,
+                        IsMeeting = false,
+                        IsBulletin = ((int)intermediateEvent.EventType & 0x20) > 0,
+                        Unknown1 = ((int)intermediateEvent.EventType & 0x10) > 0,
+                        ItemsToSecondary = false,
+                        ReceivedObjectIds = intermediateEvent.ReceivedObjectIds,
+                        DestroyedObjectIds = intermediateEvent.DestroyedObjectIds,
+                        Score = intermediateEvent.Score
+                    };
+                    model.Events.Add(individualEvent);
+                    continue;
+                }
+                
+                //it's a paired event, both have to be parsed together to make sense of it
+                var partnerEventId = intermediate.Events.FindIndex(x => 
+                    x.MessageId == intermediateEvent.MessageId &&
+                    x.IsReceive() != intermediateEvent.IsReceive() && 
+                    (
+                        (x.IsMessage() && intermediateEvent.IsMessage()) ||
+                        (x.IsPackage() && intermediateEvent.IsPackage()) ||
+                        (x.IsMeeting() && intermediateEvent.IsMeeting())
+                    )
+                );
+                var forceItemsToSecondary = false;
+                if (partnerEventId == -1)
+                {
+                    // for some reason, legacy data has events with duplicate 'receive' events that match each other
+                    partnerEventId = intermediate.Events.FindIndex(x => 
+                        x.MessageId == intermediateEvent.MessageId &&
+                        //x.IsReceive() != intermediateEvent.IsReceive() && 
+                        (
+                            (x.IsMessage() && intermediateEvent.IsMessage()) ||
+                            (x.IsPackage() && intermediateEvent.IsPackage()) ||
+                            (x.IsMeeting() && intermediateEvent.IsMeeting())
+                        ) &&
+                        ((intermediateEvent.TargetParticipantId != null && x.SourceParticipantId == intermediateEvent.TargetParticipantId.Value) ||
+                        (x.TargetParticipantId == intermediateEvent.SourceParticipantId))
+                    );
+                    if (intermediate.Events[partnerEventId].ReceivedObjectIds.Any() || intermediate.Events[partnerEventId].DestroyedObjectIds.Any())
+                    {
+                        forceItemsToSecondary = true;
+                    }
+                    if (partnerEventId == -1)
+                    {
+                        throw new Exception($"Unable to find partner event for: {i} {intermediateEvent.EventType} {intermediateEvent.MessageId} {intermediateEvent.Description}");
+                    }
+                }
+                var partnerEvent = intermediate.Events[partnerEventId];
+                processedEvents.Add(partnerEventId);
+                
+                var pairedEvent = new CrimeModel.Event()
+                {
+                    MainParticipantId = intermediateEvent.IsReceive() ? (partnerEvent.TargetParticipantId ?? intermediateEvent.SourceParticipantId) : (intermediateEvent.TargetParticipantId ?? partnerEvent.SourceParticipantId),
+                    SecondaryParticipantId = intermediateEvent.IsReceive() ? partnerEvent.SourceParticipantId : intermediateEvent.SourceParticipantId,
+                    MessageId = intermediateEvent.MessageId,
+                    ReceiveDescription = intermediateEvent.IsReceive() ? intermediateEvent.Description : partnerEvent.Description,
+                    SendDescription = intermediateEvent.IsReceive() ? partnerEvent.Description : intermediateEvent.Description,
+                    IsMessage = intermediateEvent.IsMessage(),
+                    IsPackage = intermediateEvent.IsPackage(),
+                    IsMeeting = intermediateEvent.IsMeeting(),
+                    IsBulletin = intermediateEvent.IsBulletin(),
+                    Unknown1 = intermediateEvent.IsUnknown1(),
+                    ItemsToSecondary = forceItemsToSecondary || 
+                        (!intermediateEvent.IsReceive() && (intermediateEvent.ReceivedObjectIds.Any() || intermediateEvent.DestroyedObjectIds.Any())) ||
+                        (!partnerEvent.IsReceive() && (partnerEvent.ReceivedObjectIds.Any() || partnerEvent.DestroyedObjectIds.Any())),
+                    ReceivedObjectIds = intermediateEvent.ReceivedObjectIds.Any() ? intermediateEvent.ReceivedObjectIds : partnerEvent.ReceivedObjectIds,
+                    DestroyedObjectIds = intermediateEvent.DestroyedObjectIds.Any() ? intermediateEvent.DestroyedObjectIds : partnerEvent.DestroyedObjectIds,
+                    Score = intermediateEvent.Score != 0 ? intermediateEvent.Score : partnerEvent.Score
+                };
+                model.Events.Add(pairedEvent);
+            }
+
+            return model;
+        }
+
+        private List<IntermediateCrimeModel.Participant> ReadParticipants(BinaryReader reader, int count)
+        {
+            var participants = new List<IntermediateCrimeModel.Participant>();
 
             for (var i = 0; i < count; i++)
             {
@@ -124,7 +258,7 @@ namespace CovertActionTools.Core.Importing.Parsers
 
                 var unknown1 = reader.ReadUInt16();
                 var unknown2 = reader.ReadByte();
-                var type = (CrimeModel.ParticipantType)(int)reader.ReadByte();
+                var type = (IntermediateCrimeModel.ParticipantType)(int)reader.ReadByte();
                 var unknown3 = reader.ReadUInt16();
 
                 var clueType = (ClueType)(int)reader.ReadByte();
@@ -134,7 +268,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                 var unknown4 = reader.ReadUInt16();
                 var unknown5 = reader.ReadByte();
                 
-                participants.Add(new CrimeModel.Participant()
+                participants.Add(new IntermediateCrimeModel.Participant()
                 {
                     Exposure = exposure,
                     Role = role,
@@ -152,9 +286,9 @@ namespace CovertActionTools.Core.Importing.Parsers
             return participants;
         }
 
-        private List<CrimeModel.Event> ReadEvents(BinaryReader reader, int count)
+        private List<IntermediateCrimeModel.Event> ReadEvents(BinaryReader reader, int count)
         {
-            var events = new List<CrimeModel.Event>();
+            var events = new List<IntermediateCrimeModel.Event>();
             
             for (var i = 0; i < count; i++)
             {
@@ -179,7 +313,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                 description = description.Trim().Trim('\0');
 
                 var targetParticipant = reader.ReadByte();
-                var type = (CrimeModel.EventType)(int)reader.ReadByte();
+                var type = (IntermediateCrimeModel.EventType)(int)reader.ReadByte();
 
                 var receivedObjectBitmask = reader.ReadByte();
                 HashSet<int> receivedObjects = new();
@@ -211,7 +345,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                 {
                     continue;
                 }
-                events.Add(new CrimeModel.Event()
+                events.Add(new IntermediateCrimeModel.Event()
                 {
                     SourceParticipantId = sourceParticipantId,
                     MessageId = messageId,
