@@ -70,7 +70,7 @@ namespace CovertActionTools.Core.Exporting.Exporters
         {
             var dict = new Dictionary<string, byte[]>()
             {
-                //[$"CRIME{intermediateCrime.Id}.DTA"] = GetLegacyCrimeData(crime),
+                [$"CRIME{crime.Id}.DTA"] = GetLegacyCrimeData(crime),
                 [$"CRIME{crime.Id}_crime.json"] = GetModernCrimeData(crime),
             };
 
@@ -199,8 +199,8 @@ namespace CovertActionTools.Core.Exporting.Exporters
                     Role = participant.Role,
                     ParticipantType = (
                         (participant.IsMastermind ? IntermediateCrimeModel.ParticipantType.Mastermind : 0) |
-                        (participant.IsWidow ? IntermediateCrimeModel.ParticipantType.Widow : 0) |
-                        (participant.IsAssassin ? IntermediateCrimeModel.ParticipantType.Assassin : 0)
+                        (participant.ForceFemale ? IntermediateCrimeModel.ParticipantType.Widow : 0) |
+                        (participant.CanComeOutOfHiding ? IntermediateCrimeModel.ParticipantType.Assassin : 0)
                     ),
                     Unknown2 = participant.Unknown2,
                     ClueType = participant.ClueType,

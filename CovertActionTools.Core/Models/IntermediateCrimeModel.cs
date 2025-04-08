@@ -44,15 +44,13 @@ namespace CovertActionTools.Core.Models
             /// </summary>
             public bool IsMastermind { get; set; }
             /// <summary>
-            /// Only assigned to Black Widow characters in game
-            /// TODO: is this a 'force female' flag?
+            /// Used in original game only for the 'black widow' characters
             /// </summary>
-            public bool IsWidow { get; set; }
+            public bool ForceFemale { get; set; }
             /// <summary>
-            /// Only assigned to assassin characters in game
-            /// TODO: what is the effect?
+            /// Used in original game only for the 'assassin' characters
             /// </summary>
-            public bool IsAssassin { get; set; }
+            public bool CanComeOutOfHiding { get; set; }
             /// <summary>
             /// Spawns character only from allied organisations.
             /// Warning: can cause game start to never finish correctly if mis-used.
