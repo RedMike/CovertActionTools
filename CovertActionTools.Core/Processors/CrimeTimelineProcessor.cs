@@ -62,13 +62,22 @@ namespace CovertActionTools.Core.Processors
             }
             activeParticipants.Add(0); //the first participant is the organizer usually
             var participantItems = new Dictionary<int, HashSet<int>>();
+            var destroyedItems = new HashSet<int>();
             var processedEvents = new HashSet<int>();
             var safetyCheck = 0;
             var iteration = 0;
             
+            //TODO: bugs
+            //  crime 6 event 13 - the bomber is receiving the photographs they're meant to give
+            //  crime 9 events 11/12 - bagman receiving things they're meant to give
+            //  crime 10 event 11 - extractor not receiving escapee
+            //  crime 3 - activation order is clearly wrong
+            
             do
             {
                 iteration++;
+                var busyParticipants = new HashSet<int>();
+                
                 //exclude any events we've already processed
                 var potentiallyValidEvents = crime
                     .Events
@@ -108,6 +117,13 @@ namespace CovertActionTools.Core.Processors
                         //the sender is not active
                         continue;
                     }
+                    
+                    if (busyParticipants.Contains(itemParticipant) || busyParticipants.Contains(otherParticipant))
+                    {
+                        //if the participant is already busy, we can't do anything this iteration
+                        //this is just to simulate messages happening across multiple days
+                        continue;
+                    }
 
                     if (!participantItems.ContainsKey(ev.MainParticipantId))
                     {
@@ -125,18 +141,35 @@ namespace CovertActionTools.Core.Processors
                     //destroyed objects must exist on the right participant before being allowed
                     if (ev.DestroyedObjectIds.Any())
                     {
-                        if (ev.DestroyedObjectIds.Any(x => !participantItems[itemParticipant].Contains(x)))
+                        if (ev.DestroyedObjectIds.Any(x => !destroyedItems.Contains(x) && !participantItems[otherParticipant].Contains(x)))
                         {
                             //not owned destroyed item
                             continue;
                         }
                     }
                     
-                    //received items on paired events must either not exist on any participant OR exist on the right participant before being allowed
-                    if (ev.ReceivedObjectIds.Any() && ev.IsPairedEvent)
+                    //normally, received items on paired events must exist on the right participant before being allowed
+                    if (ev.IsPairedEvent && ev.ReceivedObjectIds.Any())
                     {
-                        var alreadyExistingItems = ev.ReceivedObjectIds.Where(x => participantItems.Values.Any(i => i.Contains(x))).ToList();
-                        if (alreadyExistingItems.Any(x => !participantItems[otherParticipant].Contains(x)))
+                        var requirementsMet = true;
+                        foreach (var objId in ev.ReceivedObjectIds)
+                        {
+                            if (participantItems[otherParticipant].Contains(objId))
+                            {
+                                //the item is owned correctly
+                                continue;
+                            }
+                            //if a received item doesn't exist on any individual event, then the item requirement is skipped
+                            if (crime.Events.All(x => x.IsPairedEvent || !x.ReceivedObjectIds.Contains(objId)))
+                            {
+                                continue;
+                            }
+
+                            requirementsMet = false;
+                            break;
+                        }
+
+                        if (!requirementsMet)
                         {
                             //not owned received item
                             continue;
@@ -146,6 +179,19 @@ namespace CovertActionTools.Core.Processors
                     //it's valid
                     foundAtLeastOneEvent = true;
                     processedEvents.Add(id.Value);
+                    
+                    //mark participant as busy in some situations
+                    if (ev.IsMeeting)
+                    {
+                        //mark both as busy
+                        busyParticipants.Add(ev.MainParticipantId);
+                        busyParticipants.Add(ev.SecondaryParticipantId ?? ev.MainParticipantId);
+                    }
+                    else
+                    {
+                        //mark only the recipient as busy
+                        busyParticipants.Add(ev.MainParticipantId);
+                    }
 
                     //activate both participants
                     activeParticipants.Add(ev.MainParticipantId);
@@ -155,6 +201,7 @@ namespace CovertActionTools.Core.Processors
                     }
                     
                     //add/move items
+                    destroyedItems.UnionWith(ev.DestroyedObjectIds);
                     participantItems[itemParticipant].UnionWith(ev.ReceivedObjectIds);
                     foreach (var participantPair in participantItems)
                     {
