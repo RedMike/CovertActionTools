@@ -15,6 +15,7 @@ public class MainEditorState : IViewModel
         Text = 2,
         Clue = 3,
         Plot = 4,
+        World = 5,
     }
     public string? LoadedPackagePath { get; private set; }
     public PackageModel? OriginalLoadedPackage { get; private set; }

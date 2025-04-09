@@ -198,7 +198,7 @@ public class PackageExplorerWindow : BaseWindow
             ImGui.TreePop();
         }
         
-        if (ImGui.TreeNodeEx("Plots", ImGuiTreeNodeFlags.DefaultOpen | ImGuiTreeNodeFlags.SpanAvailWidth))
+        if (ImGui.TreeNodeEx("Plots", ImGuiTreeNodeFlags.SpanAvailWidth))
         {
             var missionSetIds = model.Plots.Values.Select(x => x.MissionSetId)
                 .Distinct()
@@ -220,6 +220,33 @@ public class PackageExplorerWindow : BaseWindow
                     if (ImGui.IsItemClicked())
                     {
                         _mainEditorState.SelectedItem = (MainEditorState.ItemType.Plot, missionSetId.ToString());
+                    }
+
+                    ImGui.TreePop();
+                }
+            }
+            
+            ImGui.TreePop();
+        }
+        
+        if (ImGui.TreeNodeEx("Worlds", ImGuiTreeNodeFlags.DefaultOpen | ImGuiTreeNodeFlags.SpanAvailWidth))
+        {
+            foreach (var worldId in model.Worlds.Keys)
+            {
+                var nodeFlags = ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.SpanAvailWidth;
+                if (_mainEditorState.SelectedItem != null &&
+                    _mainEditorState.SelectedItem.Value.type == MainEditorState.ItemType.World &&
+                    _mainEditorState.SelectedItem.Value.id == worldId.ToString())
+                {
+                    nodeFlags |= ImGuiTreeNodeFlags.Selected;
+                }
+
+                var name = $"World {worldId}";
+                if (ImGui.TreeNodeEx(name, nodeFlags))
+                {
+                    if (ImGui.IsItemClicked())
+                    {
+                        _mainEditorState.SelectedItem = (MainEditorState.ItemType.World, worldId.ToString());
                     }
 
                     ImGui.TreePop();
