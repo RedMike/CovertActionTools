@@ -132,7 +132,17 @@ public class ParsePublishedWindow : BaseWindow
                     progress = 0.75f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
                 }
                 break;
-            //0.85f
+            case ImportStatus.ImportStage.ProcessingWorlds:
+                if (importStatus.StageItems <= 0)
+                {
+                    progress = 0.85f;
+                }
+                else
+                {
+                    progress = 0.85f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
+                }
+                break;
+            //0.95f
             //TODO: other stages
             case ImportStatus.ImportStage.ImportDone:
                 progress = 1.0f;
@@ -199,7 +209,17 @@ public class ParsePublishedWindow : BaseWindow
                         progress = 0.75f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.1f;
                     }
                     break;
-                //0.85f
+                case ExportStatus.ExportStage.ProcessingWorlds:
+                    if (exportStatus.StageItems <= 0)
+                    {
+                        progress = 0.85f;
+                    }
+                    else
+                    {
+                        progress = 0.85f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.1f;
+                    }
+                    break;
+                //0.95f
                 //TODO: other stages
                 case ExportStatus.ExportStage.ExportDone:
                     progress = 1.0f;

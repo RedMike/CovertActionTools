@@ -127,7 +127,17 @@ public class SavePackageWindow : BaseWindow
                     progress = 0.75f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.1f;
                 }
                 break;
-            //0.85f
+            case ExportStatus.ExportStage.ProcessingWorlds:
+                if (exportStatus.StageItems <= 0)
+                {
+                    progress = 0.85f;
+                }
+                else
+                {
+                    progress = 0.85f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.1f;
+                }
+                break;
+            //0.95f
             //TODO: other stages
         }
 

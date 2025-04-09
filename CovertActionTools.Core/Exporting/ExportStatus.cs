@@ -13,6 +13,7 @@ namespace CovertActionTools.Core.Exporting
             ProcessingTexts = 30,
             ProcessingClues = 40,
             ProcessingPlots = 50,
+            ProcessingWorlds = 60,
             ExportDone = 100,
             
             FatalError = 999999,

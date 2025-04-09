@@ -16,6 +16,7 @@ namespace CovertActionTools.Core.Importing
         private readonly IImporter<Dictionary<string, TextModel>> _textImporter;
         private readonly IImporter<Dictionary<string, ClueModel>> _clueImporter;
         private readonly IImporter<Dictionary<string, PlotModel>> _plotImporter;
+        private readonly IImporter<Dictionary<int, WorldModel>> _worldImporter;
         
         private List<string> _errors = new List<string>();
 
@@ -23,7 +24,7 @@ namespace CovertActionTools.Core.Importing
         private ImportStatus.ImportStage _currentStage = ImportStatus.ImportStage.Unknown;
         private IImporter? _currentImporter = null;
 
-        public PackageImporter(ILogger<PackageImporter> logger, IImporter<Dictionary<string, SimpleImageModel>> simpleImageImporter, IImporter<Dictionary<int, CrimeModel>> crimeImporter, IImporter<Dictionary<string, TextModel>> textImporter, IImporter<Dictionary<string, ClueModel>> clueImporter, IImporter<Dictionary<string, PlotModel>> plotImporter)
+        public PackageImporter(ILogger<PackageImporter> logger, IImporter<Dictionary<string, SimpleImageModel>> simpleImageImporter, IImporter<Dictionary<int, CrimeModel>> crimeImporter, IImporter<Dictionary<string, TextModel>> textImporter, IImporter<Dictionary<string, ClueModel>> clueImporter, IImporter<Dictionary<string, PlotModel>> plotImporter, IImporter<Dictionary<int, WorldModel>> worldImporter)
         {
             _logger = logger;
             _simpleImageImporter = simpleImageImporter;
@@ -31,13 +32,15 @@ namespace CovertActionTools.Core.Importing
             _textImporter = textImporter;
             _clueImporter = clueImporter;
             _plotImporter = plotImporter;
+            _worldImporter = worldImporter;
             _importers = new IImporter[]
             {
                 _simpleImageImporter,
                 _crimeImporter,
                 _textImporter,
                 _clueImporter,
-                _plotImporter
+                _plotImporter,
+                _worldImporter
             };
         }
 
@@ -245,6 +248,25 @@ namespace CovertActionTools.Core.Importing
                     }
                 } while (!done);
                 model.Plots = _plotImporter.GetResult();
+                
+                //plots
+                _currentStage = ImportStatus.ImportStage.ProcessingWorlds;
+                _currentImporter = _worldImporter;
+                done = false;
+                do
+                {
+                    await Task.Yield();
+                    try
+                    {
+                        done |= _currentImporter.RunStep();
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError($"Exception while running step: {e}");
+                        _errors.Add(e.ToString());
+                    }
+                } while (!done);
+                model.Worlds = _worldImporter.GetResult();
 
                 _currentStage = ImportStatus.ImportStage.ImportDone;
                 await Task.Yield();
@@ -264,6 +286,7 @@ namespace CovertActionTools.Core.Importing
                                    $"{model.Texts.Count} texts, " +
                                    $"{model.Clues.Count} clues, " +
                                    $"{model.Plots.Count} plots, " +
+                                   $"{model.Worlds.Count} worlds, " +
                                    $"...");
             return model;
         }

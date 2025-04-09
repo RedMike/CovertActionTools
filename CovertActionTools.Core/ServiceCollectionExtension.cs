@@ -19,18 +19,21 @@ namespace CovertActionTools.Core
             services.AddSingleton<LegacyTextParser>();
             services.AddSingleton<LegacyClueParser>();
             services.AddSingleton<LegacyPlotParser>();
+            services.AddSingleton<LegacyWorldParser>();
 
             services.AddSingleton<IImporter<Dictionary<string, SimpleImageModel>>, SimpleImageImporter>();
             services.AddSingleton<IImporter<Dictionary<int, CrimeModel>>, CrimeImporter>();
             services.AddSingleton<IImporter<Dictionary<string, TextModel>>, TextImporter>();
             services.AddSingleton<IImporter<Dictionary<string, ClueModel>>, ClueImporter>();
             services.AddSingleton<IImporter<Dictionary<string, PlotModel>>, PlotImporter>();
+            services.AddSingleton<IImporter<Dictionary<int, WorldModel>>, WorldImporter>();
             
             services.AddSingleton<IExporter<Dictionary<string, SimpleImageModel>>, SimpleImageExporter>();
             services.AddSingleton<IExporter<Dictionary<int, CrimeModel>>, CrimeExporter>();
             services.AddSingleton<IExporter<Dictionary<string, TextModel>>, TextExporter>();
             services.AddSingleton<IExporter<Dictionary<string, ClueModel>>, ClueExporter>();
             services.AddSingleton<IExporter<Dictionary<string, PlotModel>>, PlotExporter>();
+            services.AddSingleton<IExporter<Dictionary<int, WorldModel>>, WorldExporter>();
             
             services.AddTransient<LegacyFolderImporter>();
             services.AddTransient<IPackageImporter, PackageImporter>();
