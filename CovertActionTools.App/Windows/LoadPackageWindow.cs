@@ -72,69 +72,69 @@ public class LoadPackageWindow : BaseWindow
         switch (importStatus.Stage)
         {
             case ImportStatus.ImportStage.ReadingIndex:
-                progress = 0.15f;
+                progress = 0.1f;
                 break;
             case ImportStatus.ImportStage.ProcessingSimpleImages:
                 if (importStatus.StageItems <= 0)
                 {
-                    progress = 0.15f;
+                    progress = 0.1f;
                 }
                 else
                 {
-                    progress = 0.15f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.2f;
+                    progress = 0.1f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
                 }
                 break;
             case ImportStatus.ImportStage.ProcessingCrimes:
                 if (importStatus.StageItems <= 0)
                 {
-                    progress = 0.35f;
+                    progress = 0.2f;
                 }
                 else
                 {
-                    progress = 0.35f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.2f;
+                    progress = 0.2f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
                 }
                 break;
             case ImportStatus.ImportStage.ProcessingTexts:
                 if (importStatus.StageItems <= 0)
                 {
-                    progress = 0.55f;
+                    progress = 0.3f;
                 }
                 else
                 {
-                    progress = 0.55f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
+                    progress = 0.3f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
                 }
                 break;
             case ImportStatus.ImportStage.ProcessingClues:
                 if (importStatus.StageItems <= 0)
                 {
-                    progress = 0.65f;
+                    progress = 0.4f;
                 }
                 else
                 {
-                    progress = 0.65f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
+                    progress = 0.4f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
                 }
                 break;
             case ImportStatus.ImportStage.ProcessingPlots:
                 if (importStatus.StageItems <= 0)
                 {
-                    progress = 0.75f;
+                    progress = 0.5f;
                 }
                 else
                 {
-                    progress = 0.75f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
+                    progress = 0.5f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
                 }
                 break;
             case ImportStatus.ImportStage.ProcessingWorlds:
                 if (importStatus.StageItems <= 0)
                 {
-                    progress = 0.85f;
+                    progress = 0.6f;
                 }
                 else
                 {
-                    progress = 0.85f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
+                    progress = 0.6f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
                 }
                 break;
-            //0.95f
+            //0.7f
             //TODO: other stages
             case ImportStatus.ImportStage.ImportDone:
                 progress = 1.0f;

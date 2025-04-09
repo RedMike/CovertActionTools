@@ -72,69 +72,69 @@ public class SavePackageWindow : BaseWindow
         switch (exportStatus.Stage)
         {
             case ExportStatus.ExportStage.Preparing:
-                progress = 0.15f;
+                progress = 0.1f;
                 break;
             case ExportStatus.ExportStage.ProcessingSimpleImages:
                 if (exportStatus.StageItems <= 0)
                 {
-                    progress = 0.2f;
+                    progress = 0.1f;
                 }
                 else
                 {
-                    progress = 0.15f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.2f;
+                    progress = 0.1f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.1f;
                 }
 
                 break;
             case ExportStatus.ExportStage.ProcessingCrimes:
                 if (exportStatus.StageItems <= 0)
                 {
-                    progress = 0.35f;
+                    progress = 0.2f;
                 }
                 else
                 {
-                    progress = 0.35f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.2f;
+                    progress = 0.2f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.1f;
                 }
 
                 break;
             case ExportStatus.ExportStage.ProcessingTexts:
                 if (exportStatus.StageItems <= 0)
                 {
-                    progress = 0.55f;
+                    progress = 0.3f;
                 }
                 else
                 {
-                    progress = 0.55f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.1f;
+                    progress = 0.3f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.1f;
                 }
 
                 break;
             case ExportStatus.ExportStage.ProcessingClues:
                 if (exportStatus.StageItems <= 0)
                 {
-                    progress = 0.65f;
+                    progress = 0.4f;
                 }
                 else
                 {
-                    progress = 0.65f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.1f;
+                    progress = 0.4f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.1f;
                 }
                 break;
             case ExportStatus.ExportStage.ProcessingPlots:
                 if (exportStatus.StageItems <= 0)
                 {
-                    progress = 0.75f;
+                    progress = 0.5f;
                 }
                 else
                 {
-                    progress = 0.75f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.1f;
+                    progress = 0.5f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.1f;
                 }
                 break;
             case ExportStatus.ExportStage.ProcessingWorlds:
                 if (exportStatus.StageItems <= 0)
                 {
-                    progress = 0.85f;
+                    progress = 0.6f;
                 }
                 else
                 {
-                    progress = 0.85f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.1f;
+                    progress = 0.6f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.1f;
                 }
                 break;
             //0.95f
