@@ -118,7 +118,18 @@ public class SelectedWorldWindow : BaseWindow
             ImGui.SetNextItemWidth(200.0f);
             if (ImGui.Button("Add City"))
             {
-                //TODO: add city
+                if (world.Cities.Count < 16)
+                {   
+                    world.Cities.Add(new WorldModel.City()
+                    {
+                        Name = "X",
+                        Country = "X",
+                        MapX = 0,
+                        MapY = 0,
+                        Unknown1 = 0,
+                        Unknown2 = 0
+                    });
+                }
             }
 
             if (world.Cities.Count >= 16)
@@ -188,6 +199,125 @@ public class SelectedWorldWindow : BaseWindow
                     city.Unknown2 = u2;
                 }
 
+                ImGui.Separator();
+            }
+        }
+
+        if (ImGui.CollapsingHeader("Organisations"))
+        {
+            ImGui.SetNextItemWidth(200.0f);
+            if (ImGui.Button("Add Organization"))
+            {
+                if (world.Organisations.Count < 16)
+                {   
+                    world.Organisations.Add(new WorldModel.Organisation()
+                    {
+                        ShortName = "X",
+                        LongName = "X",
+                        Unknown1 = 0,
+                        Unknown2 = 0,
+                        UniqueId = 0xFF,
+                        Unknown3 = 0,
+                        Unknown4 = 0
+                    });
+                }
+            }
+
+            if (world.Organisations.Count >= 16)
+            {
+                ImGui.SameLine();
+                ImGui.Text("Already have 16 orgs, cannot add more");
+            }
+            
+            var i = 0;
+            foreach (var org in world.Organisations)
+            {
+                i++;
+                var shortName = org.ShortName;
+                var origShortName = shortName;
+                ImGui.SetNextItemWidth(100.0f);
+                ImGui.InputText($"Short Name {i}", ref shortName, 6);
+                if (shortName != origShortName)
+                {
+                    org.ShortName = shortName;
+                }
+                
+                var longName = org.LongName;
+                var origLongName = longName;
+                ImGui.SameLine();
+                ImGui.SetNextItemWidth(100.0f);
+                ImGui.InputText($"Long Name {i}", ref longName, 20);
+                if (longName != origLongName)
+                {
+                    org.LongName = longName;
+                }
+
+                var u1 = org.Unknown1;
+                var origU1 = u1;
+                ImGui.SetNextItemWidth(100.0f);
+                ImGui.InputInt($"U1 {i}", ref u1);
+                if (u1 != origU1)
+                {
+                    org.Unknown1 = u1;
+                }
+                
+                var u2 = org.Unknown2;
+                var origU2 = u2;
+                ImGui.SameLine();
+                ImGui.SetNextItemWidth(100.0f);
+                ImGui.InputInt($"U2 {i}", ref u2);
+                if (u2 != origU2)
+                {
+                    org.Unknown2 = u2;
+                }
+                
+                var u3 = org.Unknown3;
+                var origU3 = u3;
+                ImGui.SameLine();
+                ImGui.SetNextItemWidth(100.0f);
+                ImGui.InputInt($"U3 {i}", ref u3);
+                if (u3 != origU3)
+                {
+                    org.Unknown3 = u3;
+                }
+                
+                var u4 = org.Unknown4;
+                var origU4 = u4;
+                ImGui.SetNextItemWidth(100.0f);
+                ImGui.InputInt($"U4 {i}", ref u4);
+                if (u4 != origU4)
+                {
+                    org.Unknown4 = u4;
+                }
+                
+                var uniqueId = org.UniqueId;
+                var origUniqueId = uniqueId;
+                ImGui.SameLine();
+                ImGui.SetNextItemWidth(100.0f);
+                ImGui.InputInt($"ID {i}", ref uniqueId);
+                if (uniqueId != origUniqueId)
+                {
+                    org.UniqueId = uniqueId;
+                }
+
+                var allowMastermind = org.AllowMastermind;
+                var origAllowMastermind = allowMastermind;
+                ImGui.SameLine();
+                ImGui.SetNextItemWidth(100.0f);
+                ImGui.Checkbox($"Allow MM {i}", ref allowMastermind);
+                if (allowMastermind != origAllowMastermind)
+                {
+                    if (allowMastermind)
+                    {
+                        org.UniqueId = 0x01;
+                    }
+                    else
+                    {
+                        org.UniqueId = 0xFF;
+                    }
+                }
+                
+                
                 ImGui.Separator();
             }
         }
