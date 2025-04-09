@@ -21,13 +21,13 @@ namespace CovertActionTools.Core.Models
         {
             /// <summary>
             /// Printed name
-            /// Legacy limited to 13 chars
+            /// Legacy limited to 12 chars
             /// </summary>
             public string Name { get; set; } = string.Empty;
 
             /// <summary>
             /// Printed name
-            /// Legacy limited to 13 chars
+            /// Legacy limited to 12 chars
             /// </summary>
             public string Country { get; set; } = string.Empty;
             
