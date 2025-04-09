@@ -202,7 +202,8 @@ namespace CovertActionTools.Core.Exporting.Exporters
                         (participant.ForceFemale ? IntermediateCrimeModel.ParticipantType.Widow : 0) |
                         (participant.CanComeOutOfHiding ? IntermediateCrimeModel.ParticipantType.Assassin : 0)
                     ),
-                    Unknown2 = participant.Unknown2,
+                    Unknown2 = participant.Unknown2 |
+                        (participant.IsInsideContact ? 0x01 : 0),
                     ClueType = participant.ClueType,
                     Rank = participant.Rank,
                     Unknown1 = participant.Unknown1,

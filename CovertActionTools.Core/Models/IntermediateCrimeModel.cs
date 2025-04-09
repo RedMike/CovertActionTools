@@ -58,14 +58,22 @@ namespace CovertActionTools.Core.Models
             public bool IsInsideContact { get; set; }
             
             /// <summary>
-            /// Likely identifying what organisations are valid, or similar?
+            /// Seems to be a way to set up which participants should match organisation/location.
             /// Lowest bit marks inside contacts (only allied orgs).
             /// Always 0 for Mastermind.
-            /// 
+            /// Some participants' locations are overridden by other data (unclear, mission sets?)
+            ///
+            /// Logic is hard to follow:
+            ///   * it seems that 1000 0000 and 0100 0000 values will put participants in the same organisation
+            ///   * it seems that 0010 0000 and 0001 0000 values will put participants in the same location
+            ///   * it seems that 0001 0000 values will _sometimes_ put participants in allied orgs
+            ///   * it seems that 0000 0001 values will _always_ put participants in allied orgs
+            ///   * if the left 4 bits are split into two groups, that allows participants to be grouped together in 2 ways
+            ///   * but 0000 0100 has sometimes led to participants in allied orgs
+            ///   * and 0000 0100, 0000 1000 values don't lead to the same anything
+            ///   * whereas 0000 0010 values lead to the same location
+            ///   * maybe a two tier system of preferred/fallback? still very hard to follow
             /// Values: 4C, 48, 08, 88, 20, A0, 02, 42, 21, 54, 0C, 86, 11, 50, 10
-            /// Definitely a bitmap of some sort.
-            /// Fourth bit marks "will interact with items/money"?
-            /// TODO: figure out meaning for other bits
             /// </summary>
             public int Unknown2 { get; set; }
 
