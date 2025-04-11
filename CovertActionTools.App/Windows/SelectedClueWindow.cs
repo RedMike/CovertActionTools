@@ -73,37 +73,23 @@ public class SelectedClueWindow : BaseWindow
             .OrderBy(x => x.CrimeId != null ? x.Id : (int)x.Type)
             .ThenBy(x => x.Id)
             .ToList();
+        var i = 0;
         foreach (var clue in clues)
         {
-            if (crimeId != null)
-            {
-                ImGui.SetNextItemWidth(100.0f);
-                var crime = clue.CrimeId ?? -1;
-                var origCrime = crime;
-                ImGui.InputInt("Crime ID", ref crime);
-                if (crime != origCrime)
-                {
-                    //TODO: change crime ID
-                }
-            }
-            else
-            {
-                ImGui.SetNextItemWidth(100.0f);
-                var crime = 0;
-                ImGui.InputInt("Crime ID", ref crime, 1, 1, ImGuiInputTextFlags.ReadOnly);
-            }
+            ImGui.PushID($"Clue{i++}");
             
-            ImGui.SameLine();
-            ImGui.Text("");
-            ImGui.SameLine();
-
-            var origId = clue.Id;
-            var id = origId;
-            ImGui.SetNextItemWidth(100.0f);
-            ImGui.InputInt("ID", ref id);
-            if (id != origId)
+            //non-crime clues aren't tied to any crime
+            var newCrimeId = ImGuiExtensions.Input("Crime ID", clue.CrimeId ?? -1, width: 100);
+            if (newCrimeId != null)
             {
-                if (model.Texts.Any(x => x.Value.Id == id && x.Value.CrimeId == crimeId))
+                //TODO: change crime ID
+            }
+            ImGuiExtensions.SameLineSpace();
+
+            var newId = ImGuiExtensions.Input("ID", clue.Id, width: 100);
+            if (newId != null)
+            {
+                if (model.Texts.Any(x => x.Value.Id == newId && x.Value.CrimeId == crimeId))
                 {
                     ImGui.SameLine();
                     ImGui.Text("Key already taken");
@@ -114,36 +100,18 @@ public class SelectedClueWindow : BaseWindow
                 }
             }
             
-            ImGui.SameLine();
-            ImGui.Text("");
-            ImGui.SameLine();
+            ImGuiExtensions.SameLineSpace();
 
-            ImGui.SetNextItemWidth(150.0f);
-            var types = Enum.GetValues<ClueType>()
-                .Where(x => x != ClueType.Unknown)
-                .Select(x => $"{x}")
-                .ToArray();
-            var typeIndex = types.ToList().FindIndex(x => x == clue.Type.ToString());
-            var origTypeIndex = typeIndex;
-            ImGui.Combo("Clue Type", ref typeIndex, types, types.Length);
-            if (typeIndex != origTypeIndex)
+            var newClueType = ImGuiExtensions.InputEnum("Clue Type", clue.Type, false, ClueType.Unknown, width: 150);
+            if (newClueType != null)
             {
                 //TODO: change
             }
             
-            ImGui.SameLine();
-            ImGui.Text("");
-            ImGui.SameLine();
+            ImGuiExtensions.SameLineSpace();
 
-            ImGui.SetNextItemWidth(150.0f);
-            var sourceTypes = Enum.GetValues<ClueModel.ClueSource>()
-                .Where(x => x != ClueModel.ClueSource.Unknown)
-                .Select(x => $"{x}")
-                .ToArray();
-            var sourceIndex = sourceTypes.ToList().FindIndex(x => x == clue.Source.ToString());
-            var origSourceIndex = sourceIndex;
-            ImGui.Combo("Source", ref sourceIndex, sourceTypes, sourceTypes.Length);
-            if (sourceIndex != origSourceIndex)
+            var newClueSource = ImGuiExtensions.InputEnum("Source", clue.Source, false, ClueModel.ClueSource.Unknown, width: 150);
+            if (newClueSource != null)
             {
                 //TODO: change
             }
@@ -158,6 +126,9 @@ public class SelectedClueWindow : BaseWindow
                 var fixedMessage = message.Replace("\n", "\r\n"); //re-add \r, for consistency across OS
                 //TODO: change message
             }
+            
+            ImGui.Separator();
+            ImGui.PopID();
         }
     }
 }

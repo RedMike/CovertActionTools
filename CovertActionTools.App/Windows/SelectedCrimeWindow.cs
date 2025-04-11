@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System.Globalization;
+using System.Numerics;
 using CovertActionTools.App.ViewModels;
 using CovertActionTools.Core.Models;
 using CovertActionTools.Core.Processors;
@@ -13,6 +14,8 @@ public class SelectedCrimeWindow : BaseWindow
     private readonly MainEditorState _mainEditorState;
     private readonly RenderWindow _renderWindow;
     private readonly ICrimeTimelineProcessor _crimeTimelineProcessor;
+
+    private string _idError = "";
 
     public SelectedCrimeWindow(ILogger<SelectedCrimeWindow> logger, MainEditorState mainEditorState, RenderWindow renderWindow, ICrimeTimelineProcessor crimeTimelineProcessor)
     {
@@ -73,33 +76,30 @@ public class SelectedCrimeWindow : BaseWindow
     {
         //TODO: keep a pending model and have a save button?
 
-        var origId = crime.Id;
-        var id = origId;
-        ImGui.SetNextItemWidth(100.0f);
-        ImGui.InputInt("ID", ref id);
-        if (id != origId)
+        var newId = ImGuiExtensions.Input("ID", crime.Id, width: 100);
+        if (newId != null)
         {
-            if (id < 0 || id > 12)
+            if (newId < 0 || newId > 12)
             {
-                ImGui.SameLine();
-                ImGui.Text("Only crimes 0-12 are supported");
+                _idError = "Only crimes 0-12 are supported";
             }
-            else if (model.Crimes.ContainsKey(id))
+            else if (model.Crimes.ContainsKey(newId.Value))
             {
-                ImGui.SameLine();
-                ImGui.Text("Key already taken");
+                _idError = "Key already taken";
             }
             else
             {
-                //TODO: change ID?    
+                _idError = "";
+                //TODO: change ID
             }
         }
 
-        ImGui.Text("");
-        ImGui.Separator();
-        ImGui.Text("");
-        var windowSize = ImGui.GetContentRegionAvail();
-
+        if (!string.IsNullOrEmpty(_idError))
+        {
+            ImGuiExtensions.SameLineSpace();
+            ImGui.TextColored(new Vector4(1.0f, 0.0f, 0.0f, 1.0f), _idError);
+        }
+        
         if (ImGui.CollapsingHeader("Participants"))
         {
             if (ImGui.Button("Add Participant"))
@@ -107,12 +107,12 @@ public class SelectedCrimeWindow : BaseWindow
                 crime.Participants.Add(new CrimeModel.Participant());
             }
 
-            ImGui.Text("");
-
             for (var i = 0; i < crime.Participants.Count; i++)
             {
+                ImGui.PushID($"Participant_{i}");
                 DrawParticipant(model, crime, i);
                 ImGui.Text("");
+                ImGui.PopID();
             }
         }
 
@@ -245,106 +245,112 @@ public class SelectedCrimeWindow : BaseWindow
         }
     }
 
-    private void DrawParticipant(PackageModel model, CrimeModel intermediateCrime, int i)
+    private void DrawParticipant(PackageModel model, CrimeModel crime, int i)
     {
         var windowSize = ImGui.GetContentRegionAvail();
         
-        var participant = intermediateCrime.Participants[i];
-        ImGui.BeginChild($"Participant {i}", new Vector2(windowSize.X, 100.0f), true);
+        var participant = crime.Participants[i];
+        ImGui.BeginChild($"Participant {i}", new Vector2(windowSize.X, 130.0f), true);
 
+        var cursorPos = ImGui.GetCursorPos();
         ImGui.Text($"Participant {i + 1}");
+        var nextCursorPos = ImGui.GetCursorPos();
+        
+        //now move to the right to make the delete button
+        var o = ImGui.CalcTextSize(" Remove ");
+        ImGui.SetCursorPos(new Vector2(windowSize.X - o.X, cursorPos.Y));
+        if (ImGui.Button("Remove"))
+        {
+            crime.Participants.RemoveAt(i);
+            return;
+        }
+        
+        ImGui.SetCursorPos(nextCursorPos);
+        ImGui.Text("");
 
-        ImGui.SetNextItemWidth(150.0f);
-        var role = participant.Role;
-        var origRole = role;
-        ImGui.InputText("Role", ref role, 32);
-        if (role != origRole)
+        if (ImGui.BeginTable("p1", 3))
         {
-            participant.Role = role;
+            ImGui.TableNextRow();
+            ImGui.TableNextColumn();
+            var newRole = ImGuiExtensions.Input("Role", participant.Role, 32, width: 150);
+            if (newRole != null)
+            {
+                participant.Role = newRole;
+            }
+        
+            ImGui.TableNextColumn();
+            var newExposure = ImGuiExtensions.Input("Exposure", participant.Exposure, width: 150);
+            if (newExposure != null)
+            {
+                participant.Exposure = newExposure.Value;
+            }
+        
+            ImGui.TableNextColumn();
+            var newClueType = ImGuiExtensions.InputEnum("Clue Type", participant.ClueType, false, ClueType.Unknown, width: 150);
+            if (newClueType != null)
+            {
+                participant.ClueType = newClueType.Value;
+            }
+            
+            ImGui.EndTable();
         }
         
-        ImGui.SameLine();
-        ImGui.Text("  ");
-        ImGui.SameLine();
-        
-        ImGui.SetNextItemWidth(150.0f);
-        var exposure = participant.Exposure;
-        var origExposure = exposure;
-        ImGui.InputInt("Exposure", ref exposure);
-        if (exposure != origExposure)
+        if (ImGui.BeginTable("p2", 4))
         {
-            //TODO: change
+            ImGui.TableNextRow();
+            ImGui.TableNextColumn();
+            var newMastermind = ImGuiExtensions.Input("Mastermind?", participant.IsMastermind);
+            if (newMastermind != null)
+            {
+                participant.IsMastermind = newMastermind.Value;
+            }
+        
+            
+            ImGui.TableNextColumn();
+            var newFemale = ImGuiExtensions.Input("Force Female?", participant.ForceFemale);
+            if (newFemale != null)
+            {
+                participant.ForceFemale = newFemale.Value;
+            }
+            
+            ImGui.TableNextColumn();
+            var canComeOut = ImGuiExtensions.Input("Back from Hiding?", participant.CanComeOutOfHiding);
+            if (canComeOut != null)
+            {
+                participant.CanComeOutOfHiding = canComeOut.Value;
+            }
+            
+            ImGui.TableNextColumn();
+            var insideContact = ImGuiExtensions.Input("Inside Contact?", participant.IsInsideContact);
+            if (insideContact != null)
+            {
+                participant.IsInsideContact = insideContact.Value;
+                participant.Unknown2 = (participant.Unknown2 & 0xFE) | (insideContact.Value ? 0x01 : 0x00);
+            }
+            
+            ImGui.EndTable();
         }
-        
-        // ImGui.SetNextItemWidth(150.0f);
-        // var participantTypes = Enum.GetValues<CrimeModel.ParticipantType>().Select(x => x.ToString()).ToArray();
-        // var participantTypeIndex = participantTypes.ToList().FindIndex(x => x == participant.ParticipantType.ToString());
-        // var origParticipantTypeIndex = participantTypeIndex;
-        // ImGui.Combo("Type", ref participantTypeIndex, participantTypes, participantTypes.Length);
-        // if (participantTypeIndex != origParticipantTypeIndex)
-        // {
-        //     //TODO: change
-        // }
-        
-        ImGui.SameLine();
-        ImGui.Text("  ");
-        ImGui.SameLine();
-        
-        ImGui.SetNextItemWidth(150.0f);
-        var u1 = $"{participant.Unknown1:X4}";
-        var origU1 = u1;
-        ImGui.InputText("Unknown 1", ref u1, 4);
-        if (u1 != origU1)
+
+
+        if (ImGui.BeginTable("p3", 2))
         {
-            //TODO: change
-        }
-        
-        ImGui.SameLine();
-        ImGui.Text("  ");
-        ImGui.SameLine();
-        
-        ImGui.SetNextItemWidth(150.0f);
-        var u2 = $"{participant.Unknown2:B8}";
-        var origU2 = u2;
-        ImGui.InputText("Unknown 2", ref u2, 8);
-        if (u2 != origU2)
-        {
-            //TODO: change
-        }
-        
-        ImGui.SetNextItemWidth(150.0f);
-        var u3 = $"{participant.Unknown3:X4}";
-        var origU3 = u3;
-        ImGui.InputText("Unknown 3", ref u3, 4);
-        if (u3 != origU3)
-        {
-            //TODO: change
-        }
-        
-        ImGui.SameLine();
-        ImGui.Text("  ");
-        ImGui.SameLine();
-        
-        ImGui.SetNextItemWidth(150.0f);
-        var u4 = $"{participant.Unknown4:X4}";
-        var origU4 = u4;
-        ImGui.InputText("Unknown 4", ref u4, 4);
-        if (u4 != origU4)
-        {
-            //TODO: change
-        }
-        
-        ImGui.SameLine();
-        ImGui.Text("  ");
-        ImGui.SameLine();
-        
-        ImGui.SetNextItemWidth(150.0f);
-        var u5 = $"{participant.Unknown5:X2}";
-        var origU5 = u5;
-        ImGui.InputText("Unknown 5", ref u5, 2);
-        if (u5 != origU5)
-        {
-            //TODO: change
+            ImGui.TableNextRow();
+            ImGui.TableNextColumn();
+            var newRank = ImGuiExtensions.Input("Rank", participant.Rank);
+            if (newRank != null)
+            {
+                participant.Rank = newRank.Value;
+            }
+
+            ImGui.TableNextColumn();
+            var newU2 = ImGuiExtensions.Input("Unknown 2", $"{participant.Unknown2:B8}", 10);
+            if (newU2 != null && int.TryParse(newU2, NumberStyles.BinaryNumber, null, out var u2Parsed))
+            {
+                participant.Unknown2 = u2Parsed;
+                participant.IsInsideContact = (u2Parsed & 0x01) == 0x01;
+            }
+            
+            ImGui.EndTable();
         }
         
         ImGui.EndChild();
