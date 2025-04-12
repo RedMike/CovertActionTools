@@ -122,13 +122,13 @@ public class SelectedCrimeWindow : BaseWindow
             {
                 crime.Events.Add(new CrimeModel.Event());
             }
-
-            ImGui.Text("");
             
             for (var i = 0; i < crime.Events.Count; i++)
             {
+                ImGui.PushID($"Event_{i}");
                 DrawEvent(model, crime, i);
                 ImGui.Text("");
+                ImGui.PopID();
             }
         }
         
@@ -356,198 +356,215 @@ public class SelectedCrimeWindow : BaseWindow
         ImGui.EndChild();
     }
 
-    private void DrawEvent(PackageModel model, CrimeModel intermediateCrime, int i)
+    private void DrawEvent(PackageModel model, CrimeModel crime, int i)
     {
+        var participantList = crime.Participants
+            .Select((x, idx) => string.IsNullOrEmpty(x.Role) ? $"Participant {idx + 1}" : x.Role)
+            .ToList();
         var windowSize = ImGui.GetContentRegionAvail();
         
-        var ev = intermediateCrime.Events[i];
+        var ev = crime.Events[i];
         ImGui.BeginChild($"Event {i}", new Vector2(windowSize.X, 250.0f), true);
 
+        var cursorPos = ImGui.GetCursorPos();
         ImGui.Text($"Event {i + 1}");
+        var nextCursorPos = ImGui.GetCursorPos();
         
-        var participantList = intermediateCrime.Participants
-            .Select((x, idx) => string.IsNullOrEmpty(x.Role) ? $"Participant {idx + 1}" : x.Role)
-            .ToArray();
-        
-        ImGui.SetNextItemWidth(200.0f);
-        var participantIndex = ev.MainParticipantId;
-        var origParticipantIndex = participantIndex;
-        ImGui.Combo("Main", ref participantIndex, participantList, participantList.Length);
-        if (participantIndex != origParticipantIndex)
+        //now move to the right to make the delete button
+        var o = ImGui.CalcTextSize(" Remove ");
+        ImGui.SetCursorPos(new Vector2(windowSize.X - o.X, cursorPos.Y));
+        if (ImGui.Button("Remove"))
         {
-            //TODO: change
+            crime.Participants.RemoveAt(i);
+            return;
         }
         
-        if (ev.SecondaryParticipantId != null)
-        {
-            ImGui.SameLine();
-            ImGui.Text("  from  ");
-            ImGui.SameLine();
+        ImGui.SetCursorPos(nextCursorPos);
 
-            ImGui.SetNextItemWidth(200.0f);
-            var secondaryParticipantIndex = ev.SecondaryParticipantId.Value;
-            var origSecondaryParticipantIndex = secondaryParticipantIndex;
-            ImGui.Combo("Secondary", ref secondaryParticipantIndex, participantList, participantList.Length);
-            if (secondaryParticipantIndex != origSecondaryParticipantIndex)
+        if (ImGui.BeginTable("e1", 3))
+        {
+            ImGui.TableNextRow();
+            ImGui.TableNextColumn();
+            var newParticipant = ImGuiExtensions.Input("Main", participantList[ev.MainParticipantId], participantList);
+            if (newParticipant != null)
             {
-                //TODO: change
+                ev.MainParticipantId = participantList.FindIndex(x => x == newParticipant);
             }
-            
-            ImGui.SameLine();
-            ImGui.SetNextItemWidth(100.0f);
-            var itemsToSecondary = ev.ItemsToSecondary;
-            var origItemsToSecondary = itemsToSecondary;
-            ImGui.Checkbox("Items to Secondary", ref itemsToSecondary);
-            if (itemsToSecondary != origItemsToSecondary)
+
+            ImGui.TableNextColumn();
+            if (ev.IsPairedEvent)
             {
-                //TODO: change
-            }
-        }
-
-        ImGui.SetNextItemWidth(200.0f);
-        var receiveDescription = ev.ReceiveDescription;
-        var origReceiveDescription = receiveDescription;
-        ImGui.InputText(ev.IsPairedEvent ? "Receive Description" : "Description", ref receiveDescription, 32);
-        if (receiveDescription != origReceiveDescription)
-        {
-            //TODO: change
-        }
-
-        if (ev.IsPairedEvent)
-        {
-            ImGui.SameLine();
-            
-            ImGui.SetNextItemWidth(200.0f);
-            var sendDescription = ev.SendDescription;
-            var origSendDescription = sendDescription;
-            ImGui.InputText("Send Description", ref sendDescription, 32);
-            if (sendDescription != origSendDescription)
-            {
-                //TODO: change
-            }
-        }
-
-        ImGui.SetNextItemWidth(200.0f);
-        var isMessage = ev.IsMessage;
-        var origIsMessage = isMessage;
-        ImGui.Checkbox("Message?", ref isMessage);
-        if (isMessage != origIsMessage)
-        {
-            //TODO: change
-        }
-        ImGui.SameLine();
-        ImGui.SetNextItemWidth(200.0f);
-        var isPackage = ev.IsPackage;
-        var origIsPackage = isPackage;
-        ImGui.Checkbox("Package?", ref isPackage);
-        if (isPackage != origIsPackage)
-        {
-            //TODO: change
-        }
-        ImGui.SameLine();
-        ImGui.SetNextItemWidth(200.0f);
-        var isMeeting = ev.IsMeeting;
-        var origIsMeeting = isMeeting;
-        ImGui.Checkbox("Meeting?", ref isMeeting);
-        if (isMeeting != origIsMeeting)
-        {
-            //TODO: change
-        }
-        ImGui.SameLine();
-        ImGui.SetNextItemWidth(200.0f);
-        var isBulletin = ev.IsBulletin;
-        var origIsBulletin = isBulletin;
-        ImGui.Checkbox("Bulletin?", ref isBulletin);
-        if (isBulletin != origIsBulletin)
-        {
-            //TODO: change
-        }
-        ImGui.SameLine();
-        ImGui.SetNextItemWidth(200.0f);
-        var isU1 = ev.Unknown1;
-        var origIsU1 = isU1;
-        ImGui.Checkbox("Unknown 1?", ref isU1);
-        if (isU1 != origIsU1)
-        {
-            //TODO: change
-        }
-        
-        ImGui.SameLine();
-        ImGui.Text(" ");
-        ImGui.SameLine();
-
-        ImGui.SetNextItemWidth(200.0f);
-        var score = ev.Score;
-        var origScore = score;
-        ImGui.InputInt("Score", ref score);
-        if (score != origScore)
-        {
-            //TODO: change
-        }
-
-        if (intermediateCrime.Objects.Count > 0)
-        {
-            ImGui.Text("Received: ");
-            ImGui.SameLine();
-            ImGui.Text("");
-            ImGui.SameLine();
-            for (var objId = 0; objId < intermediateCrime.Objects.Count; objId++)
-            {
-                var isChecked = ev.ReceivedObjectIds.Contains(objId);
-                var origIsChecked = isChecked;
-                ImGui.SetNextItemWidth(100.0f);
-                ImGui.Checkbox($"{intermediateCrime.Objects[objId].Name}", ref isChecked);
-                ImGui.SameLine();
-                if (isChecked != origIsChecked)
+                var secondParticipant = ImGuiExtensions.Input("Secondary", participantList[ev.SecondaryParticipantId ?? 0], participantList);
+                if (secondParticipant != null)
                 {
-                    //TODO: change
+                    ev.SecondaryParticipantId = participantList.FindIndex(x => x == secondParticipant);
+                }
+                
+                ImGui.TableNextColumn();
+                var itemsToSecondary = ImGuiExtensions.Input("Items to Secondary?", ev.ItemsToSecondary);
+                if (itemsToSecondary != null)
+                {
+                    ev.ItemsToSecondary = itemsToSecondary.Value;
+                }
+            }
+            else
+            {
+                ImGui.Text("No secondary participant");
+                ImGui.TableNextColumn();
+            }
+            
+            ImGui.EndTable();
+        }
+
+        if (ImGui.BeginTable("e2", 2))
+        {
+            ImGui.TableNextRow();
+            ImGui.TableNextColumn();
+            var newDescription = ImGuiExtensions.Input(ev.IsPairedEvent ? "Receive Description" : "Description",
+                ev.ReceiveDescription, 32);
+            if (newDescription != null)
+            {
+                ev.ReceiveDescription = newDescription;
+                if (!ev.IsPairedEvent)
+                {
+                    ev.SendDescription = newDescription;
                 }
             }
 
-            ImGui.Text("");
+            ImGui.TableNextColumn();
+            if (ev.IsPairedEvent)
+            {
+                var newSendDescription = ImGuiExtensions.Input("Send Description", ev.SendDescription, 32);
+                if (newSendDescription != null)
+                {
+                    ev.SendDescription = newSendDescription;
+                }
+            }
+
+            ImGui.EndTable();
+        }
+
+        if (ImGui.BeginTable("e3", 6))
+        {
+            ImGui.TableNextRow();
+            ImGui.TableNextColumn();
+            var isMessage = ImGuiExtensions.Input("Message?", ev.IsMessage);
+            if (isMessage != null)
+            {
+                ev.IsMessage = isMessage.Value;
+            }
+            
+            ImGui.TableNextColumn();
+            var isPackage = ImGuiExtensions.Input("Package?", ev.IsPackage);
+            if (isPackage != null)
+            {
+                ev.IsPackage = isPackage.Value;
+            }
+            
+            ImGui.TableNextColumn();
+            var isMeeting = ImGuiExtensions.Input("Meeting?", ev.IsMeeting);
+            if (isMeeting != null)
+            {
+                ev.IsMeeting = isMeeting.Value;
+            }
+            
+            ImGui.TableNextColumn();
+            var isBulletin = ImGuiExtensions.Input("Bulletin?", ev.IsBulletin);
+            if (isBulletin != null)
+            {
+                ev.IsBulletin = isBulletin.Value;
+            }
+            
+            ImGui.TableNextColumn();
+            var isU1 = ImGuiExtensions.Input("Unknown 1?", ev.Unknown1);
+            if (isU1 != null)
+            {
+                ev.Unknown1 = isU1.Value;
+            }
+            
+            ImGui.TableNextColumn();
+            var score = ImGuiExtensions.Input("Score", ev.Score);
+            if (score != null)
+            {
+                ev.Score = score.Value;
+            }
+            
+            ImGui.EndTable();
+        }
+
+        if (ImGui.BeginTable("e4", 5))
+        {
+            ImGui.TableNextRow();
+            ImGui.TableNextColumn();
+            ImGui.Text("Received:");
+
+            for (var objId = 0; objId < 4; objId++)
+            {
+                ImGui.TableNextColumn();
+                if (crime.Objects.Count > objId)
+                {
+                    var obj = crime.Objects[objId];
+                    var objIsReceived = ImGuiExtensions.Input($"{obj.Name}", ev.ReceivedObjectIds.Contains(objId));
+                    if (objIsReceived != null)
+                    {
+                        if (objIsReceived.Value)
+                        {
+                            ev.ReceivedObjectIds.Add(objId);
+                        }
+                        else
+                        {
+                            ev.ReceivedObjectIds.Remove(objId);
+                        }
+                    }
+                }
+            }
+
+            ImGui.TableNextRow();
+            ImGui.TableNextColumn();
+            
             ImGui.Text("Destroyed:");
-            ImGui.SameLine();
-            ImGui.Text("");
-            ImGui.SameLine();
-            for (var objId = 0; objId < intermediateCrime.Objects.Count; objId++)
+
+            for (var objId = 0; objId < 4; objId++)
             {
-                var isChecked = ev.DestroyedObjectIds.Contains(objId);
-                var origIsChecked = isChecked;
-                ImGui.SetNextItemWidth(100.0f);
-                ImGui.Checkbox($"{intermediateCrime.Objects[objId].Name}", ref isChecked);
-                ImGui.SameLine();
-                if (isChecked != origIsChecked)
+                ImGui.TableNextColumn();
+                if (crime.Objects.Count > objId)
                 {
-                    //TODO: change
+                    var obj = crime.Objects[objId];
+                    var objIsReceived = ImGuiExtensions.Input($"{obj.Name}", ev.DestroyedObjectIds.Contains(objId));
+                    if (objIsReceived != null)
+                    {
+                        if (objIsReceived.Value)
+                        {
+                            ev.DestroyedObjectIds.Add(objId);
+                        }
+                        else
+                        {
+                            ev.DestroyedObjectIds.Remove(objId);
+                        }
+                    }
                 }
             }
 
-            ImGui.Text("");
-        }
-        
-        ImGui.SetNextItemWidth(100.0f);
-        var messageId = ev.MessageId;
-        var origMessageId = messageId;
-        ImGui.InputInt("Message ID", ref messageId);
-        if (messageId != origMessageId)
-        {
-            ev.MessageId = messageId;
+            ImGui.EndTable();
         }
 
-        ImGui.BeginChild($"Message text {messageId}", new Vector2(ImGui.GetContentRegionAvail().X, 70.0f), true);
-        var text = model.Texts.Values.FirstOrDefault(x => x.CrimeId == intermediateCrime.Id && x.Id == messageId);
+        var messageId = ImGuiExtensions.Input("Message ID", ev.MessageId, width: 100);
+        if (messageId != null)
+        {
+            ev.MessageId = messageId.Value;
+        }
+
+        ImGui.BeginChild($"Message text {messageId}", new Vector2(ImGui.GetContentRegionAvail().X, 50.0f), true, ImGuiWindowFlags.NoScrollbar);
+        var text = model.Texts.Values.FirstOrDefault(x => x.CrimeId == crime.Id && x.Id == ev.MessageId);
         if (text != null)
         {
             ImGui.Text(text.Message);
         }
         else
         {
-            ImGui.Text($"ERROR: Failed to find MSG{intermediateCrime.Id:D2}{messageId:D2}");
+            ImGui.Text($"ERROR: Failed to find MSG{crime.Id:D2}{messageId:D2}");
         }
-
         ImGui.EndChild();
-        
-        //TODO: received/destroyed items
         
         ImGui.EndChild();
     }

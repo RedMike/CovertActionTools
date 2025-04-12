@@ -91,6 +91,35 @@ public static class ImGuiExtensions
         return value;
     }
     
+    public static string? Input(string label, string value, List<string> values, string? id = null, int? width = null)
+    {
+        if (width != null)
+        {
+            ImGui.SetNextItemWidth((float)width);
+        }
+
+        if (!string.IsNullOrEmpty(id))
+        {
+            ImGui.PushID(id);
+        }
+
+        var strings = values.ToArray();
+        var valueIndex = values.FindIndex(x => x.Equals(value));
+        var origValueIndex = valueIndex;
+        ImGui.Combo(label, ref valueIndex, strings, strings.Length);
+        if (!string.IsNullOrEmpty(id))
+        {
+            ImGui.PopID();
+        }
+
+        if (valueIndex == origValueIndex)
+        {
+            return null;
+        }
+
+        return values[valueIndex];
+    }
+    
     public static TEnum? InputEnum<TEnum>(string label, TEnum value, bool includeUnknown, TEnum unknown = default, string? id = null, int? width = null)
         where TEnum : struct, Enum
     {
