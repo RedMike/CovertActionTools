@@ -93,6 +93,9 @@ if (startWithParsePublishDefault)
 }
 if (startWithLoadSampleDefault)
 {
+    var mainEditorState = sp.GetRequiredService<MainEditorState>();
+    mainEditorState.DefaultPublishPath = Constants.DefaultPublishPath;
+    
     var loadPackageState = sp.GetRequiredService<LoadPackageState>();
     loadPackageState.Show = true;
     loadPackageState.SourcePath = Path.GetFullPath(Path.Combine(Constants.DefaultParseSourcePath, "../../../Sample"));

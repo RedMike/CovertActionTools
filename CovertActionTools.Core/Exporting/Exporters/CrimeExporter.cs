@@ -48,7 +48,12 @@ namespace CovertActionTools.Core.Exporting.Exporters
             var files = Export(Data[nextKey]);
             foreach (var pair in files)
             {
-                File.WriteAllBytes(System.IO.Path.Combine(Path, pair.Key), pair.Value);
+                var exportPath = Path;
+                if (!string.IsNullOrEmpty(PublishPath) || !pair.Key.publish)
+                {
+                    var publishPath = PublishPath ?? exportPath;
+                    File.WriteAllBytes(System.IO.Path.Combine(pair.Key.publish ? publishPath : exportPath, pair.Key.filename), pair.Value);
+                }
             }
 
             return _index++;
@@ -66,12 +71,12 @@ namespace CovertActionTools.Core.Exporting.Exporters
             return Data.Keys.ToList();
         }
 
-        private IDictionary<string, byte[]> Export(CrimeModel crime)
+        private IDictionary<(string filename, bool publish), byte[]> Export(CrimeModel crime)
         {
-            var dict = new Dictionary<string, byte[]>()
+            var dict = new Dictionary<(string filename, bool publish), byte[]>()
             {
-                [$"CRIME{crime.Id}.DTA"] = GetLegacyCrimeData(crime),
-                [$"CRIME{crime.Id}_crime.json"] = GetModernCrimeData(crime),
+                [($"CRIME{crime.Id}.DTA", true)] = GetLegacyCrimeData(crime),
+                [($"CRIME{crime.Id}_crime.json", false)] = GetModernCrimeData(crime),
             };
 
             return dict;

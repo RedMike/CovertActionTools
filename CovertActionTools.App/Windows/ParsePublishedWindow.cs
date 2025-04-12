@@ -254,7 +254,7 @@ public class ParsePublishedWindow : BaseWindow
                 var now = DateTime.Now;
                 _logger.LogInformation($"Starting exporting at: {now:s}");
                 _parsePublishedState.Export = true;
-                _parsePublishedState.Exporter.StartExport(_parsePublishedState.Importer.GetImportedModel(), destinationPath ?? string.Empty);
+                _parsePublishedState.Exporter.StartExport(_parsePublishedState.Importer.GetImportedModel(), destinationPath ?? string.Empty, null);
             }
         }
 

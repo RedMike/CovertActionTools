@@ -50,7 +50,12 @@ namespace CovertActionTools.Core.Exporting.Exporters
             var files = Export(Data);
             foreach (var pair in files)
             {
-                File.WriteAllBytes(System.IO.Path.Combine(Path, pair.Key), pair.Value);
+                var exportPath = Path;
+                if (!string.IsNullOrEmpty(PublishPath) || !pair.Key.publish)
+                {
+                    var publishPath = PublishPath ?? exportPath;
+                    File.WriteAllBytes(System.IO.Path.Combine(pair.Key.publish ? publishPath : exportPath, pair.Key.filename), pair.Value);
+                }
             }
 
             _done = true;
@@ -63,12 +68,12 @@ namespace CovertActionTools.Core.Exporting.Exporters
             _logger.LogInformation($"Starting export of plots");
         }
         
-        private IDictionary<string, byte[]> Export(Dictionary<string, PlotModel> plots)
+        private IDictionary<(string filename, bool publish), byte[]> Export(Dictionary<string, PlotModel> plots)
         {
-            var dict = new Dictionary<string, byte[]>()
+            var dict = new Dictionary<(string filename, bool publish), byte[]>()
             {
-                [$"PLOT.TXT"] = GetLegacyPlotData(plots),
-                [$"PLOT.json"] = GetModernPlotData(plots),
+                [("PLOT.TXT", true)] = GetLegacyPlotData(plots),
+                [("PLOT.json", false)] = GetModernPlotData(plots),
             };
 
             return dict;

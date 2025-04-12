@@ -56,7 +56,12 @@ namespace CovertActionTools.Core.Exporting.Exporters
             var files = Export(Data[nextKey]);
             foreach (var pair in files)
             {
-                File.WriteAllBytes(System.IO.Path.Combine(Path, pair.Key), pair.Value);
+                var exportPath = Path;
+                if (!string.IsNullOrEmpty(PublishPath) || !pair.Key.publish)
+                {
+                    var publishPath = PublishPath ?? exportPath;
+                    File.WriteAllBytes(System.IO.Path.Combine(pair.Key.publish ? publishPath : exportPath, pair.Key.filename), pair.Value);
+                }
             }
 
             return _index++;
@@ -74,14 +79,14 @@ namespace CovertActionTools.Core.Exporting.Exporters
             return Data.Keys.ToList();
         }
 
-        private IDictionary<string, byte[]> Export(SimpleImageModel image)
+        private IDictionary<(string filename, bool publish), byte[]> Export(SimpleImageModel image)
         {
-            var dict = new Dictionary<string, byte[]>
+            var dict = new Dictionary<(string filename, bool publish), byte[]>
             {
-                [$"{image.Key}_image.json"] = GetMetadata(image),
-                [$"{image.Key}.png"] = GetModernImageData(image),
-                [$"{image.Key}_VGA.png"] = GetVgaImageData(image),
-                [$"{image.Key}.PIC"] = GetLegacyFileData(image) 
+                [($"{image.Key}_image.json", false)] = GetMetadata(image),
+                [($"{image.Key}.png", false)] = GetModernImageData(image),
+                [($"{image.Key}_VGA.png", false)] = GetVgaImageData(image),
+                [($"{image.Key}.PIC", true)] = GetLegacyFileData(image) 
             };
             return dict;
         }

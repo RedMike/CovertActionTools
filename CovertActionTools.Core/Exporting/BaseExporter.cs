@@ -15,7 +15,7 @@ namespace CovertActionTools.Core.Importing
 
     public interface IExporter<in TData> : IExporter
     {
-        void Start(string path, TData data);
+        void Start(string path, string? publishPath, TData data);
     }
 
     public abstract class BaseExporter<TData>: IExporter<TData>
@@ -25,6 +25,7 @@ namespace CovertActionTools.Core.Importing
         private int _totalItems = 0;
         private int _currentItem = 0;
         protected string Path = string.Empty;
+        protected string? PublishPath = null;
         protected TData Data = default!;
         
         /// <summary>
@@ -32,13 +33,14 @@ namespace CovertActionTools.Core.Importing
         /// </summary>
         protected abstract string Message { get; }
 
-        public void Start(string path, TData data)
+        public void Start(string path, string? publishPath, TData data)
         {
             if (_exporting)
             {
                 throw new Exception("Already exporting");
             }
             Path = path;
+            PublishPath = publishPath;
             Data = data;
             _exporting = true;
             OnExportStart();

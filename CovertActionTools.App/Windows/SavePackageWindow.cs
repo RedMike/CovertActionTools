@@ -58,10 +58,15 @@ public class SavePackageWindow : BaseWindow
             throw new Exception("Missing exporter");
         }
         var destPath = _savePackageState.DestinationPath;
+        var publishPath = _savePackageState.PublishPath;
         var exportStatus = _savePackageState.Exporter.CheckStatus() ?? new ExportStatus();
         
         ImGui.Text($"Saving package to folder: {destPath}");
-        
+        if (!string.IsNullOrEmpty(publishPath))
+        {
+            ImGui.Text($"Publishing to folder: {publishPath}");
+        }
+
         ImGui.Text("");
         ImGui.Separator();
         ImGui.Text("");
@@ -201,10 +206,18 @@ public class SavePackageWindow : BaseWindow
         //TODO: better file explorer?
         var origDestPath = _savePackageState.DestinationPath ?? "";
         var destPath = origDestPath;
-        ImGui.InputText("Source Path", ref destPath, 256);
+        ImGui.InputText("Package Path", ref destPath, 256);
         if (destPath != origDestPath)
         {
             _savePackageState.DestinationPath = destPath;
+        }
+        
+        var origPublishPath = _savePackageState.PublishPath ?? "";
+        var publishPath = origPublishPath;
+        ImGui.InputText("Publish Path", ref publishPath, 256);
+        if (publishPath != origPublishPath)
+        {
+            _savePackageState.PublishPath = publishPath;
         }
         
         ImGui.Separator();
@@ -220,7 +233,7 @@ public class SavePackageWindow : BaseWindow
             var now = DateTime.Now;
             _savePackageState.Exporter = _exporter;
             _logger.LogInformation($"Starting exporting at: {now:s}");
-            _savePackageState.Exporter.StartExport(_mainEditorState.LoadedPackage!, destPath);
+            _savePackageState.Exporter.StartExport(_mainEditorState.LoadedPackage!, destPath, publishPath);
             _savePackageState.Run = true;
         }
     }

@@ -17,6 +17,7 @@ public class MainEditorState : IViewModel
         Plot = 4,
         World = 5,
     }
+    public string? DefaultPublishPath { get; set; }
     public string? LoadedPackagePath { get; private set; }
     public PackageModel? OriginalLoadedPackage { get; private set; }
     public PackageModel? LoadedPackage { get; private set; }

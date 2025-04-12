@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using CovertActionTools.Core.Exporting.Exporters;
 using CovertActionTools.Core.Importing;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -12,7 +11,7 @@ namespace CovertActionTools.Core.Exporting
 {
     public interface IPackageExporter
     {
-        void StartExport(PackageModel model, string path);
+        void StartExport(PackageModel model, string path, string? publishPath);
         ExportStatus? CheckStatus();
     }
     
@@ -44,7 +43,7 @@ namespace CovertActionTools.Core.Exporting
         private IExporter? _currentExporter = null;
         private string _path = string.Empty;
 
-        public void StartExport(PackageModel model, string path)
+        public void StartExport(PackageModel model, string path, string? publishPath)
         {
             if (_exportTask != null && !_exportTask.IsCompleted)
             {
@@ -52,18 +51,18 @@ namespace CovertActionTools.Core.Exporting
             }
 
             _path = path;
-            _simpleImageExporter.Start(path, model.SimpleImages);
-            _logger.LogInformation($"Exporter {_simpleImageExporter.GetType()} starting export to: {path}");
-            _crimeExporter.Start(path, model.Crimes);
-            _logger.LogInformation($"Exporter {_crimeExporter.GetType()} starting export to: {path}");
-            _textExporter.Start(path, model.Texts);
-            _logger.LogInformation($"Exporter {_textExporter.GetType()} starting export to: {path}");
-            _clueExporter.Start(path, model.Clues);
-            _logger.LogInformation($"Exporter {_clueExporter.GetType()} starting export to: {path}");
-            _plotExporter.Start(path, model.Plots);
-            _logger.LogInformation($"Exporter {_plotExporter.GetType()} starting export to: {path}");
-            _worldExporter.Start(path, model.Worlds);
-            _logger.LogInformation($"Exporter {_worldExporter.GetType()} starting export to: {path}");
+            _simpleImageExporter.Start(path, publishPath, model.SimpleImages);
+            _logger.LogInformation($"Exporter {_simpleImageExporter.GetType()} starting export to: {path} {publishPath}");
+            _crimeExporter.Start(path, publishPath, model.Crimes);
+            _logger.LogInformation($"Exporter {_crimeExporter.GetType()} starting export to: {path} {publishPath}");
+            _textExporter.Start(path, publishPath, model.Texts);
+            _logger.LogInformation($"Exporter {_textExporter.GetType()} starting export to: {path} {publishPath}");
+            _clueExporter.Start(path, publishPath, model.Clues);
+            _logger.LogInformation($"Exporter {_clueExporter.GetType()} starting export to: {path} {publishPath}");
+            _plotExporter.Start(path, publishPath, model.Plots);
+            _logger.LogInformation($"Exporter {_plotExporter.GetType()} starting export to: {path} {publishPath}");
+            _worldExporter.Start(path, publishPath, model.Worlds);
+            _logger.LogInformation($"Exporter {_worldExporter.GetType()} starting export to: {path} {publishPath}");
             _exportTask = ExportInternal();
         }
 

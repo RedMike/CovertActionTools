@@ -84,7 +84,7 @@ public class MainMenuWindow : BaseWindow
         _savePackageState.Show = true;
         _savePackageState.Run = true;
         _savePackageState.Exporter = _exporter;
-        _savePackageState.Exporter.StartExport(_mainEditorState.LoadedPackage!, _mainEditorState.LoadedPackagePath!);
+        _savePackageState.Exporter.StartExport(_mainEditorState.LoadedPackage!, _mainEditorState.LoadedPackagePath!, _mainEditorState.DefaultPublishPath);
     }
 
     private void DrawNotLoadedMenu()
