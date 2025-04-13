@@ -18,6 +18,8 @@ public class MainEditorState : IViewModel
         World = 5,
     }
     public string? DefaultPublishPath { get; set; }
+    public string? DefaultRunPath { get; set; }
+    public bool Running { get; set; }
     public string? LoadedPackagePath { get; private set; }
     public PackageModel? OriginalLoadedPackage { get; private set; }
     public PackageModel? LoadedPackage { get; private set; }

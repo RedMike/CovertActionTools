@@ -1,4 +1,5 @@
-﻿using CovertActionTools.App.ViewModels;
+﻿using System.Diagnostics;
+using CovertActionTools.App.ViewModels;
 using CovertActionTools.Core.Exporting;
 using ImGuiNET;
 using Microsoft.Extensions.Logging;
@@ -54,25 +55,22 @@ public class MainMenuWindow : BaseWindow
                 //TODO: check if need to save
                 //TODO: close
             }
-
-            if (ImGui.MenuItem("Save Package", packageModified))
-            {
-                SavePackage();
-            }
-
-            if (ImGui.MenuItem("Publish"))
-            {
-                //TODO: publish
-            }
             
             ImGui.EndMenu();
         }
 
-        if (packageModified)
+        if (ImGui.BeginMenu("Save Package"))
         {
-            if (ImGui.BeginMenu("Save Package"))
+            SavePackage();
+            
+            ImGui.EndMenu();
+        }
+
+        if (!string.IsNullOrEmpty(_mainEditorState.DefaultRunPath))
+        {
+            if (ImGui.BeginMenu("Run", !_mainEditorState.Running))
             {
-                SavePackage();
+                RunPublished();
                 
                 ImGui.EndMenu();
             }
@@ -81,10 +79,43 @@ public class MainMenuWindow : BaseWindow
 
     private void SavePackage()
     {
+        if (_savePackageState.Show)
+        {
+            return;
+        }
         _savePackageState.Show = true;
         _savePackageState.Run = true;
         _savePackageState.Exporter = _exporter;
         _savePackageState.Exporter.StartExport(_mainEditorState.LoadedPackage!, _mainEditorState.LoadedPackagePath!, _mainEditorState.DefaultPublishPath);
+    }
+
+    private void RunPublished()
+    {
+        if (_mainEditorState.DefaultRunPath == null)
+        {
+            return;
+        }
+        if (_mainEditorState.Running)
+        {
+            return;
+        }
+
+        _mainEditorState.Running = true;
+        var process = new Process();
+        process.StartInfo.FileName = _mainEditorState.DefaultRunPath;
+        process.StartInfo.WindowStyle = ProcessWindowStyle.Normal;
+        process.StartInfo.WorkingDirectory = Path.GetDirectoryName(_mainEditorState.DefaultRunPath);
+        //TODO: detect exit properly
+        process.Exited += (_, _) =>
+        {
+            _mainEditorState.Running = false;
+        };
+        var started = process.Start();
+        if (!started)
+        {
+            _logger.LogError($"Failed to start process: {process.ExitCode}");
+            _mainEditorState.Running = false;
+        }
     }
 
     private void DrawNotLoadedMenu()

@@ -94,6 +94,7 @@ if (startWithParsePublishDefault)
 if (startWithLoadSampleDefault)
 {
     var mainEditorState = sp.GetRequiredService<MainEditorState>();
+    mainEditorState.DefaultRunPath = Constants.DefaultRunPath;
     mainEditorState.DefaultPublishPath = Constants.DefaultPublishPath;
     
     var loadPackageState = sp.GetRequiredService<LoadPackageState>();
