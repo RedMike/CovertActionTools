@@ -19,6 +19,7 @@ namespace CovertActionTools.Core.Importing
         private readonly LegacyClueParser _clueImporter;
         private readonly LegacyPlotParser _plotImporter;
         private readonly LegacyWorldParser _worldImporter;
+        private readonly LegacyCatalogParser _catalogImporter;
         private readonly IReadOnlyList<IImporter> _importers;
         
         private List<string> _errors = new List<string>();
@@ -27,7 +28,7 @@ namespace CovertActionTools.Core.Importing
         private ImportStatus.ImportStage _currentStage = ImportStatus.ImportStage.Unknown;
         private IImporter? _currentImporter = null;
         
-        public LegacyFolderImporter(ILogger<LegacyFolderImporter> logger, LegacySimpleImageParser simpleImageImporter, LegacyCrimeParser crimeImporter, LegacyTextParser textImporter, LegacyClueParser clueImporter, LegacyPlotParser plotImporter, LegacyWorldParser worldImporter)
+        public LegacyFolderImporter(ILogger<LegacyFolderImporter> logger, LegacySimpleImageParser simpleImageImporter, LegacyCrimeParser crimeImporter, LegacyTextParser textImporter, LegacyClueParser clueImporter, LegacyPlotParser plotImporter, LegacyWorldParser worldImporter, LegacyCatalogParser catalogImporter)
         {
             _logger = logger;
             _simpleImageImporter = simpleImageImporter;
@@ -36,7 +37,8 @@ namespace CovertActionTools.Core.Importing
             _clueImporter = clueImporter;
             _plotImporter = plotImporter;
             _worldImporter = worldImporter;
-            _importers = new IImporter[] { _simpleImageImporter, _crimeImporter, _textImporter, _clueImporter, _plotImporter, _worldImporter };
+            _catalogImporter = catalogImporter;
+            _importers = new IImporter[] { _simpleImageImporter, _crimeImporter, _textImporter, _clueImporter, _plotImporter, _worldImporter, _catalogImporter };
         }
 
         public bool CheckIfValidForImport(string path)
@@ -262,6 +264,25 @@ namespace CovertActionTools.Core.Importing
                     }
                 } while (!done);
                 model.Worlds = _worldImporter.GetResult();
+                
+                //catalogs
+                _currentStage = ImportStatus.ImportStage.ProcessingCatalogs;
+                _currentImporter = _catalogImporter;
+                done = false;
+                do
+                {
+                    await Task.Yield();
+                    try
+                    {
+                        done |= _currentImporter.RunStep();
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError($"Exception while running step: {e}");
+                        _errors.Add(e.ToString());
+                    }
+                } while (!done);
+                model.Catalogs = _catalogImporter.GetResult();
 
                 _currentStage = ImportStatus.ImportStage.ImportDone;
                 await Task.Yield();
@@ -276,7 +297,7 @@ namespace CovertActionTools.Core.Importing
                 _currentStage = ImportStatus.ImportStage.ImportDone;
             }
 
-            _logger.LogInformation($"Import done: {model.SimpleImages.Count} images, {model.Crimes.Count} crimes, {model.Texts.Count} texts, {model.Clues.Count} clues, {model.Worlds.Count} worlds, ...");
+            _logger.LogInformation($"Import done: {model.SimpleImages.Count} images, {model.Crimes.Count} crimes, {model.Texts.Count} texts, {model.Clues.Count} clues, {model.Worlds.Count} worlds, {model.Catalogs.Count} catalogs, ...");
             return model;
         }
     }

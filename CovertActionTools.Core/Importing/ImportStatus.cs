@@ -14,6 +14,7 @@ namespace CovertActionTools.Core.Importing
             ProcessingClues = 40,
             ProcessingPlots = 50,
             ProcessingWorlds = 60,
+            ProcessingCatalogs = 70,
             ImportDone = 100,
             
             FatalError = 999999,

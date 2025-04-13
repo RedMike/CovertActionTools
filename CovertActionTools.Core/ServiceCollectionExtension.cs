@@ -14,12 +14,14 @@ namespace CovertActionTools.Core
     {
         public static void AddCovertActionsTools(this IServiceCollection services)
         {
+            services.AddSingleton<SharedImageParser>();
             services.AddSingleton<LegacySimpleImageParser>();
             services.AddSingleton<LegacyCrimeParser>();
             services.AddSingleton<LegacyTextParser>();
             services.AddSingleton<LegacyClueParser>();
             services.AddSingleton<LegacyPlotParser>();
             services.AddSingleton<LegacyWorldParser>();
+            services.AddSingleton<LegacyCatalogParser>();
 
             services.AddSingleton<IImporter<Dictionary<string, SimpleImageModel>>, SimpleImageImporter>();
             services.AddSingleton<IImporter<Dictionary<int, CrimeModel>>, CrimeImporter>();
