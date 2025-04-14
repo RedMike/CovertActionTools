@@ -6,17 +6,15 @@ using Microsoft.Extensions.Logging;
 
 namespace CovertActionTools.App.Windows;
 
-public class SelectedCatalogImageWindow : BaseWindow
+public class SelectedCatalogImageWindow : SharedImageWindow
 {
     private readonly ILogger<SelectedCatalogImageWindow> _logger;
     private readonly MainEditorState _mainEditorState;
-    private readonly RenderWindow _renderWindow;
 
-    public SelectedCatalogImageWindow(ILogger<SelectedCatalogImageWindow> logger, MainEditorState mainEditorState, RenderWindow renderWindow)
+    public SelectedCatalogImageWindow(ILogger<SelectedCatalogImageWindow> logger, MainEditorState mainEditorState, RenderWindow renderWindow) : base(renderWindow)
     {
         _logger = logger;
         _mainEditorState = mainEditorState;
-        _renderWindow = renderWindow;
     }
 
     public override void Draw()
@@ -98,13 +96,81 @@ public class SelectedCatalogImageWindow : BaseWindow
         ImGui.Separator();
         ImGui.Text("");
 
+        ImGui.PushID("image");
         DrawImageWindow(model, catalog, image);
+        ImGui.PopID();
     }
 
     private void DrawImageWindow(PackageModel model, CatalogModel catalog, SimpleImageModel image)
     {
+        //TODO: keep a pending model and have a save button?
         var windowSize = ImGui.GetContentRegionAvail();
-        
-        
+        if (ImGui.BeginTable("i_1", 4))
+        {
+            ImGui.TableNextRow();
+            ImGui.TableNextColumn();
+            var newType = ImGuiExtensions.InputEnum("Type", image.ExtraData.Type, true, SimpleImageModel.ImageType.Unknown);
+            if (newType != null)
+            {
+                image.ExtraData.Type = newType.Value;
+            }
+
+            ImGui.TableNextColumn();
+            var newKey = ImGuiExtensions.Input("Key", image.Key, 128);
+            if (newKey != null)
+            {
+                newKey = newKey.ToUpperInvariant();
+                if (catalog.Entries.ContainsKey(newKey))
+                {
+                    //TODO: error
+                }
+                else
+                {
+                    catalog.Entries.Remove(image.Key);
+                    catalog.ExtraData.Keys.Remove(image.Key);
+                    image.Key = newKey;
+                    catalog.Entries[newKey] = image;
+                    catalog.ExtraData.Keys.Add(newKey);
+                    //we also have the change the "selected" item
+                    _mainEditorState.SelectedItem = (MainEditorState.ItemType.CatalogImage, $"{catalog.Key}:{newKey}");
+                }
+            }
+
+            ImGui.TableNextColumn();
+            var newWidth = ImGuiExtensions.Input("Legacy Width", image.ExtraData.LegacyWidth);
+            if (newWidth != null)
+            {
+                //TODO: resize? confirmation dialog?
+            }
+
+            ImGui.TableNextColumn();
+            var newHeight = ImGuiExtensions.Input("Legacy Height", image.ExtraData.LegacyHeight);
+            if (newHeight != null)
+            {
+                //TODO: resize? confirmation dialog?
+            }
+            
+            ImGui.EndTable();
+        }
+
+        var newName = ImGuiExtensions.Input("Name", image.ExtraData.Name, 128);
+        if (newName != null)
+        {
+            image.ExtraData.Name = newName;
+        }
+
+        var origComment = image.ExtraData.Comment;
+        var comment = origComment;
+        ImGui.InputTextMultiline("Comment", ref comment, 2048, new Vector2(windowSize.X, 50.0f));
+        if (comment != origComment)
+        {
+            image.ExtraData.Comment = comment;
+        }
+
+        ImGui.Text("");
+        ImGui.Separator();
+        ImGui.Text("");
+
+        DrawImageTabs(image);
     }
 }
