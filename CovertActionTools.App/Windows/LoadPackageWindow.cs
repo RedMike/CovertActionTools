@@ -134,8 +134,16 @@ public class LoadPackageWindow : BaseWindow
                     progress = 0.6f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
                 }
                 break;
-            //0.7f
-            //TODO: other stages
+            case ImportStatus.ImportStage.ProcessingCatalogs:
+                if (importStatus.StageItems <= 0)
+                {
+                    progress = 0.7f;
+                }
+                else
+                {
+                    progress = 0.7f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
+                }
+                break;
             case ImportStatus.ImportStage.ImportDone:
                 progress = 1.0f;
                 break;

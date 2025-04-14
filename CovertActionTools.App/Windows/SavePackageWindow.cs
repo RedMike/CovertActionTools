@@ -142,8 +142,16 @@ public class SavePackageWindow : BaseWindow
                     progress = 0.6f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.1f;
                 }
                 break;
-            //0.95f
-            //TODO: other stages
+            case ExportStatus.ExportStage.ProcessingCatalogs:
+                if (exportStatus.StageItems <= 0)
+                {
+                    progress = 0.7f;
+                }
+                else
+                {
+                    progress = 0.7f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.1f;
+                }
+                break;
         }
 
         var progressBarSize = new Vector2(windowSize.X - 20.0f, 15.0f);
