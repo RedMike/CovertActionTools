@@ -15,8 +15,14 @@ namespace CovertActionTools.Core.Models
             /// Arbitrary comment, for development
             /// </summary>
             public string Comment { get; set; } = string.Empty;
+
+            /// <summary>
+            /// List of keys included in the catalog
+            /// </summary>
+            public List<string> Keys { get; set; } = new();
         }
-        
+
+        public string Key { get; set; } = string.Empty;
         /// <summary>
         /// Entries in file, legacy only has image entries.
         /// </summary>

@@ -89,7 +89,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                     var ch = (char)reader.ReadByte();
                     entryName += ch;
                 }
-                entryName = entryName.Trim().Trim('\0');
+                entryName = entryName.Replace(".PIC", "").Trim().Trim('\0');
 
                 reader.ReadUInt32(); //checksum, not used
 
@@ -109,11 +109,13 @@ namespace CovertActionTools.Core.Importing.Parsers
 
             return new CatalogModel()
             {
+                Key = key,
                 Entries = entries,
                 ExtraData = new CatalogModel.Metadata()
                 {
                     Name = key,
-                    Comment = "Legacy import"
+                    Comment = "Legacy import",
+                    Keys = entries.Keys.ToList()
                 }
             };
         }

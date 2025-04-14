@@ -24,8 +24,9 @@ namespace CovertActionTools.Core.Exporting
         private readonly IExporter<Dictionary<string, ClueModel>> _clueExporter;
         private readonly IExporter<Dictionary<string, PlotModel>> _plotExporter;
         private readonly IExporter<Dictionary<int, WorldModel>> _worldExporter;
+        private readonly IExporter<Dictionary<string, CatalogModel>> _catalogExporter;
 
-        public PackageExporter(ILogger<PackageExporter> logger, IExporter<Dictionary<string, SimpleImageModel>> simpleImageExporter, IExporter<Dictionary<int, CrimeModel>> crimeExporter, IExporter<Dictionary<string, TextModel>> textExporter, IExporter<Dictionary<string, ClueModel>> clueExporter, IExporter<Dictionary<string, PlotModel>> plotExporter, IExporter<Dictionary<int, WorldModel>> worldExporter)
+        public PackageExporter(ILogger<PackageExporter> logger, IExporter<Dictionary<string, SimpleImageModel>> simpleImageExporter, IExporter<Dictionary<int, CrimeModel>> crimeExporter, IExporter<Dictionary<string, TextModel>> textExporter, IExporter<Dictionary<string, ClueModel>> clueExporter, IExporter<Dictionary<string, PlotModel>> plotExporter, IExporter<Dictionary<int, WorldModel>> worldExporter, IExporter<Dictionary<string, CatalogModel>> catalogExporter)
         {
             _logger = logger;
             _simpleImageExporter = simpleImageExporter;
@@ -34,6 +35,7 @@ namespace CovertActionTools.Core.Exporting
             _clueExporter = clueExporter;
             _plotExporter = plotExporter;
             _worldExporter = worldExporter;
+            _catalogExporter = catalogExporter;
         }
         
         private List<string> _errors = new List<string>();
@@ -63,6 +65,8 @@ namespace CovertActionTools.Core.Exporting
             _logger.LogInformation($"Exporter {_plotExporter.GetType()} starting export to: {path} {publishPath}");
             _worldExporter.Start(path, publishPath, model.Worlds);
             _logger.LogInformation($"Exporter {_worldExporter.GetType()} starting export to: {path} {publishPath}");
+            _catalogExporter.Start(path, publishPath, model.Catalogs);
+            _logger.LogInformation($"Exporter {_catalogExporter.GetType()} starting export to: {path} {publishPath}");
             _exportTask = ExportInternal();
         }
 
@@ -219,6 +223,25 @@ namespace CovertActionTools.Core.Exporting
                 //worlds
                 _currentStage = ExportStatus.ExportStage.ProcessingWorlds;
                 _currentExporter = _worldExporter;
+                await Task.Yield();
+                done = false;
+                do
+                {
+                    await Task.Yield();
+                    try
+                    {
+                        done |= _currentExporter.RunStep();
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError($"Exception while running step: {e}");
+                        _errors.Add(e.ToString());
+                    }
+                } while (!done);
+                
+                //catalogs
+                _currentStage = ExportStatus.ExportStage.ProcessingCatalogs;
+                _currentExporter = _catalogExporter;
                 await Task.Yield();
                 done = false;
                 do

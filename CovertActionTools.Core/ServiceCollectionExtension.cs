@@ -30,12 +30,14 @@ namespace CovertActionTools.Core
             services.AddSingleton<IImporter<Dictionary<string, PlotModel>>, PlotImporter>();
             services.AddSingleton<IImporter<Dictionary<int, WorldModel>>, WorldImporter>();
             
+            services.AddSingleton<SharedImageExporter>();
             services.AddSingleton<IExporter<Dictionary<string, SimpleImageModel>>, SimpleImageExporter>();
             services.AddSingleton<IExporter<Dictionary<int, CrimeModel>>, CrimeExporter>();
             services.AddSingleton<IExporter<Dictionary<string, TextModel>>, TextExporter>();
             services.AddSingleton<IExporter<Dictionary<string, ClueModel>>, ClueExporter>();
             services.AddSingleton<IExporter<Dictionary<string, PlotModel>>, PlotExporter>();
             services.AddSingleton<IExporter<Dictionary<int, WorldModel>>, WorldExporter>();
+            services.AddSingleton<IExporter<Dictionary<string, CatalogModel>>, CatalogExporter>();
             
             services.AddTransient<LegacyFolderImporter>();
             services.AddTransient<IPackageImporter, PackageImporter>();

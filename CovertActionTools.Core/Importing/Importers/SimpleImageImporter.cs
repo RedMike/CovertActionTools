@@ -110,7 +110,7 @@ namespace CovertActionTools.Core.Importing.Importers
 
         private byte[] ReadModernImageData(string path, string filename, int width, int height)
         {
-            var filePath = System.IO.Path.Combine(path, $"{filename}.png");
+            var filePath = System.IO.Path.Combine(path, $"{filename}_modern.png");
             if (!File.Exists(filePath))
             {
                 throw new Exception($"Missing PNG file: {filename}");

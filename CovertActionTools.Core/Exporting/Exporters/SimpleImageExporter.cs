@@ -3,8 +3,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
-using CovertActionTools.Core.Compression;
-using CovertActionTools.Core.Conversion;
 using CovertActionTools.Core.Importing;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -15,9 +13,8 @@ namespace CovertActionTools.Core.Exporting.Exporters
     /// Given a loaded model for a SimpleImage, returns multiple assets to save:
     ///   * PIC file (legacy image)
     ///   * JSON file _image (metadata)
-    ///   * PNG file (modern image)
+    ///   * PNG file _modern (modern image)
     ///   * PNG file _VGA (VGA legacy image)
-    ///   * PNG file _CGA (CGA replacement image)
     /// </summary>
     internal class SimpleImageExporter : BaseExporter<Dictionary<string, SimpleImageModel>>
     {
@@ -31,15 +28,15 @@ namespace CovertActionTools.Core.Exporting.Exporters
         #endif
         
         private readonly ILogger<SimpleImageExporter> _logger;
-        private readonly ILoggerFactory _loggerFactory;
+        private readonly SharedImageExporter _imageExporter;
         
         private readonly List<string> _keys = new();
         private int _index = 0;
 
-        public SimpleImageExporter(ILogger<SimpleImageExporter> logger, ILoggerFactory loggerFactory)
+        public SimpleImageExporter(ILogger<SimpleImageExporter> logger, SharedImageExporter imageExporter)
         {
             _logger = logger;
-            _loggerFactory = loggerFactory;
+            _imageExporter = imageExporter;
         }
 
         protected override string Message => "Processing simple images..";
@@ -84,9 +81,9 @@ namespace CovertActionTools.Core.Exporting.Exporters
             var dict = new Dictionary<(string filename, bool publish), byte[]>
             {
                 [($"{image.Key}_image.json", false)] = GetMetadata(image),
-                [($"{image.Key}.png", false)] = GetModernImageData(image),
-                [($"{image.Key}_VGA.png", false)] = GetVgaImageData(image),
-                [($"{image.Key}.PIC", true)] = GetLegacyFileData(image) 
+                [($"{image.Key}_modern.png", false)] = _imageExporter.GetModernImageData(image),
+                [($"{image.Key}_VGA.png", false)] = _imageExporter.GetVgaImageData(image),
+                [($"{image.Key}.PIC", true)] = _imageExporter.GetLegacyFileData(image) 
             };
             return dict;
         }
@@ -96,58 +93,6 @@ namespace CovertActionTools.Core.Exporting.Exporters
             var serialisedMetadata = JsonSerializer.Serialize(image.ExtraData, JsonOptions);
             var bytes = Encoding.UTF8.GetBytes(serialisedMetadata);
             return bytes;
-        }
-        
-        private byte[] GetVgaImageData(SimpleImageModel image)
-        {
-            var imageData = image.RawVgaImageData;
-            var width = image.Width;
-            var height = image.Height;
-
-            return ImageConversion.VgaToTexture(width, height, imageData);
-        }
-
-        private byte[] GetModernImageData(SimpleImageModel image)
-        {
-            var imageData = image.ModernImageData;
-            var width = image.Width;
-            var height = image.Height;
-
-            return ImageConversion.RgbaToTexture(width, height, imageData);
-        }
-
-        private byte[] GetLegacyFileData(SimpleImageModel image)
-        {
-            var imageData = image.RawVgaImageData;
-
-            var compression = new LzwCompression(_loggerFactory.CreateLogger(typeof(LzwCompression)),
-                image.ExtraData.CompressionDictionaryWidth, imageData, image.Key);
-            var imageBytes = compression.Compress();
-
-            using var memStream = new MemoryStream();
-            using var writer = new BinaryWriter(memStream);
-
-            ushort formatFlag = 0x07;
-            if (image.ExtraData.LegacyColorMappings != null)
-            {
-                formatFlag = 0x0F;
-            }
-
-            writer.Write(formatFlag);
-            writer.Write((ushort)image.Width);
-            writer.Write((ushort)image.Height);
-            if (image.ExtraData.LegacyColorMappings != null)
-            {
-                var mappingBytes = image.ExtraData.LegacyColorMappings
-                    .OrderBy(x => x.Key)
-                    .Select(x => x.Value)
-                    .ToArray();
-                writer.Write(mappingBytes);
-            }
-            writer.Write(image.ExtraData.CompressionDictionaryWidth);
-            writer.Write(imageBytes);
-            
-            return memStream.ToArray();
         }
     }
 }
