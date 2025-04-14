@@ -67,77 +67,63 @@ public class SelectedSimpleImageWindow : BaseWindow
 
     private void DrawImageWindow(PackageModel model, SimpleImageModel image)
     {
-        var type = image.ExtraData.Type.ToString();
-        var types = Enum.GetValues<SimpleImageModel.ImageType>()
-            .OrderBy(x => (int)x)
-            .Select(x => $"{x}")
-            .ToArray();
-        var index = types.ToList().FindIndex(x => x == type);
-        var origIndex = index;
-        ImGui.SetNextItemWidth(300.0f);
-        ImGui.Combo("Type", ref index, types, types.Length);
-        if (origIndex != index)
-        {
-            var newTypeString = types[index];
-            var newType = Enum.Parse<SimpleImageModel.ImageType>(newTypeString);
-            image.ExtraData.Type = newType;
-        }
-        
         //TODO: keep a pending model and have a save button?
-        
-        var origKey = image.Key;
-        var key = origKey;
-        ImGui.SetNextItemWidth(100.0f);
-        ImGui.InputText("Key", ref key, 128, ImGuiInputTextFlags.CharsUppercase);
-        if (key != origKey)
+        if (ImGui.BeginTable("i_1", 4))
         {
-            if (model.SimpleImages.ContainsKey(key))
+            ImGui.TableNextRow();
+            ImGui.TableNextColumn();
+            var newType = ImGuiExtensions.InputEnum("Type", image.ExtraData.Type, true, SimpleImageModel.ImageType.Unknown);
+            if (newType != null)
             {
-                ImGui.SameLine();
-                ImGui.Text("Key already taken");
+                image.ExtraData.Type = newType.Value;
             }
-            else
+
+            ImGui.TableNextColumn();
+            var newKey = ImGuiExtensions.Input("Key", image.Key, 128);
+            if (newKey != null)
             {
-                image.Key = key;
-                model.SimpleImages.Remove(origKey);
-                model.SimpleImages[image.Key] = image;
-                //we also have the change the "selected" item
-                _mainEditorState.SelectedItem = (MainEditorState.ItemType.SimpleImage, key);
+                newKey = newKey.ToUpperInvariant();
+                if (model.SimpleImages.ContainsKey(newKey))
+                {
+                    //TODO: error
+                }
+                else
+                {
+                    model.SimpleImages.Remove(image.Key);
+                    image.Key = newKey;
+                    model.SimpleImages[newKey] = image;
+                    //we also have the change the "selected" item
+                    _mainEditorState.SelectedItem = (MainEditorState.ItemType.SimpleImage, newKey);
+                }
             }
-        }
-        
-        var origName = image.ExtraData.Name;
-        var name = origName;
-        ImGui.SetNextItemWidth(100.0f);
-        ImGui.InputText("Name", ref name, 128, ImGuiInputTextFlags.None);
-        if (name != origName)
-        {
-            image.ExtraData.Name = name;
+
+            ImGui.TableNextColumn();
+            var newWidth = ImGuiExtensions.Input("Legacy Width", image.ExtraData.LegacyWidth);
+            if (newWidth != null)
+            {
+                //TODO: resize? confirmation dialog?
+            }
+
+            ImGui.TableNextColumn();
+            var newHeight = ImGuiExtensions.Input("Legacy Height", image.ExtraData.LegacyHeight);
+            if (newHeight != null)
+            {
+                //TODO: resize? confirmation dialog?
+            }
+            
+            ImGui.EndTable();
         }
 
-        var legacyWidth = image.ExtraData.LegacyWidth;
-        var origLegacyWidth = legacyWidth;
-        ImGui.SetNextItemWidth(100.0f);
-        ImGui.InputInt("Legacy Width", ref legacyWidth);
-        if (legacyWidth != origLegacyWidth)
+        var newName = ImGuiExtensions.Input("Name", image.ExtraData.Name, 128);
+        if (newName != null)
         {
-            //TODO: resize? confirmation dialog?
+            image.ExtraData.Name = newName;
         }
-        
-        ImGui.SameLine();
-        
-        var legacyHeight = image.ExtraData.LegacyHeight;
-        var origLegacyHeight = legacyHeight;
-        ImGui.SetNextItemWidth(100.0f);
-        ImGui.InputInt("Legacy Height", ref legacyHeight);
-        if (legacyHeight != origLegacyHeight)
-        {
-            //TODO: resize? confirmation dialog?
-        }
-        
+
+        var windowSize = ImGui.GetContentRegionAvail();
         var origComment = image.ExtraData.Comment;
         var comment = origComment;
-        ImGui.InputTextMultiline("Comment", ref comment, 2048, new Vector2(400.0f, 50.0f), ImGuiInputTextFlags.None);
+        ImGui.InputTextMultiline("Comment", ref comment, 2048, new Vector2(windowSize.X, 50.0f));
         if (comment != origComment)
         {
             image.ExtraData.Comment = comment;
@@ -235,7 +221,7 @@ public class SelectedSimpleImageWindow : BaseWindow
     
     private void DrawModernImageTab(PackageModel model, SimpleImageModel image)
     {
-        ImGui.Text("Note: this image will only be used by a modern version, not the original game engine.");
+        ImGui.Text("Note: this image will not be shown in the original game engine.");
         var width = image.ExtraData.Width;
         var origWidth = width;
         ImGui.SetNextItemWidth(100.0f);
@@ -259,6 +245,8 @@ public class SelectedSimpleImageWindow : BaseWindow
         ImGui.Text("");
 
         DrawModernImage(model, image);
+        
+        //TODO: 'generate VGA from this' button?
     }
 
     private void DrawModernImage(PackageModel model, SimpleImageModel image)
