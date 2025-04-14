@@ -85,6 +85,7 @@ namespace CovertActionTools.Core.Exporting.Exporters
             foreach (var entry in catalog.ExtraData.Keys)
             {
                 var image = catalog.Entries[entry];
+                dict.Add(($"{image.Key}_catalog_img.json", false), _imageExporter.GetMetadata(image));
                 dict.Add(($"{image.Key}_modern.png", false), _imageExporter.GetModernImageData(image));
                 dict.Add(($"{image.Key}_VGA.png", false), _imageExporter.GetVgaImageData(image));
             }

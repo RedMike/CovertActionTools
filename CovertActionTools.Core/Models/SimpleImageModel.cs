@@ -50,7 +50,17 @@ namespace CovertActionTools.Core.Models
             /// </summary>
             public int Height { get; set; }
             /// <summary>
+            /// Width/height of VGA images
+            /// </summary>
+            public int LegacyWidth { get; set; }
+            /// <summary>
+            /// Width/height of VGA images
+            /// Usually 320
+            /// </summary>
+            public int LegacyHeight { get; set; }
+            /// <summary>
             /// Arbitrary comment, for development
+            /// Usually 200
             /// </summary>
             public string Comment { get; set; } = string.Empty;
             
@@ -69,14 +79,6 @@ namespace CovertActionTools.Core.Models
         /// ID that also determines the filename
         /// </summary>
         public string Key { get; set; } = string.Empty;
-        /// <summary>
-        /// Legacy: usually 320
-        /// </summary>
-        public int Width { get; set; }
-        /// <summary>
-        /// Legacy: usually 200
-        /// </summary>
-        public int Height { get; set; }
         /// <summary>
         /// Stored as 1 byte index into VGA palette, left-to-right, top-to-bottom.
         /// </summary>

@@ -1,5 +1,7 @@
 ﻿using System.IO;
 using System.Linq;
+using System.Text;
+using System.Text.Json;
 using CovertActionTools.Core.Compression;
 using CovertActionTools.Core.Conversion;
 using CovertActionTools.Core.Models;
@@ -9,6 +11,15 @@ namespace CovertActionTools.Core.Exporting.Exporters
 {
     internal class SharedImageExporter
     {
+#if DEBUG
+        private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions()
+        {
+            WriteIndented = true
+        };
+#else
+        private static readonly JsonSerializerOptions JsonOptions = JsonSerializerOptions.Default;
+#endif
+        
         private readonly ILogger<SharedImageExporter> _logger;
         private readonly ILoggerFactory _loggerFactory;
 
@@ -21,8 +32,8 @@ namespace CovertActionTools.Core.Exporting.Exporters
         public byte[] GetVgaImageData(SimpleImageModel image)
         {
             var imageData = image.RawVgaImageData;
-            var width = image.Width;
-            var height = image.Height;
+            var width = image.ExtraData.LegacyWidth;
+            var height = image.ExtraData.LegacyHeight;
 
             return ImageConversion.VgaToTexture(width, height, imageData);
         }
@@ -30,8 +41,8 @@ namespace CovertActionTools.Core.Exporting.Exporters
         public byte[] GetModernImageData(SimpleImageModel image)
         {
             var imageData = image.ModernImageData;
-            var width = image.Width;
-            var height = image.Height;
+            var width = image.ExtraData.LegacyWidth;
+            var height = image.ExtraData.LegacyHeight;
 
             return ImageConversion.RgbaToTexture(width, height, imageData);
         }
@@ -54,8 +65,8 @@ namespace CovertActionTools.Core.Exporting.Exporters
             }
 
             writer.Write(formatFlag);
-            writer.Write((ushort)image.Width);
-            writer.Write((ushort)image.Height);
+            writer.Write((ushort)image.ExtraData.LegacyWidth);
+            writer.Write((ushort)image.ExtraData.LegacyHeight);
             if (image.ExtraData.LegacyColorMappings != null)
             {
                 var mappingBytes = image.ExtraData.LegacyColorMappings
@@ -68,6 +79,13 @@ namespace CovertActionTools.Core.Exporting.Exporters
             writer.Write(imageBytes);
             
             return memStream.ToArray();
+        }
+        
+        public byte[] GetMetadata(SimpleImageModel image)
+        {
+            var serialisedMetadata = JsonSerializer.Serialize(image.ExtraData, JsonOptions);
+            var bytes = Encoding.UTF8.GetBytes(serialisedMetadata);
+            return bytes;
         }
     }
 }

@@ -339,9 +339,9 @@ public class SelectedWorldWindow : BaseWindow
         {
             var imageId = $"image_preview_{imageKey}";
             //TODO: cache?
-            var texture = _renderWindow.RenderImage(RenderWindow.RenderType.Image, imageId, image.Width, image.Height,
+            var texture = _renderWindow.RenderImage(RenderWindow.RenderType.Image, imageId, image.ExtraData.LegacyWidth, image.ExtraData.LegacyHeight,
                 image.VgaImageData);
-            ImGui.Image(texture, new Vector2(image.Width, image.Height));
+            ImGui.Image(texture, new Vector2(image.ExtraData.LegacyWidth, image.ExtraData.LegacyHeight));
         }
         else
         {

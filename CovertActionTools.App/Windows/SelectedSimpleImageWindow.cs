@@ -115,7 +115,7 @@ public class SelectedSimpleImageWindow : BaseWindow
             image.ExtraData.Name = name;
         }
 
-        var legacyWidth = image.Width;
+        var legacyWidth = image.ExtraData.LegacyWidth;
         var origLegacyWidth = legacyWidth;
         ImGui.SetNextItemWidth(100.0f);
         ImGui.InputInt("Legacy Width", ref legacyWidth);
@@ -126,7 +126,7 @@ public class SelectedSimpleImageWindow : BaseWindow
         
         ImGui.SameLine();
         
-        var legacyHeight = image.Height;
+        var legacyHeight = image.ExtraData.LegacyHeight;
         var origLegacyHeight = legacyHeight;
         ImGui.SetNextItemWidth(100.0f);
         ImGui.InputInt("Legacy Height", ref legacyHeight);
@@ -177,8 +177,8 @@ public class SelectedSimpleImageWindow : BaseWindow
 
     private void DrawVgaImageTab(PackageModel model, SimpleImageModel image)
     {
-        var width = image.Width;
-        var height = image.Height;
+        var width = image.ExtraData.LegacyWidth;
+        var height = image.ExtraData.LegacyHeight;
         var rawPixels = image.VgaImageData;
 
         var pos = ImGui.GetCursorPos();
@@ -202,8 +202,8 @@ public class SelectedSimpleImageWindow : BaseWindow
             return;
         }
         
-        var width = image.Width;
-        var height = image.Height;
+        var width = image.ExtraData.LegacyWidth;
+        var height = image.ExtraData.LegacyHeight;
         var rawPixels = image.CgaImageData;
 
         var pos = ImGui.GetCursorPos();

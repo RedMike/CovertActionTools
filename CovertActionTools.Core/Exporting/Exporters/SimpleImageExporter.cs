@@ -80,19 +80,12 @@ namespace CovertActionTools.Core.Exporting.Exporters
         {
             var dict = new Dictionary<(string filename, bool publish), byte[]>
             {
-                [($"{image.Key}_image.json", false)] = GetMetadata(image),
+                [($"{image.Key}_image.json", false)] = _imageExporter.GetMetadata(image),
                 [($"{image.Key}_modern.png", false)] = _imageExporter.GetModernImageData(image),
                 [($"{image.Key}_VGA.png", false)] = _imageExporter.GetVgaImageData(image),
                 [($"{image.Key}.PIC", true)] = _imageExporter.GetLegacyFileData(image) 
             };
             return dict;
-        }
-
-        private byte[] GetMetadata(SimpleImageModel image)
-        {
-            var serialisedMetadata = JsonSerializer.Serialize(image.ExtraData, JsonOptions);
-            var bytes = Encoding.UTF8.GetBytes(serialisedMetadata);
-            return bytes;
         }
     }
 }

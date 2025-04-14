@@ -90,8 +90,6 @@ namespace CovertActionTools.Core.Importing.Parsers
             return new SimpleImageModel()
             {
                 Key = key,
-                Width = width,
-                Height = height,
                 RawVgaImageData = imageUncompressedData,
                 VgaImageData = ImageConversion.VgaToTexture(width, height, imageUncompressedData),
                 CgaImageData = cgaImageData,
@@ -103,6 +101,8 @@ namespace CovertActionTools.Core.Importing.Parsers
                     Name = key,
                     Width = width,
                     Height = height,
+                    LegacyWidth = width,
+                    LegacyHeight = height,
                     Comment = "Legacy import",
                     LegacyColorMappings = legacyColorMappings,
                     CompressionDictionaryWidth = lzwMaxWordWidth
