@@ -229,7 +229,7 @@ public class PackageExplorerWindow : BaseWindow
             ImGui.TreePop();
         }
         
-        if (ImGui.TreeNodeEx("Worlds", ImGuiTreeNodeFlags.DefaultOpen | ImGuiTreeNodeFlags.SpanAvailWidth))
+        if (ImGui.TreeNodeEx("Worlds", ImGuiTreeNodeFlags.SpanAvailWidth))
         {
             foreach (var worldId in model.Worlds.Keys)
             {
@@ -247,6 +247,52 @@ public class PackageExplorerWindow : BaseWindow
                     if (ImGui.IsItemClicked())
                     {
                         _mainEditorState.SelectedItem = (MainEditorState.ItemType.World, worldId.ToString());
+                    }
+
+                    ImGui.TreePop();
+                }
+            }
+            
+            ImGui.TreePop();
+        }
+        
+        if (ImGui.TreeNodeEx("Catalog Images", ImGuiTreeNodeFlags.DefaultOpen | ImGuiTreeNodeFlags.SpanAvailWidth))
+        {
+            foreach (var catalogKey in model.Catalogs.Keys.OrderBy(x => x))
+            {
+                var catalog = model.Catalogs[catalogKey];
+                var catalogName = $"{catalogKey}";
+                if (!string.IsNullOrEmpty(catalog.ExtraData.Name) && catalogKey != catalog.ExtraData.Name)
+                {
+                    catalogName += $" ({catalog.ExtraData.Name})";
+                }
+                if (ImGui.TreeNodeEx(catalogName, ImGuiTreeNodeFlags.SpanAvailWidth))
+                {
+                    foreach (var entryKey in catalog.ExtraData.Keys)
+                    {
+                        var entry = catalog.Entries[entryKey];
+                        var nodeFlags = ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.SpanAvailWidth;
+                        if (_mainEditorState.SelectedItem != null &&
+                            _mainEditorState.SelectedItem.Value.type == MainEditorState.ItemType.CatalogImage &&
+                            _mainEditorState.SelectedItem.Value.id == $"{catalogKey}:{entryKey}")
+                        {
+                            nodeFlags |= ImGuiTreeNodeFlags.Selected;
+                        }
+
+                        var name = $"{entryKey}";
+                        if (!string.IsNullOrEmpty(entry.ExtraData.Name) && entry.ExtraData.Name != entryKey)
+                        {
+                            name += $" ({entry.ExtraData.Name})";
+                        }
+                        if (ImGui.TreeNodeEx(name, nodeFlags))
+                        {
+                            if (ImGui.IsItemClicked())
+                            {
+                                _mainEditorState.SelectedItem = (MainEditorState.ItemType.CatalogImage, $"{catalogKey}:{entryKey}");
+                            }
+
+                            ImGui.TreePop();
+                        }
                     }
 
                     ImGui.TreePop();

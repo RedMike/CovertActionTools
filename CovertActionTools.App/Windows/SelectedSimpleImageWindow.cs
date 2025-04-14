@@ -149,14 +149,12 @@ public class SelectedSimpleImageWindow : BaseWindow
 
         ImGui.BeginTabBar("ImageTabs", ImGuiTabBarFlags.NoCloseWithMiddleMouseButton);
 
-#if MODERN_ENABLED
         if (ImGui.BeginTabItem("Modern"))
         {
             DrawModernImageTab(model, image);
             
             ImGui.EndTabItem();
         }
-#endif
         
         if (ImGui.BeginTabItem("Legacy VGA"))
         {
@@ -235,7 +233,6 @@ public class SelectedSimpleImageWindow : BaseWindow
         }
     }
     
-#if MODERN_ENABLED
     private void DrawModernImageTab(PackageModel model, SimpleImageModel image)
     {
         ImGui.Text("Note: this image will only be used by a modern version, not the original game engine.");
@@ -283,5 +280,4 @@ public class SelectedSimpleImageWindow : BaseWindow
         
         ImGui.Image(texture, new Vector2(width, height));
     }
-#endif
 }

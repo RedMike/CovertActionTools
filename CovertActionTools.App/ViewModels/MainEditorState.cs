@@ -16,6 +16,7 @@ public class MainEditorState : IViewModel
         Clue = 3,
         Plot = 4,
         World = 5,
+        CatalogImage = 6,
     }
     public string? DefaultPublishPath { get; set; }
     public string? DefaultRunPath { get; set; }
