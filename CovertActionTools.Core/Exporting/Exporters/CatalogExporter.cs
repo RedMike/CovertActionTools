@@ -114,8 +114,10 @@ namespace CovertActionTools.Core.Exporting.Exporters
                 if (filename.Length > 8)
                 {
                     _logger.LogWarning($"Filename larger than 12 chars, truncating: {filename}.PIC");
-                    filename = filename.Substring(0, 8) + ".PIC";
+                    filename = filename.Substring(0, 8);
                 }
+
+                filename += ".PIC";
                 foreach (var c in filename.PadRight(12, (char)0))
                 {
                     writer.Write(c);
