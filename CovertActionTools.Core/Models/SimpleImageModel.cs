@@ -51,16 +51,16 @@ namespace CovertActionTools.Core.Models
             public int Height { get; set; }
             /// <summary>
             /// Width/height of VGA images
+            /// Usually 320
             /// </summary>
             public int LegacyWidth { get; set; }
             /// <summary>
             /// Width/height of VGA images
-            /// Usually 320
+            /// Usually 200
             /// </summary>
             public int LegacyHeight { get; set; }
             /// <summary>
             /// Arbitrary comment, for development
-            /// Usually 200
             /// </summary>
             public string Comment { get; set; } = string.Empty;
             

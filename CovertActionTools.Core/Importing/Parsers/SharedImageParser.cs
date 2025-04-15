@@ -28,6 +28,11 @@ namespace CovertActionTools.Core.Importing.Parsers
             var formatFlag = reader.ReadUInt16();
             var width = reader.ReadUInt16();
             var height = reader.ReadUInt16();
+            if (width % 2 == 1)
+            {
+                //TODO: does this have a special meaning?
+                width += 1;
+            }
             
             //legacy CGA colour mapping
             Dictionary<byte, byte>? legacyColorMappings = null;

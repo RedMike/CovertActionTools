@@ -20,6 +20,7 @@ namespace CovertActionTools.Core.Importing
         private readonly LegacyPlotParser _plotImporter;
         private readonly LegacyWorldParser _worldImporter;
         private readonly LegacyCatalogParser _catalogImporter;
+        private readonly LegacyAnimationParser _animationImporter;
         private readonly IReadOnlyList<IImporter> _importers;
         
         private List<string> _errors = new List<string>();
@@ -28,7 +29,7 @@ namespace CovertActionTools.Core.Importing
         private ImportStatus.ImportStage _currentStage = ImportStatus.ImportStage.Unknown;
         private IImporter? _currentImporter = null;
         
-        public LegacyFolderImporter(ILogger<LegacyFolderImporter> logger, LegacySimpleImageParser simpleImageImporter, LegacyCrimeParser crimeImporter, LegacyTextParser textImporter, LegacyClueParser clueImporter, LegacyPlotParser plotImporter, LegacyWorldParser worldImporter, LegacyCatalogParser catalogImporter)
+        public LegacyFolderImporter(ILogger<LegacyFolderImporter> logger, LegacySimpleImageParser simpleImageImporter, LegacyCrimeParser crimeImporter, LegacyTextParser textImporter, LegacyClueParser clueImporter, LegacyPlotParser plotImporter, LegacyWorldParser worldImporter, LegacyCatalogParser catalogImporter, LegacyAnimationParser animationImporter)
         {
             _logger = logger;
             _simpleImageImporter = simpleImageImporter;
@@ -38,7 +39,8 @@ namespace CovertActionTools.Core.Importing
             _plotImporter = plotImporter;
             _worldImporter = worldImporter;
             _catalogImporter = catalogImporter;
-            _importers = new IImporter[] { _simpleImageImporter, _crimeImporter, _textImporter, _clueImporter, _plotImporter, _worldImporter, _catalogImporter };
+            _animationImporter = animationImporter;
+            _importers = new IImporter[] { _simpleImageImporter, _crimeImporter, _textImporter, _clueImporter, _plotImporter, _worldImporter, _catalogImporter, _animationImporter };
         }
 
         public bool CheckIfValidForImport(string path)
@@ -283,6 +285,25 @@ namespace CovertActionTools.Core.Importing
                     }
                 } while (!done);
                 model.Catalogs = _catalogImporter.GetResult();
+                
+                //animations
+                _currentStage = ImportStatus.ImportStage.ProcessingAnimations;
+                _currentImporter = _animationImporter;
+                done = false;
+                do
+                {
+                    await Task.Yield();
+                    try
+                    {
+                        done |= _currentImporter.RunStep();
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError($"Exception while running step: {e}");
+                        _errors.Add(e.ToString());
+                    }
+                } while (!done);
+                model.Animations = _animationImporter.GetResult();
 
                 _currentStage = ImportStatus.ImportStage.ImportDone;
                 await Task.Yield();
