@@ -101,11 +101,13 @@ namespace CovertActionTools.Core.Importing.Parsers
             var u3 = reader.ReadUInt16();
             var u4 = reader.ReadUInt16();
             var u5 = reader.ReadByte();
-            var aWidth = reader.ReadUInt16();
-            var aHeight = reader.ReadUInt16();
+            var aWidth = reader.ReadUInt16(); //width - 1
+            var aHeight = reader.ReadUInt16(); //height - 1
             var f1 = reader.ReadUInt16();
             var f2 = reader.ReadByte();
 
+            //type 1 subtype 1 has images directly after this
+            //type 1 subtype 0 or 2, and type 4/5 has a data section before the images (always 502 bytes)
             if (f1 != 1 || f2 != 1)
             {
                 //first read until we have the first format byte to find the first image
@@ -121,6 +123,8 @@ namespace CovertActionTools.Core.Importing.Parsers
                 memStream.Seek(-1, SeekOrigin.Current);
             }
 
+            //this just goes through and identifies the images based on the 07 00 header
+            //this should instead figure out based on offsets from elsewhere in the file, but no offsets are obvious
             var imageBytes = new Dictionary<int, byte[]>();
             var tempBytes = new List<byte>(8000);
             var img = 0;
@@ -158,6 +162,11 @@ namespace CovertActionTools.Core.Importing.Parsers
                     _logger.LogWarning($"Failed to parse image {key} {pair.Key}: {e}");
                 }
             }
+            
+            //after the images there's always a section of apparent animation data containing X/Y location and some sort
+            //of ID that identifies the image; it looks like different movement types have different numbers of parameters
+            //so the section looks like different 'width' instructions for what should happen
+            //the ID isn't an offset and it's unclear how it relates to the actual image data
             
             var model = new AnimationModel()
             {
