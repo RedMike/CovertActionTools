@@ -19,7 +19,7 @@ namespace CovertActionTools.Core.Importing.Parsers
             _loggerFactory = loggerFactory;
         }
 
-        public SimpleImageModel Parse(string key, byte[] rawData)
+        public SimpleImageModel Parse(string key, byte[] rawData, out int byteOffset)
         {
             using var memStream = new MemoryStream(rawData);
             using var reader = new BinaryReader(memStream);
@@ -28,6 +28,7 @@ namespace CovertActionTools.Core.Importing.Parsers
             var formatFlag = reader.ReadUInt16();
             var width = reader.ReadUInt16();
             var height = reader.ReadUInt16();
+            var origWidth = width;
             if (width % 2 == 1)
             {
                 //TODO: does this have a special meaning?
@@ -58,12 +59,12 @@ namespace CovertActionTools.Core.Importing.Parsers
             var lzwMaxWordWidth = reader.ReadByte();
             
             //data compressed in LZW+RLE
+            var headerLength = (int)memStream.Position;
             var imageCompressedData = reader.ReadBytes(rawData.Length);
-            byte[] imageUncompressedData;
-            {
-                var lzw = new LzwDecompression(_loggerFactory.CreateLogger(typeof(LzwDecompression)), lzwMaxWordWidth, imageCompressedData, key);
-                imageUncompressedData = lzw.Decompress(width * height);
-            }
+            
+            var lzw = new LzwDecompression(_loggerFactory.CreateLogger(typeof(LzwDecompression)), lzwMaxWordWidth, imageCompressedData, key);
+            var imageUncompressedData = lzw.Decompress(width * height, out var imageByteOffset);
+            byteOffset = headerLength + imageByteOffset;
             
             //the data is currently in VGA format, so convert to modern format
             var imageModernData = new byte[width * height * 4];

@@ -203,7 +203,7 @@ namespace CovertActionTools.Core.Compression
             return ReadNext(); //recurse, we have something in the stack already
         }
 
-        public byte[] Decompress(int length)
+        public byte[] Decompress(int length, out int byteOffset)
         {
             using var memStream = new MemoryStream();
             using var writer = new BinaryWriter(memStream);
@@ -293,7 +293,9 @@ namespace CovertActionTools.Core.Compression
             }
             
             var decompressedBytes = memStream.ToArray();
-            _logger.LogInformation($"Decompressed from {_data.Length} bytes to {decompressedBytes.Length}");
+            byteOffset = _byteOffset + (_bitOffset > 1 ? 1 : 0);
+            //_logger.LogError($"{_key} offset {_byteOffset} bits {_bitOffset}");
+            _logger.LogInformation($"Decompressed from {_data.Length} ({byteOffset}) bytes to {decompressedBytes.Length}");
             return decompressedBytes;
         }
     }
