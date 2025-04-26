@@ -85,7 +85,10 @@ namespace CovertActionTools.Core.Exporting.Exporters
             };
             foreach (var key in animation.Images.Keys)
             {
-                dict.Add(($"{animation.Key}_animation_{key}.png", false), _imageExporter.GetModernImageData(animation.Images[key]));    
+                var image = animation.Images[key];
+                dict.Add(($"{animation.Key}_{key}_animation_img.json", false), _imageExporter.GetMetadata(image));
+                //dict.Add(($"{animation.Key}_{key}_modern.png", false), _imageExporter.GetModernImageData(image));
+                dict.Add(($"{animation.Key}_{key}_VGA.png", false), _imageExporter.GetVgaImageData(image));    
             }
             return dict;
         }

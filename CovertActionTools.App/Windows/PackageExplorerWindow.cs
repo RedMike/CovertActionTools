@@ -256,7 +256,7 @@ public class PackageExplorerWindow : BaseWindow
             ImGui.TreePop();
         }
         
-        if (ImGui.TreeNodeEx("Catalog Images", ImGuiTreeNodeFlags.DefaultOpen | ImGuiTreeNodeFlags.SpanAvailWidth))
+        if (ImGui.TreeNodeEx("Catalog Images", ImGuiTreeNodeFlags.SpanAvailWidth))
         {
             foreach (var catalogKey in model.Catalogs.Keys.OrderBy(x => x))
             {
@@ -293,6 +293,39 @@ public class PackageExplorerWindow : BaseWindow
 
                             ImGui.TreePop();
                         }
+                    }
+
+                    ImGui.TreePop();
+                }
+            }
+            
+            ImGui.TreePop();
+        }
+        
+        if (ImGui.TreeNodeEx("Animations", ImGuiTreeNodeFlags.DefaultOpen | ImGuiTreeNodeFlags.SpanAvailWidth))
+        {
+            foreach (var animationKey in model.Animations.Keys.OrderBy(x => x))
+            {
+                var animation = model.Animations[animationKey];
+                var animationName = $"{animationKey}";
+                if (!string.IsNullOrEmpty(animation.ExtraData.Name) && animationKey != animation.ExtraData.Name)
+                {
+                    animationName += $" ({animation.ExtraData.Name})";
+                }
+                
+                var nodeFlags = ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.SpanAvailWidth;
+                if (_mainEditorState.SelectedItem != null &&
+                    _mainEditorState.SelectedItem.Value.type == MainEditorState.ItemType.Animation &&
+                    _mainEditorState.SelectedItem.Value.id == animationKey)
+                {
+                    nodeFlags |= ImGuiTreeNodeFlags.Selected;
+                }
+
+                if (ImGui.TreeNodeEx(animationName, nodeFlags))
+                {
+                    if (ImGui.IsItemClicked())
+                    {
+                        _mainEditorState.SelectedItem = (MainEditorState.ItemType.Animation, animationKey);
                     }
 
                     ImGui.TreePop();
