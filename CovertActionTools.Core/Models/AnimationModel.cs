@@ -42,8 +42,8 @@ namespace CovertActionTools.Core.Models
         /// Not fully understood, but at least one type seems to set up an animation loop with a pointer to
         /// an InstructionRecord.
         /// </summary>
-        [JsonDerivedType(typeof(SetupAnimationRecord))]
-        [JsonDerivedType(typeof(UnknownRecord))]
+        [JsonDerivedType(typeof(SetupAnimationRecord), "setup")]
+        [JsonDerivedType(typeof(UnknownRecord), "unknown")]
         public abstract class SetupRecord
         {
             public enum SetupType
@@ -203,11 +203,11 @@ namespace CovertActionTools.Core.Models
         /// and the number of bytes that follow depends on the type. A type of 0B determines the end of the instructions.
         /// Not fully understood, but at least two types are known: a wait type and a change to positions.
         /// </summary>
-        [JsonDerivedType(typeof(DelayInstruction))]
-        [JsonDerivedType(typeof(PositionChangeInstruction))]
-        [JsonDerivedType(typeof(UnknownInstruction))]
-        [JsonDerivedType(typeof(PointerInstruction))]
-        [JsonDerivedType(typeof(ImageChangeInstruction))]
+        [JsonDerivedType(typeof(DelayInstruction), "delay")]
+        [JsonDerivedType(typeof(PositionChangeInstruction), "position")]
+        [JsonDerivedType(typeof(UnknownInstruction), "unknown")]
+        [JsonDerivedType(typeof(PointerInstruction), "pointer")]
+        [JsonDerivedType(typeof(ImageChangeInstruction), "image")]
         public abstract class InstructionRecord
         {
             public enum InstructionType

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using CovertActionTools.Core.Conversion;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -12,6 +13,18 @@ namespace CovertActionTools.Core.Importing.Importers
 {
     internal class AnimationImporter : BaseImporter<Dictionary<string, AnimationModel>>
     {
+#if DEBUG
+        private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions()
+        {
+            WriteIndented = true,
+            Converters = { 
+                new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
+            }
+        };
+#else
+        private static readonly JsonSerializerOptions JsonOptions = JsonSerializerOptions.Default;
+#endif
+        
         private readonly ILogger<AnimationImporter> _logger;
         private readonly SharedImageImporter _imageImporter;
         
@@ -87,12 +100,12 @@ namespace CovertActionTools.Core.Importing.Importers
             }
 
             var rawData = File.ReadAllText(filePath);
-            var model = JsonSerializer.Deserialize<AnimationModel>(rawData);
-            if (model == null)
+            var model = new AnimationModel()
             {
-                throw new Exception("Invalid animation model");
-            }
-
+                Key = key
+            };
+            model.ExtraData = JsonSerializer.Deserialize<AnimationModel.Metadata>(rawData, JsonOptions) ?? throw new Exception("Invalid animation model");
+            
             var images = GetImages(path, key);
             foreach (var image in images)
             {
@@ -116,7 +129,7 @@ namespace CovertActionTools.Core.Importing.Importers
                 var textureBytes = skBitmap.Bytes.ToArray();
                 model.CgaImageData = textureBytes;
             }
-            model.ModernImageData = _imageImporter.ReadModernImageData(path, filename, model.ExtraData.Width, model.ExtraData.Height);
+            //model.ModernImageData = _imageImporter.ReadModernImageData(path, filename, model.ExtraData.Width, model.ExtraData.Height);
             return model;
         }
     }

@@ -4,7 +4,7 @@ using CovertActionTools.Core.Models;
 
 namespace CovertActionTools.Core
 {
-    internal class Constants
+    public class Constants
     {
         #region Colors
         /// <summary>

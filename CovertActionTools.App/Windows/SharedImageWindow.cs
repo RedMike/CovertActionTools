@@ -6,24 +6,27 @@ namespace CovertActionTools.App.Windows;
 
 public abstract class SharedImageWindow : BaseWindow
 {
-    private readonly RenderWindow _renderWindow;
+    protected readonly RenderWindow RenderWindow;
 
     protected SharedImageWindow(RenderWindow renderWindow)
     {
-        _renderWindow = renderWindow;
+        RenderWindow = renderWindow;
     }
 
     protected void DrawImageTabs(SimpleImageModel image)
     {
         ImGui.BeginTabBar("ImageTabs", ImGuiTabBarFlags.NoCloseWithMiddleMouseButton);
 
-        if (ImGui.BeginTabItem("Modern"))
+        if (image.ModernImageData != null && image.ModernImageData.Length > 0)
         {
-            DrawModernImageTab(image);
-            
-            ImGui.EndTabItem();
+            if (ImGui.BeginTabItem("Modern"))
+            {
+                DrawModernImageTab(image);
+
+                ImGui.EndTabItem();
+            }
         }
-        
+
         if (ImGui.BeginTabItem("Legacy VGA"))
         {
             DrawVgaImageTab(image);
@@ -48,14 +51,14 @@ public abstract class SharedImageWindow : BaseWindow
         var rawPixels = image.VgaImageData;
 
         var pos = ImGui.GetCursorPos();
-        var bgTexture = _renderWindow.RenderCheckerboardRectangle(25, width, height,
+        var bgTexture = RenderWindow.RenderCheckerboardRectangle(25, width, height,
             (40, 30, 40, 255), (50, 40, 50, 255));
         ImGui.Image(bgTexture, new Vector2(width, height));
 
         ImGui.SetCursorPos(pos);
         var id = $"image_vga_{image.Key}";
         //TODO: cache?
-        var texture = _renderWindow.RenderImage(RenderWindow.RenderType.Image, id, width, height, rawPixels);
+        var texture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, id, width, height, rawPixels);
         
         ImGui.Image(texture, new Vector2(width, height));
     }
@@ -73,14 +76,14 @@ public abstract class SharedImageWindow : BaseWindow
         var rawPixels = image.CgaImageData;
 
         var pos = ImGui.GetCursorPos();
-        var bgTexture = _renderWindow.RenderCheckerboardRectangle(25, width, height,
+        var bgTexture = RenderWindow.RenderCheckerboardRectangle(25, width, height,
             (40, 30, 40, 255), (50, 40, 50, 255));
         ImGui.Image(bgTexture, new Vector2(width, height));
 
         ImGui.SetCursorPos(pos);
         var id = $"image_cga_{image.Key}";
         //TODO: cache?
-        var texture = _renderWindow.RenderImage(RenderWindow.RenderType.Image, id, width, height, rawPixels);
+        var texture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, id, width, height, rawPixels);
         
         ImGui.Image(texture, new Vector2(width, height));
         
@@ -137,7 +140,7 @@ public abstract class SharedImageWindow : BaseWindow
         var height = image.ExtraData.Height;
         
         var pos = ImGui.GetCursorPos();
-        var bgTexture = _renderWindow.RenderCheckerboardRectangle(25, width, height,
+        var bgTexture = RenderWindow.RenderCheckerboardRectangle(25, width, height,
             (40, 30, 40, 255), (50, 40, 50, 255));
         ImGui.Image(bgTexture, new Vector2(width, height));
 
@@ -146,7 +149,7 @@ public abstract class SharedImageWindow : BaseWindow
         var id = $"image_{image.Key}";
         var rawPixels = image.ModernImageData;
         //TODO: cache?
-        var texture = _renderWindow.RenderImage(RenderWindow.RenderType.Image, id, width, height, rawPixels);
+        var texture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, id, width, height, rawPixels);
         
         ImGui.Image(texture, new Vector2(width, height));
     }
