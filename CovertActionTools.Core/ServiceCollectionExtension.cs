@@ -32,6 +32,7 @@ namespace CovertActionTools.Core
             services.AddSingleton<IImporter<Dictionary<string, PlotModel>>, PlotImporter>();
             services.AddSingleton<IImporter<Dictionary<int, WorldModel>>, WorldImporter>();
             services.AddSingleton<IImporter<Dictionary<string, CatalogModel>>, CatalogImporter>();
+            services.AddSingleton<IImporter<Dictionary<string, AnimationModel>>, AnimationImporter>();
             
             services.AddSingleton<SharedImageExporter>();
             services.AddSingleton<IExporter<Dictionary<string, SimpleImageModel>>, SimpleImageExporter>();

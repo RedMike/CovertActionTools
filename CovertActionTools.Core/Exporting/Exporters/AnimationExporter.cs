@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using CovertActionTools.Core.Importing;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -19,7 +20,10 @@ namespace CovertActionTools.Core.Exporting.Exporters
 #if DEBUG
         private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions()
         {
-            WriteIndented = true
+            WriteIndented = true,
+            Converters = { 
+                new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
+            }
         };
 #else
         private static readonly JsonSerializerOptions JsonOptions = JsonSerializerOptions.Default;

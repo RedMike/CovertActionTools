@@ -160,9 +160,74 @@ namespace CovertActionTools.Core.Importing.Parsers
                 throw new Exception($"Invalid start to data section for {key}: {memStream.Position:X} {rawData[memStream.Position]:X2}");
             }
             
-            //data section has a number of setup records, which include pointers to sets of instructions
-            //TODO:
+            //we read the data section into a buffer to use for pointers
+            var originalOffset = memStream.Position;
+            var dataSectionBytes = reader.ReadBytes(64000);
+            memStream.Seek(originalOffset, SeekOrigin.Begin);
             
+            //data section has a number of setup records, which include pointers to sets of instructions
+            //the records are separated by 05 00, the distance between them dictates what type they are
+            //setup records end when there is a 05 05 at which point the rest of the file is instructions
+            //instructions are referenced by the setup records
+            var done = false;
+            var records = new List<AnimationModel.SetupRecord>();
+            try
+            {
+                while (!done)
+                {
+                    var offset = memStream.Position + 2; //skip the 05 00
+                    while (
+                        rawData[offset] != 0x05 && (
+                               (rawData[offset + 1] != 0x05 && rawData[offset + 2] != 0x00) || 
+                               rawData[offset + 1] != 0x00
+                        )
+                    )
+                    {
+                        offset++;
+                    }
+
+                    if (rawData[offset + 1] == 0x05)
+                    {
+                        //it's 05 05 00, so it's the end of the section, we still handle the last instruction though
+                        done = true;
+                    }
+                    
+                    //skip 05 00 separator
+                    reader.ReadBytes(2);
+                    
+                    //just because the first separator is X away doesn't mean the record is only X long
+                    //e.g. Animation type has 2 bytes to the first separator, but the record has 6 groups of them
+                    var length = offset - memStream.Position;
+                    if (length < 1)
+                    {
+                        continue;
+                    }
+                    var recordType = (AnimationModel.SetupRecord.SetupType)length;
+                    AnimationModel.SetupRecord record;
+                    if (recordType == AnimationModel.SetupRecord.SetupType.Animation)
+                    {
+                        record = AnimationModel.SetupRecord.AsAnimation(reader, dataSectionBytes);
+                    }
+                    else
+                    {
+                        //for now assume that every other type has no extra bytes, any pattern should be obvious later
+                        var bytes = reader.ReadBytes((int)length);
+                        record = new AnimationModel.UnknownRecord()
+                        {
+                            Type = recordType,
+                            Data = bytes
+                        };
+                    }
+
+                    //TODO: skip some types like empty 00 records?
+                    records.Add(record);
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Failed to parse data section: {e}");
+            }
+
             var model = new AnimationModel()
             {
                 Key = key,
@@ -176,7 +241,8 @@ namespace CovertActionTools.Core.Importing.Parsers
                     BoundingWidth = aWidth,
                     BoundingHeight = aHeight,
                     ColorMapping = colorMapping,
-                    HeaderData = headerData
+                    HeaderData = headerData,
+                    Records = records
                 }
             };
             return model;
