@@ -278,7 +278,7 @@ public class PackageExplorerWindow : BaseWindow
                         {
                             nodeFlags |= ImGuiTreeNodeFlags.Selected;
                         }
-
+        
                         var name = $"{entryKey}";
                         if (!string.IsNullOrEmpty(entry.ExtraData.Name) && entry.ExtraData.Name != entryKey)
                         {
@@ -290,11 +290,11 @@ public class PackageExplorerWindow : BaseWindow
                             {
                                 _mainEditorState.SelectedItem = (MainEditorState.ItemType.CatalogImage, $"{catalogKey}:{entryKey}");
                             }
-
+        
                             ImGui.TreePop();
                         }
                     }
-
+        
                     ImGui.TreePop();
                 }
             }

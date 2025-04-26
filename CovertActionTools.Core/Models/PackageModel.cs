@@ -19,7 +19,9 @@ namespace CovertActionTools.Core.Models
 
         public bool IsModified(PackageModel other)
         {
-            return GetHash() != other.GetHash();
+            return true;
+            //TODO: this is too slow to run regularly
+            //return GetHash() != other.GetHash();
         }
         
         private string GetHash()

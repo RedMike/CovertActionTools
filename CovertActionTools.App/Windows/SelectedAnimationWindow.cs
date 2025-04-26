@@ -70,6 +70,32 @@ public class SelectedAnimationWindow : SharedImageWindow
         //TODO: keep a pending model and have a save button?
         var windowSize = ImGui.GetContentRegionAvail();
 
+        ImGui.BeginTabBar("AnimationTabs", ImGuiTabBarFlags.NoCloseWithMiddleMouseButton);
+
+        if (ImGui.BeginTabItem("Preview"))
+        {
+            DrawAnimationPreviewWindow(model, animation);    
+            
+            ImGui.EndTabItem();
+        }
+
+        if (ImGui.BeginTabItem("Images"))
+        {
+            DrawAnimationImageWindow(model, animation);
+            
+            ImGui.EndTabItem();
+        }
+
+        ImGui.EndTabBar();
+    }
+
+    private void DrawAnimationPreviewWindow(PackageModel model, AnimationModel animation)
+    {
+        
+    }
+
+    private void DrawAnimationImageWindow(PackageModel model, AnimationModel animation)
+    {
         var newSelectedImage = ImGuiExtensions.Input("Image", _selectedImage);
         if (newSelectedImage != null)
         {
