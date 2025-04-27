@@ -101,8 +101,13 @@ namespace CovertActionTools.Core.Models
 
                     dataStream.Seek(pointer, SeekOrigin.Begin);
                     var type = InstructionRecord.InstructionType.Unknown;
+                    var i = 0;
+                    var instructionOffsets = new Dictionary<long, int>();
                     do
                     {
+                        i++;
+                        var startOffset = dataStream.Position;
+                        instructionOffsets[startOffset] = i;
                         type = (InstructionRecord.InstructionType)dataReader.ReadByte();
                         if (type == InstructionRecord.InstructionType.End)
                         {
@@ -122,14 +127,47 @@ namespace CovertActionTools.Core.Models
                             case InstructionRecord.InstructionType.Delay:
                                 instruction = InstructionRecord.AsDelay(dataReader);
                                 break;
-                            case InstructionRecord.InstructionType.Pointer:
-                                instruction = InstructionRecord.AsPointer(dataReader);
+                            case InstructionRecord.InstructionType.Jump:
+                                var offset = dataStream.Position;
+                                var p = dataReader.ReadUInt16();
+                                var n = false;
+                                var delta = 0;
+                                
+                                //it's a jump to another set of instructions, usually a loop (so jumping backwards)
+                                if (p > offset)
+                                {
+                                    //TODO: handle this case
+                                    throw new Exception("Pointer to instruction from later");
+                                }
+                                else
+                                {
+                                    if (p == 0)
+                                    {
+                                        //it's a null pointer
+                                        n = true;
+                                    }
+                                    else
+                                    {
+                                        if (!instructionOffsets.TryGetValue(p, out var targetInstructionIndex))
+                                        {
+                                            //TODO: handle this case same as forward instruction
+                                            throw new Exception("Pointer to instruction not processed");
+                                        }
+
+                                        delta = targetInstructionIndex - i; //negative index
+                                    }
+                                }
+                                instruction = new JumpInstruction()
+                                {
+                                    Type = InstructionRecord.InstructionType.Jump,
+                                    Null = n,
+                                    IndexDelta = delta 
+                                };
                                 break;
                             case InstructionRecord.InstructionType.Unknown8:
                                 instruction = new UnknownInstruction()
                                 {
-                                    Type = type,
-                                    Data = dataReader.ReadBytes(6)
+                                    Type = type
                                 };
                                 break;
                             case InstructionRecord.InstructionType.Unknown9:
@@ -206,7 +244,7 @@ namespace CovertActionTools.Core.Models
         [JsonDerivedType(typeof(DelayInstruction), "delay")]
         [JsonDerivedType(typeof(PositionChangeInstruction), "position")]
         [JsonDerivedType(typeof(UnknownInstruction), "unknown")]
-        [JsonDerivedType(typeof(PointerInstruction), "pointer")]
+        [JsonDerivedType(typeof(JumpInstruction), "pointer")]
         [JsonDerivedType(typeof(ImageChangeInstruction), "image")]
         public abstract class InstructionRecord
         {
@@ -216,11 +254,9 @@ namespace CovertActionTools.Core.Models
                 ImageChange = 0,
                 PositionChange = 2,
                 Delay = 5,
-                Pointer = 6, //maybe a 'continue from here'?
-                Unknown8 = 8, //6 bytes?
+                Jump = 6, //loop until Delay is done?
+                Unknown8 = 8, //0 bytes
                 Unknown9 = 9, //2 bytes?
-                Unknown20 = 20, //0 bytes?
-                Unknown21 = 21, //0 bytes?
                 
                 End = 0x0A,
             }
@@ -254,15 +290,6 @@ namespace CovertActionTools.Core.Models
                     PositionY = reader.ReadInt16()
                 };
             }
-
-            public static PointerInstruction AsPointer(BinaryReader reader)
-            {
-                return new PointerInstruction()
-                {
-                    Type = InstructionType.Pointer,
-                    Pointer = reader.ReadUInt16()
-                };
-            }
         }
 
         public class DelayInstruction : InstructionRecord
@@ -287,10 +314,10 @@ namespace CovertActionTools.Core.Models
             public int PositionY { get; set; }
         }
 
-        public class PointerInstruction : InstructionRecord
+        public class JumpInstruction : InstructionRecord
         {
-            //TODO: this shouldn't be a pointer because that context gets lost, but recursion?
-            public int Pointer { get; set; }
+            public bool Null { get; set; }
+            public int IndexDelta { get; set; }
         }
 
         public class UnknownInstruction : InstructionRecord

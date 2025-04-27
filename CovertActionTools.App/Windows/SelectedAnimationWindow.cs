@@ -279,10 +279,10 @@ public class SelectedAnimationWindow : SharedImageWindow
                         {
                             ImGui.TableNextColumn();
                             ImGui.Text($"({positionChange.PositionX}, {positionChange.PositionY})");
-                        } else if (instruction is AnimationModel.PointerInstruction pointer)
+                        } else if (instruction is AnimationModel.JumpInstruction jump)
                         {
                             ImGui.TableNextColumn();
-                            ImGui.Text($"{pointer.Pointer}");
+                            ImGui.Text($"Null: {jump.Null} Index: {jump.IndexDelta}");
                         }
                         else if (instruction is AnimationModel.UnknownInstruction unknown)
                         {
