@@ -190,14 +190,7 @@ public class SelectedAnimationWindow : SharedImageWindow
 
                 if (instruction is AnimationModel.ImageChangeInstruction imageChangeInstruction)
                 {
-                    if (imageChangeInstruction.Id >= 0)
-                    {
-                        imageId = imageChangeInstruction.Id;
-                    }
-                    else
-                    {
-                        imageId += imageChangeInstruction.Id;
-                    }
+                    imageId = imageChangeInstruction.Id - 1;
                 }
 
                 if (instruction is AnimationModel.PositionChangeInstruction positionChangeInstruction)
@@ -205,6 +198,18 @@ public class SelectedAnimationWindow : SharedImageWindow
                     dx = positionChangeInstruction.PositionX;
                     dy = positionChangeInstruction.PositionY;
                 }
+            }
+            
+            if (delay != 0)
+            {
+                var framesToWait = delay;
+                if (f + framesToWait > _selectedFrameId)
+                {
+                    framesToWait = _selectedFrameId - f + 1;
+                }
+                x += dx * framesToWait;
+                y += dy * framesToWait;
+                //TODO: image change?
             }
 
             //TODO: frame number/delay
@@ -228,7 +233,33 @@ public class SelectedAnimationWindow : SharedImageWindow
     
     private void DrawAnimationInstructionsWindow(PackageModel model, AnimationModel animation)
     {
-        //TODO: better display
+        var id = 0;
+        foreach (var record in animation.ExtraData.Records)
+        {
+            var name = $"{id++} - ";
+            if (record is AnimationModel.SetupAnimationRecord setupAnimation)
+            {
+                name += $"Setup Animation {setupAnimation.Index} at ({setupAnimation.PositionX}, {setupAnimation.PositionY})";
+            }
+            else if (record is AnimationModel.UnknownRecord unknown)
+            {
+                name += $"Unknown {unknown.Type}: {string.Join(" ", unknown.Data.Select(x => $"{x:X2}"))}";
+            }
+            else
+            {
+                name += $"Unknown record: {record.Type}";
+            }
+
+            if (ImGui.CollapsingHeader(name))
+            {
+                if (!(record is AnimationModel.SetupAnimationRecord))
+                {
+                    continue;
+                }
+                
+                
+            }
+        }
         
         var drawInstructions = animation.ExtraData.Records
             .Where(x => x.Type == AnimationModel.SetupRecord.SetupType.Animation)
