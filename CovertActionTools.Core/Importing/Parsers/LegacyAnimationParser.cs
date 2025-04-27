@@ -219,6 +219,14 @@ namespace CovertActionTools.Core.Importing.Parsers
                         };
                     }
 
+                    if (record is AnimationModel.UnknownRecord unknown && recordType ==
+                                                                       AnimationModel.SetupRecord.SetupType.Unknown1
+                                                                       && unknown.Data.Length == 1 &&
+                                                                       unknown.Data[0] == 0x00)
+                    {
+                        //it's just padding
+                        continue;
+                    }
                     //TODO: skip some types like empty 00 records?
                     records.Add(record);
                 }
