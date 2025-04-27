@@ -137,7 +137,7 @@ namespace CovertActionTools.Core.Models
                                 if (p > offset)
                                 {
                                     //TODO: handle this case
-                                    throw new Exception("Pointer to instruction from later");
+                                    delta = -999;
                                 }
                                 else
                                 {
@@ -151,7 +151,7 @@ namespace CovertActionTools.Core.Models
                                         if (!instructionOffsets.TryGetValue(p, out var targetInstructionIndex))
                                         {
                                             //TODO: handle this case same as forward instruction
-                                            throw new Exception("Pointer to instruction not processed");
+                                            targetInstructionIndex = -999;
                                         }
 
                                         delta = targetInstructionIndex - i; //negative index

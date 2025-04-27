@@ -175,21 +175,19 @@ namespace CovertActionTools.Core.Importing.Parsers
             {
                 while (!done)
                 {
+                    if (rawData[memStream.Position] == 0x05 && rawData[memStream.Position + 1] == 0x05 &&
+                        rawData[memStream.Position + 2] == 0x00)
+                    {
+                        //it's 05 05 00, so it's the end of the section, so we skip the 'instruction'
+                        done = true;
+                        continue;
+                    }
                     var offset = memStream.Position + 2; //skip the 05 00
                     while (
-                        rawData[offset] != 0x05 && (
-                               (rawData[offset + 1] != 0x05 && rawData[offset + 2] != 0x00) || 
-                               rawData[offset + 1] != 0x00
-                        )
+                        rawData[offset] != 0x05 || rawData[offset + 1] != 0x00
                     )
                     {
                         offset++;
-                    }
-
-                    if (rawData[offset + 1] == 0x05)
-                    {
-                        //it's 05 05 00, so it's the end of the section, we still handle the last instruction though
-                        done = true;
                     }
                     
                     //skip 05 00 separator
@@ -220,9 +218,11 @@ namespace CovertActionTools.Core.Importing.Parsers
                     }
 
                     if (record is AnimationModel.UnknownRecord unknown && recordType ==
-                                                                       AnimationModel.SetupRecord.SetupType.Unknown1
-                                                                       && unknown.Data.Length == 1 &&
-                                                                       unknown.Data[0] == 0x00)
+                                                                       AnimationModel.SetupRecord.SetupType.Unknown3
+                                                                       && unknown.Data.Length == 3 &&
+                                                                       unknown.Data[0] == 0x00 &&
+                                                                       unknown.Data[1] == 0x00 && 
+                                                                       unknown.Data[2] == 0x00)
                     {
                         //it's just padding
                         continue;
