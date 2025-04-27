@@ -110,8 +110,8 @@ public class SelectedAnimationWindow : SharedImageWindow
         
         var width = animation.ExtraData.BoundingWidth + 1;
         var height = animation.ExtraData.BoundingHeight + 1;
-        var offsetX = 100;
-        var offsetY = 100;
+        var offsetX = 150;
+        var offsetY = 150;
         var fullWidth = width + 2 * offsetX;
         var fullHeight = height + 2 * offsetY;
         
@@ -163,28 +163,20 @@ public class SelectedAnimationWindow : SharedImageWindow
             var imageId = -1;
             var dx = 0;
             var dy = 0;
-            var x = 0;
-            var y = 0;
-            foreach (var instruction in drawInstruction.Instructions)
+            var iterations = 0;
+            for (var index = 0; index < drawInstruction.Instructions.Count; index++)
             {
+                iterations++;
+                if (iterations > 2000)
+                {
+                    //safety check to prevent an infinite loop
+                    break;
+                }
+                
+                var instruction = drawInstruction.Instructions[index];
                 if (instruction is AnimationModel.DelayInstruction delayInstruction)
                 {
-                    if (delay != 0)
-                    {
-                        var framesToWait = delay;
-                        if (f + framesToWait > _selectedFrameId)
-                        {
-                            framesToWait = _selectedFrameId - f + 1;
-                        }
-                        f += framesToWait;
-                        x += dx * framesToWait;
-                        y += dy * framesToWait;
-                        //TODO: image change?
-                        if (f > _selectedFrameId)
-                        {
-                            break;
-                        }
-                    }
+                    //delay sets up the amount of frames after which the next jump instruction will be skipped
                     delay = delayInstruction.Frames;
                 }
 
@@ -198,20 +190,34 @@ public class SelectedAnimationWindow : SharedImageWindow
                     dx = positionChangeInstruction.PositionX;
                     dy = positionChangeInstruction.PositionY;
                 }
+
+                if (instruction is AnimationModel.JumpInstruction jumpInstruction)
+                {
+                    //the jump instruction will happen only until the number of frames from the last delay has passed
+                    if (delay > 0)
+                    {
+                        delay -= 1;
+                        ox += dx;
+                        oy += dy;
+                        
+                        if (jumpInstruction.Null || index + jumpInstruction.IndexDelta < 0)
+                        {
+                            index -= 1;
+                        }
+                        else
+                        {
+                            index += jumpInstruction.IndexDelta;
+                        }
+                    }
+                    
+                    f += 1;
+                    if (f > _selectedFrameId)
+                    {
+                        break;
+                    }
+                }
             }
             
-            if (delay != 0)
-            {
-                var framesToWait = delay;
-                if (f + framesToWait > _selectedFrameId)
-                {
-                    framesToWait = _selectedFrameId - f + 1;
-                }
-                x += dx * framesToWait;
-                y += dy * framesToWait;
-                //TODO: image change?
-            }
-
             //TODO: frame number/delay
             if (!animation.Images.ContainsKey(imageId))
             {
@@ -221,7 +227,7 @@ public class SelectedAnimationWindow : SharedImageWindow
 
             i++;
 
-            ImGui.SetCursorPos(pos + new Vector2(ox + x, oy + y));
+            ImGui.SetCursorPos(pos + new Vector2(ox, oy));
             var image = animation.Images[imageId];
             var id = $"image_{animation.Key}_frame_{_selectedFrameId}_{i}";
             //TODO: cache?
