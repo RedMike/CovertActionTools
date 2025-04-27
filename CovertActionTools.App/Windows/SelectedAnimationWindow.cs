@@ -252,30 +252,53 @@ public class SelectedAnimationWindow : SharedImageWindow
 
             if (ImGui.CollapsingHeader(name))
             {
-                if (!(record is AnimationModel.SetupAnimationRecord))
+                if (!(record is AnimationModel.SetupAnimationRecord setupAnimationRecord))
                 {
                     continue;
                 }
                 
-                
-            }
-        }
-        
-        var drawInstructions = animation.ExtraData.Records
-            .Where(x => x.Type == AnimationModel.SetupRecord.SetupType.Animation)
-            .Select(x => (AnimationModel.SetupAnimationRecord)x)
-            .OrderBy(x => x.Index)
-            .ToList();
+                ImGui.Text($"{setupAnimationRecord.Unknown1:X4} {setupAnimationRecord.Unknown2:X4}");
 
-        foreach (var instruction in drawInstructions)
-        {
-            var debugText = instruction.Instructions
-                .Where(x => x.Type == AnimationModel.InstructionRecord.InstructionType.Delay ||
-                            x.Type == AnimationModel.InstructionRecord.InstructionType.ImageChange ||
-                            x.Type == AnimationModel.InstructionRecord.InstructionType.PositionChange)
-                .Select(x => $"{x.Type}")
-                .ToList();
-            ImGui.Text($"Draw ({instruction.PositionX}, {instruction.PositionY}): {string.Join(", ", debugText)}");
+                if (ImGui.BeginTable("instructions", 2, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+                {
+                    foreach (var instruction in setupAnimationRecord.Instructions)
+                    {
+                        ImGui.TableNextRow();
+                        ImGui.TableNextColumn();
+                        ImGui.Text($"{instruction.Type}");
+
+                        if (instruction is AnimationModel.DelayInstruction delay)
+                        {
+                            ImGui.TableNextColumn();
+                            ImGui.Text($"{delay.Frames}");
+                        } else if (instruction is AnimationModel.ImageChangeInstruction imageChange)
+                        {
+                            ImGui.TableNextColumn();
+                            ImGui.Text($"{imageChange.Id}");
+                        } else if (instruction is AnimationModel.PositionChangeInstruction positionChange)
+                        {
+                            ImGui.TableNextColumn();
+                            ImGui.Text($"({positionChange.PositionX}, {positionChange.PositionY})");
+                        } else if (instruction is AnimationModel.PointerInstruction pointer)
+                        {
+                            ImGui.TableNextColumn();
+                            ImGui.Text($"{pointer.Pointer}");
+                        }
+                        else if (instruction is AnimationModel.UnknownInstruction unknown)
+                        {
+                            ImGui.TableNextColumn();
+                            ImGui.Text($"{string.Join(" ", unknown.Data.Select(x => $"{x:X2}"))}");
+                        }
+                        else
+                        {
+                            ImGui.TableNextColumn();
+                            ImGui.Text("Unknown record");
+                        }
+                    }
+                    
+                    ImGui.EndTable();
+                }
+            }
         }
     }
 
