@@ -114,7 +114,7 @@ namespace CovertActionTools.Core.Importing.Parsers
             var backgroundType = (AnimationModel.BackgroundType)reader.ReadByte();
             
             //header is always a fixed size
-            var headerLength = backgroundType == AnimationModel.BackgroundType.PreviousAnimation ? 500 : 502;
+            var headerLength = backgroundType == AnimationModel.BackgroundType.ClearToColor ? 502 : 500;
 
             //for ClearToImage, there is an image before the header, otherwise it's straight to the header
             var images = new Dictionary<int, SimpleImageModel>();
@@ -131,7 +131,15 @@ namespace CovertActionTools.Core.Importing.Parsers
                 images[img++] = image;
             }
 
-            var headerData = reader.ReadBytes(headerLength);
+            byte clearColor = 0;
+            byte unknown1 = 0;
+            if (backgroundType == AnimationModel.BackgroundType.ClearToColor)
+            {
+                clearColor = reader.ReadByte();
+                unknown1 = reader.ReadByte();
+            }
+            
+            var headerData = reader.ReadBytes(500);
             
             //there are a variable number of images, ends with 00 05 00
             while (rawData[memStream.Position] == 0x07)
@@ -244,6 +252,8 @@ namespace CovertActionTools.Core.Importing.Parsers
                     BoundingWidth = aWidth,
                     BoundingHeight = aHeight,
                     ColorMapping = colorMapping,
+                    ClearColor = clearColor,
+                    Unknown1 = unknown1,
                     HeaderData = headerData,
                     Records = records
                 }

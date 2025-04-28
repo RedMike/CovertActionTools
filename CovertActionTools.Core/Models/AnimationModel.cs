@@ -362,6 +362,16 @@ namespace CovertActionTools.Core.Models
             /// Color mapping for the entire set of images in the file 
             /// </summary>
             public Dictionary<byte, byte> ColorMapping { get; set; } = new();
+            
+            /// <summary>
+            /// Only populated when BackgroundType is ClearToColor
+            /// Represents the color to clear to before drawing anything
+            /// </summary>
+            public byte ClearColor { get; set; }
+            /// <summary>
+            /// Only populated when BackgroundType is ClearToColor
+            /// </summary>
+            public byte Unknown1 { get; set; }
 
             /// <summary>
             /// Unknown data that serves as a header to the image.
