@@ -13,6 +13,7 @@ public class SelectedAnimationWindow : SharedImageWindow
 
     private int _selectedImage = 0;
     private int _selectedFrameId = 0;
+    private int _selectedDrawInstruction = 0;
 
     public SelectedAnimationWindow(RenderWindow renderWindow, ILogger<SelectedAnimationWindow> logger, MainEditorState mainEditorState) : base(renderWindow)
     {
@@ -110,19 +111,25 @@ public class SelectedAnimationWindow : SharedImageWindow
         
         var width = animation.ExtraData.BoundingWidth + 1;
         var height = animation.ExtraData.BoundingHeight + 1;
-        var offsetX = 150;
-        var offsetY = 150;
+        var offsetX = 100;
+        var offsetY = 100;
         var fullWidth = width + 2 * offsetX;
         var fullHeight = height + 2 * offsetY;
+        
+        var pos = ImGui.GetCursorPos();
         
         var drawInstructions = animation.ExtraData.Records
             .Where(x => x.Type == AnimationModel.SetupRecord.SetupType.Animation)
             .Select(x => (AnimationModel.SetupAnimationRecord)x)
             .OrderBy(x => x.Index)
             .ToList();
+        var validIndexes = drawInstructions
+            .DistinctBy(x => x.Index)
+            .Select(x => x.Index)
+            .ToList();
         
         //draw the checkerboard first
-        var pos = ImGui.GetCursorPos();
+        ImGui.SetCursorPos(pos);
         var bgTexture = RenderWindow.RenderCheckerboardRectangle(25, fullWidth, fullHeight,
             (40, 30, 40, 255), (50, 40, 50, 255));
         ImGui.Image(bgTexture, new Vector2(fullWidth, fullHeight));
@@ -147,10 +154,20 @@ public class SelectedAnimationWindow : SharedImageWindow
         }
         
         var i = 0;
+        var selectedOverlayX = 0;
+        var selectedOverlayY = 0;
+        var selectedOverlayImageId = 0;
+        var selectedOverlayDelay = 0;
+        var selectedOverlayDx = 0;
+        var selectedOverlayDy = 0;
+        var overlaysExistHaveImage = new Dictionary<int, (bool, bool)>();
         foreach (var drawInstruction in drawInstructions)
         {
             var ox = offsetX + drawInstruction.PositionX;
             var oy = offsetY + drawInstruction.PositionY;
+
+            var isSelected = drawInstruction.Index == _selectedDrawInstruction;
+            overlaysExistHaveImage[drawInstruction.Index] = (true, false);
             
             if (drawInstruction.Instructions.All(x => x.Type != AnimationModel.InstructionRecord.InstructionType.ImageChange))
             {
@@ -217,6 +234,16 @@ public class SelectedAnimationWindow : SharedImageWindow
                     }
                 }
             }
+
+            if (isSelected)
+            {
+                selectedOverlayX = ox;
+                selectedOverlayY = oy;
+                selectedOverlayDelay = delay;
+                selectedOverlayImageId = imageId;
+                selectedOverlayDx = dx;
+                selectedOverlayDy = dy;
+            }
             
             //TODO: frame number/delay
             if (!animation.Images.ContainsKey(imageId))
@@ -225,16 +252,49 @@ public class SelectedAnimationWindow : SharedImageWindow
                 continue;
             }
 
+            overlaysExistHaveImage[drawInstruction.Index] = (true, true);
+
             i++;
+            var image = animation.Images[imageId];
+            
+            //draw an overlay
+            if (isSelected)
+            {
+                ImGui.SetCursorPos(pos + new Vector2(ox - 6, oy - 6));
+                var outlineTexture = RenderWindow.RenderOutlineRectangle(5, 
+                    image.ExtraData.LegacyWidth + 12,
+                    image.ExtraData.LegacyHeight + 12,
+                    (255, 0, 200, 255));
+                ImGui.Image(outlineTexture, new Vector2(image.ExtraData.LegacyWidth + 12, image.ExtraData.LegacyHeight + 12));
+            }
 
             ImGui.SetCursorPos(pos + new Vector2(ox, oy));
-            var image = animation.Images[imageId];
             var id = $"image_{animation.Key}_frame_{_selectedFrameId}_{i}";
             //TODO: cache?
             var texture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, id, 
                 image.ExtraData.LegacyWidth, image.ExtraData.LegacyHeight, image.VgaImageData);
             ImGui.Image(texture, new Vector2(image.ExtraData.LegacyWidth, image.ExtraData.LegacyHeight));
         }
+
+        //lastly draw the menu
+        ImGui.SetCursorPos(pos + new Vector2(fullWidth + 10, 0));
+        ImGui.BeginChild("menu", new Vector2(300, fullHeight), true);
+        //make a list of strings with the existence state
+        var strings = validIndexes.Select(x => $"{x} {overlaysExistHaveImage.GetValueOrDefault(x)}").ToList();
+        var newDrawInstruction = ImGuiExtensions.Input("Sprite", _selectedDrawInstruction, 
+            validIndexes,
+            strings,
+            width:200);
+        if (newDrawInstruction != null)
+        {
+            _selectedDrawInstruction = newDrawInstruction.Value;
+        }
+        ImGui.Text($"Exists: {overlaysExistHaveImage.GetValueOrDefault(_selectedDrawInstruction).Item1}");
+        ImGui.Text($"Image: {selectedOverlayImageId} (exists {overlaysExistHaveImage.GetValueOrDefault(_selectedDrawInstruction).Item2})");
+        ImGui.Text($"Velocity: ({selectedOverlayDx}, {selectedOverlayDy})");
+        ImGui.Text($"Position: ({selectedOverlayX}, {selectedOverlayY})");
+        ImGui.Text($"Delay: {selectedOverlayDelay}");
+        ImGui.EndChild();
     }
     
     private void DrawAnimationInstructionsWindow(PackageModel model, AnimationModel animation)

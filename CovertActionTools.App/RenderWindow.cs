@@ -163,6 +163,37 @@ public class RenderWindow : IDisposable
         return RenderImage(RenderType.Primitive, id, w, h, bytes);
     }
     
+    public IntPtr RenderOutlineRectangle(int outlineWidth, int w, int h, (byte, byte, byte, byte) fillCol)
+    {
+        var fillColId = $"{fillCol.Item1}-{fillCol.Item2}-{fillCol.Item3}-{fillCol.Item4}";
+        var id = $"outline_{outlineWidth}_{w}_{h}_{outlineWidth}_{fillColId}";
+        if (DoesTextureExist(RenderType.Primitive, id))
+        {
+            var texture = GetTexture(RenderType.Primitive, id);
+            return _controller.GetOrCreateImGuiBinding(_graphicsDevice.ResourceFactory, texture);
+        }
+        var bytes = new byte[w * h * 4];
+        for (var i = 0; i < w; i++)
+        {
+            for (var j = 0; j < h; j++)
+            {
+                var (r, g, b, a) = fillCol;
+                if (i > outlineWidth && i < w - outlineWidth &&
+                    j > outlineWidth && j < h - outlineWidth)
+                {
+                    (r, g, b, a) = (0, 0, 0, 0);
+                }
+                
+                bytes[(j * w + i) * 4 + 0] = r;
+                bytes[(j * w + i) * 4 + 1] = g;
+                bytes[(j * w + i) * 4 + 2] = b;
+                bytes[(j * w + i) * 4 + 3] = a;
+            }
+        }
+
+        return RenderImage(RenderType.Primitive, id, w, h, bytes);
+    }
+    
     private void CreateWindow()
     {
         if (_windowOpen)

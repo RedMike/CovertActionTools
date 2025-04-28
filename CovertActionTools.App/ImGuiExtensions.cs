@@ -39,6 +39,38 @@ public static class ImGuiExtensions
         return value;
     }
     
+    public static int? Input(string label, int value, List<int> validValues, List<string>? valueStrings = null, string? id = null, int? width = null)
+    {
+        if (width != null)
+        {
+            ImGui.SetNextItemWidth((float)width);
+        }
+
+        if (!string.IsNullOrEmpty(id))
+        {
+            ImGui.PushID(id);
+        }
+
+        if (valueStrings == null)
+        {
+            valueStrings = validValues.Select(x => $"{x}").ToList();
+        }
+        var origIndex = validValues.FindIndex(x => x == value);
+        var index = origIndex;
+        ImGui.Combo(label, ref index, valueStrings.ToArray(), validValues.Count);
+        if (!string.IsNullOrEmpty(id))
+        {
+            ImGui.PopID();
+        }
+
+        if (index == origIndex)
+        {
+            return null;
+        }
+
+        return validValues[index];
+    }
+    
     public static string? Input(string label, string value, int maxLength, string? id = null, int? width = null)
     {
         if (width != null)
