@@ -115,11 +115,6 @@ namespace CovertActionTools.Core.Importing.Parsers
             
             //header is always a fixed size
             var headerLength = backgroundType == AnimationModel.BackgroundType.PreviousAnimation ? 500 : 502;
-            if (backgroundType == AnimationModel.BackgroundType.ClearToImage && subAnimationCount == 3)
-            {
-                //TODO: this is the case for BUSTOUT which makes no sense?
-                headerLength = 501;
-            }
 
             //for ClearToImage, there is an image before the header, otherwise it's straight to the header
             var images = new Dictionary<int, SimpleImageModel>();
@@ -275,13 +270,19 @@ namespace CovertActionTools.Core.Importing.Parsers
             
             //TODO: the LZW decompression is not returning the correct byte offset, so we have to correct it here
             //we'll temporarily just try to find the next 07 or 05, then end right before it
+            var hadToFix = false;
+            var unfixedOffset = memStream.Position;
             while ((!withOffset && (rawData[memStream.Position] != 0x07 || rawData[memStream.Position+1] != 0x00) && rawData[memStream.Position] != 0x05) ||
                    (withOffset && (rawData[memStream.Position + offsetLength] != 0x07 || rawData[memStream.Position + offsetLength + 1] != 0x00)))
             {
+                hadToFix = true;
                 reader.ReadByte();
             }
-            //now rewind one
-            //memStream.Seek(-1, SeekOrigin.Current);
+
+            if (hadToFix)
+            {
+                _logger.LogError($"Had to fix offset on {key} {img} from {unfixedOffset:X4} to {memStream.Position:X4}");
+            }
 
             return model;
         }

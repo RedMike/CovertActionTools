@@ -65,6 +65,11 @@ namespace CovertActionTools.Core.Importing.Parsers
             var lzw = new LzwDecompression(_loggerFactory.CreateLogger(typeof(LzwDecompression)), lzwMaxWordWidth, imageCompressedData, key);
             var imageUncompressedData = lzw.Decompress(width * height, out var imageByteOffset);
             byteOffset = headerLength + imageByteOffset;
+            //_logger.LogError($"Byte offset {key} = {byteOffset:X}");
+            if (byteOffset % 2 == 1)
+            {
+                byteOffset += 1;
+            }
             
             //the data is currently in VGA format, so convert to modern format
             var imageModernData = new byte[width * height * 4];
