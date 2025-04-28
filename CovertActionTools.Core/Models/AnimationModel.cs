@@ -299,6 +299,10 @@ namespace CovertActionTools.Core.Models
         
         public class ImageChangeInstruction : InstructionRecord
         {
+            /// <summary>
+            /// This is not the sequential image index (in the file), but
+            /// the ID assigned based on the header information.
+            /// </summary>
             public int Id { get; set; }
         }
 
@@ -374,13 +378,23 @@ namespace CovertActionTools.Core.Models
             public byte Unknown1 { get; set; }
 
             /// <summary>
-            /// Unknown data that serves as a header to the image.
-            /// Seems to contain some info about setting up the animation loops, but changes either have no effect or
-            /// break the animation entirely and fails to load.
-            /// When background type is ClearToColor, first byte is the background color to clear to.
-            /// When background type is PreviousAnimation, length 500; otherwise length 502.
+            /// Each image ID is assigned an index; this ID can only increase monotonically but can have gaps. 
+            /// In the file format, this looks like a series of u16, where any 00 00 represents a gap.
+            /// With no gaps in 500 bytes that means the maximum number of images is 250.
+            /// Example: the start of a header with data AA AA  00 00  00 00  BB BB
+            /// means image 0 is index 0, image 1 (B) is index 3 (gap of 2) 
             /// </summary>
-            public byte[] HeaderData { get; set; } = Array.Empty<byte>();
+            public Dictionary<int, int> ImageIdToIndex { get; set; } = new();
+
+            /// <summary>
+            /// Each image index has a set of data attached that seems arbitrary and does not relate to the file.
+            /// This may be an authoring concern and not relevant to the file, except that 00 00 represents a gap.
+            /// The data is encoded here as u16 but might be two separate u8s instead.
+            /// Potentially this might be a grid position (X, Y) for display in the editor.
+            /// Example: the start of a header with data AA AA  00 00  00 00  BB BB
+            /// means index 0 has data AA AA, index 3 has data BB BB
+            /// </summary>
+            public Dictionary<int, int> ImageIndexToUnknownData { get; set; } = new();
 
             public List<SetupRecord> Records { get; set; } = new();
         }

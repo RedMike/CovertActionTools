@@ -139,8 +139,8 @@ public class SelectedAnimationWindow : SharedImageWindow
         if (animation.ExtraData.BackgroundType == AnimationModel.BackgroundType.ClearToColor)
         {
             var backgroundTexture = RenderWindow.RenderCheckerboardRectangle(100, width, height,
-                Core.Constants.VgaColorMapping[animation.ExtraData.HeaderData[0]],
-                Core.Constants.VgaColorMapping[animation.ExtraData.HeaderData[0]]);
+                Core.Constants.VgaColorMapping[animation.ExtraData.ClearColor],
+                Core.Constants.VgaColorMapping[animation.ExtraData.ClearColor]);
             ImGui.Image(backgroundTexture, new Vector2(width, height));
         }
         else
@@ -157,6 +157,7 @@ public class SelectedAnimationWindow : SharedImageWindow
         var selectedOverlayX = 0;
         var selectedOverlayY = 0;
         var selectedOverlayImageId = 0;
+        var selectedOverlayImageIndex = 0;
         var selectedOverlayDelay = 0;
         var selectedOverlayDx = 0;
         var selectedOverlayDy = 0;
@@ -199,7 +200,7 @@ public class SelectedAnimationWindow : SharedImageWindow
 
                 if (instruction is AnimationModel.ImageChangeInstruction imageChangeInstruction)
                 {
-                    imageId = imageChangeInstruction.Id - 1;
+                    imageId = imageChangeInstruction.Id;
                 }
 
                 if (instruction is AnimationModel.PositionChangeInstruction positionChangeInstruction)
@@ -235,18 +236,21 @@ public class SelectedAnimationWindow : SharedImageWindow
                 }
             }
 
+            var imageIndex = animation.ExtraData.ImageIdToIndex.GetValueOrDefault(imageId, -1);
+            
             if (isSelected)
             {
                 selectedOverlayX = ox;
                 selectedOverlayY = oy;
                 selectedOverlayDelay = delay;
                 selectedOverlayImageId = imageId;
+                selectedOverlayImageIndex = imageIndex;
                 selectedOverlayDx = dx;
                 selectedOverlayDy = dy;
             }
             
             //TODO: frame number/delay
-            if (!animation.Images.ContainsKey(imageId))
+            if (!animation.Images.ContainsKey(imageIndex))
             {
                 //TODO: what here?
                 continue;
@@ -255,7 +259,7 @@ public class SelectedAnimationWindow : SharedImageWindow
             overlaysExistHaveImage[drawInstruction.Index] = (true, true);
 
             i++;
-            var image = animation.Images[imageId];
+            var image = animation.Images[imageIndex];
             
             //draw an overlay
             if (isSelected)
@@ -290,7 +294,7 @@ public class SelectedAnimationWindow : SharedImageWindow
             _selectedDrawInstruction = newDrawInstruction.Value;
         }
         ImGui.Text($"Exists: {overlaysExistHaveImage.GetValueOrDefault(_selectedDrawInstruction).Item1}");
-        ImGui.Text($"Image: {selectedOverlayImageId} (exists {overlaysExistHaveImage.GetValueOrDefault(_selectedDrawInstruction).Item2})");
+        ImGui.Text($"Image: {selectedOverlayImageId} => {selectedOverlayImageIndex} (exists {overlaysExistHaveImage.GetValueOrDefault(_selectedDrawInstruction).Item2})");
         ImGui.Text($"Velocity: ({selectedOverlayDx}, {selectedOverlayDy})");
         ImGui.Text($"Position: ({selectedOverlayX}, {selectedOverlayY})");
         ImGui.Text($"Delay: {selectedOverlayDelay}");

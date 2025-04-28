@@ -139,7 +139,24 @@ namespace CovertActionTools.Core.Importing.Parsers
                 unknown1 = reader.ReadByte();
             }
             
-            var headerData = reader.ReadBytes(500);
+            //header is always 500 bytes, which is 250 pairs of bytes
+            //the entry number corresponds to the image in the file, 00 00 represents a skipped index 
+            var imageIdx = 0;
+            var imageIdToIndex = new Dictionary<int, int>();
+            var imageIndexToUnknownData = new Dictionary<int, int>();
+            for (var imageId = 0; imageId < 250; imageId++)
+            {
+                var data = reader.ReadUInt16();
+                if (data == 0)
+                {
+                    //it's a gap
+                    continue;
+                }
+
+                imageIdToIndex[imageId] = imageIdx;
+                imageIndexToUnknownData[imageIdx] = data;
+                imageIdx++;
+            }
             
             //there are a variable number of images, ends with 00 05 00
             while (rawData[memStream.Position] == 0x07)
@@ -254,7 +271,8 @@ namespace CovertActionTools.Core.Importing.Parsers
                     ColorMapping = colorMapping,
                     ClearColor = clearColor,
                     Unknown1 = unknown1,
-                    HeaderData = headerData,
+                    ImageIdToIndex = imageIdToIndex,
+                    ImageIndexToUnknownData = imageIndexToUnknownData,
                     Records = records
                 }
             };
@@ -278,20 +296,21 @@ namespace CovertActionTools.Core.Importing.Parsers
                 _logger.LogWarning($"Failed to parse image {key} {img}: {e}");
             }
             
-            //TODO: the LZW decompression is not returning the correct byte offset, so we have to correct it here
-            //we'll temporarily just try to find the next 07 or 05, then end right before it
+            //some images have some arbitrary bytes before the next image
+            //TODO: for now we're just skipping them and logging them
             var hadToFix = false;
+            var bytesSkipped = new List<byte>();
             var unfixedOffset = memStream.Position;
             while ((!withOffset && (rawData[memStream.Position] != 0x07 || rawData[memStream.Position+1] != 0x00) && rawData[memStream.Position] != 0x05) ||
                    (withOffset && (rawData[memStream.Position + offsetLength] != 0x07 || rawData[memStream.Position + offsetLength + 1] != 0x00)))
             {
                 hadToFix = true;
-                reader.ReadByte();
+                bytesSkipped.Add(reader.ReadByte());
             }
 
             if (hadToFix)
             {
-                _logger.LogError($"Had to fix offset on {key} {img} from {unfixedOffset:X4} to {memStream.Position:X4}");
+                _logger.LogError($"Had to fix offset on {key} {img} from {unfixedOffset:X4} to {memStream.Position:X4}: {string.Join(", ", bytesSkipped.Select(x => $"{x:X2}"))}");
             }
 
             return model;
