@@ -43,6 +43,7 @@ namespace CovertActionTools.Core.Models
         /// an InstructionRecord.
         /// </summary>
         [JsonDerivedType(typeof(SetupAnimationRecord), "setup")]
+        [JsonDerivedType(typeof(Unknown3Record), "u3")]
         [JsonDerivedType(typeof(UnknownRecord), "unknown")]
         public abstract class SetupRecord
         {
@@ -58,8 +59,20 @@ namespace CovertActionTools.Core.Models
                 Unknown14 = 14,
             }
 
-            public SetupType Type { get; set; } = SetupType.Unknown;
+            public SetupType RecordType { get; set; } = SetupType.Unknown;
 
+            public static Unknown3Record AsUnknown3(BinaryReader reader)
+            {
+                var data = reader.ReadUInt16();
+                var type = (Unknown3Record.Unknown3Type)reader.ReadByte();
+                return new Unknown3Record()
+                {
+                    RecordType = SetupType.Unknown3,
+                    Type = type,
+                    Data = data
+                };
+            }
+            
             public static SetupAnimationRecord AsAnimation(BinaryReader reader, byte[] dataSection)
             {
                 var pointer = reader.ReadUInt16();
@@ -193,7 +206,7 @@ namespace CovertActionTools.Core.Models
 
                 return new SetupAnimationRecord()
                 {
-                    Type = SetupType.Animation,
+                    RecordType = SetupType.Animation,
                     Index = index,
                     PositionX = dx,
                     PositionY = dy,
@@ -229,6 +242,22 @@ namespace CovertActionTools.Core.Models
             public ushort Unknown2 { get; set; }
 
             public List<InstructionRecord> Instructions { get; set; } = new();
+        }
+
+        public class Unknown3Record : SetupRecord
+        {
+            public enum Unknown3Type
+            {
+                Unknown = -1,
+                Padding = 0,
+                Index1 = 1, //something to do with a draw instruction ID?
+                Timing = 2, //something to do with frame timings?
+                Index2 = 4, //something to do with a draw instruction ID?
+            }
+            
+            public int Data { get; set; }
+
+            public Unknown3Type Type { get; set; } = Unknown3Type.Unknown;
         }
 
         public class UnknownRecord : SetupRecord

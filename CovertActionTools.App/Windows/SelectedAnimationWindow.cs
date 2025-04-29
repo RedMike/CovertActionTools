@@ -119,7 +119,7 @@ public class SelectedAnimationWindow : SharedImageWindow
         var pos = ImGui.GetCursorPos();
         
         var drawInstructions = animation.ExtraData.Records
-            .Where(x => x.Type == AnimationModel.SetupRecord.SetupType.Animation)
+            .Where(x => x.RecordType == AnimationModel.SetupRecord.SetupType.Animation)
             .Select(x => (AnimationModel.SetupAnimationRecord)x)
             .OrderBy(x => x.Index)
             .ToList();
@@ -313,60 +313,64 @@ public class SelectedAnimationWindow : SharedImageWindow
             }
             else if (record is AnimationModel.UnknownRecord unknown)
             {
-                name += $"Unknown {unknown.Type}: {string.Join(" ", unknown.Data.Select(x => $"{x:X2}"))}";
+                name += $"Unknown {unknown.RecordType}: {string.Join(" ", unknown.Data.Select(x => $"{x:X2}"))}";
+            } else if (record is AnimationModel.Unknown3Record unknown3)
+            {
+                name += $"{unknown3.RecordType}: {unknown3.Type} {unknown3.Data}";
             }
             else
             {
-                name += $"Unknown record: {record.Type}";
+                name += $"Unknown record: {record.RecordType}";
             }
 
             if (ImGui.CollapsingHeader(name))
             {
-                if (!(record is AnimationModel.SetupAnimationRecord setupAnimationRecord))
+                if (record is AnimationModel.SetupAnimationRecord setupAnimationRecord)
                 {
-                    continue;
-                }
-                
-                ImGui.Text($"{setupAnimationRecord.Unknown1:X4} {setupAnimationRecord.Unknown2:X4}");
+                    ImGui.Text($"{setupAnimationRecord.Unknown1:X4} {setupAnimationRecord.Unknown2:X4}");
 
-                if (ImGui.BeginTable("instructions", 2, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
-                {
-                    foreach (var instruction in setupAnimationRecord.Instructions)
+                    if (ImGui.BeginTable("instructions", 2, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
                     {
-                        ImGui.TableNextRow();
-                        ImGui.TableNextColumn();
-                        ImGui.Text($"{instruction.Type}");
+                        foreach (var instruction in setupAnimationRecord.Instructions)
+                        {
+                            ImGui.TableNextRow();
+                            ImGui.TableNextColumn();
+                            ImGui.Text($"{instruction.Type}");
 
-                        if (instruction is AnimationModel.DelayInstruction delay)
-                        {
-                            ImGui.TableNextColumn();
-                            ImGui.Text($"{delay.Frames}");
-                        } else if (instruction is AnimationModel.ImageChangeInstruction imageChange)
-                        {
-                            ImGui.TableNextColumn();
-                            ImGui.Text($"{imageChange.Id}");
-                        } else if (instruction is AnimationModel.PositionChangeInstruction positionChange)
-                        {
-                            ImGui.TableNextColumn();
-                            ImGui.Text($"({positionChange.PositionX}, {positionChange.PositionY})");
-                        } else if (instruction is AnimationModel.JumpInstruction jump)
-                        {
-                            ImGui.TableNextColumn();
-                            ImGui.Text($"Null: {jump.Null} Index: {jump.IndexDelta}");
+                            if (instruction is AnimationModel.DelayInstruction delay)
+                            {
+                                ImGui.TableNextColumn();
+                                ImGui.Text($"{delay.Frames}");
+                            }
+                            else if (instruction is AnimationModel.ImageChangeInstruction imageChange)
+                            {
+                                ImGui.TableNextColumn();
+                                ImGui.Text($"{imageChange.Id}");
+                            }
+                            else if (instruction is AnimationModel.PositionChangeInstruction positionChange)
+                            {
+                                ImGui.TableNextColumn();
+                                ImGui.Text($"({positionChange.PositionX}, {positionChange.PositionY})");
+                            }
+                            else if (instruction is AnimationModel.JumpInstruction jump)
+                            {
+                                ImGui.TableNextColumn();
+                                ImGui.Text($"Null: {jump.Null} Index: {jump.IndexDelta}");
+                            }
+                            else if (instruction is AnimationModel.UnknownInstruction unknown)
+                            {
+                                ImGui.TableNextColumn();
+                                ImGui.Text($"{string.Join(" ", unknown.Data.Select(x => $"{x:X2}"))}");
+                            }
+                            else
+                            {
+                                ImGui.TableNextColumn();
+                                ImGui.Text("Unknown record");
+                            }
                         }
-                        else if (instruction is AnimationModel.UnknownInstruction unknown)
-                        {
-                            ImGui.TableNextColumn();
-                            ImGui.Text($"{string.Join(" ", unknown.Data.Select(x => $"{x:X2}"))}");
-                        }
-                        else
-                        {
-                            ImGui.TableNextColumn();
-                            ImGui.Text("Unknown record");
-                        }
+
+                        ImGui.EndTable();
                     }
-                    
-                    ImGui.EndTable();
                 }
             }
         }
@@ -374,13 +378,19 @@ public class SelectedAnimationWindow : SharedImageWindow
 
     private void DrawAnimationImageWindow(PackageModel model, AnimationModel animation)
     {
-        var newSelectedImage = ImGuiExtensions.Input("Image", _selectedImage);
+        var newSelectedImage = ImGuiExtensions.Input("ID", _selectedImage);
         if (newSelectedImage != null)
         {
             _selectedImage = newSelectedImage.Value;
         }
 
-        if (!animation.Images.TryGetValue(_selectedImage, out var image))
+        if (!animation.ExtraData.ImageIdToIndex.ContainsKey(_selectedImage))
+        {
+            ImGui.Text("ID is not mapped to an image");
+            return;
+        }
+
+        if (!animation.Images.TryGetValue(animation.ExtraData.ImageIdToIndex[_selectedImage], out var image))
         {
             ImGui.Text("Something went wrong, image is missing..");
             return;

@@ -204,6 +204,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                     }
                     var offset = memStream.Position + 2; //skip the 05 00
                     while (
+                        offset == memStream.Position + 2 ||
                         rawData[offset] != 0x05 || rawData[offset + 1] != 0x00
                     )
                     {
@@ -225,6 +226,9 @@ namespace CovertActionTools.Core.Importing.Parsers
                     if (recordType == AnimationModel.SetupRecord.SetupType.Animation)
                     {
                         record = AnimationModel.SetupRecord.AsAnimation(reader, dataSectionBytes);
+                    } else if (recordType == AnimationModel.SetupRecord.SetupType.Unknown3)
+                    {
+                        record = AnimationModel.SetupRecord.AsUnknown3(reader);
                     }
                     else
                     {
@@ -232,17 +236,14 @@ namespace CovertActionTools.Core.Importing.Parsers
                         var bytes = reader.ReadBytes((int)length);
                         record = new AnimationModel.UnknownRecord()
                         {
-                            Type = recordType,
+                            RecordType = recordType,
                             Data = bytes
                         };
                     }
 
-                    if (record is AnimationModel.UnknownRecord unknown && recordType ==
-                                                                       AnimationModel.SetupRecord.SetupType.Unknown3
-                                                                       && unknown.Data.Length == 3 &&
-                                                                       unknown.Data[0] == 0x00 &&
-                                                                       unknown.Data[1] == 0x00 && 
-                                                                       unknown.Data[2] == 0x00)
+                    if (record is AnimationModel.Unknown3Record unknown && 
+                        unknown.Type == AnimationModel.Unknown3Record.Unknown3Type.Padding && 
+                        unknown.Data == 0)
                     {
                         //it's just padding
                         continue;
