@@ -272,8 +272,10 @@ public class SelectedAnimationWindow : SharedImageWindow
             return shouldStop;
         }
 
+        var recordIndex = 0;
         foreach (var record in animation.ExtraData.Records)
         {
+            recordIndex++;
             if (record is AnimationModel.SetupAnimationRecord setupAnimation)
             {
                 if (activeAnimations.Contains(setupAnimation.Index) || drawnAnimations.Contains(setupAnimation.Index))
@@ -377,6 +379,9 @@ public class SelectedAnimationWindow : SharedImageWindow
         //lastly draw the menu
         ImGui.SetCursorPos(pos + new Vector2(fullWidth + 10, 0));
         ImGui.BeginChild("menu", new Vector2(300, fullHeight), true);
+        
+        ImGui.Text($"Record: {recordIndex-1} ({animation.ExtraData.Records.Count})");
+        
         //make a list of strings with the existence state
         var strings = validIndexes.Select(x => $"{x} {drawnAnimations.Contains(x)} {activeAnimations.Contains(x)}").ToList();
         var newDrawInstruction = ImGuiExtensions.Input("Animation", _selectedAnimation, 
