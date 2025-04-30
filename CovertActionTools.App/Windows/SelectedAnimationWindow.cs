@@ -8,12 +8,32 @@ namespace CovertActionTools.App.Windows;
 
 public class SelectedAnimationWindow : SharedImageWindow
 {
+    public class AnimationState
+    {
+        //data
+        public AnimationModel.SetupAnimationRecord Record { get; set; }
+        
+        public int Index { get; set; }
+        public int ImageId { get; set; } = -1;
+        public int PositionX { get; set; }
+        public int PositionY { get; set; }
+        
+        //flags
+        public bool KeepDrawingOnceInactive { get; set; }
+        
+        //only if active
+        public int Delay { get; set; }
+        public int VelocityX { get; set; }
+        public int VelocityY { get; set; }
+        public int InstructionIndex { get; set; }
+    }
+    
     private readonly ILogger<SelectedAnimationWindow> _logger;
     private readonly MainEditorState _mainEditorState;
 
     private int _selectedImage = 0;
     private int _selectedFrameId = 0;
-    private int _selectedDrawInstruction = 0;
+    private int _selectedAnimation = 0;
 
     public SelectedAnimationWindow(RenderWindow renderWindow, ILogger<SelectedAnimationWindow> logger, MainEditorState mainEditorState) : base(renderWindow)
     {
@@ -153,116 +173,190 @@ public class SelectedAnimationWindow : SharedImageWindow
             ImGui.Image(texture, new Vector2(backgroundImage.ExtraData.LegacyWidth, backgroundImage.ExtraData.LegacyHeight));
         }
         
-        var i = 0;
-        var selectedOverlayX = 0;
-        var selectedOverlayY = 0;
-        var selectedOverlayImageId = 0;
-        var selectedOverlayImageIndex = 0;
-        var selectedOverlayDelay = 0;
-        var selectedOverlayDx = 0;
-        var selectedOverlayDy = 0;
-        var overlaysExistHaveImage = new Dictionary<int, (bool, bool)>();
-        foreach (var drawInstruction in drawInstructions)
+        //now iterate over the setup records in order
+        //as soon as a SetupAnimationRecord is handled, the animation is added as active
+        //however the actual drawing happens once we hit instructions that wait frames/for animation ends
+        //there are also records that mark animations to remain drawn after finishing (do not disappear) or other effects
+        //when a frame is handled, every active animation record is handled at the same time
+        //active means "simulate and run instructions for"
+        //drawn means "draw the current known state of the animation every frame"
+        var activeAnimations = new HashSet<int>();
+        var drawnAnimations = new HashSet<int>();
+        var animations = new Dictionary<int, AnimationState>();
+        var frameNumber = 0;
+
+        bool ProcessFrame(int frames)
         {
-            var ox = offsetX + drawInstruction.PositionX;
-            var oy = offsetY + drawInstruction.PositionY;
-
-            var isSelected = drawInstruction.Index == _selectedDrawInstruction;
-            overlaysExistHaveImage[drawInstruction.Index] = (true, false);
-            
-            if (drawInstruction.Instructions.All(x => x.Type != AnimationModel.InstructionRecord.InstructionType.ImageChange))
+            var shouldStop = false;
+            var framesProcessed = 0;
+            while (framesProcessed < frames)
             {
-                //don't know what the image should be
-                continue;
-            }
-
-            var f = 0;
-            var delay = 0;
-            var imageId = -1;
-            var dx = 0;
-            var dy = 0;
-            var iterations = 0;
-            for (var index = 0; index < drawInstruction.Instructions.Count; index++)
-            {
-                iterations++;
-                if (iterations > 2000)
+                if (frameNumber >= _selectedFrameId)
                 {
-                    //safety check to prevent an infinite loop
+                    shouldStop = true;
                     break;
                 }
-                
-                var instruction = drawInstruction.Instructions[index];
-                if (instruction is AnimationModel.DelayInstruction delayInstruction)
-                {
-                    //delay sets up the amount of frames after which the next jump instruction will be skipped
-                    delay = delayInstruction.Frames;
-                }
 
-                if (instruction is AnimationModel.ImageChangeInstruction imageChangeInstruction)
+                var activeAnimationsCopy = activeAnimations.ToList();
+                foreach (var activeAnimationIndex in activeAnimationsCopy)
                 {
-                    imageId = imageChangeInstruction.Id;
-                }
-
-                if (instruction is AnimationModel.PositionChangeInstruction positionChangeInstruction)
-                {
-                    dx = positionChangeInstruction.PositionX;
-                    dy = positionChangeInstruction.PositionY;
-                }
-
-                if (instruction is AnimationModel.JumpInstruction jumpInstruction)
-                {
-                    //the jump instruction will happen only until the number of frames from the last delay has passed
-                    if (delay > 0)
+                    var activeAnimation = animations[activeAnimationIndex];
+                    var frameDone = false;
+                    var iterations = 0; //for safety against infinite loops
+                    while (!frameDone && (iterations++ < 2000))
                     {
-                        delay -= 1;
-                        ox += dx;
-                        oy += dy;
-                        
-                        if (jumpInstruction.Null || index + jumpInstruction.IndexDelta < 0)
+                        if (activeAnimation.InstructionIndex < 0 || activeAnimation.InstructionIndex >= activeAnimation.Record.Instructions.Count)
                         {
-                            index -= 1;
+                            _logger.LogError($"Animation {activeAnimationIndex} on invalid instruction index {activeAnimation.InstructionIndex}");
+                            activeAnimations.Remove(activeAnimationIndex);
+                            frameDone = true;
+                            continue;
                         }
-                        else
+
+                        var activeInstruction = activeAnimation.Record.Instructions[activeAnimation.InstructionIndex];
+                        if (activeInstruction is AnimationModel.DelayInstruction delay)
                         {
-                            index += jumpInstruction.IndexDelta;
+                            activeAnimation.Delay = delay.Frames;
+                        }
+                        else if (activeInstruction is AnimationModel.ImageChangeInstruction imageChange)
+                        {
+                            activeAnimation.ImageId = imageChange.Id;
+                        }
+                        else if (activeInstruction is AnimationModel.PositionChangeInstruction positionChange)
+                        {
+                            activeAnimation.VelocityX = positionChange.PositionX;
+                            activeAnimation.VelocityY = positionChange.PositionY;
+                        }
+                        else if (activeInstruction is AnimationModel.JumpInstruction jump)
+                        {
+                            //TODO: a null jump instruction is an end?
+                            if (jump.Null)
+                            {
+                                activeAnimations.Remove(activeAnimationIndex);
+                                frameDone = true;
+                                break;
+                            }
+
+                            //a jump instruction either jumps to another instruction and advances a frame 
+                            //or is skipped over if delay is 0
+                            if (activeAnimation.Delay != 0)
+                            {
+                                activeAnimation.InstructionIndex += jump.IndexDelta - 1; //one will be added later
+                                activeAnimation.Delay -= 1;
+                                activeAnimation.PositionX += activeAnimation.VelocityX;
+                                activeAnimation.PositionY += activeAnimation.VelocityY;
+                                frameDone = true;
+                            }
+                        }
+
+                        activeAnimation.InstructionIndex += 1;
+
+                        if (activeAnimation.InstructionIndex == activeAnimation.Record.Instructions.Count)
+                        {
+                            activeAnimations.Remove(activeAnimationIndex);
+                            if (!activeAnimation.KeepDrawingOnceInactive)
+                            {
+                                drawnAnimations.Remove(activeAnimationIndex);
+                            }
+
+                            frameDone = true;
+                            continue;
                         }
                     }
-                    
-                    f += 1;
-                    if (f > _selectedFrameId)
+                }
+
+                framesProcessed++;
+                frameNumber++;
+            }
+
+            return shouldStop;
+        }
+
+        foreach (var record in animation.ExtraData.Records)
+        {
+            if (record is AnimationModel.SetupAnimationRecord setupAnimation)
+            {
+                if (activeAnimations.Contains(setupAnimation.Index) || drawnAnimations.Contains(setupAnimation.Index))
+                {
+                    _logger.LogError($"Got animation setup for {setupAnimation.Index} but already previously set up");
+                    continue;
+                }
+
+                var animationState = new AnimationState()
+                {
+                    Record = setupAnimation,
+                    Index = setupAnimation.Index,
+                    PositionX = setupAnimation.PositionX,
+                    PositionY = setupAnimation.PositionY
+                };
+                animations[animationState.Index] = animationState;
+                activeAnimations.Add(animationState.Index);
+                drawnAnimations.Add(animationState.Index);
+                continue;
+            }
+            if (record is AnimationModel.Unknown3Record unknown3)
+            {
+                if (unknown3.Type == AnimationModel.Unknown3Record.Unknown3Type.Index2)
+                {
+                    //prevent image disappearing once inactive
+                    if (!animations.TryGetValue(unknown3.Data, out var animationState))
+                    {
+                        _logger.LogError($"Missing animation {unknown3.Data}");
+                        continue;
+                    }
+
+                    animationState.KeepDrawingOnceInactive = true;
+                    continue;
+                }
+
+                if (unknown3.Type == AnimationModel.Unknown3Record.Unknown3Type.Timing)
+                {
+                    var shouldStop = ProcessFrame(unknown3.Data);
+
+                    if (shouldStop)
                     {
                         break;
                     }
                 }
+
+                continue;
+            }
+            
+            //_logger.LogWarning($"Unhandled record: {record.RecordType}");
+        }
+
+        while (frameNumber < _selectedFrameId)
+        {
+            var shouldStop = ProcessFrame(_selectedFrameId - frameNumber);
+
+            if (shouldStop)
+            {
+                break;
+            }
+        }
+
+        animations.TryGetValue(_selectedAnimation, out var selectedAnimation);
+        
+        foreach (var drawnAnimationIndex in drawnAnimations)
+        {
+            var drawnAnimation = animations[drawnAnimationIndex];
+            
+            if (!animation.ExtraData.ImageIdToIndex.TryGetValue(drawnAnimation.ImageId, out var imageIndex))
+            {
+                imageIndex = -1;
             }
 
-            var imageIndex = animation.ExtraData.ImageIdToIndex.GetValueOrDefault(imageId, -1);
-            
-            if (isSelected)
+            if (imageIndex < 0)
             {
-                selectedOverlayX = ox;
-                selectedOverlayY = oy;
-                selectedOverlayDelay = delay;
-                selectedOverlayImageId = imageId;
-                selectedOverlayImageIndex = imageIndex;
-                selectedOverlayDx = dx;
-                selectedOverlayDy = dy;
-            }
-            
-            //TODO: frame number/delay
-            if (!animation.Images.ContainsKey(imageIndex))
-            {
-                //TODO: what here?
                 continue;
             }
 
-            overlaysExistHaveImage[drawInstruction.Index] = (true, true);
-
-            i++;
+            var ox = offsetX + drawnAnimation.PositionX;
+            var oy = offsetY + drawnAnimation.PositionY;
             var image = animation.Images[imageIndex];
             
             //draw an overlay
-            if (isSelected)
+            if (_selectedAnimation == drawnAnimationIndex)
             {
                 ImGui.SetCursorPos(pos + new Vector2(ox - 6, oy - 6));
                 var outlineTexture = RenderWindow.RenderOutlineRectangle(5, 
@@ -273,7 +367,7 @@ public class SelectedAnimationWindow : SharedImageWindow
             }
 
             ImGui.SetCursorPos(pos + new Vector2(ox, oy));
-            var id = $"image_{animation.Key}_frame_{_selectedFrameId}_{i}";
+            var id = $"image_{animation.Key}_frame_{_selectedFrameId}_{imageIndex}";
             //TODO: cache?
             var texture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, id, 
                 image.ExtraData.LegacyWidth, image.ExtraData.LegacyHeight, image.VgaImageData);
@@ -284,20 +378,27 @@ public class SelectedAnimationWindow : SharedImageWindow
         ImGui.SetCursorPos(pos + new Vector2(fullWidth + 10, 0));
         ImGui.BeginChild("menu", new Vector2(300, fullHeight), true);
         //make a list of strings with the existence state
-        var strings = validIndexes.Select(x => $"{x} {overlaysExistHaveImage.GetValueOrDefault(x)}").ToList();
-        var newDrawInstruction = ImGuiExtensions.Input("Sprite", _selectedDrawInstruction, 
+        var strings = validIndexes.Select(x => $"{x} {drawnAnimations.Contains(x)} {activeAnimations.Contains(x)}").ToList();
+        var newDrawInstruction = ImGuiExtensions.Input("Animation", _selectedAnimation, 
             validIndexes,
             strings,
             width:200);
         if (newDrawInstruction != null)
         {
-            _selectedDrawInstruction = newDrawInstruction.Value;
+            _selectedAnimation = newDrawInstruction.Value;
         }
-        ImGui.Text($"Exists: {overlaysExistHaveImage.GetValueOrDefault(_selectedDrawInstruction).Item1}");
-        ImGui.Text($"Image: {selectedOverlayImageId} => {selectedOverlayImageIndex} (exists {overlaysExistHaveImage.GetValueOrDefault(_selectedDrawInstruction).Item2})");
-        ImGui.Text($"Velocity: ({selectedOverlayDx}, {selectedOverlayDy})");
-        ImGui.Text($"Position: ({selectedOverlayX}, {selectedOverlayY})");
-        ImGui.Text($"Delay: {selectedOverlayDelay}");
+
+        if (selectedAnimation != null)
+        {
+            ImGui.Text($"Drawn: {drawnAnimations.Contains(_selectedAnimation)}");
+            ImGui.Text($"Image: {selectedAnimation.ImageId} => {animation.ExtraData.ImageIdToIndex.GetValueOrDefault(selectedAnimation.ImageId, -1)}");
+            ImGui.Text($"Velocity: ({selectedAnimation.VelocityX}, {selectedAnimation.VelocityY})");
+            ImGui.Text($"Position: ({selectedAnimation.PositionX}, {selectedAnimation.PositionY})");
+            ImGui.Text($"Delay: {selectedAnimation.Delay}");
+            ImGui.Text($"Instruction index: {selectedAnimation.InstructionIndex} ({selectedAnimation.Record.Instructions.Count})");
+            ImGui.Text($"Keep drawing on end: {selectedAnimation.KeepDrawingOnceInactive}");
+        }
+
         ImGui.EndChild();
     }
     
