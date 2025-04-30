@@ -294,14 +294,14 @@ public class SelectedAnimationWindow : SharedImageWindow
                 drawnAnimations.Add(animationState.Index);
                 continue;
             }
-            if (record is AnimationModel.Unknown3Record unknown3)
+            if (record is AnimationModel.Instruction3Record instruction3)
             {
-                if (unknown3.Type == AnimationModel.Unknown3Record.Unknown3Type.Index2)
+                if (instruction3.Type == AnimationModel.Instruction3Record.Instruction3Type.KeepDrawingAfterEnd)
                 {
                     //prevent image disappearing once inactive
-                    if (!animations.TryGetValue(unknown3.Data, out var animationState))
+                    if (!animations.TryGetValue(instruction3.Data, out var animationState))
                     {
-                        _logger.LogError($"Missing animation {unknown3.Data}");
+                        _logger.LogError($"Missing animation {instruction3.Data}");
                         continue;
                     }
 
@@ -309,9 +309,9 @@ public class SelectedAnimationWindow : SharedImageWindow
                     continue;
                 }
 
-                if (unknown3.Type == AnimationModel.Unknown3Record.Unknown3Type.Timing)
+                if (instruction3.Type == AnimationModel.Instruction3Record.Instruction3Type.WaitFrames)
                 {
-                    var shouldStop = ProcessFrame(unknown3.Data);
+                    var shouldStop = ProcessFrame(instruction3.Data);
 
                     if (shouldStop)
                     {
@@ -415,7 +415,7 @@ public class SelectedAnimationWindow : SharedImageWindow
             else if (record is AnimationModel.UnknownRecord unknown)
             {
                 name += $"Unknown {unknown.RecordType}: {string.Join(" ", unknown.Data.Select(x => $"{x:X2}"))}";
-            } else if (record is AnimationModel.Unknown3Record unknown3)
+            } else if (record is AnimationModel.Instruction3Record unknown3)
             {
                 name += $"{unknown3.RecordType}: {unknown3.Type} {unknown3.Data}";
             }

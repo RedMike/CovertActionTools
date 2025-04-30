@@ -226,9 +226,9 @@ namespace CovertActionTools.Core.Importing.Parsers
                     if (recordType == AnimationModel.SetupRecord.SetupType.Animation)
                     {
                         record = AnimationModel.SetupRecord.AsAnimation(reader, dataSectionBytes);
-                    } else if (recordType == AnimationModel.SetupRecord.SetupType.Unknown3)
+                    } else if (recordType == AnimationModel.SetupRecord.SetupType.Instruction3)
                     {
-                        record = AnimationModel.SetupRecord.AsUnknown3(reader);
+                        record = AnimationModel.SetupRecord.AsInstruction3(reader);
                     }
                     else
                     {
@@ -241,8 +241,8 @@ namespace CovertActionTools.Core.Importing.Parsers
                         };
                     }
 
-                    if (record is AnimationModel.Unknown3Record unknown && 
-                        unknown.Type == AnimationModel.Unknown3Record.Unknown3Type.Padding && 
+                    if (record is AnimationModel.Instruction3Record unknown && 
+                        unknown.Type == AnimationModel.Instruction3Record.Instruction3Type.Padding && 
                         unknown.Data == 0)
                     {
                         //it's just padding
