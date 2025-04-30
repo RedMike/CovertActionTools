@@ -23,8 +23,6 @@ public class SelectedAnimationWindow : SharedImageWindow
         
         //only if active
         public int Delay { get; set; }
-        public int VelocityX { get; set; }
-        public int VelocityY { get; set; }
         public int InstructionIndex { get; set; }
     }
     
@@ -224,8 +222,8 @@ public class SelectedAnimationWindow : SharedImageWindow
                         }
                         else if (activeInstruction is AnimationModel.PositionChangeInstruction positionChange)
                         {
-                            activeAnimation.VelocityX = positionChange.PositionX;
-                            activeAnimation.VelocityY = positionChange.PositionY;
+                            activeAnimation.PositionX += positionChange.PositionX;
+                            activeAnimation.PositionY += positionChange.PositionY;
                         }
                         else if (activeInstruction is AnimationModel.JumpInstruction jump)
                         {
@@ -241,12 +239,20 @@ public class SelectedAnimationWindow : SharedImageWindow
                             //or is skipped over if delay is 0
                             if (activeAnimation.Delay != 0)
                             {
-                                activeAnimation.InstructionIndex += jump.IndexDelta - 1; //one will be added later
                                 activeAnimation.Delay -= 1;
-                                activeAnimation.PositionX += activeAnimation.VelocityX;
-                                activeAnimation.PositionY += activeAnimation.VelocityY;
+                                if (activeAnimation.Delay != 0)
+                                {
+                                    activeAnimation.InstructionIndex += jump.IndexDelta - 1; //one will be added later
+                                }
+
                                 frameDone = true;
                             }
+                        } else if (activeInstruction is AnimationModel.Unknown8Instruction)
+                        {
+                            //reset to start
+                            activeAnimation.InstructionIndex = 0;
+                            frameDone = true;
+                            continue;
                         }
 
                         activeAnimation.InstructionIndex += 1;
@@ -397,7 +403,6 @@ public class SelectedAnimationWindow : SharedImageWindow
         {
             ImGui.Text($"Drawn: {drawnAnimations.Contains(_selectedAnimation)}");
             ImGui.Text($"Image: {selectedAnimation.ImageId} => {animation.ExtraData.ImageIdToIndex.GetValueOrDefault(selectedAnimation.ImageId, -1)}");
-            ImGui.Text($"Velocity: ({selectedAnimation.VelocityX}, {selectedAnimation.VelocityY})");
             ImGui.Text($"Position: ({selectedAnimation.PositionX}, {selectedAnimation.PositionY})");
             ImGui.Text($"Delay: {selectedAnimation.Delay}");
             ImGui.Text($"Instruction index: {selectedAnimation.InstructionIndex} ({selectedAnimation.Record.Instructions.Count})");
@@ -467,6 +472,14 @@ public class SelectedAnimationWindow : SharedImageWindow
                             {
                                 ImGui.TableNextColumn();
                                 ImGui.Text($"{string.Join(" ", unknown.Data.Select(x => $"{x:X2}"))}");
+                            }
+                            else if (instruction is AnimationModel.Unknown8Instruction unknown8)
+                            {
+                                ImGui.TableNextColumn();
+                            }
+                            else if (instruction is AnimationModel.EndInstruction end)
+                            {
+                                ImGui.TableNextColumn();
                             }
                             else
                             {

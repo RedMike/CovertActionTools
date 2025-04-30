@@ -116,21 +116,24 @@ namespace CovertActionTools.Core.Models
                     var type = InstructionRecord.InstructionType.Unknown;
                     var i = 0;
                     var instructionOffsets = new Dictionary<long, int>();
+                    var end = false;
                     do
                     {
                         i++;
                         var startOffset = dataStream.Position;
                         instructionOffsets[startOffset] = i;
                         type = (InstructionRecord.InstructionType)dataReader.ReadByte();
-                        if (type == InstructionRecord.InstructionType.End)
-                        {
-                            continue;
-                        }
 
                         InstructionRecord instruction;
-                        byte[] data;
                         switch (type)
                         {
+                            case InstructionRecord.InstructionType.End:
+                                instruction = new EndInstruction()
+                                {
+                                    Type = InstructionRecord.InstructionType.End
+                                };
+                                end = true;
+                                break;
                             case InstructionRecord.InstructionType.ImageChange:
                                 instruction = InstructionRecord.AsImageChange(dataReader);
                                 break;
@@ -178,10 +181,11 @@ namespace CovertActionTools.Core.Models
                                 };
                                 break;
                             case InstructionRecord.InstructionType.Unknown8:
-                                instruction = new UnknownInstruction()
+                                instruction = new Unknown8Instruction()
                                 {
                                     Type = type
                                 };
+                                end = true;
                                 break;
                             case InstructionRecord.InstructionType.Unknown9:
                                 instruction = new UnknownInstruction()
@@ -201,7 +205,7 @@ namespace CovertActionTools.Core.Models
                                                 
                         instructions.Add(instruction);
                         
-                    } while (type != InstructionRecord.InstructionType.End && dataStream.Position < dataSection.Length);
+                    } while (!end && dataStream.Position < dataSection.Length);
                 }
 
                 return new SetupAnimationRecord()
@@ -275,6 +279,8 @@ namespace CovertActionTools.Core.Models
         [JsonDerivedType(typeof(UnknownInstruction), "unknown")]
         [JsonDerivedType(typeof(JumpInstruction), "pointer")]
         [JsonDerivedType(typeof(ImageChangeInstruction), "image")]
+        [JsonDerivedType(typeof(Unknown8Instruction), "u8")]
+        [JsonDerivedType(typeof(EndInstruction), "end")]
         public abstract class InstructionRecord
         {
             public enum InstructionType
@@ -283,8 +289,8 @@ namespace CovertActionTools.Core.Models
                 ImageChange = 0,
                 PositionChange = 2,
                 Delay = 5,
-                Jump = 6, //loop until Delay is done?
-                Unknown8 = 8, //0 bytes
+                Jump = 6,
+                Unknown8 = 8,
                 Unknown9 = 9, //2 bytes?
                 
                 End = 0x0A,
@@ -353,6 +359,14 @@ namespace CovertActionTools.Core.Models
             public int IndexDelta { get; set; }
         }
 
+        public class Unknown8Instruction : InstructionRecord
+        {
+        }
+        
+        public class EndInstruction : InstructionRecord
+        {
+        }
+        
         public class UnknownInstruction : InstructionRecord
         {
             public byte[] Data { get; set; } = Array.Empty<byte>();
