@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json.Serialization;
 
 namespace CovertActionTools.Core.Models
@@ -45,6 +46,7 @@ namespace CovertActionTools.Core.Models
         [JsonDerivedType(typeof(SetupAnimationRecord), "setup")]
         [JsonDerivedType(typeof(Instruction3Record), "i3")]
         [JsonDerivedType(typeof(UnknownRecord), "unknown")]
+        [JsonDerivedType(typeof(EndRecord), "end")]
         public abstract class SetupRecord
         {
             public enum SetupType
@@ -53,13 +55,191 @@ namespace CovertActionTools.Core.Models
                 Unknown1 = 1,
                 Animation = 2,
                 Instruction3 = 3, 
+                Unknown2 = 4,
                 Unknown5 = 5,
                 Unknown7 = 7,
                 Unknown9 = 9,
                 Unknown14 = 14,
+                Repeat = 30,
+                Unknown12 = 100,
+                Unknown13 = 110,
+                Unknown6 = 120,
+                End = -2,
             }
 
             public SetupType RecordType { get; set; } = SetupType.Unknown;
+
+            public static SetupRecord ParseNextRecord(MemoryStream stream, BinaryReader reader, byte[] dataSectionBytes)
+            {
+                //read the separator
+                var separator = reader.ReadBytes(2);
+                if (separator[1] == 0x14)
+                {
+                    //it's an end record
+                    return new EndRecord()
+                    {
+                        RecordType = SetupType.End,
+                        Type = (EndRecord.EndType)separator[0]
+                    };
+                }
+
+                if (separator[0] != 0x05 && 
+                    separator[0] != 0x06 &&
+                    separator[0] != 0x07 &&
+                    separator[0] != 0x12 && 
+                    separator[0] != 0x13)
+                {
+                    throw new Exception($"Invalid separator: {separator[0]:X2} {separator[1]:X2}");
+                }
+                
+                //07 is a record that is a single byte
+                if (separator[0] == 0x07)
+                {
+                    stream.Seek(-1, SeekOrigin.Current);
+                    return new UnknownRecord()
+                    {
+                        RecordType = SetupType.Unknown7
+                    };
+                }
+                
+                //at this point we have to assemble the record until it's a recognisable shape
+                var recordStack = new List<byte>();
+                var recordStart = stream.Position - 1; //starting at XX
+                recordStack.Add(separator[1]);
+                
+                //there is no record that has less than 2 bytes before a separator
+                recordStack.AddRange(reader.ReadBytes(1));
+
+                var iterations = 0;
+                while(iterations++ < 64000) //larger than any feasible file
+                {
+                    if (recordStack[recordStack.Count-1] == 0x14 &&
+                        recordStack.Count > 1 &&
+                        (
+                            recordStack[recordStack.Count-2] == 0x14 ||
+                            recordStack[recordStack.Count-2] == 0x15
+                        ))
+                    {
+                        //we missed an ending
+                        stream.Seek(-2, SeekOrigin.Current); //reverse the ending
+                        return new UnknownRecord()
+                        {
+                            Data = recordStack.Take(recordStack.Count - 2).ToArray()
+                        };
+                    }
+                    
+                    //Unknown2 is XX YY ZZ
+                    if (separator[0] == 0x05 &&
+                        recordStack.Count == 3 &&
+                        (recordStack[0] == 0x01))
+                    {
+                        stream.Seek(recordStart, SeekOrigin.Begin);
+                        return new UnknownRecord()
+                        {
+                            RecordType = SetupType.Unknown2,
+                            Data = reader.ReadBytes(3)
+                        };
+                    }
+                    
+                    //SetupAnimation starts 00 PP PP 05 00 XX XX 05 00 YY YY 05 00 ZZ ZZ 05 00 but continues longer
+                    if (separator[0] == 0x05 &&
+                        recordStack.Count == 17 &&
+                        recordStack[0] == 0x00 &&
+                        recordStack[3] == 0x05 &&
+                        recordStack[4] == 0x00 && 
+                        recordStack[7] == 0x05 && 
+                        recordStack[8] == 0x00 &&
+                        recordStack[11] == 0x05 &&
+                        recordStack[12] == 0x00 &&
+                        recordStack[15] == 0x05 &&
+                        recordStack[16] == 0x00)
+                    {
+                        stream.Seek(recordStart + 1, SeekOrigin.Begin);
+                        return AsAnimation(reader, dataSectionBytes);
+                    }
+                    
+                    //Instruction3 is 00 XX YY TT
+                    if (separator[0] == 0x05 &&
+                        recordStack.Count == 4 &&
+                        recordStack[0] == 0x00 &&
+                        (recordStack[3] == 0x01 ||
+                         recordStack[3] == 0x02 ||
+                         recordStack[3] == 0x04 ||
+                         recordStack[3] == 0x0B ||
+                         recordStack[3] == 0x0E ||
+                         recordStack[3] == 0x00))
+                    {
+                        stream.Seek(recordStart + 1, SeekOrigin.Begin);
+                        return AsInstruction3(reader);
+                    }
+                    
+                    //Unknown5 is 00 XX YY ZZ QQ 00
+                    if (separator[0] == 0x05 &&
+                        recordStack.Count == 6 &&
+                        recordStack[0] == 0x00 &&
+                        recordStack[5] == 0x00)
+                    {
+                        stream.Seek(recordStart + 1, SeekOrigin.Begin);
+                        return new UnknownRecord()
+                        {
+                            RecordType = SetupType.Unknown5,
+                            Data = reader.ReadBytes(5)
+                        };
+                    }
+                    
+                    //RepeatRecord is 00 XX YY ZZ ..followed by a repeated 
+                    // if (recordStack.Count == 10 &&
+                    //     recordStack[0] == 0x00)
+                    // {
+                    //     stream.Seek(recordStart + 1, SeekOrigin.Begin);
+                    //     return new UnknownRecord()
+                    //     {
+                    //         RecordType = SetupType.Repeat,
+                    //         Data = reader.ReadBytes(9)
+                    //     };
+                    // }
+                    
+                    //Unknown12 is 12 PP PP
+                    if (separator[0] == 0x12 &&
+                        recordStack.Count == 2)
+                    {
+                        stream.Seek(recordStart, SeekOrigin.Begin);
+                        return new UnknownRecord()
+                        {
+                            RecordType = SetupType.Unknown12,
+                            Data = reader.ReadBytes(2)
+                        };
+                    }
+                    
+                    //Unknown13 is 13 PP PP
+                    if (separator[0] == 0x13 &&
+                        recordStack.Count == 2)
+                    {
+                        stream.Seek(recordStart, SeekOrigin.Begin);
+                        return new UnknownRecord()
+                        {
+                            RecordType = SetupType.Unknown13,
+                            Data = reader.ReadBytes(2)
+                        };
+                    }
+                    
+                    //Unknown6 is 06 XX YY
+                    if (separator[0] == 0x06 &&
+                        recordStack.Count == 2)
+                    {
+                        stream.Seek(recordStart, SeekOrigin.Begin);
+                        return new UnknownRecord()
+                        {
+                            RecordType = SetupType.Unknown6,
+                            Data = reader.ReadBytes(2)
+                        };
+                    }
+                    
+                    recordStack.Add(reader.ReadByte());   
+                }
+
+                throw new Exception("Failed to find record");
+            }
 
             public static Instruction3Record AsInstruction3(BinaryReader reader)
             {
@@ -230,6 +410,7 @@ namespace CovertActionTools.Core.Models
         /// Fourth group is the X position to use as the initial position
         /// Fifth group is the Y position to use as the initial position
         /// Sixth group is unclear but usually FF 00 (Unknown2)
+        /// Seventh group is unclear but usually 00 00 00 or 01 00 00 (Unknown3/4/5) - subanimation?
         ///
         /// Instructions from pointer are parsed into this class.
         /// Position changes come from instructions.
@@ -262,6 +443,18 @@ namespace CovertActionTools.Core.Models
             public int Data { get; set; }
 
             public Instruction3Type Type { get; set; } = Instruction3Type.Unknown;
+        }
+
+        public class EndRecord : SetupRecord
+        {
+            public enum EndType
+            {
+                Unknown = -1,
+                Loop = 0x14,
+                Continue = 0x15
+            }
+
+            public EndType Type { get; set; } = EndType.Unknown;
         }
 
         public class UnknownRecord : SetupRecord

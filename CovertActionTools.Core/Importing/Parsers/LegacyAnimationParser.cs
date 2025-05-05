@@ -185,71 +185,46 @@ namespace CovertActionTools.Core.Importing.Parsers
             var dataSectionBytes = reader.ReadBytes(64000);
             memStream.Seek(originalOffset, SeekOrigin.Begin);
             
-            //data section has a number of setup records, which include pointers to sets of instructions
-            //the records are separated by 05 00, the distance between them dictates what type they are
-            //setup records end when there is a 05 05 at which point the rest of the file is instructions
-            //instructions are referenced by the setup records
+            //data section has a number of setup records, which include pointers
+            //some pointers to other records, other pointers to instructions
+            //the records are separated by 05 XX, but 05 can appear inside the data of each record
+            //therefore, the parsing can't just find the 'next' 05 XX, but check for valid records
+            //setup records end with XX 14, where XX is usually 14 but is 15 in cases like TITLE2
+            //after setup records are instructions, referenced by pointers from setup records, until EOF
             var done = false;
             var records = new List<AnimationModel.SetupRecord>();
             try
             {
                 while (!done)
                 {
-                    if (rawData[memStream.Position] == 0x05 && rawData[memStream.Position + 1] == 0x05 &&
-                        rawData[memStream.Position + 2] == 0x00)
+                    AnimationModel.SetupRecord nextRecord;
+                    try
                     {
-                        //it's 05 05 00, so it's the end of the section, so we skip the 'instruction'
+                        nextRecord = AnimationModel.SetupRecord.ParseNextRecord(memStream, reader, dataSectionBytes);
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError($"Error while parsing next record, ending: {e}");
                         done = true;
                         continue;
                     }
-                    var offset = memStream.Position + 2; //skip the 05 00
-                    while (
-                        offset == memStream.Position + 2 ||
-                        rawData[offset] != 0x05 || rawData[offset + 1] != 0x00
-                    )
-                    {
-                        offset++;
-                    }
                     
-                    //skip 05 00 separator
-                    reader.ReadBytes(2);
+                    // if (nextRecord is AnimationModel.Instruction3Record instruction3 &&  
+                    //     instruction3.Type == AnimationModel.Instruction3Record.Instruction3Type.Padding && 
+                    //     instruction3.Data == 0)
+                    // {
+                    //     //it's padding so we don't want to add it
+                    //     continue;
+                    // }
                     
-                    //just because the first separator is X away doesn't mean the record is only X long
-                    //e.g. Animation type has 2 bytes to the first separator, but the record has 6 groups of them
-                    var length = offset - memStream.Position;
-                    if (length < 1)
+                    //it's a real record, so add it
+                    records.Add(nextRecord);
+                    
+                    //if it's an end record, stop iterating
+                    if (nextRecord is AnimationModel.EndRecord)
                     {
-                        continue;
+                        done = true;
                     }
-                    var recordType = (AnimationModel.SetupRecord.SetupType)length;
-                    AnimationModel.SetupRecord record;
-                    if (recordType == AnimationModel.SetupRecord.SetupType.Animation)
-                    {
-                        record = AnimationModel.SetupRecord.AsAnimation(reader, dataSectionBytes);
-                    } else if (recordType == AnimationModel.SetupRecord.SetupType.Instruction3)
-                    {
-                        record = AnimationModel.SetupRecord.AsInstruction3(reader);
-                    }
-                    else
-                    {
-                        //for now assume that every other type has no extra bytes, any pattern should be obvious later
-                        var bytes = reader.ReadBytes((int)length);
-                        record = new AnimationModel.UnknownRecord()
-                        {
-                            RecordType = recordType,
-                            Data = bytes
-                        };
-                    }
-
-                    if (record is AnimationModel.Instruction3Record unknown && 
-                        unknown.Type == AnimationModel.Instruction3Record.Instruction3Type.Padding && 
-                        unknown.Data == 0)
-                    {
-                        //it's just padding
-                        continue;
-                    }
-                    //TODO: skip some types like empty 00 records?
-                    records.Add(record);
                 }
             }
             catch (Exception e)
