@@ -414,36 +414,88 @@ public class SelectedAnimationWindow : SharedImageWindow
     
     private void DrawAnimationInstructionsWindow(PackageModel model, AnimationModel animation)
     {
-        var index = 0;
-        foreach (var instruction in animation.ExtraData.Instructions)
+        if (ImGui.CollapsingHeader("Instructions"))
         {
-            var labelsOnIndex = animation.ExtraData.Labels
-                .Where(x => x.Value == index)
-                .Select(x => x.Key)
-                .ToList();
-            if (labelsOnIndex.Count > 0)
+            var index = 0;
+            foreach (var instruction in animation.ExtraData.Instructions)
             {
-                foreach (var label in labelsOnIndex)
+                var labelsOnIndex = animation.ExtraData.InstructionLabels
+                    .Where(x => x.Value == index)
+                    .Select(x => x.Key)
+                    .ToList();
+                if (labelsOnIndex.Count > 0)
                 {
-                    ImGui.Text($"{label}:");
+                    foreach (var label in labelsOnIndex)
+                    {
+                        ImGui.Text($"{label}:");
+                    }
                 }
-            }
             
-            var name = $"{index} - {instruction.Opcode}";
-            if (instruction.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.Jump12 ||
-                instruction.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.Jump13)
-            {
-                name += $" {instruction.Label}";
-            }
-            else
-            {
-                name += $" {string.Join(" ", instruction.Data.Select(x => $"{x:X2}"))}";
-            }
+                var name = $"{index} - {instruction.Opcode}";
+                if (instruction.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.Jump12 ||
+                    instruction.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.Jump13)
+                {
+                    name += $" {instruction.Label}";
+                }
+                else if (instruction.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.SetupSprite)
+                {
+                    name += $" {instruction.DataLabel}";
+                }
+                else
+                {
+                    if (instruction.Data.Length > 0)
+                    {
+                        name += $" {string.Join(" ", instruction.Data.Select(x => $"{x:X2}"))}";
+                    }
+                }
 
-            ImGui.Text(name);
+                if (instruction.StackParameters.Length > 0)
+                {
+                    name += $" {string.Join(" ", instruction.StackParameters.Select(x => $"{x}"))}";
+                }
+
+                ImGui.Text(name);
             
-            index++;
+                index++;
+            }
         }
+
+        if (ImGui.CollapsingHeader("Steps"))
+        {
+            var index = 0;
+            foreach (var step in animation.ExtraData.Steps)
+            {
+                var labelsOnIndex = animation.ExtraData.DataLabels
+                    .Where(x => x.Value == index)
+                    .Select(x => x.Key)
+                    .ToList();
+                if (labelsOnIndex.Count > 0)
+                {
+                    foreach (var label in labelsOnIndex)
+                    {
+                        ImGui.Text($"{label}:");
+                    }
+                }
+            
+                var name = $"{index} - {step.Type}";
+                if (step.Type == AnimationModel.AnimationStep.StepType.JumpAndReduceCounter)
+                {
+                    name += $" {step.Label}";
+                }
+                else
+                {
+                    if (step.Data.Length > 0)
+                    {
+                        name += $" {string.Join(" ", step.Data.Select(x => $"{x:X2}"))}";
+                    }
+                }
+
+                ImGui.Text(name);
+            
+                index++;
+            }
+        }
+        
         
         // var id = 0;
         // foreach (var record in animation.ExtraData.Records)

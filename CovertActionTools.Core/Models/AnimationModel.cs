@@ -42,27 +42,62 @@ namespace CovertActionTools.Core.Models
             public enum AnimationOpcode
             {
                 Unknown = -1,
-                End = 0, //14, end or return?
+                SetupSprite = 5, //00, loads 7 * 2 stack (pointer, index, u1, x, y, u2, u3), add active sprite
+                UnknownSprite01 = 14, //01, loads 2 stack, do something to sprite X?
+                WaitForFrames = 9, //02, loads 2 stack, render for X frames
+                KeepSpriteDrawn = 12, //04, loads 2 stack, persist sprite X after end?
                 Push = 1, //05 00 XX XX, push to stack?
                 Unknown0501 = 2, //05 01 XX XX, LDA?
-                Jump12 = 3, //12 XX XX, conditional jump?
-                Jump13 = 4, //13 XX XX, unconditional jump?
-                SetupSprite = 5, //00, loads 7 * 2 stack (pointer, index, u1, x, y, u2, u3), add active sprite
+                Unknown06 = 8, //06 XX XX, loads 2 stack?
                 Unknown07 = 6, //07
                 Unknown08 = 7, //08, ADD?
-                Unknown06 = 8, //06 XX XX, loads 2 stack?
-                WaitForFrames = 9, //02, loads 2 stack, render for X frames
-                Unknown15 = 10, //15
                 Unknown0B = 11, //0B, CMP?
-                KeepSpriteDrawn = 12, //04, loads 2 stack, persist sprite X after end?
                 Unknown0E = 13, //0E, CMP?
-                UnknownSprite01 = 14, //01, loads 2 stack, do something to sprite X?
+                Jump12 = 3, //12 XX XX, conditional jump?
+                Jump13 = 4, //13 XX XX, unconditional jump?
+                End = 0, //14, end or return?
+                Unknown15 = 10, //15
             }
 
             public AnimationOpcode Opcode { get; set; } = AnimationOpcode.Unknown;
             public byte[] Data { get; set; } = Array.Empty<byte>();
+            
             /// <summary>
             /// Populated for jump instructions
+            /// </summary>
+            public string Label { get; set; } = string.Empty;
+            
+            /// <summary>
+            /// Populated from preceding Push instructions, and removes those Push instructions
+            /// </summary>
+            public short[] StackParameters { get; set; } = Array.Empty<short>();
+
+            /// <summary>
+            /// Populated for SetupSprite instructions, points into data sub-section
+            /// </summary>
+            public string DataLabel { get; set; } = string.Empty;
+        }
+
+        public class AnimationStep
+        {
+            public enum StepType
+            {
+                Unknown = -1,
+                SetImage = 0x00,
+                Move1 = 0x01,
+                Move = 0x02,
+                SetCounter = 0x05,
+                JumpAndReduceCounter = 0x06,
+                End7 = 0x07,
+                Restart = 0x08,
+                End9 = 0x09,
+                End = 0x0A
+            }
+
+            public StepType Type { get; set; } = StepType.Unknown;
+            public byte[] Data { get; set; } = Array.Empty<byte>();
+            /// <summary>
+            /// Only populated for jump instructions
             /// </summary>
             public string Label { get; set; } = string.Empty;
         }
@@ -665,7 +700,9 @@ namespace CovertActionTools.Core.Models
             public List<SetupRecord> Records { get; set; } = new();
 
             public List<AnimationInstruction> Instructions { get; set; } = new();
-            public Dictionary<string, int> Labels { get; set; } = new();
+            public Dictionary<string, int> InstructionLabels { get; set; } = new();
+            public List<AnimationStep> Steps { get; set; } = new();
+            public Dictionary<string, int> DataLabels { get; set; } = new();
         }
         
         /// <summary>

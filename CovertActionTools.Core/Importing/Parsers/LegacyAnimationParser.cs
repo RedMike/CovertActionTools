@@ -190,10 +190,14 @@ namespace CovertActionTools.Core.Importing.Parsers
             //first we parse the instructions as simple opcodes, against the offset they're in
             var instructions = new Dictionary<long, AnimationModel.AnimationInstruction>();
             //jump instructions are turned into labels as targets assigned to particular offsets
-            var labels = new Dictionary<long, string>();
-            var labelId = 1;
+            var instructionLabels = new Dictionary<long, string>();
+            var instructionLabelId = 1;
+            //some instructions have pointers into data sub-section which are turned into other labels
+            var dataLabels = new Dictionary<short, string>();
+            var dataLabelId = 1;
             var instructionsDone = false;
             long lastOffset = 0;
+            var offsets = new List<long>();
             var pushedInstruction = true;
             var stack = new List<byte>();
             do
@@ -229,25 +233,29 @@ namespace CovertActionTools.Core.Importing.Parsers
                 }
 
                 //the others are now basically a binary tree search of instructions
-                //TODO: improve this
                 var foundInstruction = true;
                 var unknownInstruction = false;
                 var opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Unknown;
                 var data = Array.Empty<byte>();
                 var label = string.Empty;
+                var prevPushesToRemove = 0;
                 switch (stack[0])
                 {
                     //first the ones that have no extra data, so they are always immediately found
                     case 0x00:
+                        prevPushesToRemove = 7;
                         opcode = AnimationModel.AnimationInstruction.AnimationOpcode.SetupSprite;
                         break;
                     case 0x01:
+                        prevPushesToRemove = 1;
                         opcode = AnimationModel.AnimationInstruction.AnimationOpcode.UnknownSprite01;
                         break;
                     case 0x02:
+                        prevPushesToRemove = 1;
                         opcode = AnimationModel.AnimationInstruction.AnimationOpcode.WaitForFrames;
                         break;
                     case 0x04:
+                        prevPushesToRemove = 1;
                         opcode = AnimationModel.AnimationInstruction.AnimationOpcode.KeepSpriteDrawn;
                         break;
                     case 0x07:
@@ -257,9 +265,11 @@ namespace CovertActionTools.Core.Importing.Parsers
                         opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Unknown08;
                         break;
                     case 0x0B:
+                        prevPushesToRemove = 1;
                         opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Unknown0B;
                         break;
                     case 0x0E:
+                        prevPushesToRemove = 1;
                         opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Unknown0E;
                         break;
                     //no need to handle 0x14 because of the above code
@@ -310,8 +320,8 @@ namespace CovertActionTools.Core.Importing.Parsers
                             opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Jump12;
                             data = new[] { stack[1], stack[2] };
                             var target = (long)(stack[1] | (stack[2] << 8));
-                            labels[target] = $"LABEL_{labelId++}";
-                            label = labels[target];
+                            instructionLabels[target] = $"LABEL_{instructionLabelId++}";
+                            label = instructionLabels[target];
                         } else if (stack.Count > 3)
                         {
                             unknownInstruction = true;
@@ -328,8 +338,8 @@ namespace CovertActionTools.Core.Importing.Parsers
                             opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Jump13;
                             data = new[] { stack[1], stack[2] };
                             var target = (long)(stack[1] | (stack[2] << 8));
-                            labels[target] = $"LABEL_{labelId++}";
-                            label = labels[target];
+                            instructionLabels[target] = $"LABEL_{instructionLabelId++}";
+                            label = instructionLabels[target];
                         } else if (stack.Count > 3)
                         {
                             unknownInstruction = true;
@@ -354,39 +364,86 @@ namespace CovertActionTools.Core.Importing.Parsers
                 //not found means we have part of an instruction, so just continue reading
                 if (foundInstruction)
                 {
+                    var stackParameters = new List<short>();
+                    if (prevPushesToRemove > 0)
+                    {
+                        if (offsets.Count < prevPushesToRemove)
+                        {
+                            throw new Exception("Attempted to remove pushes when not enough instructions yet");
+                        }
+                        
+                        //_logger.LogError($"Attempting to remove {prevPushesToRemove}, list is {offsets.Count}");
+                        
+                        for (var i = 0; i < prevPushesToRemove; i++)
+                        {
+                            //_logger.LogError($"Attempting to remove {i}: {offsets.Count - prevPushesToRemove + i}");
+                            var offset = offsets[offsets.Count - prevPushesToRemove + i];
+                            if (instructions[offset].Opcode != AnimationModel.AnimationInstruction.AnimationOpcode.Push)
+                            {
+                                throw new Exception($"Attempted to remove Push but found: {instructions[offset].Opcode}");
+                            }
+
+                            if (i != 0 && instructionLabels.ContainsKey(offset))
+                            {
+                                throw new Exception($"Attempted to remove Push referenced by label");
+                            }
+
+                            if (i == 0)
+                            {
+                                //by removing pushes we 'shift up' the instruction into that offset
+                                lastOffset = offset;
+                            }
+
+                            var bytes = instructions[offset].Data;
+                            stackParameters.Add((short)(bytes[0] | (bytes[1] << 8)));
+                            instructions.Remove(offset);
+                        }
+                    }
+                    
+                    //special handling for some instructions
+                    var dataLabel = string.Empty;
+                    if (opcode == AnimationModel.AnimationInstruction.AnimationOpcode.SetupSprite)
+                    {
+                        //the first short is a data label
+                        dataLabel = $"DATA_{dataLabelId++}";
+                        dataLabels[stackParameters[0]] = dataLabel;
+                        stackParameters.RemoveAt(0);
+                    }
+                    
+                    offsets.Add(lastOffset);
                     instructions.Add(lastOffset, new AnimationModel.AnimationInstruction()
                     {
                         Opcode = opcode,
                         Data = data,
-                        Label = label
+                        Label = label,
+                        StackParameters = stackParameters.ToArray(),
+                        DataLabel = dataLabel
                     });
                     stack.Clear();
                     pushedInstruction = true;
                 }
             } while (!instructionsDone);
             
-            //double check that all labels point to valid instructions
-            var missingLabels = labels
+            //double check that all instruction labels point to valid instructions
+            var missingLabels = instructionLabels
                 .Where(x => !instructions.ContainsKey(x.Key))
                 .ToList();
             if (missingLabels.Count != 0)
             {
-                _logger.LogError($"Missing labels ({missingLabels.Count}/{labels.Count}):");
+                _logger.LogError($"Missing labels ({missingLabels.Count}/{instructionLabels.Count}):");
                 foreach (var missingLabel in missingLabels)
                 {
-                    var nearestHigher = instructions.Keys.OrderBy(x => x).FirstOrDefault(x => x > missingLabel.Key);
-                    var nearestLower = instructions.Keys.OrderByDescending(x => x).FirstOrDefault(x => x < missingLabel.Key);
-                    _logger.LogError($"Missing label: {missingLabel.Value} {missingLabel.Key}, {nearestHigher} {nearestLower}");
+                    _logger.LogError($"Missing label: {missingLabel.Value} {missingLabel.Key}");
                 }
             }
             
             //as a second pass we turn the absolute jumps into relative jumps to labels
             var listInstructions = new List<AnimationModel.AnimationInstruction>(instructions.Count);
-            var listLabels = new Dictionary<string, int>(labels.Count);
+            var listLabels = new Dictionary<string, int>(instructionLabels.Count);
             var instructionIndex = 0;
             foreach (var offset in instructions.OrderBy(x => x.Key).Select(x => x.Key))
             {
-                if (labels.TryGetValue(offset, out var label))
+                if (instructionLabels.TryGetValue(offset, out var label))
                 {
                     listLabels[label] = instructionIndex;
                 }
@@ -395,7 +452,129 @@ namespace CovertActionTools.Core.Importing.Parsers
                 instructionIndex++;
             }
             
-            //TODO: second pass to decompile into simple language (merge 00 opcode with its previous 05 00 opcodes)
+            //now we parse the data sub-section which contains simple step instructions that are
+            //prefixed with their type as a byte, and have variable length depending on the type
+            //data labels are used to track jump targets, including starting points referenced from
+            //instructions (previous section)
+            //the ending is padded with garbage data until a word ends, and the only way to detect
+            //this is to know when we're in or out of a sequence triggered by a data label
+            var steps = new Dictionary<long, AnimationModel.AnimationStep>();
+            var inSequence = false;
+            do
+            {
+                try
+                {
+                    var offset = (short)(memStream.Position - dataSectionStart);
+                    if (!inSequence)
+                    {
+                        if (dataLabels.ContainsKey(offset))
+                        {
+                            inSequence = true;
+                        }
+                    }
+                    var type = (AnimationModel.AnimationStep.StepType)reader.ReadByte();
+                    var data = Array.Empty<byte>();
+                    var dataLabel = string.Empty;
+                    var isEnd = false;
+                    switch (type)
+                    {
+                        case AnimationModel.AnimationStep.StepType.SetImage:
+                            data = reader.ReadBytes(1);
+                            break;
+                        case AnimationModel.AnimationStep.StepType.Move1:
+                            data = reader.ReadBytes(4);
+                            break;
+                        case AnimationModel.AnimationStep.StepType.Move:
+                            data = reader.ReadBytes(4);
+                            break;
+                        case AnimationModel.AnimationStep.StepType.SetCounter:
+                            data = reader.ReadBytes(2);
+                            break;
+                        case AnimationModel.AnimationStep.StepType.JumpAndReduceCounter:
+                            data = reader.ReadBytes(2);
+                            var target = (short)(data[0] | (data[1] << 8));
+                            if (!dataLabels.TryGetValue(target, out dataLabel))
+                            {
+                                dataLabel = $"DATA_{dataLabelId++}";
+                            }
+
+                            dataLabels[target] = dataLabel;
+                            break;
+                        case AnimationModel.AnimationStep.StepType.Restart:
+                            isEnd = true;
+                            break;
+                        case AnimationModel.AnimationStep.StepType.End9:
+                            isEnd = true;
+                            break;
+                        case AnimationModel.AnimationStep.StepType.End7:
+                            isEnd = true;
+                            break;
+                        case AnimationModel.AnimationStep.StepType.End:
+                            isEnd = true;
+                            break;
+                        default:
+                            throw new Exception($"Unknown step type: {(byte)type:X2} at offset {(offset + dataSectionStart):X4}");
+                    }
+
+                    // if (!inSequence)
+                    // {
+                    //     throw new Exception($"Got step {(byte)type:X2} while not in active sequence");
+                    // }
+
+                    if (isEnd)
+                    {
+                        inSequence = false;
+                    }
+
+                    steps.Add(offset, new AnimationModel.AnimationStep()
+                    {
+                        Type = type,
+                        Data = data,
+                        Label = dataLabel
+                    });
+                }
+                catch (Exception e)
+                {
+                    if (memStream.Position > memStream.Length - 15 && !inSequence)
+                    {
+                        //we've hit garbage at the end of the file
+                        //ignore the rest of the data
+                        reader.ReadBytes(100);
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
+            } while (memStream.Position < memStream.Length);
+            
+            //double check that all data labels point to valid steps
+            var missingDataLabels = dataLabels
+                .Where(x => !steps.ContainsKey(x.Key))
+                .ToList();
+            if (missingDataLabels.Count != 0)
+            {
+                _logger.LogError($"Missing data labels ({missingDataLabels.Count}/{dataLabels.Count}):");
+                foreach (var missingLabel in missingDataLabels)
+                {
+                    _logger.LogError($"Missing data label: {missingLabel.Value} {missingLabel.Key}");
+                }
+            }
+            
+            //as a second pass we turn the absolute jumps into relative jumps to labels
+            var listSteps = new List<AnimationModel.AnimationStep>(steps.Count);
+            var listDataLabels = new Dictionary<string, int>(dataLabels.Count);
+            var stepIndex = 0;
+            foreach (var offset in steps.OrderBy(x => x.Key).Select(x => x.Key))
+            {
+                if (dataLabels.TryGetValue((short)offset, out var dataLabel))
+                {
+                    listDataLabels[dataLabel] = stepIndex;
+                }
+
+                listSteps.Add(steps[offset]);
+                stepIndex++;
+            }
 
             var model = new AnimationModel()
             {
@@ -415,7 +594,9 @@ namespace CovertActionTools.Core.Importing.Parsers
                     ImageIdToIndex = imageIdToIndex,
                     ImageIndexToUnknownData = imageIndexToUnknownData,
                     Instructions = listInstructions,
-                    Labels = listLabels
+                    InstructionLabels = listLabels,
+                    Steps = listSteps,
+                    DataLabels = listDataLabels
                 }
             };
             return model;
