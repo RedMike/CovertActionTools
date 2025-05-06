@@ -49,6 +49,7 @@ namespace CovertActionTools.Core
             services.AddTransient<IPackageExporter, PackageExporter>();
 
             services.AddSingleton<ICrimeTimelineProcessor, CrimeTimelineProcessor>();
+            services.AddSingleton<IAnimationProcessor, AnimationProcessor>();
         }
     }
 }

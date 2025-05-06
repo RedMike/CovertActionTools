@@ -405,8 +405,12 @@ namespace CovertActionTools.Core.Importing.Parsers
                     if (opcode == AnimationModel.AnimationInstruction.AnimationOpcode.SetupSprite)
                     {
                         //the first short is a data label
-                        dataLabel = $"DATA_{dataLabelId++}";
-                        dataLabels[stackParameters[0]] = dataLabel;
+                        if (!dataLabels.TryGetValue(stackParameters[0], out dataLabel))
+                        {
+                            dataLabel = $"DATA_{dataLabelId++}";
+                            dataLabels[stackParameters[0]] = dataLabel;
+                        }
+                        
                         stackParameters.RemoveAt(0);
                     }
                     

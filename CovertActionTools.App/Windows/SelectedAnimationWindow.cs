@@ -1,6 +1,7 @@
 ﻿using System.Numerics;
 using CovertActionTools.App.ViewModels;
 using CovertActionTools.Core.Models;
+using CovertActionTools.Core.Processors;
 using ImGuiNET;
 using Microsoft.Extensions.Logging;
 
@@ -10,15 +11,17 @@ public class SelectedAnimationWindow : SharedImageWindow
 {
     private readonly ILogger<SelectedAnimationWindow> _logger;
     private readonly MainEditorState _mainEditorState;
+    private readonly IAnimationProcessor _animationProcessor;
 
     private int _selectedImage = 0;
     private int _selectedFrameId = 0;
     private int _selectedAnimation = 0;
 
-    public SelectedAnimationWindow(RenderWindow renderWindow, ILogger<SelectedAnimationWindow> logger, MainEditorState mainEditorState) : base(renderWindow)
+    public SelectedAnimationWindow(RenderWindow renderWindow, ILogger<SelectedAnimationWindow> logger, MainEditorState mainEditorState, IAnimationProcessor animationProcessor) : base(renderWindow)
     {
         _logger = logger;
         _mainEditorState = mainEditorState;
+        _animationProcessor = animationProcessor;
     }
 
     public override void Draw()
@@ -141,6 +144,80 @@ public class SelectedAnimationWindow : SharedImageWindow
             var texture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, id, 
                 backgroundImage.ExtraData.LegacyWidth, backgroundImage.ExtraData.LegacyHeight, backgroundImage.VgaImageData);
             ImGui.Image(texture, new Vector2(backgroundImage.ExtraData.LegacyWidth, backgroundImage.ExtraData.LegacyHeight));
+        }
+
+        var state = _animationProcessor.Process(animation, _selectedFrameId);
+        foreach (var drawnImage in state.DrawnImages)
+        {
+            ImGui.SetCursorPos(pos + new Vector2(offsetX + drawnImage.PositionX, offsetY + drawnImage.PositionY));
+            
+            var drawnImageIndex = animation.ExtraData.ImageIdToIndex[drawnImage.ImageId];
+            var drawnImageImg = animation.Images[drawnImageIndex];
+            var id = $"image_{animation.Key}_{drawnImageIndex}";
+            //TODO: cache?
+            var texture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, id,
+                drawnImageImg.ExtraData.LegacyWidth, drawnImageImg.ExtraData.LegacyHeight, drawnImageImg.VgaImageData);
+            ImGui.Image(texture, new Vector2(drawnImageImg.ExtraData.LegacyWidth, drawnImageImg.ExtraData.LegacyHeight));
+        }
+
+        if (state.Sprites.TryGetValue(_selectedAnimation, out var selectedSprite))
+        {
+            var ox = offsetX + selectedSprite.PositionX;
+            var oy = offsetY + selectedSprite.PositionY;
+            var w = 5;
+            var h = 5;
+            if (selectedSprite.ImageId >= 0 &&
+                animation.ExtraData.ImageIdToIndex.TryGetValue(selectedSprite.ImageId, out var imageIndex) &&
+                animation.Images.TryGetValue(imageIndex, out var image))
+            {
+                w = image.ExtraData.LegacyWidth;
+                h = image.ExtraData.LegacyHeight;
+            }
+            
+            //draw an overlay
+            ImGui.SetCursorPos(pos + new Vector2(ox - 6, oy - 6));
+            var outlineTexture = RenderWindow.RenderOutlineRectangle(5, 
+                w + 12,
+                h + 12,
+                (255, 0, 200, 255));
+            ImGui.Image(outlineTexture, new Vector2(w + 12, h + 12));
+        }
+        
+        ImGui.SetCursorPos(pos + new Vector2(fullWidth + 10, 0));
+        if (ImGui.BeginChild("menu", new Vector2(200, fullHeight), true))
+        {
+            ImGui.Text($"Instruction: {state.InstructionIndex}");
+            
+            var newSelectedAnimation = ImGuiExtensions.Input("Sprite", _selectedAnimation);
+            if (newSelectedAnimation != null)
+            {
+                _selectedAnimation = newSelectedAnimation.Value;
+            }
+
+            if (state.Sprites.TryGetValue(_selectedAnimation, out var sprite))
+            {
+                if (sprite.ImageId >= 0)
+                {
+                    if (animation.ExtraData.ImageIdToIndex.TryGetValue(sprite.ImageId, out var imageIndex))
+                    {
+                        ImGui.Text($"Image: {sprite.ImageId} ({imageIndex})");
+                    }
+                }
+                else
+                {
+                    ImGui.Text($"Image: Hidden ({sprite.ImageId})");
+                }
+                
+                ImGui.Text($"Active: {sprite.Active}");
+                ImGui.Text($"Step: {sprite.StepIndex}");
+                ImGui.Text($"Position: ({sprite.PositionX}, {sprite.PositionY})");
+            }
+            else
+            {
+                ImGui.Text("Does not exist");
+            }
+            
+            ImGui.EndChild();
         }
     }
     
