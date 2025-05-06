@@ -37,6 +37,36 @@ namespace CovertActionTools.Core.Models
             ClearToColor = 0x02
         }
 
+        public class AnimationInstruction
+        {
+            public enum AnimationOpcode
+            {
+                Unknown = -1,
+                End = 0, //14, end or return?
+                Push = 1, //05 00 XX XX, push to stack?
+                Unknown0501 = 2, //05 01 XX XX, LDA?
+                Jump12 = 3, //12 XX XX, conditional jump?
+                Jump13 = 4, //13 XX XX, unconditional jump?
+                SetupSprite = 5, //00, loads 7 * 2 stack (pointer, index, u1, x, y, u2, u3), add active sprite
+                Unknown07 = 6, //07
+                Unknown08 = 7, //08, ADD?
+                Unknown06 = 8, //06 XX XX, loads 2 stack?
+                WaitForFrames = 9, //02, loads 2 stack, render for X frames
+                Unknown15 = 10, //15
+                Unknown0B = 11, //0B, CMP?
+                KeepSpriteDrawn = 12, //04, loads 2 stack, persist sprite X after end?
+                Unknown0E = 13, //0E, CMP?
+                UnknownSprite01 = 14, //01, loads 2 stack, do something to sprite X?
+            }
+
+            public AnimationOpcode Opcode { get; set; } = AnimationOpcode.Unknown;
+            public byte[] Data { get; set; } = Array.Empty<byte>();
+            /// <summary>
+            /// Populated for jump instructions
+            /// </summary>
+            public string Label { get; set; } = string.Empty;
+        }
+
         /// <summary>
         /// Record that sets up some data or an animation loop of some sort, the type is identified by the number
         /// of bytes it contains. Each record is separated by 05 00, and 05 05 00 signals the end of these records.
@@ -633,6 +663,9 @@ namespace CovertActionTools.Core.Models
             public Dictionary<int, int> ImageIndexToUnknownData { get; set; } = new();
 
             public List<SetupRecord> Records { get; set; } = new();
+
+            public List<AnimationInstruction> Instructions { get; set; } = new();
+            public Dictionary<string, int> Labels { get; set; } = new();
         }
         
         /// <summary>

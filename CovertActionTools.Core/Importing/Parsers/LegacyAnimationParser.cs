@@ -170,67 +170,232 @@ namespace CovertActionTools.Core.Importing.Parsers
                 images[img++] = image;
             }
 
+            //TODO: correct image loading so this isn't necessary
             while (rawData[memStream.Position] == 0x00) //00 is used as padding sometimes
             {
                 reader.ReadByte();
             }
 
-            if (rawData[memStream.Position] != 0x05)
+            if (rawData[memStream.Position] != 0x05) //TODO: this is probably wrong on at least one animation
             {
                 throw new Exception($"Invalid start to data section for {key}: {memStream.Position:X} {rawData[memStream.Position]:X2}");
             }
             
-            //we read the data section into a buffer to use for pointers
-            var originalOffset = memStream.Position;
-            var dataSectionBytes = reader.ReadBytes(64000);
-            memStream.Seek(originalOffset, SeekOrigin.Begin);
+            //the data section is split into two sub-sections: instructions (VM opcodes) and data (simple instructions)
+            //the instruction sub-section ends on opcode 14 (but may have more 14 immediately after, find the last one)
+            //the data sub-section is referenced from opcodes in the instruction sub-section
+            //some opcodes in the instruction sub-section are jumps to other areas of the instruction sub-section
+            var dataSectionStart = memStream.Position;
             
-            //data section has a number of setup records, which include pointers
-            //some pointers to other records, other pointers to instructions
-            //the records are separated by 05 XX, but 05 can appear inside the data of each record
-            //therefore, the parsing can't just find the 'next' 05 XX, but check for valid records
-            //setup records end with XX 14, where XX is usually 14 but is 15 in cases like TITLE2
-            //after setup records are instructions, referenced by pointers from setup records, until EOF
-            var done = false;
-            var records = new List<AnimationModel.SetupRecord>();
-            try
+            //first we parse the instructions as simple opcodes, against the offset they're in
+            var instructions = new Dictionary<long, AnimationModel.AnimationInstruction>();
+            //jump instructions are turned into labels as targets assigned to particular offsets
+            var labels = new Dictionary<long, string>();
+            var labelId = 1;
+            var instructionsDone = false;
+            long lastOffset = 0;
+            var pushedInstruction = true;
+            var stack = new List<byte>();
+            do
             {
-                while (!done)
+                if (pushedInstruction)
                 {
-                    AnimationModel.SetupRecord nextRecord;
-                    try
+                    lastOffset = memStream.Position - dataSectionStart;
+                    pushedInstruction = false;
+                }
+                stack.Add(reader.ReadByte());
+                
+                //special case for end opcodes because we need to handle more than one in a row correctly
+                if (stack[0] == 0x14)
+                {
+                    instructions[lastOffset] = new AnimationModel.AnimationInstruction()
                     {
-                        nextRecord = AnimationModel.SetupRecord.ParseNextRecord(memStream, reader, dataSectionBytes);
-                    }
-                    catch (Exception e)
+                        Opcode = AnimationModel.AnimationInstruction.AnimationOpcode.End
+                    };
+                    
+                    //but also handle any subsequent 14 (like 14 14 shows up as two Ends)
+                    while (rawData[memStream.Position] == 0x14)
                     {
-                        _logger.LogError($"Error while parsing next record, ending: {e}");
-                        done = true;
-                        continue;
+                        lastOffset = memStream.Position - dataSectionStart;
+                        reader.ReadByte();
+                        instructions[lastOffset] = new AnimationModel.AnimationInstruction()
+                        {
+                            Opcode = AnimationModel.AnimationInstruction.AnimationOpcode.End
+                        };
                     }
+                    //and now we're done
+                    instructionsDone = true;
+                    continue;
+                }
+
+                //the others are now basically a binary tree search of instructions
+                //TODO: improve this
+                var foundInstruction = true;
+                var unknownInstruction = false;
+                var opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Unknown;
+                var data = Array.Empty<byte>();
+                var label = string.Empty;
+                switch (stack[0])
+                {
+                    //first the ones that have no extra data, so they are always immediately found
+                    case 0x00:
+                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.SetupSprite;
+                        break;
+                    case 0x01:
+                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.UnknownSprite01;
+                        break;
+                    case 0x02:
+                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.WaitForFrames;
+                        break;
+                    case 0x04:
+                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.KeepSpriteDrawn;
+                        break;
+                    case 0x07:
+                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Unknown07;
+                        break;
+                    case 0x08:
+                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Unknown08;
+                        break;
+                    case 0x0B:
+                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Unknown0B;
+                        break;
+                    case 0x0E:
+                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Unknown0E;
+                        break;
+                    //no need to handle 0x14 because of the above code
+                    case 0x15:
+                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Unknown15;
+                        break;
                     
-                    // if (nextRecord is AnimationModel.Instruction3Record instruction3 &&  
-                    //     instruction3.Type == AnimationModel.Instruction3Record.Instruction3Type.Padding && 
-                    //     instruction3.Data == 0)
-                    // {
-                    //     //it's padding so we don't want to add it
-                    //     continue;
-                    // }
+                    //then the ones that have extra data after, so might not be found
+                    case 0x05:
+                        if (stack.Count == 4 && stack[1] == 0x00)
+                        {
+                            opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Push;
+                            data = new[] { stack[2], stack[3] };
+                        }
+                        else if (stack.Count == 4 && stack[1] == 0x01)
+                        {
+                            opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Unknown0501;
+                            data = new[] { stack[2], stack[3] };
+                        }
+                        else if (stack.Count > 4)
+                        {
+                            unknownInstruction = true;
+                        }
+                        else
+                        {
+                            foundInstruction = false;
+                        }
+                        break;
                     
-                    //it's a real record, so add it
-                    records.Add(nextRecord);
+                    case 0x06:
+                        if (stack.Count == 3)
+                        {
+                            opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Unknown06;
+                            data = new[] { stack[1], stack[2] };
+                        } else if (stack.Count > 3)
+                        {
+                            unknownInstruction = true;
+                        }
+                        else
+                        {
+                            foundInstruction = false;
+                        }
+                        break;
                     
-                    //if it's an end record, stop iterating
-                    if (nextRecord is AnimationModel.EndRecord)
+                    case 0x12:
+                        if (stack.Count == 3)
+                        {
+                            opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Jump12;
+                            data = new[] { stack[1], stack[2] };
+                            var target = (long)(stack[1] | (stack[2] << 8));
+                            labels[target] = $"LABEL_{labelId++}";
+                            label = labels[target];
+                        } else if (stack.Count > 3)
+                        {
+                            unknownInstruction = true;
+                        }
+                        else
+                        {
+                            foundInstruction = false;
+                        }
+                        break;
+                    
+                    case 0x13:
+                        if (stack.Count == 3)
+                        {
+                            opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Jump13;
+                            data = new[] { stack[1], stack[2] };
+                            var target = (long)(stack[1] | (stack[2] << 8));
+                            labels[target] = $"LABEL_{labelId++}";
+                            label = labels[target];
+                        } else if (stack.Count > 3)
+                        {
+                            unknownInstruction = true;
+                        }
+                        else
+                        {
+                            foundInstruction = false;
+                        }
+                        break;
+                    
+                    default:
+                        unknownInstruction = true;
+                        break;
+                }
+
+                //unknown instructions means we have an overlap in the binary tree
+                if (unknownInstruction)
+                {
+                    throw new Exception($"Unknown instruction: {string.Join(" ", stack.Select(x => $"{x:X2}"))}");
+                }
+
+                //not found means we have part of an instruction, so just continue reading
+                if (foundInstruction)
+                {
+                    instructions.Add(lastOffset, new AnimationModel.AnimationInstruction()
                     {
-                        done = true;
-                    }
+                        Opcode = opcode,
+                        Data = data,
+                        Label = label
+                    });
+                    stack.Clear();
+                    pushedInstruction = true;
+                }
+            } while (!instructionsDone);
+            
+            //double check that all labels point to valid instructions
+            var missingLabels = labels
+                .Where(x => !instructions.ContainsKey(x.Key))
+                .ToList();
+            if (missingLabels.Count != 0)
+            {
+                _logger.LogError($"Missing labels ({missingLabels.Count}/{labels.Count}):");
+                foreach (var missingLabel in missingLabels)
+                {
+                    var nearestHigher = instructions.Keys.OrderBy(x => x).FirstOrDefault(x => x > missingLabel.Key);
+                    var nearestLower = instructions.Keys.OrderByDescending(x => x).FirstOrDefault(x => x < missingLabel.Key);
+                    _logger.LogError($"Missing label: {missingLabel.Value} {missingLabel.Key}, {nearestHigher} {nearestLower}");
                 }
             }
-            catch (Exception e)
+            
+            //as a second pass we turn the absolute jumps into relative jumps to labels
+            var listInstructions = new List<AnimationModel.AnimationInstruction>(instructions.Count);
+            var listLabels = new Dictionary<string, int>(labels.Count);
+            var instructionIndex = 0;
+            foreach (var offset in instructions.OrderBy(x => x.Key).Select(x => x.Key))
             {
-                _logger.LogError($"Failed to parse data section: {e}");
+                if (labels.TryGetValue(offset, out var label))
+                {
+                    listLabels[label] = instructionIndex;
+                }
+
+                listInstructions.Add(instructions[offset]);
+                instructionIndex++;
             }
+            
+            //TODO: second pass to decompile into simple language (merge 00 opcode with its previous 05 00 opcodes)
 
             var model = new AnimationModel()
             {
@@ -249,7 +414,8 @@ namespace CovertActionTools.Core.Importing.Parsers
                     Unknown1 = unknown1,
                     ImageIdToIndex = imageIdToIndex,
                     ImageIndexToUnknownData = imageIndexToUnknownData,
-                    Records = records
+                    Instructions = listInstructions,
+                    Labels = listLabels
                 }
             };
             return model;

@@ -414,85 +414,116 @@ public class SelectedAnimationWindow : SharedImageWindow
     
     private void DrawAnimationInstructionsWindow(PackageModel model, AnimationModel animation)
     {
-        var id = 0;
-        foreach (var record in animation.ExtraData.Records)
+        var index = 0;
+        foreach (var instruction in animation.ExtraData.Instructions)
         {
-            var name = $"{id++} - ";
-            if (record is AnimationModel.SetupAnimationRecord setupAnimation)
+            var labelsOnIndex = animation.ExtraData.Labels
+                .Where(x => x.Value == index)
+                .Select(x => x.Key)
+                .ToList();
+            if (labelsOnIndex.Count > 0)
             {
-                name += $"Setup Animation {setupAnimation.Index} at ({setupAnimation.PositionX}, {setupAnimation.PositionY})";
+                foreach (var label in labelsOnIndex)
+                {
+                    ImGui.Text($"{label}:");
+                }
             }
-            else if (record is AnimationModel.UnknownRecord unknown)
+            
+            var name = $"{index} - {instruction.Opcode}";
+            if (instruction.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.Jump12 ||
+                instruction.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.Jump13)
             {
-                name += $"Unknown {unknown.RecordType}: {string.Join(" ", unknown.Data.Select(x => $"{x:X2}"))}";
-            } else if (record is AnimationModel.Instruction3Record unknown3)
-            {
-                name += $"{unknown3.RecordType}: {unknown3.Type} {unknown3.Data}";
+                name += $" {instruction.Label}";
             }
             else
             {
-                name += $"Unknown record: {record.RecordType}";
+                name += $" {string.Join(" ", instruction.Data.Select(x => $"{x:X2}"))}";
             }
 
-            if (ImGui.CollapsingHeader(name))
-            {
-                if (record is AnimationModel.SetupAnimationRecord setupAnimationRecord)
-                {
-                    ImGui.Text($"{setupAnimationRecord.Unknown1:X4} {setupAnimationRecord.Unknown2:X4}");
-
-                    if (ImGui.BeginTable("instructions", 2, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
-                    {
-                        foreach (var instruction in setupAnimationRecord.Instructions)
-                        {
-                            ImGui.TableNextRow();
-                            ImGui.TableNextColumn();
-                            ImGui.Text($"{instruction.Type}");
-
-                            if (instruction is AnimationModel.DelayInstruction delay)
-                            {
-                                ImGui.TableNextColumn();
-                                ImGui.Text($"{delay.Frames}");
-                            }
-                            else if (instruction is AnimationModel.ImageChangeInstruction imageChange)
-                            {
-                                ImGui.TableNextColumn();
-                                ImGui.Text($"{imageChange.Id}");
-                            }
-                            else if (instruction is AnimationModel.PositionChangeInstruction positionChange)
-                            {
-                                ImGui.TableNextColumn();
-                                ImGui.Text($"({positionChange.PositionX}, {positionChange.PositionY})");
-                            }
-                            else if (instruction is AnimationModel.JumpInstruction jump)
-                            {
-                                ImGui.TableNextColumn();
-                                ImGui.Text($"Null: {jump.Null} Index: {jump.IndexDelta}");
-                            }
-                            else if (instruction is AnimationModel.UnknownInstruction unknown)
-                            {
-                                ImGui.TableNextColumn();
-                                ImGui.Text($"{string.Join(" ", unknown.Data.Select(x => $"{x:X2}"))}");
-                            }
-                            else if (instruction is AnimationModel.Unknown8Instruction unknown8)
-                            {
-                                ImGui.TableNextColumn();
-                            }
-                            else if (instruction is AnimationModel.EndInstruction end)
-                            {
-                                ImGui.TableNextColumn();
-                            }
-                            else
-                            {
-                                ImGui.TableNextColumn();
-                                ImGui.Text("Unknown record");
-                            }
-                        }
-
-                        ImGui.EndTable();
-                    }
-                }
-            }
+            ImGui.Text(name);
+            
+            index++;
         }
+        
+        // var id = 0;
+        // foreach (var record in animation.ExtraData.Records)
+        // {
+        //     var name = $"{id++} - ";
+        //     if (record is AnimationModel.SetupAnimationRecord setupAnimation)
+        //     {
+        //         name += $"Setup Animation {setupAnimation.Index} at ({setupAnimation.PositionX}, {setupAnimation.PositionY})";
+        //     }
+        //     else if (record is AnimationModel.UnknownRecord unknown)
+        //     {
+        //         name += $"Unknown {unknown.RecordType}: {string.Join(" ", unknown.Data.Select(x => $"{x:X2}"))}";
+        //     } else if (record is AnimationModel.Instruction3Record unknown3)
+        //     {
+        //         name += $"{unknown3.RecordType}: {unknown3.Type} {unknown3.Data}";
+        //     }
+        //     else
+        //     {
+        //         name += $"Unknown record: {record.RecordType}";
+        //     }
+        //
+        //     if (ImGui.CollapsingHeader(name))
+        //     {
+        //         if (record is AnimationModel.SetupAnimationRecord setupAnimationRecord)
+        //         {
+        //             ImGui.Text($"{setupAnimationRecord.Unknown1:X4} {setupAnimationRecord.Unknown2:X4}");
+        //
+        //             if (ImGui.BeginTable("instructions", 2, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+        //             {
+        //                 foreach (var instruction in setupAnimationRecord.Instructions)
+        //                 {
+        //                     ImGui.TableNextRow();
+        //                     ImGui.TableNextColumn();
+        //                     ImGui.Text($"{instruction.Type}");
+        //
+        //                     if (instruction is AnimationModel.DelayInstruction delay)
+        //                     {
+        //                         ImGui.TableNextColumn();
+        //                         ImGui.Text($"{delay.Frames}");
+        //                     }
+        //                     else if (instruction is AnimationModel.ImageChangeInstruction imageChange)
+        //                     {
+        //                         ImGui.TableNextColumn();
+        //                         ImGui.Text($"{imageChange.Id}");
+        //                     }
+        //                     else if (instruction is AnimationModel.PositionChangeInstruction positionChange)
+        //                     {
+        //                         ImGui.TableNextColumn();
+        //                         ImGui.Text($"({positionChange.PositionX}, {positionChange.PositionY})");
+        //                     }
+        //                     else if (instruction is AnimationModel.JumpInstruction jump)
+        //                     {
+        //                         ImGui.TableNextColumn();
+        //                         ImGui.Text($"Null: {jump.Null} Index: {jump.IndexDelta}");
+        //                     }
+        //                     else if (instruction is AnimationModel.UnknownInstruction unknown)
+        //                     {
+        //                         ImGui.TableNextColumn();
+        //                         ImGui.Text($"{string.Join(" ", unknown.Data.Select(x => $"{x:X2}"))}");
+        //                     }
+        //                     else if (instruction is AnimationModel.Unknown8Instruction unknown8)
+        //                     {
+        //                         ImGui.TableNextColumn();
+        //                     }
+        //                     else if (instruction is AnimationModel.EndInstruction end)
+        //                     {
+        //                         ImGui.TableNextColumn();
+        //                     }
+        //                     else
+        //                     {
+        //                         ImGui.TableNextColumn();
+        //                         ImGui.Text("Unknown record");
+        //                     }
+        //                 }
+        //
+        //                 ImGui.EndTable();
+        //             }
+        //         }
+        //     }
+        //}
     }
 
     private void DrawAnimationImageWindow(PackageModel model, AnimationModel animation)
