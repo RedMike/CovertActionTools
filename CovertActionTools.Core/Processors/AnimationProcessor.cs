@@ -13,8 +13,8 @@ namespace CovertActionTools.Core.Processors
         {
             public int Index { get; set; }
             public int Counter { get; set; }
-        
-            public int ImageId { get; set; } //maybe not actually maintained?
+
+            public int ImageId { get; set; } = -1;
             public int PositionX { get; set; }
             public int PositionY { get; set; }
             
