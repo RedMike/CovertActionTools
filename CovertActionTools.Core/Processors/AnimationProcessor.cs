@@ -175,14 +175,14 @@ namespace CovertActionTools.Core.Processors
                         state.Ended = true;
                         nextInstructionIndex = state.InstructionIndex;
                         break;
-                    case AnimationModel.AnimationInstruction.AnimationOpcode.Push:
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.PushParameterToStack:
                         state.Stack.Add(ReadDataAsShort(0));
                         break;
-                    case AnimationModel.AnimationInstruction.AnimationOpcode.Jump13:
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.Jump:
                         //TODO: condition?
                         nextInstructionIndex = animation.ExtraData.InstructionLabels[currentInstruction.Label];
                         break;
-                    case AnimationModel.AnimationInstruction.AnimationOpcode.Jump12:
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.ConditionalJump:
                         if (!state.CompareFlag)
                         {
                             nextInstructionIndex = animation.ExtraData.InstructionLabels[currentInstruction.Label];
@@ -237,7 +237,7 @@ namespace CovertActionTools.Core.Processors
                             });
                         }
                         break;
-                    case AnimationModel.AnimationInstruction.AnimationOpcode.Unknown06:
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.PopStackToRegister:
                     {
                         var registerIndex = (ushort)(currentInstruction.Data[0] | (currentInstruction.Data[1] << 8));
                         if (!state.Registers.ContainsKey(registerIndex))
@@ -255,7 +255,7 @@ namespace CovertActionTools.Core.Processors
                         state.Registers[registerIndex] = s1;
                         break;
                     }
-                    case AnimationModel.AnimationInstruction.AnimationOpcode.Unknown0501:
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.PushRegisterToStack:
                     {
                         var registerIndex = (ushort)(currentInstruction.Data[0] | (currentInstruction.Data[1] << 8));
                         if (!state.Registers.ContainsKey(registerIndex))
@@ -266,7 +266,7 @@ namespace CovertActionTools.Core.Processors
                         state.Stack.Add((short)state.Registers[registerIndex]);
                         break;
                     }
-                    case AnimationModel.AnimationInstruction.AnimationOpcode.Unknown0B:
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.CompareEqual:
                     {
                         var target = currentInstruction.StackParameters[0];
                         var value = state.Stack[state.Stack.Count - 1];
@@ -274,7 +274,7 @@ namespace CovertActionTools.Core.Processors
                         state.CompareFlag = target == value;
                         break;
                     }
-                    case AnimationModel.AnimationInstruction.AnimationOpcode.Unknown08:
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.CompareNotEqual:
                     {
                         var target = currentInstruction.StackParameters[0];
                         if (state.Stack.Count == 0)
@@ -286,20 +286,13 @@ namespace CovertActionTools.Core.Processors
                         state.CompareFlag = target != value;
                         break;
                     }
-                    case AnimationModel.AnimationInstruction.AnimationOpcode.Unknown0E:
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.Add:
                         var delta = currentInstruction.StackParameters[0];
                         if (state.Stack.Count == 0)
                         {
                             state.Stack.Add(0);
                         }
                         state.Stack[state.Stack.Count - 1] += delta;
-                        break;
-                    case AnimationModel.AnimationInstruction.AnimationOpcode.Unknown07:
-                        // if (state.Stack.Count == 0)
-                        // {
-                        //     state.Stack.Add(0);
-                        // }
-                        // state.Stack[state.Stack.Count - 1] += 1;
                         break;
                     default:
                         break;

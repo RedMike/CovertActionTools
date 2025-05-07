@@ -45,16 +45,16 @@ namespace CovertActionTools.Core.Models
                 SetupSprite = 5, //00, loads 7 * 2 stack (pointer, index, u1, x, y, u2, u3), add active sprite
                 UnknownSprite01 = 14, //01, loads 2 stack, do something to sprite X?
                 WaitForFrames = 9, //02, loads 2 stack, render for X frames
-                KeepSpriteDrawn = 12, //04, loads 2 stack, persist sprite X after end?
-                Push = 1, //05 00 XX XX, push to stack?
-                Unknown0501 = 2, //05 01 XX XX, LDA?
-                Unknown06 = 8, //06 XX XX, loads 2 stack?
+                KeepSpriteDrawn = 12, //04, loads 2 stack, persist sprite X at current position after end
+                PushParameterToStack = 1, //05 00 XX XX, push XX XX to stack
+                PushRegisterToStack = 2, //05 01 XX XX, push register X to stack
+                PopStackToRegister = 8, //06 XX XX, pops stack and sets register X to it
                 Unknown07 = 6, //07
-                Unknown08 = 7, //08, ADD?
-                Unknown0B = 11, //0B, CMP?
-                Unknown0E = 13, //0E, CMP?
-                Jump12 = 3, //12 XX XX, conditional jump?
-                Jump13 = 4, //13 XX XX, unconditional jump?
+                CompareNotEqual = 7, //08, loads 2 stack, sets compare flag if most recent two stack entries are not equal
+                CompareEqual = 11, //0B, loads 2 stack, sets compare flag if most recent two stack entries are equal
+                Add = 13, //0E, loads 2 stack, adds most recent two stack entries together
+                ConditionalJump = 3, //12 XX XX, conditional jump?
+                Jump = 4, //13 XX XX, unconditional jump?
                 End = 0, //14, end or return?
                 Unknown15 = 10, //15
             }

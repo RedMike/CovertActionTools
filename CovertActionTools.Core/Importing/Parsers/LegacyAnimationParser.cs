@@ -263,15 +263,15 @@ namespace CovertActionTools.Core.Importing.Parsers
                         break;
                     case 0x08:
                         prevPushesToRemove = 1;
-                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Unknown08;
+                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.CompareNotEqual;
                         break;
                     case 0x0B:
                         prevPushesToRemove = 1;
-                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Unknown0B;
+                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.CompareEqual;
                         break;
                     case 0x0E:
                         prevPushesToRemove = 1;
-                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Unknown0E;
+                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Add;
                         break;
                     //no need to handle 0x14 because of the above code
                     case 0x15:
@@ -282,12 +282,12 @@ namespace CovertActionTools.Core.Importing.Parsers
                     case 0x05:
                         if (stack.Count == 4 && stack[1] == 0x00)
                         {
-                            opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Push;
+                            opcode = AnimationModel.AnimationInstruction.AnimationOpcode.PushParameterToStack;
                             data = new[] { stack[2], stack[3] };
                         }
                         else if (stack.Count == 4 && stack[1] == 0x01)
                         {
-                            opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Unknown0501;
+                            opcode = AnimationModel.AnimationInstruction.AnimationOpcode.PushRegisterToStack;
                             data = new[] { stack[2], stack[3] };
                         }
                         else if (stack.Count > 4)
@@ -303,7 +303,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                     case 0x06:
                         if (stack.Count == 3)
                         {
-                            opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Unknown06;
+                            opcode = AnimationModel.AnimationInstruction.AnimationOpcode.PopStackToRegister;
                             data = new[] { stack[1], stack[2] };
                         } else if (stack.Count > 3)
                         {
@@ -318,7 +318,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                     case 0x12:
                         if (stack.Count == 3)
                         {
-                            opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Jump12;
+                            opcode = AnimationModel.AnimationInstruction.AnimationOpcode.ConditionalJump;
                             data = new[] { stack[1], stack[2] };
                             var target = (long)(stack[1] | (stack[2] << 8));
                             if (!instructionLabels.TryGetValue(target, out label))
@@ -339,7 +339,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                     case 0x13:
                         if (stack.Count == 3)
                         {
-                            opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Jump13;
+                            opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Jump;
                             data = new[] { stack[1], stack[2] };
                             var target = (long)(stack[1] | (stack[2] << 8));
                             if (!instructionLabels.TryGetValue(target, out label))
@@ -385,7 +385,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                         {
                             //_logger.LogError($"Attempting to remove {i}: {offsets.Count - prevPushesToRemove + i}");
                             var offset = offsets[offsets.Count - prevPushesToRemove + i];
-                            if (instructions[offset].Opcode != AnimationModel.AnimationInstruction.AnimationOpcode.Push)
+                            if (instructions[offset].Opcode != AnimationModel.AnimationInstruction.AnimationOpcode.PushParameterToStack)
                             {
                                 throw new Exception($"Attempted to remove Push but found: {instructions[offset].Opcode}");
                             }

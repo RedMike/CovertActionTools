@@ -188,7 +188,7 @@ public class SelectedAnimationWindow : SharedImageWindow
         if (ImGui.BeginChild("menu", new Vector2(300, fullHeight), true))
         {
             var inputRegisters = animation.ExtraData.Instructions
-                .Where(x => x.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.Unknown0501)
+                .Where(x => x.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.PushRegisterToStack)
                 .Select(x => x.Data[0])
                 .Distinct()
                 .Order()
@@ -351,8 +351,8 @@ public class SelectedAnimationWindow : SharedImageWindow
     private string GetInstructionText(int index, AnimationModel.AnimationInstruction instruction)
     {
         var name = $"{index} - {instruction.Opcode}";
-        if (instruction.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.Jump12 ||
-            instruction.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.Jump13)
+        if (instruction.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.ConditionalJump ||
+            instruction.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.Jump)
         {
             name += $" {instruction.Label}";
         }
