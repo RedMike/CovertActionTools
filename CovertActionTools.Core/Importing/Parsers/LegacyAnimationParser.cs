@@ -494,7 +494,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                         case AnimationModel.AnimationStep.StepType.SetCounter:
                             data = reader.ReadBytes(2);
                             break;
-                        case AnimationModel.AnimationStep.StepType.JumpAndReduceCounter:
+                        case AnimationModel.AnimationStep.StepType.Jump:
                             data = reader.ReadBytes(2);
                             var target = (short)(data[0] | (data[1] << 8));
                             if (!dataLabels.TryGetValue(target, out dataLabel))

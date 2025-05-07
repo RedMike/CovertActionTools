@@ -21,6 +21,8 @@ namespace CovertActionTools.Core.Processors
             public bool Active { get; set; }
             public int OriginalStepIndex { get; set; }
             public int StepIndex { get; set; }
+
+            public List<int> LastFrameStepIndices { get; set; } = new();
         }
 
         /// <summary>
@@ -41,6 +43,8 @@ namespace CovertActionTools.Core.Processors
         public int InstructionIndex { get; set; }
         public int FramesToWait { get; set; }
         public int CurrentFrame { get; set; }
+
+        public List<int> LastFrameInstructionIndices { get; set; } = new();
     }
     
     public interface IAnimationProcessor
@@ -55,6 +59,7 @@ namespace CovertActionTools.Core.Processors
             var state = new AnimationState();
             while (state.CurrentFrame <= frameIndex)
             {
+                var firstFrame = true;
                 while (state.FramesToWait > 0 && state.CurrentFrame <= frameIndex)
                 {
                     foreach (var sprite in state.Sprites.Values)
@@ -64,9 +69,11 @@ namespace CovertActionTools.Core.Processors
                             continue;
                         }
 
+                        sprite.LastFrameStepIndices.Clear();
                         var frameDone = false;
                         while (!frameDone)
                         {
+                            sprite.LastFrameStepIndices.Add(sprite.StepIndex);
                             var step = animation.ExtraData.Steps[sprite.StepIndex];
                             if (step.Type == AnimationModel.AnimationStep.StepType.End)
                             {
@@ -89,14 +96,11 @@ namespace CovertActionTools.Core.Processors
                             {
                                 case AnimationModel.AnimationStep.StepType.Restart:
                                     nextIndex = sprite.OriginalStepIndex;
-                                    frameDone = true;
                                     break;
-                                case AnimationModel.AnimationStep.StepType.JumpAndReduceCounter:
+                                case AnimationModel.AnimationStep.StepType.Jump:
                                     if (sprite.Counter > 0)
                                     {
-                                        sprite.Counter--;
                                         nextIndex = animation.ExtraData.DataLabels[step.Label];
-                                        frameDone = true;
                                     }
                                     break;
                                 case AnimationModel.AnimationStep.StepType.Move:
@@ -107,6 +111,11 @@ namespace CovertActionTools.Core.Processors
                                     break;
                                 case AnimationModel.AnimationStep.StepType.SetImage:
                                     sprite.ImageId = (sbyte)step.Data[0];
+                                    frameDone = true;
+                                    if (sprite.Counter > 0)
+                                    {
+                                        sprite.Counter--;
+                                    }
                                     break;
                                 case AnimationModel.AnimationStep.StepType.SetCounter:
                                     var count = (short)(step.Data[0] | (step.Data[1] << 8));
@@ -122,8 +131,17 @@ namespace CovertActionTools.Core.Processors
 
                     state.CurrentFrame++;
                     state.FramesToWait--;
-                    if (state.FramesToWait == 0)
+
+                    if (!firstFrame)
                     {
+                        state.LastFrameInstructionIndices.Clear();
+                        state.LastFrameInstructionIndices.Add(state.InstructionIndex);
+                    }
+                    firstFrame = false;
+                    if (state.FramesToWait == 0 && state.CurrentFrame <= frameIndex)
+                    {
+                        state.LastFrameInstructionIndices.Clear();
+                        state.LastFrameInstructionIndices.Add(state.InstructionIndex);
                         state.InstructionIndex++;
                     }
                 }
@@ -134,6 +152,7 @@ namespace CovertActionTools.Core.Processors
                 }
 
                 var currentInstruction = animation.ExtraData.Instructions[state.InstructionIndex];
+                state.LastFrameInstructionIndices.Add(state.InstructionIndex);
                 if (currentInstruction.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.End)
                 {
                     break;

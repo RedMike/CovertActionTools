@@ -187,13 +187,30 @@ public class SelectedAnimationWindow : SharedImageWindow
         if (ImGui.BeginChild("menu", new Vector2(200, fullHeight), true))
         {
             ImGui.Text($"Instruction: {state.InstructionIndex}");
+            ImGui.Text($"Wait: {state.FramesToWait}");
+            if (ImGui.CollapsingHeader("Instruction View"))
+            {
+                foreach (var instructionIndex in state.LastFrameInstructionIndices)
+                {
+                    var instruction = animation.ExtraData.Instructions[instructionIndex];
+                    ImGui.Text(GetInstructionText(instructionIndex, instruction));
+                }
+            }
+
+            ImGui.Text("");
+
+            var spriteIndexes = animation.ExtraData.Instructions
+                .Where(x => x.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.SetupSprite)
+                .Select(x => (int)x.StackParameters[0])
+                .Distinct()
+                .ToList();
             
-            var newSelectedAnimation = ImGuiExtensions.Input("Sprite", _selectedAnimation);
+            var newSelectedAnimation = ImGuiExtensions.Input("Sprite", _selectedAnimation, spriteIndexes);
             if (newSelectedAnimation != null)
             {
                 _selectedAnimation = newSelectedAnimation.Value;
             }
-
+            
             if (state.Sprites.TryGetValue(_selectedAnimation, out var sprite))
             {
                 if (sprite.ImageId >= 0)
@@ -207,20 +224,34 @@ public class SelectedAnimationWindow : SharedImageWindow
                 {
                     ImGui.Text($"Image: Hidden ({sprite.ImageId})");
                 }
-                
-                ImGui.Text($"Active: {sprite.Active}");
-                ImGui.Text($"Step: {sprite.StepIndex}");
+
+                ImGui.Text($"Active: {sprite.Active} Counter: {sprite.Counter}");
                 ImGui.Text($"Position: ({sprite.PositionX}, {sprite.PositionY})");
+                ImGui.Text($"Step: {sprite.StepIndex}");
+                    
             }
             else
             {
                 ImGui.Text("Does not exist");
             }
-            
+
+            ImGui.Text("");
+
+            if (ImGui.CollapsingHeader("Step View"))
+            {
+                if (sprite != null)
+                {
+                    foreach (var stepIndex in sprite.LastFrameStepIndices)
+                    {
+                        ImGui.Text(GetStepText(stepIndex, animation.ExtraData.Steps[stepIndex]));
+                    }
+                }
+            }
+
             ImGui.EndChild();
         }
     }
-    
+
     private void DrawAnimationInstructionsWindow(PackageModel model, AnimationModel animation)
     {
         if (ImGui.CollapsingHeader("Instructions"))
@@ -239,31 +270,8 @@ public class SelectedAnimationWindow : SharedImageWindow
                         ImGui.Text($"{label}:");
                     }
                 }
-            
-                var name = $"{index} - {instruction.Opcode}";
-                if (instruction.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.Jump12 ||
-                    instruction.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.Jump13)
-                {
-                    name += $" {instruction.Label}";
-                }
-                else if (instruction.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.SetupSprite)
-                {
-                    name += $" {instruction.DataLabel}";
-                }
-                else
-                {
-                    if (instruction.Data.Length > 0)
-                    {
-                        name += $" {string.Join(" ", instruction.Data.Select(x => $"{x:X2}"))}";
-                    }
-                }
-
-                if (instruction.StackParameters.Length > 0)
-                {
-                    name += $" {string.Join(" ", instruction.StackParameters.Select(x => $"{x}"))}";
-                }
-
-                ImGui.Text(name);
+                
+                ImGui.Text(GetInstructionText(index, instruction));
             
                 index++;
             }
@@ -286,20 +294,7 @@ public class SelectedAnimationWindow : SharedImageWindow
                     }
                 }
             
-                var name = $"{index} - {step.Type}";
-                if (step.Type == AnimationModel.AnimationStep.StepType.JumpAndReduceCounter)
-                {
-                    name += $" {step.Label}";
-                }
-                else
-                {
-                    if (step.Data.Length > 0)
-                    {
-                        name += $" {string.Join(" ", step.Data.Select(x => $"{x:X2}"))}";
-                    }
-                }
-
-                ImGui.Text(name);
+                ImGui.Text(GetStepText(index, step));
             
                 index++;
             }
@@ -327,5 +322,51 @@ public class SelectedAnimationWindow : SharedImageWindow
         }
 
         DrawImageTabs(image);
+    }
+    
+    private string GetInstructionText(int index, AnimationModel.AnimationInstruction instruction)
+    {
+        var name = $"{index} - {instruction.Opcode}";
+        if (instruction.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.Jump12 ||
+            instruction.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.Jump13)
+        {
+            name += $" {instruction.Label}";
+        }
+        else if (instruction.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.SetupSprite)
+        {
+            name += $" {instruction.DataLabel}";
+        }
+        else
+        {
+            if (instruction.Data.Length > 0)
+            {
+                name += $" {string.Join(" ", instruction.Data.Select(x => $"{x:X2}"))}";
+            }
+        }
+
+        if (instruction.StackParameters.Length > 0)
+        {
+            name += $" {string.Join(" ", instruction.StackParameters.Select(x => $"{x}"))}";
+        }
+
+        return name;
+    }
+
+    private string GetStepText(int index, AnimationModel.AnimationStep step)
+    {
+        var name = $"{index} - {step.Type}";
+        if (step.Type == AnimationModel.AnimationStep.StepType.Jump)
+        {
+            name += $" {step.Label}";
+        }
+        else
+        {
+            if (step.Data.Length > 0)
+            {
+                name += $" {string.Join(" ", step.Data.Select(x => $"{x:X2}"))}";
+            }
+        }
+
+        return name;
     }
 }

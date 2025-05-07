@@ -87,7 +87,7 @@ namespace CovertActionTools.Core.Models
                 Move1 = 0x01,
                 Move = 0x02,
                 SetCounter = 0x05,
-                JumpAndReduceCounter = 0x06,
+                Jump = 0x06,
                 End7 = 0x07,
                 Restart = 0x08,
                 End9 = 0x09,
