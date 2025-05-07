@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using CovertActionTools.Core.Models;
 
 namespace CovertActionTools.Core.Processors
@@ -40,23 +41,27 @@ namespace CovertActionTools.Core.Processors
         public List<DrawnImage> DrawnImages { get; set; } = new();
 
         public List<short> Stack { get; set; } = new();
+        public Dictionary<int, int> Registers { get; set; } = new();
+        public bool CompareFlag { get; set; }
         public int InstructionIndex { get; set; }
         public int FramesToWait { get; set; }
         public int CurrentFrame { get; set; }
+        public bool Ended { get; set; }
 
         public List<int> LastFrameInstructionIndices { get; set; } = new();
     }
     
     public interface IAnimationProcessor
     {
-        AnimationState Process(AnimationModel animation, int frameIndex);
+        AnimationState Process(AnimationModel animation, int frameIndex, Dictionary<int, int> inputRegisters);
     }
     
     internal class AnimationProcessor : IAnimationProcessor
     {
-        public AnimationState Process(AnimationModel animation, int frameIndex)
+        public AnimationState Process(AnimationModel animation, int frameIndex, Dictionary<int, int> inputRegisters)
         {
             var state = new AnimationState();
+            state.Registers = inputRegisters.ToDictionary(x => x.Key, x => x.Value);
             while (state.CurrentFrame <= frameIndex)
             {
                 var firstFrame = true;
@@ -82,8 +87,7 @@ namespace CovertActionTools.Core.Processors
                                 continue;
                             }
 
-                            if (step.Type == AnimationModel.AnimationStep.StepType.End7 ||
-                                step.Type == AnimationModel.AnimationStep.StepType.End9)
+                            if (step.Type == AnimationModel.AnimationStep.StepType.End7)
                             {
                                 //TODO: is this correct? conditional?
                                 sprite.Active = false;
@@ -95,6 +99,9 @@ namespace CovertActionTools.Core.Processors
                             switch (step.Type)
                             {
                                 case AnimationModel.AnimationStep.StepType.Restart:
+                                    nextIndex = sprite.OriginalStepIndex;
+                                    break;
+                                case AnimationModel.AnimationStep.StepType.End9:
                                     nextIndex = sprite.OriginalStepIndex;
                                     break;
                                 case AnimationModel.AnimationStep.StepType.Jump:
@@ -151,17 +158,23 @@ namespace CovertActionTools.Core.Processors
                     break;
                 }
 
+                if (state.Ended)
+                {
+                    state.InstructionIndex--;
+                }
+
                 var currentInstruction = animation.ExtraData.Instructions[state.InstructionIndex];
                 state.LastFrameInstructionIndices.Add(state.InstructionIndex);
-                if (currentInstruction.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.End)
-                {
-                    break;
-                }
 
                 short ReadDataAsShort(int startIdx) => (short)(currentInstruction.Data[startIdx] | (currentInstruction.Data[startIdx + 1] << 8));
                 var nextInstructionIndex = state.InstructionIndex + 1;
                 switch (currentInstruction.Opcode)
                 {
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.End:
+                        state.FramesToWait = 1;
+                        state.Ended = true;
+                        nextInstructionIndex = state.InstructionIndex;
+                        break;
                     case AnimationModel.AnimationInstruction.AnimationOpcode.Push:
                         state.Stack.Add(ReadDataAsShort(0));
                         break;
@@ -170,8 +183,10 @@ namespace CovertActionTools.Core.Processors
                         nextInstructionIndex = animation.ExtraData.InstructionLabels[currentInstruction.Label];
                         break;
                     case AnimationModel.AnimationInstruction.AnimationOpcode.Jump12:
-                        //TODO: condition?
-                        nextInstructionIndex = animation.ExtraData.InstructionLabels[currentInstruction.Label];
+                        if (!state.CompareFlag)
+                        {
+                            nextInstructionIndex = animation.ExtraData.InstructionLabels[currentInstruction.Label];
+                        }
                         break;
                     case AnimationModel.AnimationInstruction.AnimationOpcode.SetupSprite:
                         var spriteIndex = currentInstruction.StackParameters[0];
@@ -221,6 +236,70 @@ namespace CovertActionTools.Core.Processors
                                 PositionY = sprite.PositionY
                             });
                         }
+                        break;
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.Unknown06:
+                    {
+                        var registerIndex = (ushort)(currentInstruction.Data[0] | (currentInstruction.Data[1] << 8));
+                        if (!state.Registers.ContainsKey(registerIndex))
+                        {
+                            state.Registers[registerIndex] = 0;
+                        }
+
+                        if (state.Stack.Count == 0)
+                        {
+                            state.Stack.Add(0);
+                        }
+                        var s1 = state.Stack[state.Stack.Count - 1];
+                        state.Stack.RemoveAt(state.Stack.Count - 1); //TODO: should pop or not?
+
+                        state.Registers[registerIndex] = s1;
+                        break;
+                    }
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.Unknown0501:
+                    {
+                        var registerIndex = (ushort)(currentInstruction.Data[0] | (currentInstruction.Data[1] << 8));
+                        if (!state.Registers.ContainsKey(registerIndex))
+                        {
+                            state.Registers[registerIndex] = 0;
+                        }
+
+                        state.Stack.Add((short)state.Registers[registerIndex]);
+                        break;
+                    }
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.Unknown0B:
+                    {
+                        var target = currentInstruction.StackParameters[0];
+                        var value = state.Stack[state.Stack.Count - 1];
+                        //state.Stack.RemoveAt(state.Stack.Count - 1); //TODO: should pop or not?
+                        state.CompareFlag = target == value;
+                        break;
+                    }
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.Unknown08:
+                    {
+                        var target = currentInstruction.StackParameters[0];
+                        if (state.Stack.Count == 0)
+                        {
+                            state.Stack.Add(0);
+                        }
+                        var value = state.Stack[state.Stack.Count - 1];
+                        //state.Stack.RemoveAt(state.Stack.Count - 1); //TODO: should pop or not?
+                        state.CompareFlag = target != value;
+                        break;
+                    }
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.Unknown0E:
+                        var delta = currentInstruction.StackParameters[0];
+                        if (state.Stack.Count == 0)
+                        {
+                            state.Stack.Add(0);
+                        }
+                        state.Stack[state.Stack.Count - 1] += delta;
+                        break;
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.Unknown07:
+                        // if (state.Stack.Count == 0)
+                        // {
+                        //     state.Stack.Add(0);
+                        // }
+                        // state.Stack[state.Stack.Count - 1] += 1;
                         break;
                     default:
                         break;

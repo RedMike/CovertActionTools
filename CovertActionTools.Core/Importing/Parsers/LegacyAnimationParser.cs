@@ -262,6 +262,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                         opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Unknown07;
                         break;
                     case 0x08:
+                        prevPushesToRemove = 1;
                         opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Unknown08;
                         break;
                     case 0x0B:
@@ -320,8 +321,11 @@ namespace CovertActionTools.Core.Importing.Parsers
                             opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Jump12;
                             data = new[] { stack[1], stack[2] };
                             var target = (long)(stack[1] | (stack[2] << 8));
-                            instructionLabels[target] = $"LABEL_{instructionLabelId++}";
-                            label = instructionLabels[target];
+                            if (!instructionLabels.TryGetValue(target, out label))
+                            {
+                                label = $"LABEL_{instructionLabelId++}";
+                                instructionLabels[target] = label;
+                            }
                         } else if (stack.Count > 3)
                         {
                             unknownInstruction = true;
@@ -338,8 +342,11 @@ namespace CovertActionTools.Core.Importing.Parsers
                             opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Jump13;
                             data = new[] { stack[1], stack[2] };
                             var target = (long)(stack[1] | (stack[2] << 8));
-                            instructionLabels[target] = $"LABEL_{instructionLabelId++}";
-                            label = instructionLabels[target];
+                            if (!instructionLabels.TryGetValue(target, out label))
+                            {
+                                label = $"LABEL_{instructionLabelId++}";
+                                instructionLabels[target] = label;
+                            }
                         } else if (stack.Count > 3)
                         {
                             unknownInstruction = true;

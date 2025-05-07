@@ -16,6 +16,7 @@ public class SelectedAnimationWindow : SharedImageWindow
     private int _selectedImage = 0;
     private int _selectedFrameId = 0;
     private int _selectedAnimation = 0;
+    private Dictionary<int, int> _inputRegisters = new();
 
     public SelectedAnimationWindow(RenderWindow renderWindow, ILogger<SelectedAnimationWindow> logger, MainEditorState mainEditorState, IAnimationProcessor animationProcessor) : base(renderWindow)
     {
@@ -146,7 +147,7 @@ public class SelectedAnimationWindow : SharedImageWindow
             ImGui.Image(texture, new Vector2(backgroundImage.ExtraData.LegacyWidth, backgroundImage.ExtraData.LegacyHeight));
         }
 
-        var state = _animationProcessor.Process(animation, _selectedFrameId);
+        var state = _animationProcessor.Process(animation, _selectedFrameId, _inputRegisters);
         foreach (var drawnImage in state.DrawnImages)
         {
             ImGui.SetCursorPos(pos + new Vector2(offsetX + drawnImage.PositionX, offsetY + drawnImage.PositionY));
@@ -184,8 +185,31 @@ public class SelectedAnimationWindow : SharedImageWindow
         }
         
         ImGui.SetCursorPos(pos + new Vector2(fullWidth + 10, 0));
-        if (ImGui.BeginChild("menu", new Vector2(200, fullHeight), true))
+        if (ImGui.BeginChild("menu", new Vector2(300, fullHeight), true))
         {
+            var inputRegisters = animation.ExtraData.Instructions
+                .Where(x => x.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.Unknown0501)
+                .Select(x => x.Data[0])
+                .Distinct()
+                .Order()
+                .ToList();
+            foreach (var inputRegister in inputRegisters)
+            {
+                _inputRegisters.TryGetValue(inputRegister, out var oldValue);
+                var newValue = ImGuiExtensions.Input($"Register {inputRegister}", oldValue);
+                if (newValue != null)
+                {
+                    _inputRegisters[inputRegister] = newValue.Value;
+                }
+            }
+            
+            ImGui.Text($"Stack ({state.Stack.Count}): {string.Join(" ", state.Stack.Select(x => $"{x}"))}");
+            foreach (var pair in state.Registers)
+            {
+                ImGui.Text($"Register {pair.Key}: {pair.Value}");
+            }
+            ImGui.Text($"Compare flag: {state.CompareFlag}");
+            
             ImGui.Text($"Instruction: {state.InstructionIndex}");
             ImGui.Text($"Wait: {state.FramesToWait}");
             if (ImGui.CollapsingHeader("Instruction View"))
