@@ -175,24 +175,35 @@ namespace CovertActionTools.Core.Processors
                         break;
                     case AnimationModel.AnimationInstruction.AnimationOpcode.SetupSprite:
                         var spriteIndex = currentInstruction.StackParameters[0];
-                        if (state.Sprites.ContainsKey(spriteIndex))
-                        {
-                            //TODO: what happens here?
-                            throw new Exception("Tried to add sprite that already exists");
-                        }
-
                         var posX = currentInstruction.StackParameters[2];
                         var posY = currentInstruction.StackParameters[3];
                         var stepIndex = animation.ExtraData.DataLabels[currentInstruction.DataLabel];
-                        state.Sprites[spriteIndex] = new AnimationState.Sprite()
+                        
+                        if (state.Sprites.TryGetValue(spriteIndex, out var existingSprite))
                         {
-                            Active = true,
-                            Index = spriteIndex,
-                            PositionX = posX,
-                            PositionY = posY,
-                            OriginalStepIndex = stepIndex, 
-                            StepIndex = stepIndex
-                        };
+                            if (existingSprite.Active)
+                            {
+                                //TODO: what happens here?
+                                throw new Exception("Tried to add sprite that already exists and is active");
+                            }
+                            existingSprite.Active = true;
+                            existingSprite.PositionX = posX;
+                            existingSprite.PositionY = posY;
+                            existingSprite.OriginalStepIndex = stepIndex;
+                            existingSprite.StepIndex = stepIndex;
+                        }
+                        else
+                        {
+                            state.Sprites[spriteIndex] = new AnimationState.Sprite()
+                            {
+                                Active = true,
+                                Index = spriteIndex,
+                                PositionX = posX,
+                                PositionY = posY,
+                                OriginalStepIndex = stepIndex, 
+                                StepIndex = stepIndex
+                            };
+                        }
                         break;
                     case AnimationModel.AnimationInstruction.AnimationOpcode.WaitForFrames:
                         state.FramesToWait = currentInstruction.StackParameters[0];
@@ -202,6 +213,7 @@ namespace CovertActionTools.Core.Processors
                         var sprite = state.Sprites[currentInstruction.StackParameters[0]];
                         if (sprite.Active && sprite.ImageId >= 0)
                         {
+                            //TODO: not 100% accurate, in-game it looks like unless the sprite hits Restart, it will not draw itself there UNTIL it ends
                             state.DrawnImages.Add(new AnimationState.DrawnImage()
                             {
                                 ImageId = sprite.ImageId,

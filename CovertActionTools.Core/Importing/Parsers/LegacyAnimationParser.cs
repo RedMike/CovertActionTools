@@ -407,7 +407,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                         //the first short is a data label
                         if (!dataLabels.TryGetValue(stackParameters[0], out dataLabel))
                         {
-                            dataLabel = $"DATA_{dataLabelId++}";
+                            dataLabel = $"START_{dataLabelId++}";
                             dataLabels[stackParameters[0]] = dataLabel;
                         }
                         
