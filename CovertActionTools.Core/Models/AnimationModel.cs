@@ -45,6 +45,7 @@ namespace CovertActionTools.Core.Models
                 SetupSprite = 5, //00, loads 7 * 2 stack (pointer, index, u1, x, y, u2, u3), add active sprite
                 UnknownSprite01 = 14, //01, loads 2 stack, do something to sprite X?
                 WaitForFrames = 9, //02, loads 2 stack, render for X frames
+                Unknown03 = 15, //03, ? not in CA
                 KeepSpriteDrawn = 12, //04, loads 2 stack, persist sprite X at current position after end
                 PushParameterToStack = 1, //05 00 XX XX, push XX XX to stack
                 PushRegisterToStack = 2, //05 01 XX XX, push register X to stack

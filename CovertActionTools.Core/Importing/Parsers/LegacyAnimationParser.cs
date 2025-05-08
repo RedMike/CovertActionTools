@@ -93,7 +93,7 @@ namespace CovertActionTools.Core.Importing.Parsers
             var tag = reader.ReadBytes(5);
             if (tag[0] != 0x03 || tag[1] != 0x01 || tag[2] != 0x01 || tag[3] != 0x00 || tag[4] != 0x03)
             {
-                throw new Exception($"Unexpected tag: {string.Join(" ", tag.Select(x => $"{x:X2}"))}");
+                //throw new Exception($"Unexpected tag: {string.Join(" ", tag.Select(x => $"{x:X2}"))}");
             }
             
             var colorMapping = new Dictionary<byte, byte>();
@@ -253,6 +253,9 @@ namespace CovertActionTools.Core.Importing.Parsers
                     case 0x02:
                         prevPushesToRemove = 1;
                         opcode = AnimationModel.AnimationInstruction.AnimationOpcode.WaitForFrames;
+                        break;
+                    case 0x03:
+                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Unknown03;
                         break;
                     case 0x04:
                         prevPushesToRemove = 1;

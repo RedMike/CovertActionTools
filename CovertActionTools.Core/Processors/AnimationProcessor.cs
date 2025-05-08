@@ -14,9 +14,12 @@ namespace CovertActionTools.Core.Processors
         {
             public int Index { get; set; }
             public int Counter { get; set; }
+            public List<int> CounterStack { get; set; } = new();
 
             public int ImageId { get; set; } = -1;
+            public int OriginalPositionX { get; set; }
             public int PositionX { get; set; }
+            public int OriginalPositionY { get; set; }
             public int PositionY { get; set; }
             
             public bool Active { get; set; }
@@ -32,12 +35,13 @@ namespace CovertActionTools.Core.Processors
         /// </summary>
         public class DrawnImage
         {
+            public int SpriteIndex { get; set; }
             public int ImageId { get; set; }
             public int PositionX { get; set; }
             public int PositionY { get; set; }
         }
 
-        public Dictionary<int, Sprite> Sprites { get; set; } = new();
+        public List<Sprite> Sprites { get; set; } = new();
         public List<DrawnImage> DrawnImages { get; set; } = new();
 
         public List<short> Stack { get; set; } = new();
@@ -67,7 +71,7 @@ namespace CovertActionTools.Core.Processors
                 var firstFrame = true;
                 while (state.FramesToWait > 0 && state.CurrentFrame <= frameIndex)
                 {
-                    foreach (var sprite in state.Sprites.Values)
+                    foreach (var sprite in state.Sprites)
                     {
                         if (!sprite.Active)
                         {
@@ -87,27 +91,52 @@ namespace CovertActionTools.Core.Processors
                                 continue;
                             }
 
-                            if (step.Type == AnimationModel.AnimationStep.StepType.End7)
+                            if (step.Type == AnimationModel.AnimationStep.StepType.End9)
                             {
-                                //TODO: is this correct? conditional?
                                 sprite.Active = false;
                                 frameDone = true;
+                                //but keep drawing it
+                                state.DrawnImages.Add(new AnimationState.DrawnImage()
+                                {
+                                    SpriteIndex = sprite.Index,
+                                    ImageId = sprite.ImageId,
+                                    PositionX = sprite.PositionX,
+                                    PositionY = sprite.PositionY
+                                });
                                 continue;
                             }
 
                             var nextIndex = sprite.StepIndex + 1;
                             switch (step.Type)
                             {
+                                case AnimationModel.AnimationStep.StepType.End7:
+                                    nextIndex = sprite.OriginalStepIndex;
+                                    //reset the position to the original
+                                    sprite.PositionX = sprite.OriginalPositionX;
+                                    sprite.PositionY = sprite.OriginalPositionY;
+                                    //TODO: should counter clear here?
+                                    sprite.Counter = 0;
+                                    sprite.CounterStack.Clear();
+                                    break;
                                 case AnimationModel.AnimationStep.StepType.Restart:
                                     nextIndex = sprite.OriginalStepIndex;
-                                    break;
-                                case AnimationModel.AnimationStep.StepType.End9:
-                                    nextIndex = sprite.OriginalStepIndex;
+                                    //TODO: should counter clear here?
+                                    sprite.Counter = 0;
+                                    sprite.CounterStack.Clear();
                                     break;
                                 case AnimationModel.AnimationStep.StepType.Jump:
                                     if (sprite.Counter > 0)
                                     {
-                                        nextIndex = animation.ExtraData.DataLabels[step.Label];
+                                        sprite.Counter--;
+                                        if (sprite.Counter > 0)
+                                        {
+                                            nextIndex = animation.ExtraData.DataLabels[step.Label];
+                                        }
+                                        if (sprite.Counter == 0 && sprite.CounterStack.Count > 0)
+                                        {
+                                            sprite.Counter = sprite.CounterStack[sprite.CounterStack.Count - 1];
+                                            sprite.CounterStack.RemoveAt(sprite.CounterStack.Count - 1);
+                                        }
                                     }
                                     break;
                                 case AnimationModel.AnimationStep.StepType.Move:
@@ -119,13 +148,14 @@ namespace CovertActionTools.Core.Processors
                                 case AnimationModel.AnimationStep.StepType.SetImage:
                                     sprite.ImageId = (sbyte)step.Data[0];
                                     frameDone = true;
-                                    if (sprite.Counter > 0)
-                                    {
-                                        sprite.Counter--;
-                                    }
                                     break;
                                 case AnimationModel.AnimationStep.StepType.SetCounter:
                                     var count = (short)(step.Data[0] | (step.Data[1] << 8));
+                                    if (sprite.Counter > 0)
+                                    {
+                                        //if we already had one, we push the current one to the stack and add a new one
+                                        sprite.CounterStack.Add(sprite.Counter);
+                                    }
                                     sprite.Counter = count;
                                     break;
                                 default:
@@ -193,8 +223,9 @@ namespace CovertActionTools.Core.Processors
                         var posX = currentInstruction.StackParameters[2];
                         var posY = currentInstruction.StackParameters[3];
                         var stepIndex = animation.ExtraData.DataLabels[currentInstruction.DataLabel];
-                        
-                        if (state.Sprites.TryGetValue(spriteIndex, out var existingSprite))
+
+                        var existingSprite = state.Sprites.FirstOrDefault(x => x.Index == spriteIndex);
+                        if (existingSprite != null)
                         {
                             if (existingSprite.Active)
                             {
@@ -209,15 +240,17 @@ namespace CovertActionTools.Core.Processors
                         }
                         else
                         {
-                            state.Sprites[spriteIndex] = new AnimationState.Sprite()
+                            state.Sprites.Add(new AnimationState.Sprite()
                             {
                                 Active = true,
                                 Index = spriteIndex,
                                 PositionX = posX,
+                                OriginalPositionX = posX,
                                 PositionY = posY,
-                                OriginalStepIndex = stepIndex, 
+                                OriginalPositionY = posY,
+                                OriginalStepIndex = stepIndex,
                                 StepIndex = stepIndex
-                            };
+                            });
                         }
                         break;
                     case AnimationModel.AnimationInstruction.AnimationOpcode.WaitForFrames:
@@ -225,12 +258,13 @@ namespace CovertActionTools.Core.Processors
                         nextInstructionIndex = state.InstructionIndex;
                         break;
                     case AnimationModel.AnimationInstruction.AnimationOpcode.KeepSpriteDrawn:
-                        var sprite = state.Sprites[currentInstruction.StackParameters[0]];
-                        if (sprite.Active && sprite.ImageId >= 0)
+                        var sprite = state.Sprites.FirstOrDefault(x => x.Index == currentInstruction.StackParameters[0]);
+                        if (sprite != null && sprite.Active && sprite.ImageId >= 0)
                         {
                             //TODO: not 100% accurate, in-game it looks like unless the sprite hits Restart, it will not draw itself there UNTIL it ends
                             state.DrawnImages.Add(new AnimationState.DrawnImage()
                             {
+                                SpriteIndex = sprite.Index,
                                 ImageId = sprite.ImageId,
                                 PositionX = sprite.PositionX,
                                 PositionY = sprite.PositionY
@@ -301,7 +335,7 @@ namespace CovertActionTools.Core.Processors
                 state.InstructionIndex = nextInstructionIndex;
             }
 
-            foreach (var sprite in state.Sprites.Values)
+            foreach (var sprite in state.Sprites)
             {
                 if (!sprite.Active || sprite.ImageId < 0)
                 {
@@ -310,6 +344,7 @@ namespace CovertActionTools.Core.Processors
                 
                 state.DrawnImages.Add(new AnimationState.DrawnImage()
                 {
+                    SpriteIndex = sprite.Index,
                     ImageId = sprite.ImageId,
                     PositionX = sprite.PositionX,
                     PositionY = sprite.PositionY

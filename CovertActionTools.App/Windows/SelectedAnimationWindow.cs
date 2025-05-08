@@ -148,11 +148,11 @@ public class SelectedAnimationWindow : SharedImageWindow
         }
 
         var state = _animationProcessor.Process(animation, _selectedFrameId, _inputRegisters);
-        foreach (var drawnImage in state.DrawnImages)
+        foreach (var drawnImage in state.DrawnImages.OrderBy(x => x.SpriteIndex))
         {
             ImGui.SetCursorPos(pos + new Vector2(offsetX + drawnImage.PositionX, offsetY + drawnImage.PositionY));
             
-            var drawnImageIndex = animation.ExtraData.ImageIdToIndex[drawnImage.ImageId];
+            var drawnImageIndex = animation.ExtraData.ImageIdToIndex[drawnImage.ImageId] + (animation.ExtraData.BackgroundType == AnimationModel.BackgroundType.ClearToImage ? 1 : 0);
             var drawnImageImg = animation.Images[drawnImageIndex];
             var id = $"image_{animation.Key}_{drawnImageIndex}";
             //TODO: cache?
@@ -161,7 +161,8 @@ public class SelectedAnimationWindow : SharedImageWindow
             ImGui.Image(texture, new Vector2(drawnImageImg.ExtraData.LegacyWidth, drawnImageImg.ExtraData.LegacyHeight));
         }
 
-        if (state.Sprites.TryGetValue(_selectedAnimation, out var selectedSprite))
+        var selectedSprite = state.Sprites.FirstOrDefault(x => x.Index == _selectedAnimation);
+        if (selectedSprite != null)
         {
             var ox = offsetX + selectedSprite.PositionX;
             var oy = offsetY + selectedSprite.PositionY;
@@ -235,7 +236,8 @@ public class SelectedAnimationWindow : SharedImageWindow
                 _selectedAnimation = newSelectedAnimation.Value;
             }
             
-            if (state.Sprites.TryGetValue(_selectedAnimation, out var sprite))
+            var sprite = state.Sprites.FirstOrDefault(x => x.Index == _selectedAnimation);
+            if (sprite != null)
             {
                 if (sprite.ImageId >= 0)
                 {
@@ -249,7 +251,8 @@ public class SelectedAnimationWindow : SharedImageWindow
                     ImGui.Text($"Image: Hidden ({sprite.ImageId})");
                 }
 
-                ImGui.Text($"Active: {sprite.Active} Counter: {sprite.Counter}");
+                ImGui.Text($"Active: {sprite.Active}");
+                ImGui.Text($"Counter: {sprite.Counter} ({string.Join(" ", sprite.CounterStack)})");
                 ImGui.Text($"Position: ({sprite.PositionX}, {sprite.PositionY})");
                 ImGui.Text($"Step: {sprite.StepIndex}");
                     
