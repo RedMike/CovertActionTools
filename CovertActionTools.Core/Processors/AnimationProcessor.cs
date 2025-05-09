@@ -145,6 +145,12 @@ namespace CovertActionTools.Core.Processors
                                     sprite.PositionX += dx;
                                     sprite.PositionY += dy;
                                     break;
+                                case AnimationModel.AnimationStep.StepType.Move1:
+                                    var newX = (short)(step.Data[0] | (step.Data[1] << 8));
+                                    var newY = (short)(step.Data[2] | (step.Data[3] << 8));
+                                    sprite.PositionX = newX;
+                                    sprite.PositionY = newY;
+                                    break;
                                 case AnimationModel.AnimationStep.StepType.SetImage:
                                     sprite.ImageId = (sbyte)step.Data[0];
                                     frameDone = true;
@@ -227,16 +233,17 @@ namespace CovertActionTools.Core.Processors
                         var existingSprite = state.Sprites.FirstOrDefault(x => x.Index == spriteIndex);
                         if (existingSprite != null)
                         {
-                            if (existingSprite.Active)
-                            {
-                                //TODO: what happens here?
-                                throw new Exception("Tried to add sprite that already exists and is active");
-                            }
                             existingSprite.Active = true;
+                            existingSprite.ImageId = -1;
+                            existingSprite.OriginalPositionX = posX;
                             existingSprite.PositionX = posX;
+                            existingSprite.OriginalPositionY = posY;
                             existingSprite.PositionY = posY;
                             existingSprite.OriginalStepIndex = stepIndex;
                             existingSprite.StepIndex = stepIndex;
+                            existingSprite.Counter = 0;
+                            existingSprite.CounterStack.Clear();
+                            existingSprite.LastFrameStepIndices.Clear();
                         }
                         else
                         {

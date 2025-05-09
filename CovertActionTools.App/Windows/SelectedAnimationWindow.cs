@@ -169,7 +169,7 @@ public class SelectedAnimationWindow : SharedImageWindow
             var w = 5;
             var h = 5;
             if (selectedSprite.ImageId >= 0 &&
-                animation.ExtraData.ImageIdToIndex.TryGetValue(selectedSprite.ImageId, out var imageIndex) &&
+                animation.ExtraData.ImageIdToIndex.TryGetValue(selectedSprite.ImageId + 1, out var imageIndex) &&
                 animation.Images.TryGetValue(imageIndex, out var image))
             {
                 w = image.ExtraData.LegacyWidth;
@@ -241,9 +241,9 @@ public class SelectedAnimationWindow : SharedImageWindow
             {
                 if (sprite.ImageId >= 0)
                 {
-                    if (animation.ExtraData.ImageIdToIndex.TryGetValue(sprite.ImageId, out var imageIndex))
+                    if (animation.ExtraData.ImageIdToIndex.TryGetValue(sprite.ImageId + 1, out var imageIndex))
                     {
-                        ImGui.Text($"Image: {sprite.ImageId} ({imageIndex})");
+                        ImGui.Text($"Image: {sprite.ImageId + 1} ({imageIndex})");
                     }
                 }
                 else
