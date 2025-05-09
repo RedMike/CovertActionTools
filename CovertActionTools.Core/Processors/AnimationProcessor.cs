@@ -13,6 +13,11 @@ namespace CovertActionTools.Core.Processors
         public class Sprite
         {
             public int Index { get; set; }
+            /// <summary>
+            /// When set to a valid sprite, drawn position is an offset from that sprite's position
+            /// TODO: does this chain in the real game?
+            /// </summary>
+            public int FollowIndex { get; set; }
             public int Counter { get; set; }
             public List<int> CounterStack { get; set; } = new();
 
@@ -53,6 +58,28 @@ namespace CovertActionTools.Core.Processors
         public bool Ended { get; set; }
 
         public List<int> LastFrameInstructionIndices { get; set; } = new();
+
+        public (int x, int y) GetSpritePosition(int spriteIndex)
+        {
+            var sprite = Sprites.FirstOrDefault(x => x.Index == spriteIndex);
+            if (sprite == null)
+            {
+                return (-9999, -9999);
+            }
+
+            //following sprites get referenced as offsets
+            var positionX = 0;
+            var positionY = 0;
+            var curSprite = sprite;
+            do
+            {
+                positionX += curSprite.PositionX;
+                positionY += curSprite.PositionY;
+                curSprite = Sprites.FirstOrDefault(x => x.Index == curSprite.FollowIndex);
+            } while (curSprite != null);
+
+            return (positionX, positionY);
+        }
     }
     
     public interface IAnimationProcessor
@@ -91,24 +118,14 @@ namespace CovertActionTools.Core.Processors
                                 continue;
                             }
 
-                            if (step.Type == AnimationModel.AnimationStep.StepType.End9)
-                            {
-                                sprite.Active = false;
-                                frameDone = true;
-                                //but keep drawing it
-                                state.DrawnImages.Add(new AnimationState.DrawnImage()
-                                {
-                                    SpriteIndex = sprite.Index,
-                                    ImageId = sprite.ImageId,
-                                    PositionX = sprite.PositionX,
-                                    PositionY = sprite.PositionY
-                                });
-                                continue;
-                            }
-
                             var nextIndex = sprite.StepIndex + 1;
                             switch (step.Type)
                             {
+                                case AnimationModel.AnimationStep.StepType.End9:
+                                    //effectively acts like a constant frame wait without continuing past End9
+                                    frameDone = true;
+                                    nextIndex = sprite.StepIndex;
+                                    break;
                                 case AnimationModel.AnimationStep.StepType.End7:
                                     nextIndex = sprite.OriginalStepIndex;
                                     //reset the position to the original
@@ -226,6 +243,7 @@ namespace CovertActionTools.Core.Processors
                         break;
                     case AnimationModel.AnimationInstruction.AnimationOpcode.SetupSprite:
                         var spriteIndex = currentInstruction.StackParameters[0];
+                        var followIndex = currentInstruction.StackParameters[1];
                         var posX = currentInstruction.StackParameters[2];
                         var posY = currentInstruction.StackParameters[3];
                         var stepIndex = animation.ExtraData.DataLabels[currentInstruction.DataLabel];
@@ -235,6 +253,7 @@ namespace CovertActionTools.Core.Processors
                         {
                             existingSprite.Active = true;
                             existingSprite.ImageId = -1;
+                            existingSprite.FollowIndex = followIndex;
                             existingSprite.OriginalPositionX = posX;
                             existingSprite.PositionX = posX;
                             existingSprite.OriginalPositionY = posY;
@@ -251,6 +270,7 @@ namespace CovertActionTools.Core.Processors
                             {
                                 Active = true,
                                 Index = spriteIndex,
+                                FollowIndex = followIndex,
                                 PositionX = posX,
                                 OriginalPositionX = posX,
                                 PositionY = posY,
@@ -262,22 +282,40 @@ namespace CovertActionTools.Core.Processors
                         break;
                     case AnimationModel.AnimationInstruction.AnimationOpcode.WaitForFrames:
                         state.FramesToWait = currentInstruction.StackParameters[0];
-                        nextInstructionIndex = state.InstructionIndex;
+                        //TODO: what does WaitForFrames 0 mean?
+                        if (state.FramesToWait > 0)
+                        {
+                            nextInstructionIndex = state.InstructionIndex;
+                        }
+
                         break;
                     case AnimationModel.AnimationInstruction.AnimationOpcode.KeepSpriteDrawn:
+                    {
                         var sprite = state.Sprites.FirstOrDefault(x => x.Index == currentInstruction.StackParameters[0]);
                         if (sprite != null && sprite.Active && sprite.ImageId >= 0)
                         {
-                            //TODO: not 100% accurate, in-game it looks like unless the sprite hits Restart, it will not draw itself there UNTIL it ends
+                            var (x, y) = state.GetSpritePosition(sprite.Index);
                             state.DrawnImages.Add(new AnimationState.DrawnImage()
                             {
                                 SpriteIndex = sprite.Index,
                                 ImageId = sprite.ImageId,
-                                PositionX = sprite.PositionX,
-                                PositionY = sprite.PositionY
+                                PositionX = x,
+                                PositionY = y
                             });
                         }
+
                         break;
+                    }
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.UnknownSprite01:
+                    {
+                        var sprite = state.Sprites.FirstOrDefault(x => x.Index == currentInstruction.StackParameters[0]);
+                        if (sprite != null)
+                        {
+                            sprite.Active = false;
+                        }
+
+                        break;
+                    }
                     case AnimationModel.AnimationInstruction.AnimationOpcode.PopStackToRegister:
                     {
                         var registerIndex = (ushort)(currentInstruction.Data[0] | (currentInstruction.Data[1] << 8));
@@ -349,12 +387,13 @@ namespace CovertActionTools.Core.Processors
                     continue;
                 }
                 
+                var (x, y) = state.GetSpritePosition(sprite.Index);
                 state.DrawnImages.Add(new AnimationState.DrawnImage()
                 {
                     SpriteIndex = sprite.Index,
                     ImageId = sprite.ImageId,
-                    PositionX = sprite.PositionX,
-                    PositionY = sprite.PositionY
+                    PositionX = x,
+                    PositionY = y
                 });
             }
 

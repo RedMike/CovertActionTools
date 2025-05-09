@@ -164,8 +164,9 @@ public class SelectedAnimationWindow : SharedImageWindow
         var selectedSprite = state.Sprites.FirstOrDefault(x => x.Index == _selectedAnimation);
         if (selectedSprite != null)
         {
-            var ox = offsetX + selectedSprite.PositionX;
-            var oy = offsetY + selectedSprite.PositionY;
+            var (spriteX, spriteY) = state.GetSpritePosition(selectedSprite.Index);
+            var ox = offsetX + spriteX;
+            var oy = offsetY + spriteY;
             var w = 5;
             var h = 5;
             if (selectedSprite.ImageId >= 0 &&
@@ -253,7 +254,9 @@ public class SelectedAnimationWindow : SharedImageWindow
 
                 ImGui.Text($"Active: {sprite.Active}");
                 ImGui.Text($"Counter: {sprite.Counter} ({string.Join(" ", sprite.CounterStack)})");
-                ImGui.Text($"Position: ({sprite.PositionX}, {sprite.PositionY})");
+                ImGui.Text($"Follow: ({sprite.FollowIndex})");
+                var (x, y) = state.GetSpritePosition(sprite.Index);
+                ImGui.Text($"Position: ({x}, {y})");
                 ImGui.Text($"Step: {sprite.StepIndex}");
                     
             }
