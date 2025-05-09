@@ -16,7 +16,7 @@ public class SelectedAnimationWindow : SharedImageWindow
     private int _selectedImage = 0;
     private int _selectedFrameId = 0;
     private int _selectedAnimation = 0;
-    private Dictionary<int, int> _inputRegisters = new();
+    private readonly Dictionary<int, (int value, int frameIndex)> _inputRegisters = new();
 
     public SelectedAnimationWindow(RenderWindow renderWindow, ILogger<SelectedAnimationWindow> logger, MainEditorState mainEditorState, IAnimationProcessor animationProcessor) : base(renderWindow)
     {
@@ -197,12 +197,21 @@ public class SelectedAnimationWindow : SharedImageWindow
                 .ToList();
             foreach (var inputRegister in inputRegisters)
             {
-                _inputRegisters.TryGetValue(inputRegister, out var oldValue);
+                _inputRegisters.TryGetValue(inputRegister, out var val);
+                var (oldValue, oldFrameIndex) = val;
                 var newValue = ImGuiExtensions.Input($"Register {inputRegister}", oldValue);
                 if (newValue != null)
                 {
-                    _inputRegisters[inputRegister] = newValue.Value;
+                    _inputRegisters[inputRegister] = (newValue.Value, oldFrameIndex);
                 }
+
+                var newFrameIndex = ImGuiExtensions.Input($"Apply Frame {inputRegister}", oldFrameIndex);
+                if (newFrameIndex != null)
+                {
+                    _inputRegisters[inputRegister] = (_inputRegisters[inputRegister].value, newFrameIndex.Value);
+                }
+                
+                ImGui.Text("");
             }
             
             ImGui.Text($"Stack ({state.Stack.Count}): {string.Join(" ", state.Stack.Select(x => $"{x}"))}");
@@ -385,7 +394,7 @@ public class SelectedAnimationWindow : SharedImageWindow
     private string GetStepText(int index, AnimationModel.AnimationStep step)
     {
         var name = $"{index} - {step.Type}";
-        if (step.Type == AnimationModel.AnimationStep.StepType.Jump)
+        if (step.Type == AnimationModel.AnimationStep.StepType.JumpIfCounter)
         {
             name += $" {step.Label}";
         }

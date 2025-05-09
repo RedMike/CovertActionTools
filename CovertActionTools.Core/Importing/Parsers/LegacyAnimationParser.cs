@@ -248,7 +248,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                         break;
                     case 0x01:
                         prevPushesToRemove = 1;
-                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.UnknownSprite01;
+                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.RemoveSprite;
                         break;
                     case 0x02:
                         prevPushesToRemove = 1;
@@ -259,18 +259,18 @@ namespace CovertActionTools.Core.Importing.Parsers
                         break;
                     case 0x04:
                         prevPushesToRemove = 1;
-                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.KeepSpriteDrawn;
+                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.StampSprite;
                         break;
                     case 0x07:
                         opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Unknown07;
                         break;
                     case 0x08:
                         prevPushesToRemove = 1;
-                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.CompareNotEqual;
+                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.CompareEqual;
                         break;
                     case 0x0B:
                         prevPushesToRemove = 1;
-                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.CompareEqual;
+                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.CompareNotEqual;
                         break;
                     case 0x0E:
                         prevPushesToRemove = 1;
@@ -285,7 +285,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                     case 0x05:
                         if (stack.Count == 4 && stack[1] == 0x00)
                         {
-                            opcode = AnimationModel.AnimationInstruction.AnimationOpcode.PushParameterToStack;
+                            opcode = AnimationModel.AnimationInstruction.AnimationOpcode.PushToStack;
                             data = new[] { stack[2], stack[3] };
                         }
                         else if (stack.Count == 4 && stack[1] == 0x01)
@@ -388,7 +388,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                         {
                             //_logger.LogError($"Attempting to remove {i}: {offsets.Count - prevPushesToRemove + i}");
                             var offset = offsets[offsets.Count - prevPushesToRemove + i];
-                            if (instructions[offset].Opcode != AnimationModel.AnimationInstruction.AnimationOpcode.PushParameterToStack)
+                            if (instructions[offset].Opcode != AnimationModel.AnimationInstruction.AnimationOpcode.PushToStack)
                             {
                                 throw new Exception($"Attempted to remove Push but found: {instructions[offset].Opcode}");
                             }
@@ -492,19 +492,19 @@ namespace CovertActionTools.Core.Importing.Parsers
                     var isEnd = false;
                     switch (type)
                     {
-                        case AnimationModel.AnimationStep.StepType.SetImage:
+                        case AnimationModel.AnimationStep.StepType.DrawFrame:
                             data = reader.ReadBytes(1);
                             break;
-                        case AnimationModel.AnimationStep.StepType.Move1:
+                        case AnimationModel.AnimationStep.StepType.MoveAbsolute:
                             data = reader.ReadBytes(4);
                             break;
-                        case AnimationModel.AnimationStep.StepType.Move:
+                        case AnimationModel.AnimationStep.StepType.MoveRelative:
                             data = reader.ReadBytes(4);
                             break;
-                        case AnimationModel.AnimationStep.StepType.SetCounter:
+                        case AnimationModel.AnimationStep.StepType.PushCounter:
                             data = reader.ReadBytes(2);
                             break;
-                        case AnimationModel.AnimationStep.StepType.Jump:
+                        case AnimationModel.AnimationStep.StepType.JumpIfCounter:
                             data = reader.ReadBytes(2);
                             var target = (short)(data[0] | (data[1] << 8));
                             if (!dataLabels.TryGetValue(target, out dataLabel))
@@ -514,16 +514,16 @@ namespace CovertActionTools.Core.Importing.Parsers
 
                             dataLabels[target] = dataLabel;
                             break;
+                        case AnimationModel.AnimationStep.StepType.Loop:
+                            isEnd = true;
+                            break;
+                        case AnimationModel.AnimationStep.StepType.Pause:
+                            isEnd = true;
+                            break;
                         case AnimationModel.AnimationStep.StepType.Restart:
                             isEnd = true;
                             break;
-                        case AnimationModel.AnimationStep.StepType.End9:
-                            isEnd = true;
-                            break;
-                        case AnimationModel.AnimationStep.StepType.End7:
-                            isEnd = true;
-                            break;
-                        case AnimationModel.AnimationStep.StepType.End:
+                        case AnimationModel.AnimationStep.StepType.Stop:
                             isEnd = true;
                             break;
                         default:

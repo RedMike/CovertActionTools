@@ -84,20 +84,41 @@ namespace CovertActionTools.Core.Processors
     
     public interface IAnimationProcessor
     {
-        AnimationState Process(AnimationModel animation, int frameIndex, Dictionary<int, int> inputRegisters);
+        AnimationState Process(AnimationModel animation, int frameIndex, Dictionary<int, (int value, int frameIndex)> inputRegisters);
     }
     
     internal class AnimationProcessor : IAnimationProcessor
     {
-        public AnimationState Process(AnimationModel animation, int frameIndex, Dictionary<int, int> inputRegisters)
+        public AnimationState Process(AnimationModel animation, int frameIndex, Dictionary<int, (int value, int frameIndex)> inputRegisters)
         {
             var state = new AnimationState();
-            state.Registers = inputRegisters.ToDictionary(x => x.Key, x => x.Value);
+            //apply input registers on inputs only
+            state.Registers = inputRegisters
+                .Where(x => x.Value.frameIndex == 0)
+                .ToDictionary(x => x.Key, x => x.Value.value);
+            var laterRegisterValues = inputRegisters
+                .Where(x => x.Value.frameIndex != 0)
+                .Select(x => x.Value.frameIndex)
+                .Distinct()
+                .ToDictionary(x => x, targetFrame => inputRegisters
+                    .Where(x => x.Value.frameIndex == targetFrame)
+                    .ToDictionary(x => x.Key, x => x.Value.value)
+                );
             while (state.CurrentFrame <= frameIndex)
             {
                 var firstFrame = true;
                 while (state.FramesToWait > 0 && state.CurrentFrame <= frameIndex)
                 {
+                    if (laterRegisterValues.TryGetValue(state.CurrentFrame, out var registersToSet))
+                    {
+                        foreach (var pair in registersToSet)
+                        {
+                            state.Registers[pair.Key] = pair.Value;
+                        }
+                        //remove so that we don't re-trigger it for some reason
+                        laterRegisterValues.Remove(state.CurrentFrame);
+                    }
+                    
                     foreach (var sprite in state.Sprites)
                     {
                         if (!sprite.Active)
@@ -111,7 +132,7 @@ namespace CovertActionTools.Core.Processors
                         {
                             sprite.LastFrameStepIndices.Add(sprite.StepIndex);
                             var step = animation.ExtraData.Steps[sprite.StepIndex];
-                            if (step.Type == AnimationModel.AnimationStep.StepType.End)
+                            if (step.Type == AnimationModel.AnimationStep.StepType.Stop)
                             {
                                 sprite.Active = false;
                                 frameDone = true;
@@ -121,12 +142,12 @@ namespace CovertActionTools.Core.Processors
                             var nextIndex = sprite.StepIndex + 1;
                             switch (step.Type)
                             {
-                                case AnimationModel.AnimationStep.StepType.End9:
-                                    //effectively acts like a constant frame wait without continuing past End9
+                                case AnimationModel.AnimationStep.StepType.Pause:
+                                    //effectively acts like a constant frame wait without continuing past this instruction
                                     frameDone = true;
                                     nextIndex = sprite.StepIndex;
                                     break;
-                                case AnimationModel.AnimationStep.StepType.End7:
+                                case AnimationModel.AnimationStep.StepType.Restart:
                                     nextIndex = sprite.OriginalStepIndex;
                                     //reset the position to the original
                                     sprite.PositionX = sprite.OriginalPositionX;
@@ -135,13 +156,13 @@ namespace CovertActionTools.Core.Processors
                                     sprite.Counter = 0;
                                     sprite.CounterStack.Clear();
                                     break;
-                                case AnimationModel.AnimationStep.StepType.Restart:
+                                case AnimationModel.AnimationStep.StepType.Loop:
                                     nextIndex = sprite.OriginalStepIndex;
                                     //TODO: should counter clear here?
                                     sprite.Counter = 0;
                                     sprite.CounterStack.Clear();
                                     break;
-                                case AnimationModel.AnimationStep.StepType.Jump:
+                                case AnimationModel.AnimationStep.StepType.JumpIfCounter:
                                     if (sprite.Counter > 0)
                                     {
                                         sprite.Counter--;
@@ -156,23 +177,23 @@ namespace CovertActionTools.Core.Processors
                                         }
                                     }
                                     break;
-                                case AnimationModel.AnimationStep.StepType.Move:
+                                case AnimationModel.AnimationStep.StepType.MoveRelative:
                                     var dx = (short)(step.Data[0] | (step.Data[1] << 8));
                                     var dy = (short)(step.Data[2] | (step.Data[3] << 8));
                                     sprite.PositionX += dx;
                                     sprite.PositionY += dy;
                                     break;
-                                case AnimationModel.AnimationStep.StepType.Move1:
+                                case AnimationModel.AnimationStep.StepType.MoveAbsolute:
                                     var newX = (short)(step.Data[0] | (step.Data[1] << 8));
                                     var newY = (short)(step.Data[2] | (step.Data[3] << 8));
                                     sprite.PositionX = newX;
                                     sprite.PositionY = newY;
                                     break;
-                                case AnimationModel.AnimationStep.StepType.SetImage:
+                                case AnimationModel.AnimationStep.StepType.DrawFrame:
                                     sprite.ImageId = (sbyte)step.Data[0];
                                     frameDone = true;
                                     break;
-                                case AnimationModel.AnimationStep.StepType.SetCounter:
+                                case AnimationModel.AnimationStep.StepType.PushCounter:
                                     var count = (short)(step.Data[0] | (step.Data[1] << 8));
                                     if (sprite.Counter > 0)
                                     {
@@ -228,7 +249,7 @@ namespace CovertActionTools.Core.Processors
                         state.Ended = true;
                         nextInstructionIndex = state.InstructionIndex;
                         break;
-                    case AnimationModel.AnimationInstruction.AnimationOpcode.PushParameterToStack:
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.PushToStack:
                         state.Stack.Add(ReadDataAsShort(0));
                         break;
                     case AnimationModel.AnimationInstruction.AnimationOpcode.Jump:
@@ -236,7 +257,7 @@ namespace CovertActionTools.Core.Processors
                         nextInstructionIndex = animation.ExtraData.InstructionLabels[currentInstruction.Label];
                         break;
                     case AnimationModel.AnimationInstruction.AnimationOpcode.ConditionalJump:
-                        if (!state.CompareFlag)
+                        if (state.CompareFlag)
                         {
                             nextInstructionIndex = animation.ExtraData.InstructionLabels[currentInstruction.Label];
                         }
@@ -289,7 +310,7 @@ namespace CovertActionTools.Core.Processors
                         }
 
                         break;
-                    case AnimationModel.AnimationInstruction.AnimationOpcode.KeepSpriteDrawn:
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.StampSprite:
                     {
                         var sprite = state.Sprites.FirstOrDefault(x => x.Index == currentInstruction.StackParameters[0]);
                         if (sprite != null && sprite.Active && sprite.ImageId >= 0)
@@ -306,7 +327,7 @@ namespace CovertActionTools.Core.Processors
 
                         break;
                     }
-                    case AnimationModel.AnimationInstruction.AnimationOpcode.UnknownSprite01:
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.RemoveSprite:
                     {
                         var sprite = state.Sprites.FirstOrDefault(x => x.Index == currentInstruction.StackParameters[0]);
                         if (sprite != null)
@@ -345,15 +366,15 @@ namespace CovertActionTools.Core.Processors
                         state.Stack.Add((short)state.Registers[registerIndex]);
                         break;
                     }
-                    case AnimationModel.AnimationInstruction.AnimationOpcode.CompareEqual:
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.CompareNotEqual:
                     {
                         var target = currentInstruction.StackParameters[0];
                         var value = state.Stack[state.Stack.Count - 1];
                         //state.Stack.RemoveAt(state.Stack.Count - 1); //TODO: should pop or not?
-                        state.CompareFlag = target == value;
+                        state.CompareFlag = target != value;
                         break;
                     }
-                    case AnimationModel.AnimationInstruction.AnimationOpcode.CompareNotEqual:
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.CompareEqual:
                     {
                         var target = currentInstruction.StackParameters[0];
                         if (state.Stack.Count == 0)
@@ -362,7 +383,7 @@ namespace CovertActionTools.Core.Processors
                         }
                         var value = state.Stack[state.Stack.Count - 1];
                         //state.Stack.RemoveAt(state.Stack.Count - 1); //TODO: should pop or not?
-                        state.CompareFlag = target != value;
+                        state.CompareFlag = target == value;
                         break;
                     }
                     case AnimationModel.AnimationInstruction.AnimationOpcode.Add:
@@ -370,8 +391,13 @@ namespace CovertActionTools.Core.Processors
                         if (state.Stack.Count == 0)
                         {
                             state.Stack.Add(0);
+                            state.Stack.Add(0);
+                        } else if (state.Stack.Count == 1)
+                        {
+                            state.Stack.Add(0);
                         }
                         state.Stack[state.Stack.Count - 1] += delta;
+                        state.Stack.RemoveAt(state.Stack.Count - 2); //TODO: should pop or not?
                         break;
                     default:
                         break;

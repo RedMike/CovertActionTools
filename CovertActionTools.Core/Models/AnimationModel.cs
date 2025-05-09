@@ -42,22 +42,22 @@ namespace CovertActionTools.Core.Models
             public enum AnimationOpcode
             {
                 Unknown = -1,
-                SetupSprite = 5, //00, loads 7 * 2 stack (pointer, index, u1, x, y, u2, u3), add active sprite
-                UnknownSprite01 = 14, //01, loads 2 stack, do something to sprite X?
-                WaitForFrames = 9, //02, loads 2 stack, render for X frames
-                Unknown03 = 15, //03, ? not in CA
-                KeepSpriteDrawn = 12, //04, loads 2 stack, persist sprite X at current position after end
-                PushParameterToStack = 1, //05 00 XX XX, push XX XX to stack
-                PushRegisterToStack = 2, //05 01 XX XX, push register X to stack
-                PopStackToRegister = 8, //06 XX XX, pops stack and sets register X to it
-                Unknown07 = 6, //07
-                CompareNotEqual = 7, //08, loads 2 stack, sets compare flag if most recent two stack entries are not equal
-                CompareEqual = 11, //0B, loads 2 stack, sets compare flag if most recent two stack entries are equal
-                Add = 13, //0E, loads 2 stack, adds most recent two stack entries together
-                ConditionalJump = 3, //12 XX XX, conditional jump?
-                Jump = 4, //13 XX XX, unconditional jump?
-                End = 0, //14, end or return?
-                Unknown15 = 10, //15
+                SetupSprite = 0, //00, loads 7 * 2 stack (pointer, index, u1, x, y, u2, u3), add active sprite
+                RemoveSprite = 1, //01, loads 2 stack, stops/removes target sprite
+                WaitForFrames = 2, //02, loads 2 stack, render for X frames
+                Unknown03 = 3, //03, loads 2 stack, TODO: not in CA, in RRM, no apparent effect
+                StampSprite = 4, //04, loads 2 stack, saves a persistent copy of the sprite at the current position/image
+                PushToStack = 5, //05 00 XX XX, push XX XX to stack
+                PushRegisterToStack = 261, //05 01 XX XX, push register X to stack
+                PopStackToRegister = 6, //06 XX XX, pops stack and sets register X to value
+                Unknown07 = 7, //07, TODO: no apparent effect/used in switch statements
+                CompareEqual = 8, //08, loads 2 stack, sets compare flag if most recent two stack entries are equal
+                CompareNotEqual = 11, //0B, loads 2 stack, sets compare flag if most recent two stack entries are not equal
+                Add = 14, //0E, loads 2 stack, pops most recent two stack entries, adds them together and pushes it
+                ConditionalJump = 12, //12 XX XX, jumps only if compare flag is set
+                Jump = 19, //13 XX XX, always jumps, TODO: unclear why some existing files have two 13's one after the other
+                End = 20, //14, TODO: wait behaviour? some animations do wait, others start a new animation immediately
+                Unknown15 = 21, //15, TODO: related to wait behaviour? some animations use 15 right before 1; not loop because TITLE2 uses it
             }
 
             public AnimationOpcode Opcode { get; set; } = AnimationOpcode.Unknown;
@@ -84,15 +84,44 @@ namespace CovertActionTools.Core.Models
             public enum StepType
             {
                 Unknown = -1,
-                SetImage = 0x00,
-                Move1 = 0x01,
-                Move = 0x02,
-                SetCounter = 0x05,
-                Jump = 0x06,
-                End7 = 0x07,
-                Restart = 0x08,
-                End9 = 0x09,
-                End = 0x0A
+                /// <summary>
+                /// Draw frame with current image, -1 for waiting a frame without drawing
+                /// Does NOT reduce Counter
+                /// </summary>
+                DrawFrame = 0x00,
+                /// <summary>
+                /// Move to absolute position
+                /// </summary>
+                MoveAbsolute = 0x01,
+                /// <summary>
+                /// Move relative to current position
+                /// </summary>
+                MoveRelative = 0x02,
+                /// <summary>
+                /// Push value to Counter stack
+                /// </summary>
+                PushCounter = 0x05,
+                /// <summary>
+                /// Jump only if Counter is > 0
+                /// Reduces Counter by 1 or pops Counter stack if 0 
+                /// </summary>
+                JumpIfCounter = 0x06,
+                /// <summary>
+                /// Reset simulation and state (position)
+                /// </summary>
+                Restart = 0x07,
+                /// <summary>
+                /// Reset simulation but do not reset state (position)
+                /// </summary>
+                Loop = 0x08,
+                /// <summary>
+                /// Stop simulating and continue drawing
+                /// </summary>
+                Pause = 0x09,
+                /// <summary>
+                /// Stop simulating and drawing
+                /// </summary>
+                Stop = 0x0A
             }
 
             public StepType Type { get; set; } = StepType.Unknown;
