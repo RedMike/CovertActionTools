@@ -152,7 +152,7 @@ public class SelectedAnimationWindow : SharedImageWindow
         {
             ImGui.SetCursorPos(pos + new Vector2(offsetX + drawnImage.PositionX, offsetY + drawnImage.PositionY));
             
-            var drawnImageIndex = animation.ExtraData.ImageIdToIndex[drawnImage.ImageId] + (animation.ExtraData.BackgroundType == AnimationModel.BackgroundType.ClearToImage ? 1 : 0);
+            var drawnImageIndex = animation.ExtraData.ImageIdToIndex[drawnImage.ImageId];
             var drawnImageImg = animation.Images[drawnImageIndex];
             var id = $"image_{animation.Key}_{drawnImageIndex}";
             //TODO: cache?

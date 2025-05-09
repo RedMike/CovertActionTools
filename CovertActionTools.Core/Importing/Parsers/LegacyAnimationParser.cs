@@ -93,7 +93,8 @@ namespace CovertActionTools.Core.Importing.Parsers
             var tag = reader.ReadBytes(5);
             if (tag[0] != 0x03 || tag[1] != 0x01 || tag[2] != 0x01 || tag[3] != 0x00 || tag[4] != 0x03)
             {
-                //throw new Exception($"Unexpected tag: {string.Join(" ", tag.Select(x => $"{x:X2}"))}");
+                //not an exception because RRT PAN file have different tag
+                _logger.LogWarning($"Unexpected tag: {string.Join(" ", tag.Select(x => $"{x:X2}"))}");
             }
             
             var colorMapping = new Dictionary<byte, byte>();
@@ -110,33 +111,29 @@ namespace CovertActionTools.Core.Importing.Parsers
             
             var aWidth = reader.ReadUInt16(); //width - 1
             var aHeight = reader.ReadUInt16(); //height - 1
-            var subAnimationCount = reader.ReadUInt16();
+            var unknown1 = reader.ReadUInt16();
             var backgroundType = (AnimationModel.BackgroundType)reader.ReadByte();
             
-            //header is always a fixed size
-            var headerLength = backgroundType == AnimationModel.BackgroundType.ClearToColor ? 502 : 500;
-
             //for ClearToImage, there is an image before the header, otherwise it's straight to the header
             var images = new Dictionary<int, SimpleImageModel>();
-            var img = 0;
             if (backgroundType == AnimationModel.BackgroundType.ClearToImage)
             {
                 //there is one image before the header
-                var image = ReadImage(rawData, reader, memStream, key, img, withOffset:true, offsetLength:headerLength);
+                var image = ReadImage(reader, memStream, key, -1);
                 if (image == null)
                 {
                     throw new Exception("Missing first image");
                 }
 
-                images[img++] = image;
+                images[-1] = image;
             }
 
             byte clearColor = 0;
-            byte unknown1 = 0;
+            byte unknown2 = 0;
             if (backgroundType == AnimationModel.BackgroundType.ClearToColor)
             {
                 clearColor = reader.ReadByte();
-                unknown1 = reader.ReadByte();
+                unknown2 = reader.ReadByte();
             }
             
             //header is always 500 bytes, which is 250 pairs of bytes
@@ -158,25 +155,26 @@ namespace CovertActionTools.Core.Importing.Parsers
                 imageIdx++;
             }
             
-            //there are a variable number of images, ends with 00 05 00
-            while (rawData[memStream.Position] == 0x07)
+            //the number of images is determined from the previous list
+            for (var img = 0; img < imageIdToIndex.Count; img++)
             {
-                var image = ReadImage(rawData, reader, memStream, key, img);
+                var image = ReadImage(reader, memStream, key, img);
                 if (image == null)
                 {
                     throw new Exception("Unparseable image");
                 }
 
-                images[img++] = image;
+                images[img] = image;
             }
-
-            //TODO: correct image loading so this isn't necessary
-            while (rawData[memStream.Position] == 0x00) //00 is used as padding sometimes
+            
+            //there are two bytes between the last image and the data section, which determine the size of the data section
+            var dataSectionLength = reader.ReadUInt16();
+            if (memStream.Length - memStream.Position != dataSectionLength * 16)
             {
-                reader.ReadByte();
+                throw new Exception($"Expected remaining data in data section to be: {dataSectionLength * 16} but found {memStream.Length - memStream.Position}");
             }
 
-            if (rawData[memStream.Position] != 0x05) //TODO: this is probably wrong on at least one animation
+            if (rawData[memStream.Position] != 0x05)
             {
                 throw new Exception($"Invalid start to data section for {key}: {memStream.Position:X} {rawData[memStream.Position]:X2}");
             }
@@ -598,13 +596,13 @@ namespace CovertActionTools.Core.Importing.Parsers
                 {
                     Name = key,
                     Comment = "Legacy import",
-                    SubAnimationCount = subAnimationCount,
+                    Unknown1 = unknown1,
                     BackgroundType = backgroundType,
                     BoundingWidth = aWidth,
                     BoundingHeight = aHeight,
                     ColorMapping = colorMapping,
                     ClearColor = clearColor,
-                    Unknown1 = unknown1,
+                    Unknown2 = unknown2,
                     ImageIdToIndex = imageIdToIndex,
                     ImageIndexToUnknownData = imageIndexToUnknownData,
                     Instructions = listInstructions,
@@ -616,7 +614,7 @@ namespace CovertActionTools.Core.Importing.Parsers
             return model;
         }
 
-        private SimpleImageModel? ReadImage(byte[] rawData, BinaryReader reader, MemoryStream memStream, string key, int img, bool withOffset = false, int offsetLength = 502)
+        private SimpleImageModel? ReadImage(BinaryReader reader, MemoryStream memStream, string key, int img)
         {
             //because we don't do piece-meal parsing, we have to read a ton of extra bytes and pass them over first
             //but parsing the image will return the actual offset
@@ -633,23 +631,6 @@ namespace CovertActionTools.Core.Importing.Parsers
                 _logger.LogWarning($"Failed to parse image {key} {img}: {e}");
             }
             
-            //some images have some arbitrary bytes before the next image
-            //TODO: for now we're just skipping them and logging them
-            var hadToFix = false;
-            var bytesSkipped = new List<byte>();
-            var unfixedOffset = memStream.Position;
-            while ((!withOffset && (rawData[memStream.Position] != 0x07 || rawData[memStream.Position+1] != 0x00) && rawData[memStream.Position] != 0x05) ||
-                   (withOffset && (rawData[memStream.Position + offsetLength] != 0x07 || rawData[memStream.Position + offsetLength + 1] != 0x00)))
-            {
-                hadToFix = true;
-                bytesSkipped.Add(reader.ReadByte());
-            }
-
-            if (hadToFix)
-            {
-                _logger.LogError($"Had to fix offset on {key} {img} from {unfixedOffset:X4} to {memStream.Position:X4}: {string.Join(", ", bytesSkipped.Select(x => $"{x:X2}"))}");
-            }
-
             return model;
         }
     }

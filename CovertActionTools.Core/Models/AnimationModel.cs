@@ -154,11 +154,10 @@ namespace CovertActionTools.Core.Models
             public int BoundingHeight { get; set; }
             
             /// <summary>
-            /// Used by the game to enable/disable certain animation loops (alarm level in buildings)
-            /// Not fully confirmed but tracks with some of the data
+            /// Unknown purpose
             /// Normally 1 for most animations.
             /// </summary>
-            public int SubAnimationCount { get; set; }
+            public int Unknown1 { get; set; }
 
             /// <summary>
             /// How the game draws a background before updating or drawing images based on the animations
@@ -178,14 +177,15 @@ namespace CovertActionTools.Core.Models
             /// <summary>
             /// Only populated when BackgroundType is ClearToColor
             /// </summary>
-            public byte Unknown1 { get; set; }
+            public byte Unknown2 { get; set; }
 
             /// <summary>
             /// Each image ID is assigned an index; this ID can only increase monotonically but can have gaps. 
             /// In the file format, this looks like a series of u16, where any 00 00 represents a gap.
             /// With no gaps in 500 bytes that means the maximum number of images is 250.
             /// Example: the start of a header with data AA AA  00 00  00 00  BB BB
-            /// means image 0 is index 0, image 1 (B) is index 3 (gap of 2) 
+            /// means image 0 is index 0, image 1 (B) is index 3 (gap of 2)
+            /// Important: the background image is not part of the IDs
             /// </summary>
             public Dictionary<int, int> ImageIdToIndex { get; set; } = new();
 
@@ -196,6 +196,7 @@ namespace CovertActionTools.Core.Models
             /// Potentially this might be a grid position (X, Y) for display in the editor.
             /// Example: the start of a header with data AA AA  00 00  00 00  BB BB
             /// means index 0 has data AA AA, index 3 has data BB BB
+            /// Important: the background image is not part of the IDs
             /// </summary>
             public Dictionary<int, int> ImageIndexToUnknownData { get; set; } = new();
 
