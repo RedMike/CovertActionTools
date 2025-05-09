@@ -28,12 +28,6 @@ namespace CovertActionTools.Core.Importing.Parsers
             var formatFlag = reader.ReadUInt16();
             var width = reader.ReadUInt16();
             var height = reader.ReadUInt16();
-            var origWidth = width;
-            if (width % 2 == 1)
-            {
-                //TODO: does this have a special meaning?
-                width += 1;
-            }
             
             //legacy CGA colour mapping
             Dictionary<byte, byte>? legacyColorMappings = null;
@@ -63,9 +57,8 @@ namespace CovertActionTools.Core.Importing.Parsers
             var imageCompressedData = reader.ReadBytes(rawData.Length);
             
             var lzw = new LzwDecompression(_loggerFactory.CreateLogger(typeof(LzwDecompression)), lzwMaxWordWidth, imageCompressedData, key);
-            var imageUncompressedData = lzw.Decompress(width * height, out var imageByteOffset);
+            var imageUncompressedData = lzw.Decompress(width, height, out var imageByteOffset);
             byteOffset = headerLength + imageByteOffset;
-            //_logger.LogError($"Byte offset {key} = {byteOffset:X}");
             if (byteOffset % 2 == 1)
             {
                 byteOffset += 1;

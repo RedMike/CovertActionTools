@@ -120,28 +120,41 @@ namespace CovertActionTools.Core.Compression
             return (ushort)(_dict.Values.DefaultIfEmpty((ushort)0xFF).Max() + 1);
         }
 
-        public byte[] Compress()
+        public byte[] Compress(int width, int height)
         {
             //first turn two pixels (up to 16 values) into a single byte (up to 256)
             using var duplicatedMemStream = new MemoryStream();
             using var duplicatedWriter = new BinaryWriter(duplicatedMemStream);
-            for (var i = 0; i < _data.Length; i++)
+            var i = 0;
+            for (var y = 0; y < height; y++)
             {
-                var p1 = _data[i];
-                i++;
-                byte p2 = 0;
-                if (i < _data.Length)
+                var stride = width;
+                //each byte has 2 pixels, if the width is -1 we have to append a fake pixel to keep it on the same line
+                //but not last line because that can just end suddenly
+                if (y < height - 1 && width % 2 == 1)
                 {
-                    p2 = _data[i];
+                    stride = width + 1;
                 }
-
-                if (p1 > 16 || p2 > 16)
+                for (var x = 0; x < stride; x++)
                 {
-                    throw new Exception($"Pixel value too high: {p1:X} {p2:X}");
-                }
+                    var p1 = _data[i];
+                    i++;
+                    x++;
+                    byte p2 = 0;
+                    if (x < width) //if we're reading the fake pixel, don't increment actual byte count
+                    {
+                        p2 = _data[i];
+                        i++;
+                    }
 
-                var mixedPixel = (byte)(((p2 & 0x0F) << 4) | (p1 & 0x0F));
-                duplicatedWriter.Write(mixedPixel);
+                    if (p1 > 16 || p2 > 16)
+                    {
+                        throw new Exception($"Pixel value too high: {p1:X} {p2:X}");
+                    }
+
+                    var mixedPixel = (byte)(((p2 & 0x0F) << 4) | (p1 & 0x0F));
+                    duplicatedWriter.Write(mixedPixel);
+                }
             }
 
             var duplicatedBytes = duplicatedMemStream.ToArray();
@@ -152,13 +165,14 @@ namespace CovertActionTools.Core.Compression
             byte repeats = 0;
             bool started = false;
             byte lastPixel = 0;
-            for (var i = 0; i < duplicatedBytes.Length; i++)
+            for (i = 0; i < duplicatedBytes.Length; i++)
             {
                 var pixel = duplicatedBytes[i];
-
+                
                 if (started &&
+                    pixel != 0x90 &&
                     pixel == lastPixel &&
-                    repeats < 250 && //prevent overflow (in legacy engine)
+                    repeats < 254 && //prevent overflow (in legacy engine)
                     i < duplicatedBytes.Length - 1 //end of image, finish repeating
                    )
                 {
@@ -217,14 +231,23 @@ namespace CovertActionTools.Core.Compression
                 }
                 else
                 {
-                    //we apply RLE
-                    encodingWriter.Write((byte)0x90);
-                    encodingWriter.Write((byte)(repeats + 1));
-                    encodingWriter.Write(pixel);
-                    if (pixel == 0x90)
+                    if (i == duplicatedBytes.Length - 1)
                     {
-                        //the only way to write 0x90 is to RLE encode it with a repeat of 0
-                        encodingWriter.Write((byte)0);
+                        //it's only a RLE code, not a second pixel
+                        encodingWriter.Write((byte)0x90);
+                        encodingWriter.Write((byte)(repeats + 2));
+                    }
+                    else
+                    {
+                        //we apply RLE
+                        encodingWriter.Write((byte)0x90);
+                        encodingWriter.Write((byte)(repeats + 1));
+                        encodingWriter.Write(pixel);
+                        if (pixel == 0x90)
+                        {
+                            //the only way to write 0x90 is to RLE encode it with a repeat of 0
+                            encodingWriter.Write((byte)0);
+                        }   
                     }
                 }
 
@@ -233,10 +256,12 @@ namespace CovertActionTools.Core.Compression
                 lastPixel = pixel;
             }
 
+            var rleBytes = encodingMemStream.ToArray();
+            
             //lastly we apply LZW
             var bytes = new byte[_data.Length]; //TODO: lower size
 
-            using var readStream = new MemoryStream(encodingMemStream.ToArray());
+            using var readStream = new MemoryStream(rleBytes);
             using var reader = new BinaryReader(readStream);
 
             var first = true;
@@ -347,7 +372,7 @@ namespace CovertActionTools.Core.Compression
                 }
             }
 
-            _logger.LogInformation($"Compressed from {_data.Length} bytes to {compressedBytes.Length}");
+            _logger.LogDebug($"Compressed from {_data.Length} bytes to {compressedBytes.Length}");
             return compressedBytes;
         }
     }

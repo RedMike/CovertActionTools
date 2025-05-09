@@ -53,7 +53,7 @@ namespace CovertActionTools.Core.Exporting.Exporters
 
             var compression = new LzwCompression(_loggerFactory.CreateLogger(typeof(LzwCompression)),
                 image.ExtraData.CompressionDictionaryWidth, imageData, image.Key);
-            var imageBytes = compression.Compress();
+            var imageBytes = compression.Compress(image.ExtraData.LegacyWidth, image.ExtraData.LegacyHeight);
 
             using var memStream = new MemoryStream();
             using var writer = new BinaryWriter(memStream);

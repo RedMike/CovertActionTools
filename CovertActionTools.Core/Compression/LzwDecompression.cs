@@ -22,7 +22,7 @@ namespace CovertActionTools.Core.Compression
         private readonly int _maxWordWidth;
         private readonly byte[] _data;
 
-        private int _bitOffset;
+        private byte _bitOffset;
         private int _byteOffset;
         
         private readonly Dictionary<ushort, List<byte>> _dict = new();
@@ -203,7 +203,7 @@ namespace CovertActionTools.Core.Compression
             return ReadNext(); //recurse, we have something in the stack already
         }
 
-        public byte[] Decompress(int length, out int byteOffset)
+        public byte[] Decompress(int width, int height, out int byteOffset)
         {
             using var memStream = new MemoryStream();
             using var writer = new BinaryWriter(memStream);
@@ -211,67 +211,79 @@ namespace CovertActionTools.Core.Compression
             uint rleCount = 0;
             byte pixel = 0;
 
-            for (var i = 0; i < length; i++)
+            for (var y = 0; y < height; y++)
             {
-                if (rleCount > 0)
+                var stride = width;
+                //each byte has 2 pixels, if the width is -1 we have to append a fake pixel to keep it on the same line
+                //but not last line because that can just end suddenly
+                if (y < height - 1 && width % 2 == 1)
                 {
-                    rleCount--;
+                    stride = width + 1;
                 }
-                else
+                for (var x = 0; x < stride; x++)
                 {
-                    var data = ReadNext();
-                    if (PrintDebugRle)
+                    if (rleCount > 0)
                     {
-                        _rleBytes.Add(data);
-                    }
-
-                    //is it RLE?
-                    if (data != 0x90)
-                    {
-                        //no
-                        pixel = data;
+                        rleCount--;
                     }
                     else
                     {
-                        //yes, check how many times
-                        var repeat = ReadNext();
+                        var data = ReadNext();
                         if (PrintDebugRle)
                         {
-                            _rleBytes.Add(repeat);
+                            _rleBytes.Add(data);
                         }
 
-                        if (repeat == 0)
+                        //is it RLE?
+                        if (data != 0x90)
                         {
-                            //we're just encoding 0x90
-                            pixel = 0x90;
+                            //no
+                            pixel = data;
                         }
                         else
                         {
-                            //_logger.LogInformation($"RLE encoded of bytes {pixel:X2} for {repeat}");
-                            if (repeat < 2)
+                            //yes, check how many times
+                            var repeat = ReadNext();
+                            if (PrintDebugRle)
                             {
-                                throw new Exception($"Invalid RLE repeat byte: {repeat}");
+                                _rleBytes.Add(repeat);
                             }
-                            rleCount = (uint)(repeat - 2);
+
+                            if (repeat == 0)
+                            {
+                                //we're just encoding 0x90
+                                pixel = 0x90;
+                            }
+                            else
+                            {
+                                //_logger.LogInformation($"RLE encoded of bytes {pixel:X2} for {repeat}");
+                                if (repeat < 2)
+                                {
+                                    throw new Exception($"Invalid RLE repeat byte: {repeat}");
+                                }
+
+                                rleCount = (uint)(repeat - 2);
+                            }
                         }
                     }
-                }
 
-                //each byte is actually two pixels one after the other
-                writer.Write((byte)(pixel & 0x0f));
-                writer.Write((byte)((pixel >> 4) & 0x0f));
-                if (PrintDebugMergedPixels)
-                {
-                    _mergedBytes.Add((byte)pixel);
+                    //each byte is actually two pixels one after the other
+                    writer.Write((byte)(pixel & 0x0f));
+                    x++;
+                    writer.Write((byte)((pixel >> 4) & 0x0f));
+                    if (PrintDebugMergedPixels)
+                    {
+                        _mergedBytes.Add((byte)pixel);
+                    }
+
+                    if (PrintDebugRawData)
+                    {
+                        _rawBytes.Add((byte)(pixel & 0x0f));
+                        _rawBytes.Add((byte)((pixel >> 4) & 0x0f));
+                    }
                 }
-                if (PrintDebugRawData)
-                {
-                    _rawBytes.Add((byte)(pixel & 0x0f));
-                    _rawBytes.Add((byte)((pixel >> 4) & 0x0f));
-                }
-                i += 1;
             }
-
+            
             if (PrintDebugKeys.Contains(_key))
             {
                 if (PrintDebugRawData)
@@ -293,9 +305,8 @@ namespace CovertActionTools.Core.Compression
             }
             
             var decompressedBytes = memStream.ToArray();
-            byteOffset = _byteOffset + (_bitOffset > 1 ? 1 : 0);
-            //_logger.LogError($"{_key} offset {_byteOffset} bits {_bitOffset}");
-            _logger.LogInformation($"Decompressed from {_data.Length} ({byteOffset}) bytes to {decompressedBytes.Length}");
+            byteOffset = _byteOffset + (_bitOffset > 0 ? 1 : 0);
+            _logger.LogDebug($"Decompressed from {_data.Length} ({byteOffset}) bytes to {decompressedBytes.Length}");
             return decompressedBytes;
         }
     }
