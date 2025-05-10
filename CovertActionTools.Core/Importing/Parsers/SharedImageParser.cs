@@ -66,11 +66,18 @@ namespace CovertActionTools.Core.Importing.Parsers
             
             //the data is currently in VGA format, so convert to modern format
             var imageModernData = new byte[width * height * 4];
-            for (var i = 0; i < width; i++)
+            for (var j = 0; j < height; j++)
             {
-                for (var j = 0; j < height; j++)
+                var stride = width;
+                if (width % 2 == 1)
                 {
-                    var pixel = imageUncompressedData[j * width + i];
+                    stride += 1;
+                }
+                for (var i = 0; i < width; i++)
+                {
+                    //the pixel we read is based on the stride because it has an extra byte at the end
+                    //due to the pixel packing of two pixels into one byte
+                    var pixel = imageUncompressedData[j * stride + i];
                     if (!Constants.VgaColorMapping.TryGetValue(pixel, out var col))
                     {
                         throw new Exception($"Invalid pixel value: {pixel}");
