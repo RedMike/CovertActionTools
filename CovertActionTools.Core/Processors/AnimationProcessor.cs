@@ -374,19 +374,23 @@ namespace CovertActionTools.Core.Processors
                     case AnimationModel.AnimationInstruction.AnimationOpcode.PopStackToRegister:
                     {
                         var registerIndex = (ushort)(currentInstruction.Data[0] | (currentInstruction.Data[1] << 8));
-                        if (!state.Registers.ContainsKey(registerIndex))
+                        if (registerIndex == 0xFFFF)
                         {
-                            state.Registers[registerIndex] = 0;
+                            //pop discard, so the value is popped but nothing happens
+                            state.Stack.RemoveAt(state.Stack.Count - 1);
                         }
-
-                        if (state.Stack.Count == 0)
+                        else
                         {
-                            state.Stack.Add(0);
-                        }
-                        var s1 = state.Stack[state.Stack.Count - 1];
-                        state.Stack.RemoveAt(state.Stack.Count - 1); //TODO: should pop or not?
+                            if (!state.Registers.ContainsKey(registerIndex))
+                            {
+                                state.Registers[registerIndex] = 0;
+                            }
 
-                        state.Registers[registerIndex] = s1;
+                            var s1 = state.Stack[state.Stack.Count - 1];
+                            state.Stack.RemoveAt(state.Stack.Count - 1); //TODO: should pop or not? 
+
+                            state.Registers[registerIndex] = s1;
+                        }
                         break;
                     }
                     case AnimationModel.AnimationInstruction.AnimationOpcode.PushRegisterToStack:
@@ -404,34 +408,27 @@ namespace CovertActionTools.Core.Processors
                     {
                         var target = currentInstruction.StackParameters[0];
                         var value = state.Stack[state.Stack.Count - 1];
-                        //state.Stack.RemoveAt(state.Stack.Count - 1); //TODO: should pop or not?
+                        state.Stack.RemoveAt(state.Stack.Count - 1);
                         state.CompareFlag = target != value;
                         break;
                     }
                     case AnimationModel.AnimationInstruction.AnimationOpcode.CompareEqual:
                     {
                         var target = currentInstruction.StackParameters[0];
-                        if (state.Stack.Count == 0)
-                        {
-                            state.Stack.Add(0);
-                        }
                         var value = state.Stack[state.Stack.Count - 1];
-                        //state.Stack.RemoveAt(state.Stack.Count - 1); //TODO: should pop or not?
+                        state.Stack.RemoveAt(state.Stack.Count - 1);
                         state.CompareFlag = target == value;
                         break;
                     }
                     case AnimationModel.AnimationInstruction.AnimationOpcode.Add:
                         var delta = currentInstruction.StackParameters[0];
-                        if (state.Stack.Count == 0)
-                        {
-                            state.Stack.Add(0);
-                            state.Stack.Add(0);
-                        } else if (state.Stack.Count == 1)
-                        {
-                            state.Stack.Add(0);
-                        }
                         state.Stack[state.Stack.Count - 1] += delta;
-                        state.Stack.RemoveAt(state.Stack.Count - 2); //TODO: should pop or not?
+                        break;
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.PushCopyOfStackValue:
+                        state.Stack.Add(state.Stack[state.Stack.Count - 1]);
+                        break;
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.Unknown03:
+                        //TODO: what does this do?
                         break;
                     default:
                         break;

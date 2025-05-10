@@ -253,6 +253,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                         opcode = AnimationModel.AnimationInstruction.AnimationOpcode.WaitForFrames;
                         break;
                     case 0x03:
+                        prevPushesToRemove = 1;
                         opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Unknown03;
                         break;
                     case 0x04:
@@ -260,7 +261,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                         opcode = AnimationModel.AnimationInstruction.AnimationOpcode.StampSprite;
                         break;
                     case 0x07:
-                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Unknown07;
+                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.PushCopyOfStackValue;
                         break;
                     case 0x08:
                         prevPushesToRemove = 1;
@@ -276,7 +277,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                         break;
                     //no need to handle 0x14 because of the above code
                     case 0x15:
-                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Unknown15;
+                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.MarkEndAsNoWait;
                         break;
                     
                     //then the ones that have extra data after, so might not be found

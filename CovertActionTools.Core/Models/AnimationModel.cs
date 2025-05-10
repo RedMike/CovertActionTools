@@ -50,14 +50,14 @@ namespace CovertActionTools.Core.Models
                 PushToStack = 5, //05 00 XX XX, push XX XX to stack
                 PushRegisterToStack = 261, //05 01 XX XX, push register X to stack
                 PopStackToRegister = 6, //06 XX XX, pops stack and sets register X to value
-                Unknown07 = 7, //07, TODO: no apparent effect/used in switch statements
+                PushCopyOfStackValue = 7, //07, pushes copy of top stack value
                 CompareEqual = 8, //08, loads 2 stack, sets compare flag if most recent two stack entries are equal
                 CompareNotEqual = 11, //0B, loads 2 stack, sets compare flag if most recent two stack entries are not equal
                 Add = 14, //0E, loads 2 stack, pops most recent two stack entries, adds them together and pushes it
                 ConditionalJump = 12, //12 XX XX, jumps only if compare flag is set
                 Jump = 19, //13 XX XX, always jumps, TODO: unclear why some existing files have two 13's one after the other
-                End = 20, //14, TODO: wait behaviour? some animations do wait, others start a new animation immediately
-                Unknown15 = 21, //15, TODO: related to wait behaviour? some animations use 15 right before 1; not loop because TITLE2 uses it
+                End = 20, //14, if not marked as NoWait, acts as a WaitForFrames 1 that infinitely loops
+                MarkEndAsNoWait = 21, //15, marks the animation as ending (stop running logic) once End is reached
             }
 
             public AnimationOpcode Opcode { get; set; } = AnimationOpcode.Unknown;
