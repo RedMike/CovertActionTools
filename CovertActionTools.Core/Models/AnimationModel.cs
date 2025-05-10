@@ -165,7 +165,8 @@ namespace CovertActionTools.Core.Models
             public BackgroundType BackgroundType { get; set; } = BackgroundType.Unknown;
             
             /// <summary>
-            /// Color mapping for the entire set of images in the file 
+            /// Color mapping for the entire set of images in the file
+            /// Not actually used by legacy game files, but engine supports it
             /// </summary>
             public Dictionary<byte, byte> ColorMapping { get; set; } = new();
             
@@ -199,9 +200,54 @@ namespace CovertActionTools.Core.Models
             /// Important: the background image is not part of the IDs
             /// </summary>
             public Dictionary<int, int> ImageIndexToUnknownData { get; set; } = new();
-
+            
             public List<AnimationInstruction> Instructions { get; set; } = new();
             public Dictionary<string, int> InstructionLabels { get; set; } = new();
+
+            [JsonIgnore]
+            public string CachedSerialisedInstructions = "";
+            public string GetSerialisedInstructions()
+            {
+                if (!string.IsNullOrEmpty(CachedSerialisedInstructions))
+                {
+                    return CachedSerialisedInstructions;
+                }
+                
+                var lines = new List<string>();
+                for (var i = 0; i < Instructions.Count; i++)
+                {
+                    var labels = InstructionLabels
+                        .Where(x => x.Value == i)
+                        .Select(x => $"@{x.Key}:")
+                        .ToList();
+                    lines.AddRange(labels);
+                    
+                    var instruction = Instructions[i];
+                    var instructionString = $"{instruction.Opcode}";
+                    if (!string.IsNullOrEmpty(instruction.Label))
+                    {
+                        instructionString += $" {instruction.Label}";
+                    }
+                    if (!string.IsNullOrEmpty(instruction.DataLabel))
+                    {
+                        instructionString += $" {instruction.DataLabel}";
+                    }
+                    if (instruction.Data.Length > 0)
+                    {
+                        instructionString += $" {string.Join(" ", instruction.Data.Select(x => $"{x:X2}"))}";
+                    }
+                    if (instruction.StackParameters.Length > 0)
+                    {
+                        instructionString += $" {string.Join(" ", instruction.StackParameters.Select(x => $"{x}"))}";
+                    }
+                    lines.Add($"\t{instructionString}");
+                }
+
+                CachedSerialisedInstructions = string.Join("\n", lines);
+                return CachedSerialisedInstructions;
+            }
+            
+            
             public List<AnimationStep> Steps { get; set; } = new();
             public Dictionary<string, int> DataLabels { get; set; } = new();
         }

@@ -299,25 +299,11 @@ public class SelectedAnimationWindow : SharedImageWindow
     {
         if (ImGui.CollapsingHeader("Instructions"))
         {
-            var index = 0;
-            foreach (var instruction in animation.ExtraData.Instructions)
-            {
-                var labelsOnIndex = animation.ExtraData.InstructionLabels
-                    .Where(x => x.Value == index)
-                    .Select(x => x.Key)
-                    .ToList();
-                if (labelsOnIndex.Count > 0)
-                {
-                    foreach (var label in labelsOnIndex)
-                    {
-                        ImGui.Text($"{label}:");
-                    }
-                }
-                
-                ImGui.Text(GetInstructionText(index, instruction));
+            var windowSize = ImGui.GetContentRegionAvail();
+            animation.ExtraData.GetSerialisedInstructions();
+            ImGui.InputTextMultiline("InstructionsText", ref animation.ExtraData.CachedSerialisedInstructions, 4096, new Vector2(windowSize.X, 400));
             
-                index++;
-            }
+            
         }
 
         if (ImGui.CollapsingHeader("Steps"))
