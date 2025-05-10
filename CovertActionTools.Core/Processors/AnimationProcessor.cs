@@ -54,6 +54,8 @@ namespace CovertActionTools.Core.Processors
         public bool CompareFlag { get; set; }
         public int InstructionIndex { get; set; }
         public int FramesToWait { get; set; }
+        public bool WaitWithoutDraw { get; set; }
+        public List<int> PendingSpriteStamps { get; set; } = new();
         public int CurrentFrame { get; set; }
         public bool Ended { get; set; }
 
@@ -106,9 +108,11 @@ namespace CovertActionTools.Core.Processors
                 );
             while (state.CurrentFrame <= frameIndex)
             {
+                var hadWait = false;
                 var firstFrame = true;
-                while (state.FramesToWait > 0 && state.CurrentFrame <= frameIndex)
+                while (state.WaitWithoutDraw || (state.FramesToWait > 0 && state.CurrentFrame <= frameIndex))
                 {
+                    hadWait = true;
                     if (laterRegisterValues.TryGetValue(state.CurrentFrame, out var registersToSet))
                     {
                         foreach (var pair in registersToSet)
@@ -210,8 +214,16 @@ namespace CovertActionTools.Core.Processors
                         }
                     }
 
-                    state.CurrentFrame++;
-                    state.FramesToWait--;
+                    if (state.WaitWithoutDraw)
+                    {
+                        //when WaitForFrames 0 is used, we don't actually advance the frame, we just ran one update
+                        state.WaitWithoutDraw = false;
+                    }
+                    else
+                    {
+                        state.CurrentFrame++;
+                        state.FramesToWait--;
+                    }
 
                     if (!firstFrame)
                     {
@@ -225,6 +237,31 @@ namespace CovertActionTools.Core.Processors
                         state.LastFrameInstructionIndices.Add(state.InstructionIndex);
                         state.InstructionIndex++;
                     }
+                }
+
+                if (hadWait)
+                {
+                    foreach (var spriteToStamp in state.PendingSpriteStamps)
+                    {
+                        var sprite = state.Sprites.FirstOrDefault(x => x.Index == spriteToStamp); 
+                        if (sprite != null && sprite.Active && sprite.ImageId >= 0)
+                        {
+                            var (x, y) = state.GetSpritePosition(sprite.Index);
+                            state.DrawnImages.Add(new AnimationState.DrawnImage()
+                            {
+                                SpriteIndex = sprite.Index,
+                                ImageId = sprite.ImageId,
+                                PositionX = x,
+                                PositionY = y
+                            });
+                        }
+                        else
+                        {
+                            throw new Exception(
+                                $"Attempted to stamp missing/inactive sprite: {spriteToStamp} {sprite?.ImageId} {sprite?.Active}");
+                        }
+                    }
+                    state.PendingSpriteStamps.Clear();
                 }
 
                 if (state.CurrentFrame > frameIndex)
@@ -269,6 +306,11 @@ namespace CovertActionTools.Core.Processors
                         var posY = currentInstruction.StackParameters[3];
                         var stepIndex = animation.ExtraData.DataLabels[currentInstruction.DataLabel];
 
+                        if (spriteIndex == 41)
+                        {
+                            var q = 0;
+                        }
+
                         var existingSprite = state.Sprites.FirstOrDefault(x => x.Index == spriteIndex);
                         if (existingSprite != null)
                         {
@@ -302,29 +344,21 @@ namespace CovertActionTools.Core.Processors
                         }
                         break;
                     case AnimationModel.AnimationInstruction.AnimationOpcode.WaitForFrames:
-                        state.FramesToWait = currentInstruction.StackParameters[0];
-                        //TODO: what does WaitForFrames 0 mean?
-                        if (state.FramesToWait > 0)
+                        if (currentInstruction.StackParameters[0] != 0)
                         {
-                            nextInstructionIndex = state.InstructionIndex;
+                            state.FramesToWait = currentInstruction.StackParameters[0];
                         }
+                        else
+                        {
+                            state.WaitWithoutDraw = true;
+                        }
+                        nextInstructionIndex = state.InstructionIndex;
 
                         break;
                     case AnimationModel.AnimationInstruction.AnimationOpcode.StampSprite:
                     {
-                        var sprite = state.Sprites.FirstOrDefault(x => x.Index == currentInstruction.StackParameters[0]);
-                        if (sprite != null && sprite.Active && sprite.ImageId >= 0)
-                        {
-                            var (x, y) = state.GetSpritePosition(sprite.Index);
-                            state.DrawnImages.Add(new AnimationState.DrawnImage()
-                            {
-                                SpriteIndex = sprite.Index,
-                                ImageId = sprite.ImageId,
-                                PositionX = x,
-                                PositionY = y
-                            });
-                        }
-
+                        //stamping is done after the wait finishes, to allow the sprites to have an init set of steps
+                        state.PendingSpriteStamps.Add(currentInstruction.StackParameters[0]);
                         break;
                     }
                     case AnimationModel.AnimationInstruction.AnimationOpcode.RemoveSprite:
