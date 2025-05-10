@@ -254,7 +254,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                         break;
                     case 0x03:
                         prevPushesToRemove = 1;
-                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Unknown03;
+                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.TriggerAudio;
                         break;
                     case 0x04:
                         prevPushesToRemove = 1;
@@ -277,7 +277,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                         break;
                     //no need to handle 0x14 because of the above code
                     case 0x15:
-                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.MarkEndAsNoWait;
+                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.EndImmediate;
                         break;
                     
                     //then the ones that have extra data after, so might not be found
@@ -321,7 +321,6 @@ namespace CovertActionTools.Core.Importing.Parsers
                         if (stack.Count == 3)
                         {
                             opcode = AnimationModel.AnimationInstruction.AnimationOpcode.ConditionalJump;
-                            data = new[] { stack[1], stack[2] };
                             var target = (long)(stack[1] | (stack[2] << 8));
                             if (!instructionLabels.TryGetValue(target, out label))
                             {
@@ -342,7 +341,6 @@ namespace CovertActionTools.Core.Importing.Parsers
                         if (stack.Count == 3)
                         {
                             opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Jump;
-                            data = new[] { stack[1], stack[2] };
                             var target = (long)(stack[1] | (stack[2] << 8));
                             if (!instructionLabels.TryGetValue(target, out label))
                             {

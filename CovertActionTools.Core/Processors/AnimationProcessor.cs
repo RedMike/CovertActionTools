@@ -281,6 +281,10 @@ namespace CovertActionTools.Core.Processors
                 var nextInstructionIndex = state.InstructionIndex + 1;
                 switch (currentInstruction.Opcode)
                 {
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.EndImmediate:
+                        state.Ended = true;
+                        nextInstructionIndex = state.InstructionIndex;
+                        break;
                     case AnimationModel.AnimationInstruction.AnimationOpcode.End:
                         state.FramesToWait = 1;
                         state.Ended = true;
@@ -427,8 +431,8 @@ namespace CovertActionTools.Core.Processors
                     case AnimationModel.AnimationInstruction.AnimationOpcode.PushCopyOfStackValue:
                         state.Stack.Add(state.Stack[state.Stack.Count - 1]);
                         break;
-                    case AnimationModel.AnimationInstruction.AnimationOpcode.Unknown03:
-                        //TODO: what does this do?
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.TriggerAudio:
+                        //TODO: add to state
                         break;
                     default:
                         break;

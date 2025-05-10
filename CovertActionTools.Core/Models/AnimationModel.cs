@@ -45,7 +45,7 @@ namespace CovertActionTools.Core.Models
                 SetupSprite = 0, //00, loads 7 * 2 stack (pointer, index, u1, x, y, u2, u3), add active sprite
                 RemoveSprite = 1, //01, loads 2 stack, stops/removes target sprite
                 WaitForFrames = 2, //02, loads 2 stack, render for X frames
-                Unknown03 = 3, //03, loads 2 stack, TODO: not in CA, in RRM, no apparent effect
+                TriggerAudio = 3, //03, loads 2 stack, triggers audio from engine global audio table
                 StampSprite = 4, //04, loads 2 stack, saves a persistent copy of the sprite at the current position/image
                 PushToStack = 5, //05 00 XX XX, push XX XX to stack
                 PushRegisterToStack = 261, //05 01 XX XX, push register X to stack
@@ -56,8 +56,8 @@ namespace CovertActionTools.Core.Models
                 Add = 14, //0E, loads 2 stack, pops most recent two stack entries, adds them together and pushes it
                 ConditionalJump = 12, //12 XX XX, jumps only if compare flag is set
                 Jump = 19, //13 XX XX, always jumps, TODO: unclear why some existing files have two 13's one after the other
-                End = 20, //14, if not marked as NoWait, acts as a WaitForFrames 1 that infinitely loops
-                MarkEndAsNoWait = 21, //15, marks the animation as ending (stop running logic) once End is reached
+                End = 20, //14, acts as a WaitForFrames 1 that infinitely loops
+                EndImmediate = 21, //15, acts as an immediate end to the animation
             }
 
             public AnimationOpcode Opcode { get; set; } = AnimationOpcode.Unknown;
