@@ -346,19 +346,57 @@ public class SelectedAnimationWindow : SharedImageWindow
 
     private void DrawAnimationImageWindow(PackageModel model, AnimationModel animation)
     {
-        var newSelectedImage = ImGuiExtensions.Input("ID", _selectedImage);
-        if (newSelectedImage != null)
+        if (!animation.ExtraData.ImageIdToIndex.TryGetValue(_selectedImage, out var index))
         {
-            _selectedImage = newSelectedImage.Value;
+            index = -2;
+        }
+        
+        var imageIds = new List<int>();
+        var imageIdNames = new List<string>();
+        if (animation.ExtraData.BackgroundType == AnimationModel.BackgroundType.ClearToImage)
+        {
+            imageIds.Add(-1);
+            imageIdNames.Add("Background");
         }
 
-        if (!animation.ExtraData.ImageIdToIndex.ContainsKey(_selectedImage))
+        var unselectedIds = new List<int>();
+        for (var i = 0; i < 250; i++)
         {
-            ImGui.Text("ID is not mapped to an image");
-            return;
+            if (animation.ExtraData.ImageIdToIndex.TryGetValue(i, out var targetIndex))
+            {
+                var name = $"{i} - Index {targetIndex}";
+                if (animation.Images.TryGetValue(targetIndex, out var targetImage))
+                {
+                    name += $" - {targetImage.ExtraData.Name} ({targetImage.ExtraData.LegacyWidth}x{targetImage.ExtraData.LegacyHeight})";
+                }
+                imageIds.Add(i);
+                imageIdNames.Add(name);
+            }
+            else
+            {
+                unselectedIds.Add(i);
+            }
         }
 
-        if (!animation.Images.TryGetValue(animation.ExtraData.ImageIdToIndex[_selectedImage], out var image))
+        var newSelectedId = ImGuiExtensions.Input("ID", _selectedImage, imageIds, imageIdNames);
+        if (newSelectedId != null)
+        {
+            _selectedImage = newSelectedId.Value;
+        }
+
+        var replacementIds = new List<int>();
+        replacementIds.Add(_selectedImage);
+        replacementIds.AddRange(unselectedIds);
+        var replacementIdNames = new List<string>();
+        replacementIdNames.Add(" ");
+        replacementIdNames.AddRange(unselectedIds.Select(x => $"{x}"));
+        var replacementId = ImGuiExtensions.Input("Replacement ID", _selectedImage, replacementIds, replacementIdNames);
+        if (replacementId != null)
+        {
+            //TODO: handle change
+        }
+        
+        if (!animation.Images.TryGetValue(index, out var image))
         {
             ImGui.Text("Something went wrong, image is missing..");
             return;
