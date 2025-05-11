@@ -348,6 +348,10 @@ public class SelectedAnimationWindow : SharedImageWindow
         }
 
         var unselectedIds = new List<int>();
+        if (!animation.Images.ContainsKey(-1))
+        {
+            unselectedIds.Add(-1);
+        }
         for (var i = 0; i < 250; i++)
         {
             if (animation.ExtraData.ImageIdToIndex.TryGetValue(i, out var targetIndex))
@@ -377,14 +381,19 @@ public class SelectedAnimationWindow : SharedImageWindow
         replacementIds.AddRange(unselectedIds);
         var replacementIdNames = new List<string>();
         replacementIdNames.Add(" ");
-        replacementIdNames.AddRange(unselectedIds.Select(x => $"{x}"));
+        replacementIdNames.AddRange(unselectedIds.Select(x => $"{(x == -1 ? "Background" : x)}"));
         var replacementId = ImGuiExtensions.Input("Replacement ID", _selectedImage, replacementIds, replacementIdNames);
         if (replacementId != null)
         {
             //TODO: handle change
         }
-        
-        if (!animation.Images.TryGetValue(index, out var image))
+
+        var selectedIndex = index;
+        if (_selectedImage == -1)
+        {
+            selectedIndex = -1;
+        }
+        if (!animation.Images.TryGetValue(selectedIndex, out var image))
         {
             ImGui.Text("Something went wrong, image is missing..");
             return;

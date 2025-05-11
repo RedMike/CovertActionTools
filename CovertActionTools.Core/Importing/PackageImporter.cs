@@ -136,14 +136,14 @@ namespace CovertActionTools.Core.Importing
                 throw new Exception("Trying to read model when no task");
             }
 
-            if (!_importTask.IsCompleted)
-            {
-                throw new Exception("Trying to read model when task pending");
-            }
-
             if (_importTask.IsFaulted)
             {
                 throw _importTask.Exception!;
+            }
+            
+            if (!_importTask.IsCompleted)
+            {
+                throw new Exception("Trying to read model when task pending");
             }
 
             return _importTask.Result!;
@@ -313,8 +313,17 @@ namespace CovertActionTools.Core.Importing
                 } while (!done);
                 model.Animations = _animationImporter.GetResult();
 
-                _currentStage = ImportStatus.ImportStage.ImportDone;
                 await Task.Yield();
+                
+                _logger.LogInformation($"Import done: {model.SimpleImages.Count} images, " +
+                                       $"{model.Crimes.Count} crimes, " +
+                                       $"{model.Texts.Count} texts, " +
+                                       $"{model.Clues.Count} clues, " +
+                                       $"{model.Plots.Count} plots, " +
+                                       $"{model.Worlds.Count} worlds, " +
+                                       $"{model.Catalogs.Count} catalogs, " +
+                                       $"{model.Animations.Count} animations, " +
+                                       $"...");
             }
             catch (Exception e)
             {
@@ -325,16 +334,7 @@ namespace CovertActionTools.Core.Importing
             {
                 _currentStage = ImportStatus.ImportStage.ImportDone;
             }
-
-            _logger.LogInformation($"Import done: {model.SimpleImages.Count} images, " +
-                                   $"{model.Crimes.Count} crimes, " +
-                                   $"{model.Texts.Count} texts, " +
-                                   $"{model.Clues.Count} clues, " +
-                                   $"{model.Plots.Count} plots, " +
-                                   $"{model.Worlds.Count} worlds, " +
-                                   $"{model.Catalogs.Count} catalogs, " +
-                                   $"{model.Animations.Count} animations, " +
-                                   $"...");
+            
             return model;
         }
     }
