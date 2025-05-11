@@ -323,12 +323,12 @@ public class SelectedAnimationWindow : SharedImageWindow
         
         if (ImGui.CollapsingHeader("Instructions"))
         {
-            ImGui.InputTextMultiline("InstructionsText", ref _animationEditorState.SerialisedInstructions, 16000, new Vector2(windowSize.X, 400), ImGuiInputTextFlags.AllowTabInput);
+            ImGui.InputTextMultiline("InstructionsText", ref _animationEditorState.SerialisedInstructions, 32000, new Vector2(windowSize.X, 400), ImGuiInputTextFlags.AllowTabInput);
         }
 
         if (ImGui.CollapsingHeader("Steps"))
         {
-            ImGui.InputTextMultiline("StepsText", ref _animationEditorState.SerialisedSteps, 16000, new Vector2(windowSize.X, 400), ImGuiInputTextFlags.AllowTabInput);
+            ImGui.InputTextMultiline("StepsText", ref _animationEditorState.SerialisedSteps, 32000, new Vector2(windowSize.X, 400), ImGuiInputTextFlags.AllowTabInput);
         }
     }
 

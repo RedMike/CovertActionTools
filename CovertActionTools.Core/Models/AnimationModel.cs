@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text.Json.Serialization;
 
 namespace CovertActionTools.Core.Models
 {
@@ -233,7 +231,7 @@ namespace CovertActionTools.Core.Models
                     {
                         if (instruction.Data.Length == 2)
                         {
-                            instructionString += $" {instruction.Data[0] | (instruction.Data[1] << 8)}";
+                            instructionString += $" {(short)(instruction.Data[0] | (instruction.Data[1] << 8))}";
                         }
                         else
                         {

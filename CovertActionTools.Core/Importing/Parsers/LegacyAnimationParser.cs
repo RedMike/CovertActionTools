@@ -540,10 +540,12 @@ namespace CovertActionTools.Core.Importing.Parsers
                         comment = $"Sprites start: {string.Join(", ", spritesStartOnLine)}";
                     }
 
-                    // if (!inSequence)
-                    // {
-                    //     throw new Exception($"Got step {(byte)type:X2} while not in active sequence");
-                    // }
+                    if (!inSequence && memStream.Position > memStream.Length - 15)
+                    {
+                        reader.ReadBytes(16);
+                        continue;
+                        //throw new Exception($"Got step {(byte)type:X2} while not in active sequence: {memStream.Position} {memStream.Length}");
+                    }
 
                     if (isEnd)
                     {
@@ -572,6 +574,15 @@ namespace CovertActionTools.Core.Importing.Parsers
                     }
                 }
             } while (memStream.Position < memStream.Length);
+            
+            //remove the last few instructions after the end, they're garbage padding
+            // var lastEndStep = steps.Last(x =>
+            //     x.Value.Type == AnimationModel.AnimationStep.StepType.Loop ||
+            //     x.Value.Type == AnimationModel.AnimationStep.StepType.Pause ||
+            //     x.Value.Type == AnimationModel.AnimationStep.StepType.Restart ||
+            //     x.Value.Type == AnimationModel.AnimationStep.StepType.Stop
+            // ).Key;
+            // var lastLabel = dataLabels.Max(x => x.Key);
             
             //double check that all data labels point to valid steps
             var missingDataLabels = dataLabels

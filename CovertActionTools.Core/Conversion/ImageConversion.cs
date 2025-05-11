@@ -124,7 +124,7 @@ namespace CovertActionTools.Core.Conversion
             }
             //the raw bytes are pixel packed so for odd widths there's an extra byte at the end
             //except the last row which does not have it
-            var bytes = new byte[stride * (height - 1) + width];
+            var bytes = new byte[stride * (height - 1) + stride];
             for (var i = 0; i < height; i++)
             {
                 for (var j = 0; j < width; j++)
