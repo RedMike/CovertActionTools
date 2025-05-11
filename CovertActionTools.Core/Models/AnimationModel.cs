@@ -77,6 +77,8 @@ namespace CovertActionTools.Core.Models
             /// Populated for SetupSprite instructions, points into data sub-section
             /// </summary>
             public string DataLabel { get; set; } = string.Empty;
+
+            public string Comment { get; set; } = string.Empty;
         }
 
         public class AnimationStep
@@ -130,6 +132,8 @@ namespace CovertActionTools.Core.Models
             /// Only populated for jump instructions
             /// </summary>
             public string Label { get; set; } = string.Empty;
+
+            public string Comment { get; set; } = string.Empty;
         }
 
         public class Metadata
@@ -240,6 +244,12 @@ namespace CovertActionTools.Core.Models
                     {
                         instructionString += $" {string.Join(" ", instruction.StackParameters.Select(x => $"{x}"))}";
                     }
+
+                    if (!string.IsNullOrEmpty(instruction.Comment))
+                    {
+                        instructionString += $"  ; {instruction.Comment}";
+                    }
+                    
                     lines.Add($"\t{instructionString}");
                 }
 
@@ -284,18 +294,10 @@ namespace CovertActionTools.Core.Models
                             stepString += $" {(short)(step.Data[2] | (step.Data[3] << 8))}";
                         }
                     }
-                    
-                    //add comment for what sprites start on this line
-                    var spritesStartOnLine = Instructions
-                        .Where(x => x.Opcode == AnimationInstruction.AnimationOpcode.SetupSprite &&
-                                    dataLabelsOnLine.Contains(x.DataLabel))
-                        .Select(x => x.StackParameters[0])
-                        .Distinct()
-                        .OrderBy(x => x)
-                        .ToList();
-                    if (spritesStartOnLine.Count > 0)
+
+                    if (!string.IsNullOrEmpty(step.Comment))
                     {
-                        stepString += $"  ; Sprites start: {string.Join(", ", spritesStartOnLine)}";
+                        stepString += $"  ; {step.Comment}";
                     }
                     
                     lines.Add($"\t{stepString}");
@@ -306,7 +308,218 @@ namespace CovertActionTools.Core.Models
 
             public void ParseInstructionsAndSteps(string instructionsString, string stepsString)
             {
+                var instructions = new List<AnimationInstruction>();
+                var instructionLabels = new Dictionary<string, int>();
+                var steps = new List<AnimationStep>();
+                var stepLabels = new Dictionary<string, int>();
                 
+                var instructionLines = instructionsString.Split('\n')
+                    .Select(x => x.Trim().Trim('\r', '\t', '\n'))
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .ToList();
+                var labelStack = new List<string>();
+                for (var i = 0; i < instructionLines.Count; i++)
+                {
+                    var lineText = instructionLines[i];
+                    var comment = string.Empty;
+                    if (lineText.Contains(";"))
+                    {
+                        var separatorIndex = lineText.IndexOf(';');
+                        comment = lineText
+                            .Substring(separatorIndex)
+                            .Trim('\r', '\t').Trim()
+                            .Trim(';').Trim();
+                        lineText = lineText
+                            .Substring(0, separatorIndex)
+                            .Trim('\r', '\t').Trim();
+                    }
+
+                    if (lineText.StartsWith("@"))
+                    {
+                        //it's a label
+                        labelStack.Add(lineText.Replace("@", "").Replace(":", ""));
+                        continue;
+                    }
+
+                    var opcodeEndIndex = lineText.IndexOf(' ');
+                    if (opcodeEndIndex == -1)
+                    {
+                        opcodeEndIndex = lineText.Length;
+                    }
+                    var opcodeString = lineText.Substring(0, opcodeEndIndex);
+                    if (!Enum.TryParse(opcodeString, out AnimationInstruction.AnimationOpcode opcode))
+                    {
+                        throw new Exception($"Unknown opcode: {instructionLines[i]}");
+                    }
+                    lineText = lineText.Substring(opcodeEndIndex)
+                        .Trim('\r', '\t').Trim();
+                    var stackParameters = new List<short>();
+                    var data = new List<byte>();
+                    var label = string.Empty;
+                    var dataLabel = string.Empty;
+                    switch (opcode)
+                    {
+                        case AnimationInstruction.AnimationOpcode.SetupSprite:
+                            var labelEndIndex = lineText.IndexOf(' ');
+                            dataLabel = lineText.Substring(0, labelEndIndex)
+                                .Trim('\r', '\t').Trim();
+                            lineText = lineText.Substring(labelEndIndex);
+                            var remainingParameters = lineText.Split(' ')
+                                .Select(x => x.Trim('\r', '\t').Trim())
+                                .Where(x => !string.IsNullOrWhiteSpace(x))
+                                .Select(short.Parse).ToList();
+                            if (remainingParameters.Count != 6)
+                            {
+                                throw new Exception($"Incorrect number of parameters: {instructionLines[i]}");
+                            }
+
+                            stackParameters.AddRange(remainingParameters);
+                            break;
+                        case AnimationInstruction.AnimationOpcode.PushToStack:
+                        case AnimationInstruction.AnimationOpcode.PushRegisterToStack:
+                        case AnimationInstruction.AnimationOpcode.PopStackToRegister:
+                            var n = short.Parse(lineText);
+                            data.AddRange(new []{ (byte)(n & 0xFF), (byte)(((ushort)n & 0xFF00) >> 8) });
+                            break;
+                        case AnimationInstruction.AnimationOpcode.Jump:
+                        case AnimationInstruction.AnimationOpcode.ConditionalJump:
+                            label = lineText;
+                            break;
+                        case AnimationInstruction.AnimationOpcode.WaitForFrames:
+                        case AnimationInstruction.AnimationOpcode.StampSprite:
+                        case AnimationInstruction.AnimationOpcode.CompareEqual:
+                        case AnimationInstruction.AnimationOpcode.CompareNotEqual:
+                        case AnimationInstruction.AnimationOpcode.Add:
+                        case AnimationInstruction.AnimationOpcode.TriggerAudio:
+                        case AnimationInstruction.AnimationOpcode.RemoveSprite:
+                            stackParameters.Add(short.Parse(lineText));
+                            break;
+                        case AnimationInstruction.AnimationOpcode.PushCopyOfStackValue:
+                        case AnimationInstruction.AnimationOpcode.EndImmediate:
+                        case AnimationInstruction.AnimationOpcode.End:
+                            break;
+                        default:
+                            throw new Exception($"Unhandled opcode: {instructionLines[i]}");
+                    }
+                    
+                    instructions.Add(new AnimationInstruction()
+                    {
+                        Opcode = opcode,
+                        StackParameters = stackParameters.ToArray(),
+                        Data = data.ToArray(),
+                        Label = label,
+                        DataLabel = dataLabel,
+                        Comment = comment
+                    });
+                    
+                    //if there are any labels queued up, they take effect on the first instruction after
+                    if (labelStack.Count != 0)
+                    {
+                        foreach (var queuedLabel in labelStack)
+                        {
+                            instructionLabels.Add(queuedLabel, instructions.Count - 1);
+                        }
+                        labelStack.Clear();
+                    }
+                }
+
+                var stepLines = stepsString.Split('\n')
+                    .Select(x => x.Trim().Trim('\r', '\t', '\n'))
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .ToList();
+                var dataLabelStack = new List<string>();
+                for (var i = 0; i < stepLines.Count; i++)
+                {
+                    var lineText = stepLines[i];
+                    var comment = string.Empty;
+                    if (lineText.Contains(";"))
+                    {
+                        var separatorIndex = lineText.IndexOf(';');
+                        comment = lineText
+                            .Substring(separatorIndex)
+                            .Trim('\r', '\t').Trim()
+                            .Trim(';').Trim();
+                        lineText = lineText
+                            .Substring(0, separatorIndex)
+                            .Trim('\r', '\t').Trim();
+                    }
+                    
+                    if (lineText.StartsWith("@"))
+                    {
+                        //it's a label
+                        dataLabelStack.Add(lineText.Replace("@", "").Replace(":", ""));
+                        continue;
+                    }
+
+                    var typeEndIndex = lineText.IndexOf(' ');
+                    if (typeEndIndex == -1)
+                    {
+                        typeEndIndex = lineText.Length;
+                    }
+
+                    var typeString = lineText.Substring(0, typeEndIndex);
+                    if (!Enum.TryParse(typeString, out AnimationStep.StepType type))
+                    {
+                        throw new Exception($"Unknown type: {stepLines[i]}");
+                    }
+                    
+                    lineText = lineText.Substring(typeEndIndex)
+                        .Trim('\r', '\t').Trim();
+                    var data = new List<byte>();
+                    var label = string.Empty;
+                    switch (type)
+                    {
+                        case AnimationStep.StepType.Loop:
+                        case AnimationStep.StepType.Pause:
+                        case AnimationStep.StepType.Restart:
+                        case AnimationStep.StepType.Stop:
+                            break;
+                        case AnimationStep.StepType.DrawFrame:
+                            data.Add((byte)sbyte.Parse(lineText));
+                            break;
+                        case AnimationStep.StepType.JumpIfCounter:
+                            label = lineText;
+                            break;
+                        case AnimationStep.StepType.PushCounter:
+                            var val = short.Parse(lineText);
+                            data.AddRange(new [] { (byte)(val & 0xFF), (byte)((val & 0xFF00) >> 8) });
+                            break;
+                        case AnimationStep.StepType.MoveAbsolute:
+                        case AnimationStep.StepType.MoveRelative:
+                            var separator = lineText.IndexOf(' ');
+                            var firstVal = short.Parse(lineText.Substring(0, separator));
+                            var secondVal = short.Parse(lineText.Substring(separator));
+                            data.AddRange(new [] { (byte)(firstVal & 0xFF), (byte)((firstVal & 0xFF00) >> 8) });
+                            data.AddRange(new [] { (byte)(secondVal & 0xFF), (byte)((secondVal & 0xFF00) >> 8) });
+                            break;
+                        default:
+                            throw new Exception($"Unhandled step type: {stepLines[i]}");
+                    }
+                    
+                    steps.Add(new AnimationStep()
+                    {
+                        Type = type,
+                        Comment = comment,
+                        Data = data.ToArray(),
+                        Label = label,
+                    });
+                    
+                    //if there are any labels queued up, they take effect on the first instruction after
+                    if (dataLabelStack.Count != 0)
+                    {
+                        foreach (var queuedLabel in dataLabelStack)
+                        {
+                            stepLabels.Add(queuedLabel, steps.Count - 1);
+                        }
+                        dataLabelStack.Clear();
+                    }
+                }
+
+                Instructions = instructions;
+                InstructionLabels = instructionLabels;
+
+                Steps = steps;
+                DataLabels = stepLabels;
             }
         }
         

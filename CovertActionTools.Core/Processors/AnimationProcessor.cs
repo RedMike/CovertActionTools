@@ -310,11 +310,6 @@ namespace CovertActionTools.Core.Processors
                         var posY = currentInstruction.StackParameters[3];
                         var stepIndex = animation.ExtraData.DataLabels[currentInstruction.DataLabel];
 
-                        if (spriteIndex == 41)
-                        {
-                            var q = 0;
-                        }
-
                         var existingSprite = state.Sprites.FirstOrDefault(x => x.Index == spriteIndex);
                         if (existingSprite != null)
                         {

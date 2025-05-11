@@ -379,11 +379,8 @@ namespace CovertActionTools.Core.Importing.Parsers
                             throw new Exception("Attempted to remove pushes when not enough instructions yet");
                         }
                         
-                        //_logger.LogError($"Attempting to remove {prevPushesToRemove}, list is {offsets.Count}");
-                        
                         for (var i = 0; i < prevPushesToRemove; i++)
                         {
-                            //_logger.LogError($"Attempting to remove {i}: {offsets.Count - prevPushesToRemove + i}");
                             var offset = offsets[offsets.Count - prevPushesToRemove + i];
                             if (instructions[offset].Opcode != AnimationModel.AnimationInstruction.AnimationOpcode.PushToStack)
                             {
@@ -420,6 +417,8 @@ namespace CovertActionTools.Core.Importing.Parsers
                         
                         stackParameters.RemoveAt(0);
                     }
+
+                    var comment = string.Empty;
                     
                     offsets.Add(lastOffset);
                     instructions.Add(lastOffset, new AnimationModel.AnimationInstruction()
@@ -428,7 +427,8 @@ namespace CovertActionTools.Core.Importing.Parsers
                         Data = data,
                         Label = label,
                         StackParameters = stackParameters.ToArray(),
-                        DataLabel = dataLabel
+                        DataLabel = dataLabel,
+                        Comment = comment
                     });
                     stack.Clear();
                     pushedInstruction = true;
@@ -526,6 +526,19 @@ namespace CovertActionTools.Core.Importing.Parsers
                         default:
                             throw new Exception($"Unknown step type: {(byte)type:X2} at offset {(offset + dataSectionStart):X4}");
                     }
+                    
+                    var spritesStartOnLine = instructions.Values
+                        .Where(x => x.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.SetupSprite &&
+                                    dataLabels.First(y => y.Value == x.DataLabel).Key == offset)
+                        .Select(x => x.StackParameters[0])
+                        .Distinct()
+                        .OrderBy(x => x)
+                        .ToList();
+                    var comment = string.Empty;
+                    if (spritesStartOnLine.Count > 0)
+                    {
+                        comment = $"Sprites start: {string.Join(", ", spritesStartOnLine)}";
+                    }
 
                     // if (!inSequence)
                     // {
@@ -541,10 +554,11 @@ namespace CovertActionTools.Core.Importing.Parsers
                     {
                         Type = type,
                         Data = data,
-                        Label = dataLabel
+                        Label = dataLabel,
+                        Comment = comment
                     });
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     if (memStream.Position > memStream.Length - 15 && !inSequence)
                     {

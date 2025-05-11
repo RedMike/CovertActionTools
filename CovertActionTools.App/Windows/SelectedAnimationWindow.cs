@@ -308,11 +308,11 @@ public class SelectedAnimationWindow : SharedImageWindow
 
     private void DrawAnimationInstructionsWindow(PackageModel model, AnimationModel animation)
     {
-        if (_animationEditorState.HasChanges())
+        if (_animationEditorState.HasChanges() || true)
         {
             if (ImGui.Button("Save"))
             {
-                animation.ExtraData.ParseInstructionsAndSteps(_animationEditorState.SerialisedInstructions, "");
+                animation.ExtraData.ParseInstructionsAndSteps(_animationEditorState.SerialisedInstructions, _animationEditorState.SerialisedSteps);
 
                 //mark it for reset so that the model gets updated
                 _animationEditorState.Reset("");
@@ -323,12 +323,12 @@ public class SelectedAnimationWindow : SharedImageWindow
         
         if (ImGui.CollapsingHeader("Instructions"))
         {
-            ImGui.InputTextMultiline("InstructionsText", ref _animationEditorState.SerialisedInstructions, uint.MaxValue, new Vector2(windowSize.X, 400));
+            ImGui.InputTextMultiline("InstructionsText", ref _animationEditorState.SerialisedInstructions, 16000, new Vector2(windowSize.X, 400), ImGuiInputTextFlags.AllowTabInput);
         }
 
         if (ImGui.CollapsingHeader("Steps"))
         {
-            ImGui.InputTextMultiline("StepsText", ref _animationEditorState.SerialisedSteps, uint.MaxValue, new Vector2(windowSize.X, 400));
+            ImGui.InputTextMultiline("StepsText", ref _animationEditorState.SerialisedSteps, 16000, new Vector2(windowSize.X, 400), ImGuiInputTextFlags.AllowTabInput);
         }
     }
 
