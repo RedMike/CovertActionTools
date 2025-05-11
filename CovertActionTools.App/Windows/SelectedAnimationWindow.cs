@@ -12,17 +12,18 @@ public class SelectedAnimationWindow : SharedImageWindow
     private readonly ILogger<SelectedAnimationWindow> _logger;
     private readonly MainEditorState _mainEditorState;
     private readonly IAnimationProcessor _animationProcessor;
+    private readonly AnimationPreviewState _animationPreviewState;
 
     private int _selectedImage = 0;
-    private int _selectedFrameId = 0;
-    private int _selectedAnimation = 0;
-    private readonly Dictionary<int, (int value, int frameIndex)> _inputRegisters = new();
+    private int _selectedSprite = 0;
+    
 
-    public SelectedAnimationWindow(RenderWindow renderWindow, ILogger<SelectedAnimationWindow> logger, MainEditorState mainEditorState, IAnimationProcessor animationProcessor) : base(renderWindow)
+    public SelectedAnimationWindow(RenderWindow renderWindow, ILogger<SelectedAnimationWindow> logger, MainEditorState mainEditorState, IAnimationProcessor animationProcessor, AnimationPreviewState animationPreviewState) : base(renderWindow)
     {
         _logger = logger;
         _mainEditorState = mainEditorState;
         _animationProcessor = animationProcessor;
+        _animationPreviewState = animationPreviewState;
     }
 
     public override void Draw()
@@ -39,6 +40,10 @@ public class SelectedAnimationWindow : SharedImageWindow
         }
         
         var key = _mainEditorState.SelectedItem.Value.id;
+        if (_animationPreviewState.SelectedId != key)
+        {
+            _animationPreviewState.Reset(key);
+        }
         
         var screenSize = ImGui.GetMainViewport().Size;
         var initialPos = new Vector2(300.0f, 20.0f);
@@ -73,12 +78,7 @@ public class SelectedAnimationWindow : SharedImageWindow
 
     private void DrawAnimationWindow(PackageModel model, AnimationModel animation)
     {
-        ImGui.Text("The PAN file format is not fully understood, so this is read-only and likely completely wrong.");
-        ImGui.Text("");
-        
         //TODO: keep a pending model and have a save button?
-        var windowSize = ImGui.GetContentRegionAvail();
-
         ImGui.BeginTabBar("AnimationTabs", ImGuiTabBarFlags.NoCloseWithMiddleMouseButton);
 
         if (ImGui.BeginTabItem("Preview"))
@@ -107,10 +107,39 @@ public class SelectedAnimationWindow : SharedImageWindow
 
     private void DrawAnimationPreviewWindow(PackageModel model, AnimationModel animation)
     {
-        var newFrameId = ImGuiExtensions.Input("Frame ID", _selectedFrameId);
+        var newFrameId = ImGuiExtensions.Input("Frame ID", _animationPreviewState.SelectedFrameId);
         if (newFrameId != null)
         {
-            _selectedFrameId = newFrameId.Value;
+            _animationPreviewState.SelectedFrameId = newFrameId.Value;
+        }
+        
+        var inputRegisters = animation.ExtraData.Instructions
+            .Where(x => x.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.PushRegisterToStack)
+            .Select(x => x.Data[0])
+            .Distinct()
+            .Order()
+            .ToList();
+        var windowSize = ImGui.GetContentRegionAvail();
+        var fieldWidth = ((int)windowSize.X / 2) - 100;
+        foreach (var inputRegister in inputRegisters)
+        {
+            _animationPreviewState.InputRegisters.TryGetValue(inputRegister, out var val);
+            var (oldValue, oldFrameIndex) = val;
+            var newValue = ImGuiExtensions.Input($"Register {inputRegister}", oldValue, width:fieldWidth);
+            if (newValue != null)
+            {
+                _animationPreviewState.SetInputRegister(inputRegister, newValue.Value, oldFrameIndex);
+            }
+
+            ImGui.SameLine();
+
+            var newFrameIndex = ImGuiExtensions.Input($"Apply Frame {inputRegister}", oldFrameIndex, width:fieldWidth);
+            if (newFrameIndex != null)
+            {
+                _animationPreviewState.SetInputRegister(inputRegister, _animationPreviewState.InputRegisters[inputRegister].value, newFrameIndex.Value);
+            }
+                
+            ImGui.Text("");
         }
         
         var width = animation.ExtraData.BoundingWidth + 1;
@@ -147,7 +176,7 @@ public class SelectedAnimationWindow : SharedImageWindow
             ImGui.Image(texture, new Vector2(backgroundImage.ExtraData.LegacyWidth, backgroundImage.ExtraData.LegacyHeight));
         }
 
-        var state = _animationProcessor.Process(animation, _selectedFrameId, _inputRegisters);
+        var state = _animationPreviewState.GetState(animation, _animationProcessor);
         foreach (var drawnImage in state.DrawnImages.OrderBy(x => x.SpriteIndex))
         {
             ImGui.SetCursorPos(pos + new Vector2(offsetX + drawnImage.PositionX, offsetY + drawnImage.PositionY));
@@ -161,7 +190,7 @@ public class SelectedAnimationWindow : SharedImageWindow
             ImGui.Image(texture, new Vector2(drawnImageImg.ExtraData.LegacyWidth, drawnImageImg.ExtraData.LegacyHeight));
         }
 
-        var selectedSprite = state.Sprites.FirstOrDefault(x => x.Index == _selectedAnimation);
+        var selectedSprite = state.Sprites.FirstOrDefault(x => x.Index == _selectedSprite);
         if (selectedSprite != null)
         {
             var (spriteX, spriteY) = state.GetSpritePosition(selectedSprite.Index);
@@ -189,31 +218,6 @@ public class SelectedAnimationWindow : SharedImageWindow
         ImGui.SetCursorPos(pos + new Vector2(fullWidth + 10, 0));
         if (ImGui.BeginChild("menu", new Vector2(300, fullHeight), true))
         {
-            var inputRegisters = animation.ExtraData.Instructions
-                .Where(x => x.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.PushRegisterToStack)
-                .Select(x => x.Data[0])
-                .Distinct()
-                .Order()
-                .ToList();
-            foreach (var inputRegister in inputRegisters)
-            {
-                _inputRegisters.TryGetValue(inputRegister, out var val);
-                var (oldValue, oldFrameIndex) = val;
-                var newValue = ImGuiExtensions.Input($"Register {inputRegister}", oldValue);
-                if (newValue != null)
-                {
-                    _inputRegisters[inputRegister] = (newValue.Value, oldFrameIndex);
-                }
-
-                var newFrameIndex = ImGuiExtensions.Input($"Apply Frame {inputRegister}", oldFrameIndex);
-                if (newFrameIndex != null)
-                {
-                    _inputRegisters[inputRegister] = (_inputRegisters[inputRegister].value, newFrameIndex.Value);
-                }
-                
-                ImGui.Text("");
-            }
-            
             ImGui.Text($"Stack ({state.Stack.Count}): {string.Join(" ", state.Stack.Select(x => $"{x}"))}");
             foreach (var pair in state.Registers)
             {
@@ -240,13 +244,13 @@ public class SelectedAnimationWindow : SharedImageWindow
                 .Distinct()
                 .ToList();
             
-            var newSelectedAnimation = ImGuiExtensions.Input("Sprite", _selectedAnimation, spriteIndexes);
+            var newSelectedAnimation = ImGuiExtensions.Input("Sprite", _selectedSprite, spriteIndexes);
             if (newSelectedAnimation != null)
             {
-                _selectedAnimation = newSelectedAnimation.Value;
+                _selectedSprite = newSelectedAnimation.Value;
             }
             
-            var sprite = state.Sprites.FirstOrDefault(x => x.Index == _selectedAnimation);
+            var sprite = state.Sprites.FirstOrDefault(x => x.Index == _selectedSprite);
             if (sprite != null)
             {
                 if (sprite.ImageId >= 0)
@@ -302,8 +306,6 @@ public class SelectedAnimationWindow : SharedImageWindow
             var windowSize = ImGui.GetContentRegionAvail();
             animation.ExtraData.GetSerialisedInstructions();
             ImGui.InputTextMultiline("InstructionsText", ref animation.ExtraData.CachedSerialisedInstructions, 4096, new Vector2(windowSize.X, 400));
-            
-            
         }
 
         if (ImGui.CollapsingHeader("Steps"))
