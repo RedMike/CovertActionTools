@@ -502,8 +502,8 @@ namespace CovertActionTools.Core.Importing.Parsers
                             data = reader.ReadBytes(2);
                             break;
                         case AnimationModel.AnimationStep.StepType.JumpIfCounter:
-                            data = reader.ReadBytes(2);
-                            var target = (short)(data[0] | (data[1] << 8));
+                            var tempData = reader.ReadBytes(2);
+                            var target = (short)(tempData[0] | (tempData[1] << 8));
                             if (!dataLabels.TryGetValue(target, out dataLabel))
                             {
                                 dataLabel = $"DATA_{dataLabelId++}";

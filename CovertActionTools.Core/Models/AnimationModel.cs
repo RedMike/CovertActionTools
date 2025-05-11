@@ -203,16 +203,9 @@ namespace CovertActionTools.Core.Models
             
             public List<AnimationInstruction> Instructions { get; set; } = new();
             public Dictionary<string, int> InstructionLabels { get; set; } = new();
-
-            [JsonIgnore]
-            public string CachedSerialisedInstructions = "";
+            
             public string GetSerialisedInstructions()
             {
-                if (!string.IsNullOrEmpty(CachedSerialisedInstructions))
-                {
-                    return CachedSerialisedInstructions;
-                }
-                
                 var lines = new List<string>();
                 for (var i = 0; i < Instructions.Count; i++)
                 {
@@ -234,7 +227,14 @@ namespace CovertActionTools.Core.Models
                     }
                     if (instruction.Data.Length > 0)
                     {
-                        instructionString += $" {string.Join(" ", instruction.Data.Select(x => $"{x:X2}"))}";
+                        if (instruction.Data.Length == 2)
+                        {
+                            instructionString += $" {instruction.Data[0] | (instruction.Data[1] << 8)}";
+                        }
+                        else
+                        {
+                            instructionString += $" {string.Join(" ", instruction.Data.Select(x => $"{x:X2}"))}";
+                        }
                     }
                     if (instruction.StackParameters.Length > 0)
                     {
@@ -243,13 +243,71 @@ namespace CovertActionTools.Core.Models
                     lines.Add($"\t{instructionString}");
                 }
 
-                CachedSerialisedInstructions = string.Join("\n", lines);
-                return CachedSerialisedInstructions;
+                return string.Join("\n", lines);
             }
-            
-            
+
             public List<AnimationStep> Steps { get; set; } = new();
             public Dictionary<string, int> DataLabels { get; set; } = new();
+            
+            public string GetSerialisedSteps()
+            {
+                var lines = new List<string>();
+                for (var i = 0; i < Steps.Count; i++)
+                {
+                    var dataLabelsOnLine = DataLabels
+                        .Where(x => x.Value == i)
+                        .Select(x => x.Key)
+                        .ToList();
+                    var labels = dataLabelsOnLine
+                        .Select(x => $"@{x}:")
+                        .ToList();
+                    lines.AddRange(labels);
+
+                    var step = Steps[i];
+                    var stepString = $"{step.Type}";
+                    if (!string.IsNullOrEmpty(step.Label))
+                    {
+                        stepString += $" {step.Label}";
+                    }
+
+                    if (step.Data.Length > 0)
+                    {
+                        if (step.Data.Length == 1)
+                        {
+                            stepString += $" {(sbyte)step.Data[0]}";
+                        } else if (step.Data.Length == 2)
+                        {
+                            stepString += $" {(short)(step.Data[0] | (step.Data[1] << 8))}";
+                        } else if (step.Data.Length == 4)
+                        {
+                            stepString += $" {(short)(step.Data[0] | (step.Data[1] << 8))}";
+                            stepString += $" {(short)(step.Data[2] | (step.Data[3] << 8))}";
+                        }
+                    }
+                    
+                    //add comment for what sprites start on this line
+                    var spritesStartOnLine = Instructions
+                        .Where(x => x.Opcode == AnimationInstruction.AnimationOpcode.SetupSprite &&
+                                    dataLabelsOnLine.Contains(x.DataLabel))
+                        .Select(x => x.StackParameters[0])
+                        .Distinct()
+                        .OrderBy(x => x)
+                        .ToList();
+                    if (spritesStartOnLine.Count > 0)
+                    {
+                        stepString += $"  ; Sprites start: {string.Join(", ", spritesStartOnLine)}";
+                    }
+                    
+                    lines.Add($"\t{stepString}");
+                }
+
+                return string.Join("\n", lines);
+            }
+
+            public void ParseInstructionsAndSteps(string instructionsString, string stepsString)
+            {
+                
+            }
         }
         
         /// <summary>

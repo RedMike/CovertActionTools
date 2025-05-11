@@ -13,17 +13,18 @@ public class SelectedAnimationWindow : SharedImageWindow
     private readonly MainEditorState _mainEditorState;
     private readonly IAnimationProcessor _animationProcessor;
     private readonly AnimationPreviewState _animationPreviewState;
+    private readonly AnimationEditorState _animationEditorState;
 
     private int _selectedImage = 0;
     private int _selectedSprite = 0;
-    
 
-    public SelectedAnimationWindow(RenderWindow renderWindow, ILogger<SelectedAnimationWindow> logger, MainEditorState mainEditorState, IAnimationProcessor animationProcessor, AnimationPreviewState animationPreviewState) : base(renderWindow)
+    public SelectedAnimationWindow(RenderWindow renderWindow, ILogger<SelectedAnimationWindow> logger, MainEditorState mainEditorState, IAnimationProcessor animationProcessor, AnimationPreviewState animationPreviewState, AnimationEditorState animationEditorState) : base(renderWindow)
     {
         _logger = logger;
         _mainEditorState = mainEditorState;
         _animationProcessor = animationProcessor;
         _animationPreviewState = animationPreviewState;
+        _animationEditorState = animationEditorState;
     }
 
     public override void Draw()
@@ -43,6 +44,10 @@ public class SelectedAnimationWindow : SharedImageWindow
         if (_animationPreviewState.SelectedId != key)
         {
             _animationPreviewState.Reset(key);
+        }
+        if (_animationEditorState.SelectedId != key)
+        {
+            _animationEditorState.Reset(key);
         }
         
         var screenSize = ImGui.GetMainViewport().Size;
@@ -78,6 +83,8 @@ public class SelectedAnimationWindow : SharedImageWindow
 
     private void DrawAnimationWindow(PackageModel model, AnimationModel animation)
     {
+        _animationEditorState.Update(animation);
+        
         //TODO: keep a pending model and have a save button?
         ImGui.BeginTabBar("AnimationTabs", ImGuiTabBarFlags.NoCloseWithMiddleMouseButton);
 
@@ -301,34 +308,27 @@ public class SelectedAnimationWindow : SharedImageWindow
 
     private void DrawAnimationInstructionsWindow(PackageModel model, AnimationModel animation)
     {
+        if (_animationEditorState.HasChanges())
+        {
+            if (ImGui.Button("Save"))
+            {
+                animation.ExtraData.ParseInstructionsAndSteps(_animationEditorState.SerialisedInstructions, "");
+
+                //mark it for reset so that the model gets updated
+                _animationEditorState.Reset("");
+            }
+        }
+        
+        var windowSize = ImGui.GetContentRegionAvail();
+        
         if (ImGui.CollapsingHeader("Instructions"))
         {
-            var windowSize = ImGui.GetContentRegionAvail();
-            animation.ExtraData.GetSerialisedInstructions();
-            ImGui.InputTextMultiline("InstructionsText", ref animation.ExtraData.CachedSerialisedInstructions, 4096, new Vector2(windowSize.X, 400));
+            ImGui.InputTextMultiline("InstructionsText", ref _animationEditorState.SerialisedInstructions, uint.MaxValue, new Vector2(windowSize.X, 400));
         }
 
         if (ImGui.CollapsingHeader("Steps"))
         {
-            var index = 0;
-            foreach (var step in animation.ExtraData.Steps)
-            {
-                var labelsOnIndex = animation.ExtraData.DataLabels
-                    .Where(x => x.Value == index)
-                    .Select(x => x.Key)
-                    .ToList();
-                if (labelsOnIndex.Count > 0)
-                {
-                    foreach (var label in labelsOnIndex)
-                    {
-                        ImGui.Text($"{label}:");
-                    }
-                }
-            
-                ImGui.Text(GetStepText(index, step));
-            
-                index++;
-            }
+            ImGui.InputTextMultiline("StepsText", ref _animationEditorState.SerialisedSteps, uint.MaxValue, new Vector2(windowSize.X, 400));
         }
     }
 
