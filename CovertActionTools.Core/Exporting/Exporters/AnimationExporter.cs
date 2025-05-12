@@ -45,6 +45,13 @@ namespace CovertActionTools.Core.Exporting.Exporters
         }
 
         protected override string Message => "Processing animations..";
+        
+        protected override void Reset()
+        {
+            _keys.Clear();
+            _index = 0;
+        }
+
         protected override int GetTotalItemCountInPath()
         {
             return _keys.Count;
@@ -394,15 +401,18 @@ namespace CovertActionTools.Core.Exporting.Exporters
             }
             
             //we write the size of the data section first
-            writer.Write((ushort)(dataSection.Length/16));
+            writer.Write((ushort)Math.Ceiling((float)dataSection.Length/16));
             //then we write the actual data section, aligned to 16 bytes
             writer.Write(dataSection);
-            var paddingLength = dataSection.Length % 16;
-            for (var i = 0; i < paddingLength; i++)
+            var paddingLength = 16 - dataSection.Length % 16;
+            if (paddingLength != 16)
             {
-                writer.Write((byte)0);
+                for (var i = 0; i < paddingLength; i++)
+                {
+                    writer.Write((byte)0);
+                }
             }
-            
+
             return memStream.ToArray();
         }
     }

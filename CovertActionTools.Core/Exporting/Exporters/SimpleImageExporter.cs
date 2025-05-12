@@ -40,6 +40,12 @@ namespace CovertActionTools.Core.Exporting.Exporters
         }
 
         protected override string Message => "Processing simple images..";
+        
+        protected override void Reset()
+        {
+            _keys.Clear();
+            _index = 0;
+        }
 
         protected override int GetTotalItemCountInPath()
         {

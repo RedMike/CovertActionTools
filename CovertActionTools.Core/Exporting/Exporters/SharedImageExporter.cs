@@ -50,7 +50,7 @@ namespace CovertActionTools.Core.Exporting.Exporters
         public byte[] GetLegacyFileData(SimpleImageModel image)
         {
             var imageData = image.RawVgaImageData;
-
+            
             var compression = new LzwCompression(_loggerFactory.CreateLogger(typeof(LzwCompression)),
                 image.ExtraData.CompressionDictionaryWidth, imageData, image.Key);
             var imageBytes = compression.Compress(image.ExtraData.LegacyWidth, image.ExtraData.LegacyHeight);

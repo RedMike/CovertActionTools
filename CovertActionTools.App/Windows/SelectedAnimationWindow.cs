@@ -87,10 +87,10 @@ public class SelectedAnimationWindow : SharedImageWindow
         
         //TODO: keep a pending model and have a save button?
         ImGui.BeginTabBar("AnimationTabs", ImGuiTabBarFlags.NoCloseWithMiddleMouseButton);
-
-        if (ImGui.BeginTabItem("Preview"))
+        
+        if (ImGui.BeginTabItem("Images"))
         {
-            DrawAnimationPreviewWindow(model, animation);    
+            DrawAnimationImageWindow(model, animation);
             
             ImGui.EndTabItem();
         }
@@ -101,10 +101,10 @@ public class SelectedAnimationWindow : SharedImageWindow
             
             ImGui.EndTabItem();
         }
-
-        if (ImGui.BeginTabItem("Images"))
+        
+        if (ImGui.BeginTabItem("Preview"))
         {
-            DrawAnimationImageWindow(model, animation);
+            DrawAnimationPreviewWindow(model, animation);    
             
             ImGui.EndTabItem();
         }

@@ -66,6 +66,15 @@ namespace CovertActionTools.Core.Importing
                 _currentItem++;
                 throw;
             }
+
+            if (_done)
+            {
+                _exporting = false;
+                _currentItem = 0;
+                _totalItems = 0;
+                Data = default!;
+                Reset();
+            }
             return _done;
         }
 
@@ -78,6 +87,8 @@ namespace CovertActionTools.Core.Importing
         {
             return Message;
         }
+
+        protected abstract void Reset();
 
         /// <summary>
         /// Get the total number of items that the path will process.

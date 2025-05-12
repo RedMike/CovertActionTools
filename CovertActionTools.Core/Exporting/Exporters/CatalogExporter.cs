@@ -40,6 +40,12 @@ namespace CovertActionTools.Core.Exporting.Exporters
         }
 
         protected override string Message => "Processing catalogs..";
+        
+        protected override void Reset()
+        {
+            _keys.Clear();
+            _index = 0;
+        }
         protected override int GetTotalItemCountInPath()
         {
             return _keys.Count;

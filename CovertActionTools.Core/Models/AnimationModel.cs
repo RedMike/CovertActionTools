@@ -52,7 +52,7 @@ namespace CovertActionTools.Core.Models
                 CompareEqual = 8, //08, loads 2 stack, sets compare flag if most recent two stack entries are equal
                 CompareNotEqual = 11, //0B, loads 2 stack, sets compare flag if most recent two stack entries are not equal
                 Add = 14, //0E, loads 2 stack, pops most recent two stack entries, adds them together and pushes it
-                ConditionalJump = 12, //12 XX XX, jumps only if compare flag is set
+                ConditionalJump = 18, //12 XX XX, jumps only if compare flag is set
                 Jump = 19, //13 XX XX, always jumps, TODO: unclear why some existing files have two 13's one after the other
                 End = 20, //14, acts as a WaitForFrames 1 that infinitely loops
                 EndImmediate = 21, //15, acts as an immediate end to the animation

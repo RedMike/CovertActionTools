@@ -19,16 +19,9 @@ namespace CovertActionTools.Core.Conversion
             int padding = bitmap.RowBytes - (4 * width);
             for (var i = 0; i < height; i++)
             {
-                var stride = width;
-                if (width % 2 == 1)
-                {
-                    stride += 1;
-                }
                 for (int j = 0; j < width; j++)
                 {
-                    //the pixel we read is based on the stride because it has an extra byte at the end
-                    //due to the pixel packing of two pixels into one byte
-                    var pixel = bytes[i * stride + j];
+                    var pixel = bytes[i * width + j];
                     if (!Constants.VgaColorMapping.TryGetValue(pixel, out var col))
                     {
                         throw new Exception($"Invalid pixel value: {pixel}");
@@ -63,16 +56,9 @@ namespace CovertActionTools.Core.Conversion
             int padding = bitmap.RowBytes - (4 * width);
             for (var i = 0; i < height; i++)
             {
-                var stride = width;
-                if (width % 2 == 1)
-                {
-                    stride += 1;
-                }
                 for (int j = 0; j < width; j++)
                 {
-                    //the pixel we read is based on the stride because it has an extra byte at the end
-                    //due to the pixel packing of two pixels into one byte
-                    var pixel = bytes[i * stride + j];
+                    var pixel = bytes[i * width + j];
                     
                     //if the pixel is 0x00, the CGA replacement does not run! it's transparent
                     var col = (Constants.TransparentColor);
@@ -117,14 +103,9 @@ namespace CovertActionTools.Core.Conversion
 
         public static byte[] TextureToVga(int width, int height, byte[] rawBytes)
         {
-            var stride = width;
-            if (width % 2 == 1)
-            {
-                stride += 1;
-            }
             //the raw bytes are pixel packed so for odd widths there's an extra byte at the end
             //except the last row which does not have it
-            var bytes = new byte[stride * (height - 1) + stride];
+            var bytes = new byte[width * height];
             for (var i = 0; i < height; i++)
             {
                 for (var j = 0; j < width; j++)
@@ -138,9 +119,7 @@ namespace CovertActionTools.Core.Conversion
                         throw new Exception($"Invalid VGA color: {j}x{i} = {(r, g, b, a)}");
                     }
 
-                    //the pixel we write is based on the stride because it has an extra byte at the end
-                    //due to the pixel packing of two pixels into one byte
-                    bytes[i * stride + j] = pixel;
+                    bytes[i * width + j] = pixel;
                 }
             }
 

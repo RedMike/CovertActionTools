@@ -37,6 +37,11 @@ namespace CovertActionTools.Core.Exporting.Exporters
         }
 
         protected override string Message => "Processing clues..";
+        
+        protected override void Reset()
+        {
+            _done = false;
+        }
         protected override int GetTotalItemCountInPath()
         {
             return Data.Count > 0 ? 1 : 0;

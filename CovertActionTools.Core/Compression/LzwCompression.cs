@@ -231,7 +231,7 @@ namespace CovertActionTools.Core.Compression
                 }
                 else
                 {
-                    if (i == duplicatedBytes.Length - 1)
+                    if (i == duplicatedBytes.Length - 1 && pixel == lastPixel)
                     {
                         //it's only a RLE code, not a second pixel
                         encodingWriter.Write((byte)0x90);
@@ -259,7 +259,7 @@ namespace CovertActionTools.Core.Compression
             var rleBytes = encodingMemStream.ToArray();
             
             //lastly we apply LZW
-            var bytes = new byte[_data.Length]; //TODO: lower size
+            var bytes = new byte[16000]; //TODO: lower size
 
             using var readStream = new MemoryStream(rleBytes);
             using var reader = new BinaryReader(readStream);

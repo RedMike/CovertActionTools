@@ -68,16 +68,9 @@ namespace CovertActionTools.Core.Importing.Parsers
             var imageModernData = new byte[width * height * 4];
             for (var j = 0; j < height; j++)
             {
-                var stride = width;
-                if (width % 2 == 1)
-                {
-                    stride += 1;
-                }
                 for (var i = 0; i < width; i++)
                 {
-                    //the pixel we read is based on the stride because it has an extra byte at the end
-                    //due to the pixel packing of two pixels into one byte
-                    var pixel = imageUncompressedData[j * stride + i];
+                    var pixel = imageUncompressedData[j * width + i];
                     if (!Constants.VgaColorMapping.TryGetValue(pixel, out var col))
                     {
                         throw new Exception($"Invalid pixel value: {pixel}");
