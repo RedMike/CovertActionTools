@@ -267,13 +267,41 @@ namespace CovertActionTools.Core.Importing.Parsers
                         prevPushesToRemove = 1;
                         opcode = AnimationModel.AnimationInstruction.AnimationOpcode.CompareEqual;
                         break;
-                    case 0x0B:
+                    case 0x09:
                         prevPushesToRemove = 1;
                         opcode = AnimationModel.AnimationInstruction.AnimationOpcode.CompareNotEqual;
+                        break;
+                    case 0x0A:
+                        prevPushesToRemove = 1;
+                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.CompareGreaterThan;
+                        break;
+                    case 0x0B:
+                        prevPushesToRemove = 1;
+                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.CompareLessThan;
+                        break;
+                    case 0x0C:
+                        prevPushesToRemove = 1;
+                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.CompareGreaterOrEqual;
+                        break;
+                    case 0x0D:
+                        prevPushesToRemove = 1;
+                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.CompareLessOrEqual;
                         break;
                     case 0x0E:
                         prevPushesToRemove = 1;
                         opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Add;
+                        break;
+                    case 0x0F:
+                        prevPushesToRemove = 1;
+                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Subtract;
+                        break;
+                    case 0x10:
+                        prevPushesToRemove = 1;
+                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Multiply;
+                        break;
+                    case 0x11:
+                        prevPushesToRemove = 1;
+                        opcode = AnimationModel.AnimationInstruction.AnimationOpcode.Divide;
                         break;
                     //no need to handle 0x14 because of the above code
                     case 0x15:
@@ -498,6 +526,8 @@ namespace CovertActionTools.Core.Importing.Parsers
                         case AnimationModel.AnimationStep.StepType.MoveRelative:
                             data = reader.ReadBytes(4);
                             break;
+                        case AnimationModel.AnimationStep.StepType.SetFrameSkip:
+                        case AnimationModel.AnimationStep.StepType.SetFrameAdjustment:
                         case AnimationModel.AnimationStep.StepType.PushCounter:
                             data = reader.ReadBytes(2);
                             break;

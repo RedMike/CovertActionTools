@@ -73,7 +73,7 @@ public class AnimationPreviewState : IViewModel
                 return false;
             }
             
-            if (pair.Value != value)
+            if (pair.Value.value != value.value || pair.Value.frameIndex != value.frameIndex)
             {
                 return false;
             }

@@ -230,7 +230,6 @@ public class SelectedAnimationWindow : SharedImageWindow
             {
                 ImGui.Text($"Register {pair.Key}: {pair.Value}");
             }
-            ImGui.Text($"Compare flag: {state.CompareFlag}");
             
             ImGui.Text($"Instruction: {state.InstructionIndex}");
             ImGui.Text($"Wait: {state.FramesToWait}");

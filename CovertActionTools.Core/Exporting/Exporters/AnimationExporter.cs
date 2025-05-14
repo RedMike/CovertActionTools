@@ -224,6 +224,14 @@ namespace CovertActionTools.Core.Exporting.Exporters
                     instructionIndexToOffset[i] = offset;
                     switch (instruction.Opcode)
                     {
+                        case AnimationModel.AnimationInstruction.AnimationOpcode.RawByte:
+                            offset += 1;
+                            break;
+                        case AnimationModel.AnimationInstruction.AnimationOpcode.RawShort:
+                        case AnimationModel.AnimationInstruction.AnimationOpcode.RawLabel:
+                        case AnimationModel.AnimationInstruction.AnimationOpcode.RawDataLabel:
+                            offset += 2;
+                            break;
                         case AnimationModel.AnimationInstruction.AnimationOpcode.PushCopyOfStackValue:
                         case AnimationModel.AnimationInstruction.AnimationOpcode.End:
                         case AnimationModel.AnimationInstruction.AnimationOpcode.EndImmediate:
@@ -243,7 +251,14 @@ namespace CovertActionTools.Core.Exporting.Exporters
                         case AnimationModel.AnimationInstruction.AnimationOpcode.TriggerAudio:
                         case AnimationModel.AnimationInstruction.AnimationOpcode.StampSprite:
                         case AnimationModel.AnimationInstruction.AnimationOpcode.CompareEqual:
+                        case AnimationModel.AnimationInstruction.AnimationOpcode.CompareLessThan:
                         case AnimationModel.AnimationInstruction.AnimationOpcode.CompareNotEqual:
+                        case AnimationModel.AnimationInstruction.AnimationOpcode.CompareGreaterThan:
+                        case AnimationModel.AnimationInstruction.AnimationOpcode.CompareGreaterOrEqual:
+                        case AnimationModel.AnimationInstruction.AnimationOpcode.CompareLessOrEqual:
+                        case AnimationModel.AnimationInstruction.AnimationOpcode.Subtract:
+                        case AnimationModel.AnimationInstruction.AnimationOpcode.Multiply:
+                        case AnimationModel.AnimationInstruction.AnimationOpcode.Divide:
                         case AnimationModel.AnimationInstruction.AnimationOpcode.Add:
                             offset += 5;
                             break;
@@ -270,6 +285,8 @@ namespace CovertActionTools.Core.Exporting.Exporters
                         case AnimationModel.AnimationStep.StepType.DrawFrame:
                             offset += 2;
                             break;
+                        case AnimationModel.AnimationStep.StepType.SetFrameSkip:
+                        case AnimationModel.AnimationStep.StepType.SetFrameAdjustment:
                         case AnimationModel.AnimationStep.StepType.PushCounter:
                         case AnimationModel.AnimationStep.StepType.JumpIfCounter:
                             offset += 3;
@@ -289,6 +306,25 @@ namespace CovertActionTools.Core.Exporting.Exporters
                     var instruction = animation.ExtraData.Instructions[i];
                     switch (instruction.Opcode)
                     {
+                        case AnimationModel.AnimationInstruction.AnimationOpcode.RawByte:
+                            dataSectionWriter.Write((byte)instruction.Data[0]);
+                            break;
+                        case AnimationModel.AnimationInstruction.AnimationOpcode.RawShort:
+                            dataSectionWriter.Write((byte)instruction.Data[0]);
+                            dataSectionWriter.Write((byte)instruction.Data[1]);
+                            break;
+                        case AnimationModel.AnimationInstruction.AnimationOpcode.RawLabel:
+                            var rawTargetLabel = instruction.Label;
+                            var rawTargetIndex = animation.ExtraData.InstructionLabels[rawTargetLabel];
+                            var rawTargetOffset = instructionIndexToOffset[rawTargetIndex];
+                            dataSectionWriter.Write(new [] { (byte)(rawTargetOffset & 0xFF), (byte)((rawTargetOffset & 0xFF00) >> 8)} );
+                            break;
+                        case AnimationModel.AnimationInstruction.AnimationOpcode.RawDataLabel:
+                            var rawTargetDataLabel = instruction.DataLabel;
+                            var rawTargetDataIndex = animation.ExtraData.DataLabels[rawTargetDataLabel];
+                            var rawTargetDataOffset = stepIndexToOffset[rawTargetDataIndex];
+                            dataSectionWriter.Write(new [] { (byte)(rawTargetDataOffset & 0xFF), (byte)((rawTargetDataOffset & 0xFF00) >> 8)} );
+                            break;
                         case AnimationModel.AnimationInstruction.AnimationOpcode.PushCopyOfStackValue:
                         case AnimationModel.AnimationInstruction.AnimationOpcode.End:
                         case AnimationModel.AnimationInstruction.AnimationOpcode.EndImmediate:
@@ -317,8 +353,15 @@ namespace CovertActionTools.Core.Exporting.Exporters
                         case AnimationModel.AnimationInstruction.AnimationOpcode.TriggerAudio:
                         case AnimationModel.AnimationInstruction.AnimationOpcode.StampSprite:
                         case AnimationModel.AnimationInstruction.AnimationOpcode.CompareEqual:
+                        case AnimationModel.AnimationInstruction.AnimationOpcode.CompareLessThan:
                         case AnimationModel.AnimationInstruction.AnimationOpcode.CompareNotEqual:
+                        case AnimationModel.AnimationInstruction.AnimationOpcode.CompareGreaterThan:
+                        case AnimationModel.AnimationInstruction.AnimationOpcode.CompareGreaterOrEqual:
+                        case AnimationModel.AnimationInstruction.AnimationOpcode.CompareLessOrEqual:
                         case AnimationModel.AnimationInstruction.AnimationOpcode.Add:
+                        case AnimationModel.AnimationInstruction.AnimationOpcode.Subtract:
+                        case AnimationModel.AnimationInstruction.AnimationOpcode.Multiply:
+                        case AnimationModel.AnimationInstruction.AnimationOpcode.Divide:
                             dataSectionWriter.Write(new [] { (byte)0x05, (byte)0x00, 
                                 (byte)(instruction.StackParameters[0] & 0xFF), 
                                 (byte)((instruction.StackParameters[0] & 0xFF00) >> 8) });
@@ -370,6 +413,8 @@ namespace CovertActionTools.Core.Exporting.Exporters
                         case AnimationModel.AnimationStep.StepType.DrawFrame:
                             dataSectionWriter.Write((byte)step.Data[0]);
                             break;
+                        case AnimationModel.AnimationStep.StepType.SetFrameSkip:
+                        case AnimationModel.AnimationStep.StepType.SetFrameAdjustment:
                         case AnimationModel.AnimationStep.StepType.PushCounter:
                             dataSectionWriter.Write(new[] {step.Data[0], step.Data[1]});
                             break;

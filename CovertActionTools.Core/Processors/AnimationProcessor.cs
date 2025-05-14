@@ -15,7 +15,7 @@ namespace CovertActionTools.Core.Processors
             public int Index { get; set; }
             /// <summary>
             /// When set to a valid sprite, drawn position is an offset from that sprite's position
-            /// TODO: does this chain in the real game?
+            /// The movement chains in the original game engine, but does not set the initial position in a chained way
             /// </summary>
             public int FollowIndex { get; set; }
             public int Counter { get; set; }
@@ -30,6 +30,15 @@ namespace CovertActionTools.Core.Processors
             public bool Active { get; set; }
             public int OriginalStepIndex { get; set; }
             public int StepIndex { get; set; }
+            
+            /// <summary>
+            /// Used in conjunction with FrameSkip/FrameAdjustment to decide if a sprite should
+            /// skip actually running steps or not
+            /// </summary>
+            public short FrameCounter { get; set; }
+            public short FrameSkip { get; set; }
+            public short FrameAdjustment { get; set; }
+            public short Flags { get; set; }
 
             public List<int> LastFrameStepIndices { get; set; } = new();
         }
@@ -49,9 +58,8 @@ namespace CovertActionTools.Core.Processors
         public List<Sprite> Sprites { get; set; } = new();
         public List<DrawnImage> DrawnImages { get; set; } = new();
 
-        public List<short> Stack { get; set; } = new();
+        public Stack<short> Stack { get; set; } = new();
         public Dictionary<int, int> Registers { get; set; } = new();
-        public bool CompareFlag { get; set; }
         public int InstructionIndex { get; set; }
         public int FramesToWait { get; set; }
         public bool WaitWithoutDraw { get; set; }
@@ -127,6 +135,12 @@ namespace CovertActionTools.Core.Processors
                     {
                         if (!sprite.Active)
                         {
+                            continue;
+                        }
+
+                        if (sprite.FrameSkip == 0)
+                        {
+                            //never simulate
                             continue;
                         }
 
@@ -206,6 +220,12 @@ namespace CovertActionTools.Core.Processors
                                     }
                                     sprite.Counter = count;
                                     break;
+                                case AnimationModel.AnimationStep.StepType.SetFrameSkip:
+                                    sprite.FrameSkip = (short)(step.Data[0] | (step.Data[1] << 8));
+                                    break;
+                                case AnimationModel.AnimationStep.StepType.SetFrameAdjustment:
+                                    sprite.FrameAdjustment = (short)(step.Data[0] | (step.Data[1] << 8));
+                                    break;
                                 default:
                                     break;
                             }
@@ -275,9 +295,21 @@ namespace CovertActionTools.Core.Processors
                 }
 
                 var currentInstruction = animation.ExtraData.Instructions[state.InstructionIndex];
+                var stackParameters = new Stack<short>();
+                foreach (var param in currentInstruction.StackParameters)
+                {
+                    stackParameters.Push(param);
+                }
                 state.LastFrameInstructionIndices.Add(state.InstructionIndex);
 
                 short ReadDataAsShort(int startIdx) => (short)(currentInstruction.Data[startIdx] | (currentInstruction.Data[startIdx + 1] << 8));
+                short PopStack() => 
+                    stackParameters.Count > 0 ? (
+                        stackParameters.Pop()
+                    ) :
+                    (
+                        state.Stack.Count > 0 ? state.Stack.Pop() : (short)0
+                    );
                 var nextInstructionIndex = state.InstructionIndex + 1;
                 switch (currentInstruction.Opcode)
                 {
@@ -291,23 +323,25 @@ namespace CovertActionTools.Core.Processors
                         nextInstructionIndex = state.InstructionIndex;
                         break;
                     case AnimationModel.AnimationInstruction.AnimationOpcode.PushToStack:
-                        state.Stack.Add(ReadDataAsShort(0));
+                        state.Stack.Push(ReadDataAsShort(0));
                         break;
                     case AnimationModel.AnimationInstruction.AnimationOpcode.Jump:
-                        //TODO: condition?
                         nextInstructionIndex = animation.ExtraData.InstructionLabels[currentInstruction.Label];
                         break;
                     case AnimationModel.AnimationInstruction.AnimationOpcode.ConditionalJump:
-                        if (state.CompareFlag)
+                        short compareFlag = PopStack();
+                        if (compareFlag != 0)
                         {
                             nextInstructionIndex = animation.ExtraData.InstructionLabels[currentInstruction.Label];
                         }
                         break;
                     case AnimationModel.AnimationInstruction.AnimationOpcode.SetupSprite:
-                        var spriteIndex = currentInstruction.StackParameters[0];
-                        var followIndex = currentInstruction.StackParameters[1];
-                        var posX = currentInstruction.StackParameters[2];
-                        var posY = currentInstruction.StackParameters[3];
+                        var flags = PopStack();
+                        var frameSkip = PopStack();
+                        var posY = PopStack();
+                        var posX = PopStack();
+                        var followIndex = PopStack();
+                        var spriteIndex = PopStack();
                         var stepIndex = animation.ExtraData.DataLabels[currentInstruction.DataLabel];
 
                         var existingSprite = state.Sprites.FirstOrDefault(x => x.Index == spriteIndex);
@@ -323,6 +357,10 @@ namespace CovertActionTools.Core.Processors
                             existingSprite.OriginalStepIndex = stepIndex;
                             existingSprite.StepIndex = stepIndex;
                             existingSprite.Counter = 0;
+                            existingSprite.FrameSkip = frameSkip;
+                            existingSprite.FrameCounter = 0;
+                            existingSprite.Flags = flags;
+                            
                             existingSprite.CounterStack.Clear();
                             existingSprite.LastFrameStepIndices.Clear();
                         }
@@ -338,14 +376,17 @@ namespace CovertActionTools.Core.Processors
                                 PositionY = posY,
                                 OriginalPositionY = posY,
                                 OriginalStepIndex = stepIndex,
-                                StepIndex = stepIndex
+                                StepIndex = stepIndex,
+                                FrameSkip = frameSkip,
+                                Flags = flags
                             });
                         }
                         break;
                     case AnimationModel.AnimationInstruction.AnimationOpcode.WaitForFrames:
-                        if (currentInstruction.StackParameters[0] != 0)
+                        var val = PopStack();
+                        if (val != 0)
                         {
-                            state.FramesToWait = currentInstruction.StackParameters[0];
+                            state.FramesToWait = val;
                         }
                         else
                         {
@@ -357,12 +398,12 @@ namespace CovertActionTools.Core.Processors
                     case AnimationModel.AnimationInstruction.AnimationOpcode.StampSprite:
                     {
                         //stamping is done after the wait finishes, to allow the sprites to have an init set of steps
-                        state.PendingSpriteStamps.Add(currentInstruction.StackParameters[0]);
+                        state.PendingSpriteStamps.Add(PopStack());
                         break;
                     }
                     case AnimationModel.AnimationInstruction.AnimationOpcode.RemoveSprite:
                     {
-                        var sprite = state.Sprites.FirstOrDefault(x => x.Index == currentInstruction.StackParameters[0]);
+                        var sprite = state.Sprites.FirstOrDefault(x => x.Index == PopStack());
                         if (sprite != null)
                         {
                             sprite.Active = false;
@@ -372,11 +413,11 @@ namespace CovertActionTools.Core.Processors
                     }
                     case AnimationModel.AnimationInstruction.AnimationOpcode.PopStackToRegister:
                     {
-                        var registerIndex = (ushort)(currentInstruction.Data[0] | (currentInstruction.Data[1] << 8));
-                        if (registerIndex == 0xFFFF)
+                        var registerIndex = ReadDataAsShort(0);
+                        if (registerIndex == -1)
                         {
                             //pop discard, so the value is popped but nothing happens
-                            state.Stack.RemoveAt(state.Stack.Count - 1);
+                            PopStack();
                         }
                         else
                         {
@@ -385,8 +426,7 @@ namespace CovertActionTools.Core.Processors
                                 state.Registers[registerIndex] = 0;
                             }
 
-                            var s1 = state.Stack[state.Stack.Count - 1];
-                            state.Stack.RemoveAt(state.Stack.Count - 1); //TODO: should pop or not? 
+                            var s1 = PopStack(); 
 
                             state.Registers[registerIndex] = s1;
                         }
@@ -394,38 +434,113 @@ namespace CovertActionTools.Core.Processors
                     }
                     case AnimationModel.AnimationInstruction.AnimationOpcode.PushRegisterToStack:
                     {
-                        var registerIndex = (ushort)(currentInstruction.Data[0] | (currentInstruction.Data[1] << 8));
+                        var registerIndex = ReadDataAsShort(0);
                         if (!state.Registers.ContainsKey(registerIndex))
                         {
                             state.Registers[registerIndex] = 0;
                         }
 
-                        state.Stack.Add((short)state.Registers[registerIndex]);
+                        state.Stack.Push((short)state.Registers[registerIndex]);
                         break;
                     }
-                    case AnimationModel.AnimationInstruction.AnimationOpcode.CompareNotEqual:
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.CompareGreaterThan:
                     {
-                        var target = currentInstruction.StackParameters[0];
-                        var value = state.Stack[state.Stack.Count - 1];
-                        state.Stack.RemoveAt(state.Stack.Count - 1);
-                        state.CompareFlag = target != value;
+                        var target = PopStack();
+                        short value = PopStack();
+                        state.Stack.Push((byte)(value > target ? 1 : 0));
+                        break;
+                    }
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.CompareLessOrEqual:
+                    {
+                        var target = PopStack();
+                        short value = PopStack();
+                        state.Stack.Push((byte)(value <= target ? 1 : 0));
+                        break;
+                    }
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.CompareGreaterOrEqual:
+                    {
+                        var target = PopStack();
+                        short value = PopStack();
+                        state.Stack.Push((byte)(value >= target ? 1 : 0));
+                        break;
+                    }
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.CompareLessThan:
+                    {
+                        var target = PopStack();
+                        short value = PopStack();
+                        state.Stack.Push((byte)(value < target ? 1 : 0));
                         break;
                     }
                     case AnimationModel.AnimationInstruction.AnimationOpcode.CompareEqual:
                     {
-                        var target = currentInstruction.StackParameters[0];
-                        var value = state.Stack[state.Stack.Count - 1];
-                        state.Stack.RemoveAt(state.Stack.Count - 1);
-                        state.CompareFlag = target == value;
+                        var target = PopStack();
+                        short value = PopStack();
+                        state.Stack.Push((byte)(value == target ? 1 : 0));
+                        break;
+                    }
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.CompareNotEqual:
+                    {
+                        var target = PopStack();
+                        short value = PopStack();
+                        state.Stack.Push((byte)(value != target ? 1 : 0));
                         break;
                     }
                     case AnimationModel.AnimationInstruction.AnimationOpcode.Add:
-                        var delta = currentInstruction.StackParameters[0];
-                        state.Stack[state.Stack.Count - 1] += delta;
+                    {
+                        var delta = PopStack();
+                        var value = delta;
+                        if (state.Stack.Count > 0)
+                        {
+                            value = (short)(PopStack() + delta);
+                        }
+
+                        state.Stack.Push(value);
                         break;
+                    }
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.Subtract:
+                    {
+                        var delta = PopStack();
+                        var value = delta;
+                        if (state.Stack.Count > 0)
+                        {
+                            value = (short)(PopStack() - delta);
+                        }
+
+                        state.Stack.Push(value);
+                        break;
+                    }
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.Multiply:
+                    {
+                        var delta = PopStack();
+                        var value = delta;
+                        if (state.Stack.Count > 0)
+                        {
+                            value = (short)(PopStack() * delta);
+                        }
+
+                        state.Stack.Push(value);
+                        break;
+                    }
+                    
+                    case AnimationModel.AnimationInstruction.AnimationOpcode.Divide:
+                    {
+                        var delta = PopStack();
+                        var value = delta;
+                        if (state.Stack.Count > 0)
+                        {
+                            value = (short)(PopStack() / delta);
+                        }
+
+                        state.Stack.Push(value);
+                        break;
+                    }
                     case AnimationModel.AnimationInstruction.AnimationOpcode.PushCopyOfStackValue:
-                        state.Stack.Add(state.Stack[state.Stack.Count - 1]);
+                    {
+                        short value = PopStack();
+                        state.Stack.Push(value);
+                        state.Stack.Push(value);
                         break;
+                    }
                     case AnimationModel.AnimationInstruction.AnimationOpcode.TriggerAudio:
                         //TODO: add to state
                         break;
