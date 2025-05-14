@@ -266,28 +266,14 @@ namespace CovertActionTools.Core.Compression
                             }
                         }
                     }
-
-                    //each byte is actually two pixels one after the other
-                    writer.Write((byte)(pixel & 0x0f));
+                    
+                    writer.Write((byte)pixel);
                     x++;
-                    //but if it's the padding byte to keep the stride, we don't want to actually add it to the data
-                    if (x < width)
-                    {
-                        writer.Write((byte)((pixel >> 4) & 0x0f));
-                    }
-
-                    if (PrintDebugMergedPixels)
-                    {
-                        _mergedBytes.Add((byte)pixel);
-                    }
-
-                    if (PrintDebugRawData)
-                    {
-                        _rawBytes.Add((byte)(pixel & 0x0f));
-                        _rawBytes.Add((byte)((pixel >> 4) & 0x0f));
-                    }
                 }
             }
+
+            var rleBytes = memStream.ToArray();
+            var unpackedBytes = PixelPackingUtility.UnpackPixels(width, height, rleBytes);
             
             if (PrintDebugKeys.Contains(_key))
             {
@@ -309,7 +295,7 @@ namespace CovertActionTools.Core.Compression
                 }
             }
             
-            var decompressedBytes = memStream.ToArray();
+            var decompressedBytes = unpackedBytes;
             byteOffset = _byteOffset + (_bitOffset > 0 ? 1 : 0);
             _logger.LogDebug($"Decompressed from {_data.Length} ({byteOffset} {_bitOffset}) bytes to {decompressedBytes.Length}");
             return decompressedBytes;
