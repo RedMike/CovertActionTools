@@ -11,19 +11,16 @@ namespace CovertActionTools.Core.Importing.Parsers
     public class SharedImageParser
     {
         private readonly ILogger<SharedImageParser> _logger;
-        private readonly ILoggerFactory _loggerFactory;
+        private readonly ILzwDecompression _decompression;
 
-        public SharedImageParser(ILogger<SharedImageParser> logger, ILoggerFactory loggerFactory)
+        public SharedImageParser(ILogger<SharedImageParser> logger, ILzwDecompression decompression)
         {
             _logger = logger;
-            _loggerFactory = loggerFactory;
+            _decompression = decompression;
         }
 
-        public SimpleImageModel Parse(string key, byte[] rawData, out int byteOffset)
+        public SimpleImageModel Parse(string key, BinaryReader reader)
         {
-            using var memStream = new MemoryStream(rawData);
-            using var reader = new BinaryReader(memStream);
-
             //basic data
             var formatFlag = reader.ReadUInt16();
             var width = reader.ReadUInt16();
@@ -53,16 +50,7 @@ namespace CovertActionTools.Core.Importing.Parsers
             var lzwMaxWordWidth = reader.ReadByte();
             
             //data compressed in LZW+RLE
-            var headerLength = (int)memStream.Position;
-            var imageCompressedData = reader.ReadBytes(rawData.Length);
-            
-            var lzw = new LzwDecompression(_loggerFactory.CreateLogger(typeof(LzwDecompression)), lzwMaxWordWidth, imageCompressedData, key);
-            var imageUncompressedData = lzw.Decompress(width, height, out var imageByteOffset);
-            byteOffset = headerLength + imageByteOffset;
-            if (byteOffset % 2 == 1)
-            {
-                byteOffset += 1;
-            }
+            var imageUncompressedData = _decompression.Decompress(width, height, lzwMaxWordWidth, reader);
             
             //the data is currently in VGA format, so convert to modern format
             var imageModernData = new byte[width * height * 4];
@@ -83,8 +71,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                 }
             }
 
-            var fullByteSize = width * height * 4;
-            _logger.LogInformation($"Read image '{key}': {width}x{height}, Legacy Color Mapping = {legacyColorMappings != null}, Compressed Bytes = {rawData.Length}, Compression: {(100.0f - (float)rawData.Length/fullByteSize * 100.0f):F0}%");
+            _logger.LogInformation($"Read image '{key}': {width}x{height}, Legacy Color Mapping = {legacyColorMappings != null}");
             byte[] cgaImageData = Array.Empty<byte>();
             if (legacyColorMappings != null)
             {

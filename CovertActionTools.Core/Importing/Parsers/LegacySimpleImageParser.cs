@@ -75,10 +75,12 @@ namespace CovertActionTools.Core.Importing.Parsers
             }
 
             var rawData = File.ReadAllBytes(filePath);
-            var image = _imageParser.Parse(key, rawData, out var byteOffset);
-            if (byteOffset < rawData.Length)
+            using var memStream = new MemoryStream(rawData);
+            using var reader = new BinaryReader(memStream);
+            var image = _imageParser.Parse(key, reader);
+            if (memStream.Position < rawData.Length)
             {
-                _logger.LogWarning($"Loading image {key} data ended at offset {byteOffset:X} but length was {rawData.Length:X}");
+                _logger.LogWarning($"Loading image {key} data ended at offset {memStream.Position:X} but length was {rawData.Length:X}");
             }
             return image;
         }

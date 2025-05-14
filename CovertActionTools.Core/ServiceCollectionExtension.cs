@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using CovertActionTools.Core.Compression;
 using CovertActionTools.Core.Exporting;
 using CovertActionTools.Core.Exporting.Exporters;
 using CovertActionTools.Core.Importing;
@@ -14,6 +15,8 @@ namespace CovertActionTools.Core
     {
         public static void AddCovertActionsTools(this IServiceCollection services)
         {
+            services.AddSingleton<ILzwDecompression, LzwDecompression>();
+            
             services.AddSingleton<SharedImageParser>();
             services.AddSingleton<LegacySimpleImageParser>();
             services.AddSingleton<LegacyCrimeParser>();

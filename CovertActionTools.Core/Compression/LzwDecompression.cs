@@ -6,24 +6,15 @@ using Microsoft.Extensions.Logging;
 
 namespace CovertActionTools.Core.Compression
 {
-    internal class LzwDecompression
+    internal class LzwDecompressor
     {
-        private const bool PrintDebugRawData = false;
-        private const bool PrintDebugMergedPixels = false;
-        private const bool PrintDebugRle = false;
-        private const bool PrintDebugLzw = false;
-
-        private const bool LogDebugLzwFirstDict = false;
-        
-        private static readonly string PrintDebugFolder = @"";
-        private static readonly HashSet<string> PrintDebugKeys = new HashSet<string>() { };
-        
         private readonly ILogger _logger;
         private readonly int _maxWordWidth;
-        private readonly byte[] _data;
-
+        private readonly BinaryReader _reader;
+        
         private byte _bitOffset;
         private int _byteOffset;
+        private byte? _curByte = null;
         
         private readonly Dictionary<ushort, List<byte>> _dict = new();
         private readonly Stack<byte> _stack = new();
@@ -32,28 +23,23 @@ namespace CovertActionTools.Core.Compression
         private ushort _prevIndex;
         private byte _prevData;
 
-        private readonly string _key;
-
-        private readonly List<byte> _rawBytes = new();
-        private readonly List<byte> _mergedBytes = new();
-        private readonly List<byte> _rleBytes = new();
-        private readonly List<byte> _lzwBytes = new();
-
-        public LzwDecompression(ILogger logger, int maxWordWidth, byte[] data, string key)
+        public LzwDecompressor(ILogger logger, int maxWordWidth, BinaryReader reader)
         {
             _logger = logger;
             _maxWordWidth = maxWordWidth;
-            _data = data;
-            _key = key;
-            _logger.LogInformation($"Starting decompression from {data.Length} bytes, max word width {maxWordWidth}");
-
-            _bitOffset = 0;
-            _byteOffset = 0;
-            
-            _stack.Clear();
+            _reader = reader;
             Reset();
         }
-
+        
+        private void Reset()
+        {
+            _prevIndex = 0;
+            _prevData = 0;
+            _wordWidth = 9;
+            _wordMask = (1 << _wordWidth) - 1;
+            _dict.Clear();
+        }
+        
         private List<byte> GetDict(int index)
         {
             if (index > 2048)
@@ -90,16 +76,7 @@ namespace CovertActionTools.Core.Compression
         {
             return (ushort)(_dict.Keys.DefaultIfEmpty((ushort)0xFF).Max() + 1);
         }
-
-        private void Reset()
-        {
-            _prevIndex = 0;
-            _prevData = 0;
-            _wordWidth = 9;
-            _wordMask = (1 << _wordWidth) - 1;
-            _dict.Clear();
-        }
-
+        
         private ushort ReadBytes(byte bitsToRead)
         {
             ushort value = 0;
@@ -109,7 +86,11 @@ namespace CovertActionTools.Core.Compression
             {
                 value = (ushort)(((short)value) >> 1); //we want arithmetic shift
 
-                byte data = _data[_byteOffset];
+                if (_curByte == null)
+                {
+                    _curByte = _reader.ReadByte();
+                }
+                byte data = _curByte.Value;
                 if ((data & (1 << _bitOffset)) != 0)
                 {
                     value = (ushort)(value | 1 << (bitsToRead - 1));
@@ -121,16 +102,12 @@ namespace CovertActionTools.Core.Compression
                 {
                     _bitOffset = 0;
                     _byteOffset += 1;
+                    _curByte = null;
                 }
 
                 bitsReadSoFar += 1;
             }
             
-            if (PrintDebugLzw)
-            {
-                _lzwBytes.Add((byte)((value >> 8) & 0xFF));
-                _lzwBytes.Add((byte)(value & 0xFF));
-            }
             return value;
         }
 
@@ -171,13 +148,6 @@ namespace CovertActionTools.Core.Compression
             word.Insert(0, _stack.Peek());
             
             SetDict(nextId, word);
-            if (LogDebugLzwFirstDict && nextId < 0x105)
-            {
-                if (_logger.IsEnabled(LogLevel.Debug))
-                {
-                    _logger.LogDebug($"Dict word {nextId:X4} at offset {_byteOffset} {_bitOffset}: {string.Join("", word.Select(x => $"{x:X2}"))}");
-                }
-            }
 
             _prevIndex = index;
             //if we've reached the limit of X bit indexes, increase by 1 bit
@@ -202,8 +172,8 @@ namespace CovertActionTools.Core.Compression
             }
             return ReadNext(); //recurse, we have something in the stack already
         }
-
-        public byte[] Decompress(int width, int height, out int byteOffset)
+        
+        public byte[] Decompress(int width, int height)
         {
             using var memStream = new MemoryStream();
             using var writer = new BinaryWriter(memStream);
@@ -229,10 +199,6 @@ namespace CovertActionTools.Core.Compression
                     else
                     {
                         var data = ReadNext();
-                        if (PrintDebugRle)
-                        {
-                            _rleBytes.Add(data);
-                        }
 
                         //is it RLE?
                         if (data != 0x90)
@@ -244,10 +210,6 @@ namespace CovertActionTools.Core.Compression
                         {
                             //yes, check how many times
                             var repeat = ReadNext();
-                            if (PrintDebugRle)
-                            {
-                                _rleBytes.Add(repeat);
-                            }
 
                             if (repeat == 0)
                             {
@@ -256,7 +218,6 @@ namespace CovertActionTools.Core.Compression
                             }
                             else
                             {
-                                //_logger.LogInformation($"RLE encoded of bytes {pixel:X2} for {repeat}");
                                 if (repeat < 2)
                                 {
                                     throw new Exception($"Invalid RLE repeat byte: {repeat}");
@@ -267,38 +228,40 @@ namespace CovertActionTools.Core.Compression
                         }
                     }
                     
-                    writer.Write((byte)pixel);
+                    //each byte is actually two pixels one after the other
+                    writer.Write((byte)(pixel & 0x0f));
                     x++;
+                    //but if it's the padding byte to keep the stride, we don't want to actually add it to the data
+                    if (x < width)
+                    {
+                        writer.Write((byte)((pixel >> 4) & 0x0f));
+                    }
                 }
             }
-
-            var rleBytes = memStream.ToArray();
-            var unpackedBytes = PixelPackingUtility.UnpackPixels(width, height, rleBytes);
-            
-            if (PrintDebugKeys.Contains(_key))
-            {
-                if (PrintDebugRawData)
-                {
-                    File.WriteAllBytes(Path.Combine(PrintDebugFolder, $"{_key}_decompress_raw.bin"), _rawBytes.ToArray());    
-                }
-                if (PrintDebugMergedPixels)
-                {
-                    File.WriteAllBytes(Path.Combine(PrintDebugFolder, $"{_key}_decompress_merged.bin"), _mergedBytes.ToArray());    
-                }
-                if (PrintDebugRle)
-                {
-                    File.WriteAllBytes(Path.Combine(PrintDebugFolder, $"{_key}_decompress_RLE.bin"), _rleBytes.ToArray());    
-                }
-                if (PrintDebugLzw)
-                {
-                    File.WriteAllBytes(Path.Combine(PrintDebugFolder, $"{_key}_decompress_LZW.bin"), _lzwBytes.ToArray());    
-                }
-            }
-            
-            var decompressedBytes = unpackedBytes;
-            byteOffset = _byteOffset + (_bitOffset > 0 ? 1 : 0);
-            _logger.LogDebug($"Decompressed from {_data.Length} ({byteOffset} {_bitOffset}) bytes to {decompressedBytes.Length}");
+           
+            var decompressedBytes = memStream.ToArray();
             return decompressedBytes;
+        }
+    }
+
+    public interface ILzwDecompression
+    {
+        byte[] Decompress(int width, int height, int maxWordWidth, BinaryReader reader);
+    }
+    
+    internal class LzwDecompression : ILzwDecompression
+    {
+        private readonly ILogger _logger;
+
+        public LzwDecompression(ILogger<LzwDecompression> logger)
+        {
+            _logger = logger;
+        }
+
+        public byte[] Decompress(int width, int height, int maxWordWidth, BinaryReader reader)
+        {
+            var decompressor = new LzwDecompressor(_logger, maxWordWidth, reader);
+            return decompressor.Decompress(width, height);
         }
     }
 }

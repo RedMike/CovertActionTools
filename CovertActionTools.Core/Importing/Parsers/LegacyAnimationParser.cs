@@ -672,13 +672,15 @@ namespace CovertActionTools.Core.Importing.Parsers
         {
             //because we don't do piece-meal parsing, we have to read a ton of extra bytes and pass them over first
             //but parsing the image will return the actual offset
-            var originalOffset = memStream.Position;
-            var bytes = reader.ReadBytes(16000); //no image can be longer than this anyway
             SimpleImageModel? model = null;
             try
             {
-                model = _imageParser.Parse($"{key}_{img}", bytes, out var byteOffset);
-                memStream.Seek(originalOffset + byteOffset, SeekOrigin.Begin);
+                var startOffset = memStream.Position;
+                model = _imageParser.Parse($"{key}_{img}", reader);
+                if ((memStream.Position - startOffset) % 2 == 1)
+                {
+                    reader.ReadByte(); //it's padded to 2 bytes
+                }
             }
             catch (Exception e)
             {

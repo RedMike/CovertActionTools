@@ -102,11 +102,10 @@ namespace CovertActionTools.Core.Importing.Parsers
             foreach (var pair in offsetsAndLengths)
             {
                 memStream.Position = pair.Value.offset;
-                var rawImageData = reader.ReadBytes((int)pair.Value.length);
-                var imageModel = _imageParser.Parse(pair.Key, rawImageData, out var byteOffset);
-                if (byteOffset < pair.Value.length - 1)
+                var imageModel = _imageParser.Parse(pair.Key, reader);
+                if (memStream.Position - pair.Value.offset < pair.Value.length - 1)
                 {
-                    _logger.LogWarning($"Loading image {key} data ended at offset {byteOffset:X} but length was {pair.Value.length:X}");
+                    _logger.LogWarning($"Loading image {key} data ended at offset {memStream.Position:X} but length was {pair.Value.length:X}");
                 }
                 entries[pair.Key] = imageModel;
             }
