@@ -126,13 +126,11 @@ public class SelectedAnimationWindow : SharedImageWindow
             .Distinct()
             .Order()
             .ToList();
-        var windowSize = ImGui.GetContentRegionAvail();
-        var fieldWidth = ((int)windowSize.X / 2) - 100;
         foreach (var inputRegister in inputRegisters)
         {
             _animationPreviewState.InputRegisters.TryGetValue(inputRegister, out var val);
             var (oldValue, oldFrameIndex) = val;
-            var newValue = ImGuiExtensions.Input($"Register {inputRegister}", oldValue, width:fieldWidth);
+            var newValue = ImGuiExtensions.Input($"Register {inputRegister}", oldValue);
             if (newValue != null)
             {
                 _animationPreviewState.SetInputRegister(inputRegister, newValue.Value, oldFrameIndex);
@@ -140,7 +138,7 @@ public class SelectedAnimationWindow : SharedImageWindow
 
             ImGui.SameLine();
 
-            var newFrameIndex = ImGuiExtensions.Input($"Apply Frame {inputRegister}", oldFrameIndex, width:fieldWidth);
+            var newFrameIndex = ImGuiExtensions.Input($"Apply Frame {inputRegister}", oldFrameIndex);
             if (newFrameIndex != null)
             {
                 _animationPreviewState.SetInputRegister(inputRegister, _animationPreviewState.InputRegisters[inputRegister].value, newFrameIndex.Value);
@@ -156,75 +154,103 @@ public class SelectedAnimationWindow : SharedImageWindow
         var fullWidth = width + 2 * offsetX;
         var fullHeight = height + 2 * offsetY;
         
-        var pos = ImGui.GetCursorPos();
-        
-        //draw the checkerboard first
-        ImGui.SetCursorPos(pos);
-        var bgTexture = RenderWindow.RenderCheckerboardRectangle(25, fullWidth, fullHeight,
-            (40, 30, 40, 255), (50, 40, 50, 255));
-        ImGui.Image(bgTexture, new Vector2(fullWidth, fullHeight));
-
-        //now draw background
-        ImGui.SetCursorPos(pos + new Vector2(offsetX, offsetY));
-        if (animation.ExtraData.BackgroundType == AnimationModel.BackgroundType.ClearToColor)
-        {
-            var backgroundTexture = RenderWindow.RenderCheckerboardRectangle(100, width, height,
-                Core.Constants.VgaColorMapping[animation.ExtraData.ClearColor],
-                Core.Constants.VgaColorMapping[animation.ExtraData.ClearColor]);
-            ImGui.Image(backgroundTexture, new Vector2(width, height));
-        }
-        else
-        {
-            var backgroundImage = animation.Images.OrderBy(x => x.Key).First().Value;
-            var id = $"image_{animation.Key}_frame";
-            //TODO: cache?
-            var texture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, id, 
-                backgroundImage.ExtraData.LegacyWidth, backgroundImage.ExtraData.LegacyHeight, backgroundImage.VgaImageData);
-            ImGui.Image(texture, new Vector2(backgroundImage.ExtraData.LegacyWidth, backgroundImage.ExtraData.LegacyHeight));
-        }
-
+        var windowSize = ImGui.GetContentRegionAvail();
         var state = _animationPreviewState.GetState(animation, _animationProcessor);
-        foreach (var drawnImage in state.DrawnImages.OrderBy(x => x.SpriteIndex))
-        {
-            ImGui.SetCursorPos(pos + new Vector2(offsetX + drawnImage.PositionX, offsetY + drawnImage.PositionY));
-            
-            var drawnImageIndex = animation.ExtraData.ImageIdToIndex[drawnImage.ImageId];
-            var drawnImageImg = animation.Images[drawnImageIndex];
-            var id = $"image_{animation.Key}_{drawnImageIndex}";
-            //TODO: cache?
-            var texture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, id,
-                drawnImageImg.ExtraData.LegacyWidth, drawnImageImg.ExtraData.LegacyHeight, drawnImageImg.VgaImageData);
-            ImGui.Image(texture, new Vector2(drawnImageImg.ExtraData.LegacyWidth, drawnImageImg.ExtraData.LegacyHeight));
-        }
 
-        var selectedSprite = state.Sprites.FirstOrDefault(x => x.Index == _selectedSprite);
-        if (selectedSprite != null)
+        if (ImGui.BeginChild("view", new Vector2(fullWidth + 10.0f, windowSize.Y), false,
+                ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoResize |
+                ImGuiWindowFlags.NoTitleBar))
         {
-            var (spriteX, spriteY) = state.GetSpritePosition(selectedSprite.Index);
-            var ox = offsetX + spriteX;
-            var oy = offsetY + spriteY;
-            var w = 5;
-            var h = 5;
-            if (selectedSprite.ImageId >= 0 &&
-                animation.ExtraData.ImageIdToIndex.TryGetValue(selectedSprite.ImageId, out var imageIndex) &&
-                animation.Images.TryGetValue(imageIndex, out var image))
+            var pos = ImGui.GetCursorPos();
+            var rawPos = ImGui.GetCursorScreenPos();
+            //draw the checkerboard first
+            ImGui.SetCursorPos(pos);
+            var bgTexture = RenderWindow.RenderCheckerboardRectangle(25, fullWidth, fullHeight,
+                (40, 30, 40, 255), (50, 40, 50, 255));
+            ImGui.Image(bgTexture, new Vector2(fullWidth, fullHeight));
+
+            //now draw background
+            //TODO: previous animation background type
+            ImGui.SetCursorPos(pos + new Vector2(offsetX, offsetY));
+            if (animation.ExtraData.BackgroundType == AnimationModel.BackgroundType.ClearToColor)
             {
-                w = image.ExtraData.LegacyWidth;
-                h = image.ExtraData.LegacyHeight;
+                var backgroundTexture = RenderWindow.RenderCheckerboardRectangle(100, width, height,
+                    Core.Constants.VgaColorMapping[animation.ExtraData.ClearColor],
+                    Core.Constants.VgaColorMapping[animation.ExtraData.ClearColor]);
+                ImGui.Image(backgroundTexture, new Vector2(width, height));
+            }
+            else
+            {
+                var backgroundImage = animation.Images.OrderBy(x => x.Key).First().Value;
+                var id = $"image_{animation.Key}_frame";
+                //TODO: cache?
+                var texture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, id,
+                    backgroundImage.ExtraData.LegacyWidth, backgroundImage.ExtraData.LegacyHeight,
+                    backgroundImage.VgaImageData);
+                ImGui.Image(texture,
+                    new Vector2(backgroundImage.ExtraData.LegacyWidth, backgroundImage.ExtraData.LegacyHeight));
+            }
+
+            if (_animationPreviewState.LimitToGameWindow)
+            {
+                ImGui.PushClipRect(rawPos + new Vector2(offsetX, offsetY),
+                    rawPos + new Vector2(offsetX + width, offsetY + height), false);
+            }
+            foreach (var drawnImage in state.DrawnImages.OrderBy(x => x.SpriteIndex))
+            {
+                ImGui.SetCursorPos(pos + new Vector2(offsetX + drawnImage.PositionX, offsetY + drawnImage.PositionY));
+
+                var drawnImageIndex = animation.ExtraData.ImageIdToIndex[drawnImage.ImageId];
+                var drawnImageImg = animation.Images[drawnImageIndex];
+                var id = $"image_{animation.Key}_{drawnImageIndex}";
+                //TODO: cache?
+                var texture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, id,
+                    drawnImageImg.ExtraData.LegacyWidth, drawnImageImg.ExtraData.LegacyHeight,
+                    drawnImageImg.VgaImageData);
+                ImGui.Image(texture,
+                    new Vector2(drawnImageImg.ExtraData.LegacyWidth, drawnImageImg.ExtraData.LegacyHeight));
             }
             
-            //draw an overlay
-            ImGui.SetCursorPos(pos + new Vector2(ox - 6, oy - 6));
-            var outlineTexture = RenderWindow.RenderOutlineRectangle(5, 
-                w + 12,
-                h + 12,
-                (255, 0, 200, 255));
-            ImGui.Image(outlineTexture, new Vector2(w + 12, h + 12));
+            if (_animationPreviewState.LimitToGameWindow)
+            {
+                ImGui.PopClipRect();
+            }
+
+            var selectedSprite = state.Sprites.FirstOrDefault(x => x.Index == _selectedSprite);
+            if (selectedSprite != null)
+            {
+                var (spriteX, spriteY) = state.GetSpritePosition(selectedSprite.Index);
+                var ox = offsetX + spriteX;
+                var oy = offsetY + spriteY;
+                var w = 5;
+                var h = 5;
+                if (selectedSprite.ImageId >= 0 &&
+                    animation.ExtraData.ImageIdToIndex.TryGetValue(selectedSprite.ImageId, out var imageIndex) &&
+                    animation.Images.TryGetValue(imageIndex, out var image))
+                {
+                    w = image.ExtraData.LegacyWidth;
+                    h = image.ExtraData.LegacyHeight;
+                }
+
+                //draw an overlay
+                ImGui.SetCursorPos(pos + new Vector2(ox - 6, oy - 6));
+                var outlineTexture = RenderWindow.RenderOutlineRectangle(5,
+                    w + 12,
+                    h + 12,
+                    (255, 0, 200, 255));
+                ImGui.Image(outlineTexture, new Vector2(w + 12, h + 12));
+            }
+            ImGui.EndChild();
         }
-        
-        ImGui.SetCursorPos(pos + new Vector2(fullWidth + 10, 0));
-        if (ImGui.BeginChild("menu", new Vector2(300, fullHeight), true))
+        ImGui.SameLine();
+        if (ImGui.BeginChild("menu", new Vector2(windowSize.X - fullWidth - 20.0f, windowSize.Y), true))
         {
+            var newLimitGameWindow = ImGuiExtensions.Input("Draw Only Game Window", _animationPreviewState.LimitToGameWindow);
+            if (newLimitGameWindow != null)
+            {
+                _animationPreviewState.LimitToGameWindow = newLimitGameWindow.Value;
+            }
+            
             ImGui.Text($"Stack ({state.Stack.Count}): {string.Join(" ", state.Stack.Select(x => $"{x}"))}");
             foreach (var pair in state.Registers)
             {

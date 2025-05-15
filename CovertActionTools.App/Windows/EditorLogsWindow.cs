@@ -23,15 +23,16 @@ public class EditorLogsWindow : BaseWindow
         }
         
         var screenSize = ImGui.GetMainViewport().Size;
-        var initialPos = new Vector2(0.0f, screenSize.Y - 200.0f);
-        var initialSize = new Vector2(screenSize.X, 200.0f);
+        var initialPos = new Vector2(0.0f, screenSize.Y - 180.0f);
+        var initialSize = new Vector2(screenSize.X, 180.0f);
         ImGui.SetNextWindowSize(initialSize);
         ImGui.SetNextWindowPos(initialPos);
         ImGui.Begin("Logs", 
             ImGuiWindowFlags.NoResize |
             ImGuiWindowFlags.NoMove |
             ImGuiWindowFlags.NoNav | 
-            ImGuiWindowFlags.NoCollapse);
+            ImGuiWindowFlags.NoCollapse | 
+            ImGuiWindowFlags.NoTitleBar);
         
         var logs = _appLoggingState.Logs.ToList();
         foreach (var log in logs)

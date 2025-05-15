@@ -10,6 +10,8 @@ public class AnimationPreviewState : IViewModel
     public int SelectedFrameId { get; set; } = 0;
     public Dictionary<int, (int value, int frameIndex)> InputRegisters { get; set; } = new();
     
+    public bool LimitToGameWindow { get; set; }
+    
     private int _cachedFrameId = -1;
     private Dictionary<int, (int value, int frameIndex)> _cachedInputRegisters = new();
     private AnimationState? _cachedState = null;
@@ -23,6 +25,8 @@ public class AnimationPreviewState : IViewModel
         _cachedFrameId = -1;
         _cachedInputRegisters.Clear();
         _cachedState = null;
+
+        LimitToGameWindow = false;
     }
 
     public void SetInputRegister(int registerId, int value, int frameIndex)
