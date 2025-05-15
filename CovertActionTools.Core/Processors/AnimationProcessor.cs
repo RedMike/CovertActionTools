@@ -403,7 +403,8 @@ namespace CovertActionTools.Core.Processors
                     }
                     case AnimationModel.AnimationInstruction.AnimationOpcode.RemoveSprite:
                     {
-                        var sprite = state.Sprites.FirstOrDefault(x => x.Index == PopStack());
+                        var spriteId = PopStack();
+                        var sprite = state.Sprites.FirstOrDefault(x => x.Index == spriteId);
                         if (sprite != null)
                         {
                             sprite.Active = false;
@@ -488,11 +489,8 @@ namespace CovertActionTools.Core.Processors
                     case AnimationModel.AnimationInstruction.AnimationOpcode.Add:
                     {
                         var delta = PopStack();
-                        var value = delta;
-                        if (state.Stack.Count > 0)
-                        {
-                            value = (short)(PopStack() + delta);
-                        }
+                        var value = PopStack();
+                        value = (short)(value + delta);
 
                         state.Stack.Push(value);
                         break;
@@ -500,11 +498,8 @@ namespace CovertActionTools.Core.Processors
                     case AnimationModel.AnimationInstruction.AnimationOpcode.Subtract:
                     {
                         var delta = PopStack();
-                        var value = delta;
-                        if (state.Stack.Count > 0)
-                        {
-                            value = (short)(PopStack() - delta);
-                        }
+                        var value = PopStack();
+                        value = (short)(value - delta);
 
                         state.Stack.Push(value);
                         break;
@@ -512,11 +507,8 @@ namespace CovertActionTools.Core.Processors
                     case AnimationModel.AnimationInstruction.AnimationOpcode.Multiply:
                     {
                         var delta = PopStack();
-                        var value = delta;
-                        if (state.Stack.Count > 0)
-                        {
-                            value = (short)(PopStack() * delta);
-                        }
+                        var value = PopStack();
+                        value = (short)(value * delta);
 
                         state.Stack.Push(value);
                         break;
@@ -525,11 +517,8 @@ namespace CovertActionTools.Core.Processors
                     case AnimationModel.AnimationInstruction.AnimationOpcode.Divide:
                     {
                         var delta = PopStack();
-                        var value = delta;
-                        if (state.Stack.Count > 0)
-                        {
-                            value = (short)(PopStack() / delta);
-                        }
+                        var value = PopStack();
+                        value = (short)(value / delta);
 
                         state.Stack.Push(value);
                         break;

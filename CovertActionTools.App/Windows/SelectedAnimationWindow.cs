@@ -274,9 +274,14 @@ public class SelectedAnimationWindow : SharedImageWindow
                 .Where(x => x.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.SetupSprite)
                 .Select(x => (int)x.StackParameters[0])
                 .Distinct()
+                .OrderBy(x => x)
+                .ToList();
+            var spriteIndexNames = spriteIndexes
+                .Select(id => (id, state.Sprites.FirstOrDefault(s => s.Index == id)))
+                .Select(x => $"{x.id} {((x.Item2?.Active ?? false) ? "Active" : "Inactive")} {(x.Item2?.ImageId >= 0 ? "Drawn" : "Hidden")}")
                 .ToList();
             
-            var newSelectedAnimation = ImGuiExtensions.Input("Sprite", _selectedSprite, spriteIndexes);
+            var newSelectedAnimation = ImGuiExtensions.Input("Sprite", _selectedSprite, spriteIndexes, spriteIndexNames);
             if (newSelectedAnimation != null)
             {
                 _selectedSprite = newSelectedAnimation.Value;
