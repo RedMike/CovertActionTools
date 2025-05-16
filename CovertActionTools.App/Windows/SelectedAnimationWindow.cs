@@ -146,6 +146,26 @@ public class SelectedAnimationWindow : SharedImageWindow
                 
             ImGui.Text("");
         }
+        if (animation.ExtraData.BackgroundType == AnimationModel.BackgroundType.PreviousAnimation)
+        {
+            //only animations with EndImmediate can be used as backgrounds, otherwise it'd never end in the first place
+            var eligiblePreviousAnimations = model.Animations
+                .Where(x => x.Value.ExtraData.Instructions
+                                .Any(i => i.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.EndImmediate)
+                            && x.Value.Key != animation.Key
+                )
+                .Select(x => (x.Key, x.Value))
+                .ToList();
+
+            var animationKeys = eligiblePreviousAnimations.Select(x => x.Key).ToList();
+            var animationNames = eligiblePreviousAnimations.Select(x => x.Value.ExtraData.Name).ToList();
+            var newSelectedPreviousAnimation = ImGuiExtensions.Input("Previous Animation",
+                _animationPreviewState.PreviousAnimationId, animationKeys, animationNames);
+            if (!string.IsNullOrEmpty(newSelectedPreviousAnimation))
+            {
+                _animationPreviewState.PreviousAnimationId = newSelectedPreviousAnimation;
+            }
+        }
         
         var width = animation.ExtraData.BoundingWidth + 1;
         var height = animation.ExtraData.BoundingHeight + 1;
@@ -155,7 +175,12 @@ public class SelectedAnimationWindow : SharedImageWindow
         var fullHeight = height + 2 * offsetY;
         
         var windowSize = ImGui.GetContentRegionAvail();
-        var state = _animationPreviewState.GetState(animation, _animationProcessor);
+        AnimationModel? previousAnimation = null;
+        if (!string.IsNullOrEmpty(_animationPreviewState.PreviousAnimationId) && model.Animations.TryGetValue(_animationPreviewState.PreviousAnimationId, out var prevAnimation))
+        {
+            previousAnimation = prevAnimation;
+        }
+        var (state, previousAnimationState) = _animationPreviewState.GetState(animation, previousAnimation, _animationProcessor);
 
         if (ImGui.BeginChild("view", new Vector2(fullWidth + 10.0f, windowSize.Y), false,
                 ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoResize |
@@ -168,9 +193,14 @@ public class SelectedAnimationWindow : SharedImageWindow
             var bgTexture = RenderWindow.RenderCheckerboardRectangle(25, fullWidth, fullHeight,
                 (40, 30, 40, 255), (50, 40, 50, 255));
             ImGui.Image(bgTexture, new Vector2(fullWidth, fullHeight));
+            
+            if (_animationPreviewState.LimitToGameWindow)
+            {
+                ImGui.PushClipRect(rawPos + new Vector2(offsetX, offsetY),
+                    rawPos + new Vector2(offsetX + width, offsetY + height), false);
+            }
 
             //now draw background
-            //TODO: previous animation background type
             ImGui.SetCursorPos(pos + new Vector2(offsetX, offsetY));
             if (animation.ExtraData.BackgroundType == AnimationModel.BackgroundType.ClearToColor)
             {
@@ -178,6 +208,52 @@ public class SelectedAnimationWindow : SharedImageWindow
                     Core.Constants.VgaColorMapping[animation.ExtraData.ClearColor],
                     Core.Constants.VgaColorMapping[animation.ExtraData.ClearColor]);
                 ImGui.Image(backgroundTexture, new Vector2(width, height));
+            }
+            else if (animation.ExtraData.BackgroundType == AnimationModel.BackgroundType.PreviousAnimation)
+            {
+                //TODO: render previous animation at its final state
+                if (previousAnimation != null && previousAnimationState != null)
+                {
+                    //render background
+                    if (previousAnimation.ExtraData.BackgroundType == AnimationModel.BackgroundType.PreviousAnimation)
+                    {
+                        throw new Exception("PreviousAnimation chaining not supported");
+                    }
+                    if (previousAnimation.ExtraData.BackgroundType == AnimationModel.BackgroundType.ClearToImage)
+                    {
+                        var backgroundImage = previousAnimation.Images.OrderBy(x => x.Key).First().Value;
+                        var id = $"image_{previousAnimation.Key}_frame";
+                        //TODO: cache?
+                        var texture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, id,
+                            backgroundImage.ExtraData.LegacyWidth, backgroundImage.ExtraData.LegacyHeight,
+                            backgroundImage.VgaImageData);
+                        ImGui.Image(texture,
+                            new Vector2(backgroundImage.ExtraData.LegacyWidth, backgroundImage.ExtraData.LegacyHeight));
+                    }
+                    else
+                    {
+                        var backgroundTexture = RenderWindow.RenderCheckerboardRectangle(100, width, height,
+                            Core.Constants.VgaColorMapping[previousAnimation.ExtraData.ClearColor],
+                            Core.Constants.VgaColorMapping[previousAnimation.ExtraData.ClearColor]);
+                        ImGui.Image(backgroundTexture, new Vector2(width, height));
+                    }
+                    
+                    //render sprites
+                    foreach (var drawnImage in previousAnimationState.DrawnImages.OrderBy(x => x.SpriteIndex))
+                    {
+                        ImGui.SetCursorPos(pos + new Vector2(offsetX + drawnImage.PositionX, offsetY + drawnImage.PositionY));
+
+                        var drawnImageIndex = previousAnimation.ExtraData.ImageIdToIndex[drawnImage.ImageId];
+                        var drawnImageImg = previousAnimation.Images[drawnImageIndex];
+                        var id = $"image_{previousAnimation.Key}_{drawnImageIndex}";
+                        //TODO: cache?
+                        var texture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, id,
+                            drawnImageImg.ExtraData.LegacyWidth, drawnImageImg.ExtraData.LegacyHeight,
+                            drawnImageImg.VgaImageData);
+                        ImGui.Image(texture,
+                            new Vector2(drawnImageImg.ExtraData.LegacyWidth, drawnImageImg.ExtraData.LegacyHeight));
+                    }
+                }
             }
             else
             {
@@ -191,11 +267,6 @@ public class SelectedAnimationWindow : SharedImageWindow
                     new Vector2(backgroundImage.ExtraData.LegacyWidth, backgroundImage.ExtraData.LegacyHeight));
             }
 
-            if (_animationPreviewState.LimitToGameWindow)
-            {
-                ImGui.PushClipRect(rawPos + new Vector2(offsetX, offsetY),
-                    rawPos + new Vector2(offsetX + width, offsetY + height), false);
-            }
             foreach (var drawnImage in state.DrawnImages.OrderBy(x => x.SpriteIndex))
             {
                 ImGui.SetCursorPos(pos + new Vector2(offsetX + drawnImage.PositionX, offsetY + drawnImage.PositionY));

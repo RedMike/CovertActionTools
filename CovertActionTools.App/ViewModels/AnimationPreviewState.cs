@@ -9,12 +9,15 @@ public class AnimationPreviewState : IViewModel
     
     public int SelectedFrameId { get; set; } = 0;
     public Dictionary<int, (int value, int frameIndex)> InputRegisters { get; set; } = new();
+    public string PreviousAnimationId { get; set; } = string.Empty;
     
     public bool LimitToGameWindow { get; set; }
     
     private int _cachedFrameId = -1;
     private Dictionary<int, (int value, int frameIndex)> _cachedInputRegisters = new();
     private AnimationState? _cachedState = null;
+    private AnimationState? _cachedPreviousAnimationState = null;
+    private string _cachedPreviousAnimationId = string.Empty;
     
     public void Reset(string id)
     {
@@ -25,7 +28,9 @@ public class AnimationPreviewState : IViewModel
         _cachedFrameId = -1;
         _cachedInputRegisters.Clear();
         _cachedState = null;
+        _cachedPreviousAnimationState = null;
 
+        PreviousAnimationId = string.Empty;
         LimitToGameWindow = false;
     }
 
@@ -40,17 +45,23 @@ public class AnimationPreviewState : IViewModel
         InputRegisters[registerId] = (value, frameIndex);
     }
 
-    public AnimationState GetState(AnimationModel animation, IAnimationProcessor animationProcessor)
+    public (AnimationState current, AnimationState? previous) GetState(AnimationModel animation, AnimationModel? previousAnimation, IAnimationProcessor animationProcessor)
     {
         if (CacheIsValid())
         {
-            return _cachedState!;
+            return (_cachedState!, _cachedPreviousAnimationState);
         }
 
         _cachedFrameId = SelectedFrameId;
         _cachedInputRegisters = InputRegisters.ToDictionary(x => x.Key, x => x.Value);
         _cachedState = animationProcessor.Process(animation, _cachedFrameId, _cachedInputRegisters);
-        return _cachedState;
+
+        if (!string.IsNullOrEmpty(PreviousAnimationId) && previousAnimation != null)
+        {
+            _cachedPreviousAnimationState = animationProcessor.Process(previousAnimation, 1000, new());
+        }
+        
+        return (_cachedState, _cachedPreviousAnimationState);
     }
 
     private bool CacheIsValid()
@@ -66,6 +77,11 @@ public class AnimationPreviewState : IViewModel
         }
 
         if (InputRegisters.Count != _cachedInputRegisters.Count)
+        {
+            return false;
+        }
+
+        if (PreviousAnimationId != _cachedPreviousAnimationId)
         {
             return false;
         }
