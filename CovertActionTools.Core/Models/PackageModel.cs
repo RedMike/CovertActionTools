@@ -16,6 +16,7 @@ namespace CovertActionTools.Core.Models
         public Dictionary<int, WorldModel> Worlds { get; set; } = new();
         public Dictionary<string, CatalogModel> Catalogs { get; set; } = new();
         public Dictionary<string, AnimationModel> Animations { get; set; } = new();
+        public FontsModel Fonts { get; set; } = new();
 
         public bool IsModified(PackageModel other)
         {

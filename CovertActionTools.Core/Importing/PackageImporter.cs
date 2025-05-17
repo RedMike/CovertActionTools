@@ -19,6 +19,7 @@ namespace CovertActionTools.Core.Importing
         private readonly IImporter<Dictionary<int, WorldModel>> _worldImporter;
         private readonly IImporter<Dictionary<string, CatalogModel>> _catalogImporter;
         private readonly IImporter<Dictionary<string, AnimationModel>> _animationImporter;
+        private readonly IImporter<FontsModel> _fontsImporter;
         
         private List<string> _errors = new List<string>();
 
@@ -26,7 +27,7 @@ namespace CovertActionTools.Core.Importing
         private ImportStatus.ImportStage _currentStage = ImportStatus.ImportStage.Unknown;
         private IImporter? _currentImporter = null;
 
-        public PackageImporter(ILogger<PackageImporter> logger, IImporter<Dictionary<string, SimpleImageModel>> simpleImageImporter, IImporter<Dictionary<int, CrimeModel>> crimeImporter, IImporter<Dictionary<string, TextModel>> textImporter, IImporter<Dictionary<string, ClueModel>> clueImporter, IImporter<Dictionary<string, PlotModel>> plotImporter, IImporter<Dictionary<int, WorldModel>> worldImporter, IImporter<Dictionary<string, CatalogModel>> catalogImporter, IImporter<Dictionary<string, AnimationModel>> animationImporter)
+        public PackageImporter(ILogger<PackageImporter> logger, IImporter<Dictionary<string, SimpleImageModel>> simpleImageImporter, IImporter<Dictionary<int, CrimeModel>> crimeImporter, IImporter<Dictionary<string, TextModel>> textImporter, IImporter<Dictionary<string, ClueModel>> clueImporter, IImporter<Dictionary<string, PlotModel>> plotImporter, IImporter<Dictionary<int, WorldModel>> worldImporter, IImporter<Dictionary<string, CatalogModel>> catalogImporter, IImporter<Dictionary<string, AnimationModel>> animationImporter, IImporter<FontsModel> fontsImporter)
         {
             _logger = logger;
             _simpleImageImporter = simpleImageImporter;
@@ -37,6 +38,7 @@ namespace CovertActionTools.Core.Importing
             _worldImporter = worldImporter;
             _catalogImporter = catalogImporter;
             _animationImporter = animationImporter;
+            _fontsImporter = fontsImporter;
             _importers = new IImporter[]
             {
                 _simpleImageImporter,
@@ -46,7 +48,8 @@ namespace CovertActionTools.Core.Importing
                 _plotImporter,
                 _worldImporter,
                 _catalogImporter,
-                _animationImporter
+                _animationImporter,
+                _fontsImporter
             };
         }
 
@@ -312,6 +315,25 @@ namespace CovertActionTools.Core.Importing
                     }
                 } while (!done);
                 model.Animations = _animationImporter.GetResult();
+                
+                //fonts
+                _currentStage = ImportStatus.ImportStage.ProcessingFonts;
+                _currentImporter = _fontsImporter;
+                done = false;
+                do
+                {
+                    await Task.Yield();
+                    try
+                    {
+                        done |= _currentImporter.RunStep();
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError($"Exception while running step: {e}");
+                        _errors.Add(e.ToString());
+                    }
+                } while (!done);
+                model.Fonts = _fontsImporter.GetResult();
 
                 await Task.Yield();
                 

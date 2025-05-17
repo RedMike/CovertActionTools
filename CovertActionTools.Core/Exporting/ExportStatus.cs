@@ -16,6 +16,7 @@ namespace CovertActionTools.Core.Exporting
             ProcessingWorlds = 60,
             ProcessingCatalogs = 70,
             ProcessingAnimations = 80,
+            ProcessingFonts = 90,
             ExportDone = 100,
             
             FatalError = 999999,

@@ -62,7 +62,7 @@ namespace CovertActionTools.Core.Importing.Parsers
             var filePath = System.IO.Path.Combine(path, $"TEXT.DTA");
             if (!File.Exists(filePath))
             {
-                throw new Exception($"Missing JSON file: TEXT.DTA");
+                throw new Exception($"Missing DTA file: TEXT.DTA");
             }
 
             var rawData = File.ReadAllBytes(filePath);

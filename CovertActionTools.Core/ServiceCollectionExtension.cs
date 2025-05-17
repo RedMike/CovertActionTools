@@ -26,6 +26,7 @@ namespace CovertActionTools.Core
             services.AddSingleton<LegacyWorldParser>();
             services.AddSingleton<LegacyCatalogParser>();
             services.AddSingleton<LegacyAnimationParser>();
+            services.AddSingleton<LegacyFontsParser>();
 
             services.AddSingleton<SharedImageImporter>();
             services.AddSingleton<IImporter<Dictionary<string, SimpleImageModel>>, SimpleImageImporter>();
@@ -36,6 +37,7 @@ namespace CovertActionTools.Core
             services.AddSingleton<IImporter<Dictionary<int, WorldModel>>, WorldImporter>();
             services.AddSingleton<IImporter<Dictionary<string, CatalogModel>>, CatalogImporter>();
             services.AddSingleton<IImporter<Dictionary<string, AnimationModel>>, AnimationImporter>();
+            services.AddSingleton<IImporter<FontsModel>, FontsImporter>();
             
             services.AddSingleton<SharedImageExporter>();
             services.AddSingleton<IExporter<Dictionary<string, SimpleImageModel>>, SimpleImageExporter>();
@@ -46,6 +48,7 @@ namespace CovertActionTools.Core
             services.AddSingleton<IExporter<Dictionary<int, WorldModel>>, WorldExporter>();
             services.AddSingleton<IExporter<Dictionary<string, CatalogModel>>, CatalogExporter>();
             services.AddSingleton<IExporter<Dictionary<string, AnimationModel>>, AnimationExporter>();
+            services.AddSingleton<IExporter<FontsModel>, FontsExporter>();
             
             services.AddTransient<LegacyFolderImporter>();
             services.AddTransient<IPackageImporter, PackageImporter>();
