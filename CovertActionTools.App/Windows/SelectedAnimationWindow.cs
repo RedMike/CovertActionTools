@@ -146,7 +146,27 @@ public class SelectedAnimationWindow : SharedImageWindow
                 
             ImGui.Text("");
         }
-        if (animation.ExtraData.BackgroundType == AnimationModel.BackgroundType.PreviousAnimation)
+
+        var newBackgroundType = ImGuiExtensions.InputEnum("Background Type", animation.ExtraData.BackgroundType, false);
+        if (newBackgroundType != null)
+        {
+            animation.ExtraData.BackgroundType = newBackgroundType.Value;
+        }
+
+        if (animation.ExtraData.BackgroundType == AnimationModel.BackgroundType.ClearToColor)
+        {
+            var validColours = new List<int>()
+            {
+                1, 2, 3, 4, 5,
+                6, 7, 8, 9, 10, 
+                11, 12, 13, 14, 15
+            };
+            var newBackgroundClearColour = ImGuiExtensions.Input("Clear Color", animation.ExtraData.ClearColor, validColours);
+            if (newBackgroundClearColour != null)
+            {
+                animation.ExtraData.ClearColor = (byte)newBackgroundClearColour.Value;
+            }
+        } else if (animation.ExtraData.BackgroundType == AnimationModel.BackgroundType.PreviousAnimation)
         {
             //only animations with EndImmediate can be used as backgrounds, otherwise it'd never end in the first place
             var eligiblePreviousAnimations = model.Animations
