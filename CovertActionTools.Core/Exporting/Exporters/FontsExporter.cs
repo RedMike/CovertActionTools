@@ -83,10 +83,10 @@ namespace CovertActionTools.Core.Exporting.Exporters
             for (var f = 0; f < fonts.Fonts.Count; f++)
             {
                 var font = fonts.Fonts[f];
-                foreach (var c in font.CharacterImageData.Keys)
+                foreach (var c in font.CharacterImages.Keys)
                 {
                     var code = (byte)c;
-                    dict[($"FONTS_{f}_{code}.png", false)] = font.CharacterImageData[c];
+                    dict[($"FONTS_{f}_{code}.png", false)] = font.CharacterImages[c];
                 }
             }
 

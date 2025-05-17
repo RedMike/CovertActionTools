@@ -6,26 +6,25 @@ namespace CovertActionTools.Core.Models
     {
         public class Font
         {
-            public Dictionary<char, byte[]> CharacterImageData { get; set; } = new();
+            public Dictionary<char, byte[]> CharacterImages { get; set; } = new();
         }
 
         public class FontMetadata
-        {
-            public byte FirstAsciiValue { get; set; }
-            public byte LastAsciiValue { get; set; }
-            public byte HorizontalPadding { get; set; }
-            public byte VerticalPadding { get; set; }
-            public byte MaximumCharWidth { get; set; }
-            public byte CharHeight { get; set; }
-        }
-        
-        public class Metadata
         {
             /// <summary>
             /// Arbitrary comment, for development
             /// </summary>
             public string Comment { get; set; } = string.Empty;
-
+            public byte FirstAsciiValue { get; set; }
+            public byte LastAsciiValue { get; set; }
+            public byte HorizontalPadding { get; set; }
+            public byte VerticalPadding { get; set; }
+            public byte CharHeight { get; set; }
+            public Dictionary<char, int> CharacterWidths { get; set; } = new();
+        }
+        
+        public class Metadata
+        {
             public Dictionary<int, FontMetadata> Fonts { get; set; } = new();
         }
         

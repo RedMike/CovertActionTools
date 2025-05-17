@@ -98,7 +98,7 @@ namespace CovertActionTools.Core.Importing.Importers
                 
                 model.Fonts.Add(new FontsModel.Font()
                 {
-                    CharacterImageData = fontImages
+                    CharacterImages = fontImages
                 });
             }
 

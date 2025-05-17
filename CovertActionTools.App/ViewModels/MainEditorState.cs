@@ -18,6 +18,7 @@ public class MainEditorState : IViewModel
         World = 5,
         CatalogImage = 6,
         Animation = 7,
+        Font = 8,
     }
     public string? DefaultPublishPath { get; set; }
     public string? DefaultRunPath { get; set; }

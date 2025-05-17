@@ -68,13 +68,7 @@ namespace CovertActionTools.Core.Importing.Parsers
 
             var rawData = File.ReadAllBytes(filePath);
 
-            var fonts = new FontsModel()
-            {
-                ExtraData = new FontsModel.Metadata()
-                {
-                    Comment = "Legacy import"
-                }
-            };
+            var fonts = new FontsModel();
             
             using var memStream = new MemoryStream(rawData);
             using var reader = new BinaryReader(memStream);
@@ -146,7 +140,6 @@ namespace CovertActionTools.Core.Importing.Parsers
                                 bitMask = bitMask >> 1;
                             }
                         }
-                        //TODO: is this right?
                         s = s.Substring(0, charWidths[c]);
                         charStrings.Add(s);
                     }
@@ -178,16 +171,17 @@ namespace CovertActionTools.Core.Importing.Parsers
 
                 fonts.ExtraData.Fonts[f] = new FontsModel.FontMetadata()
                 {
+                    Comment = "Legacy import",
                     FirstAsciiValue = firstAsciiValue,
                     LastAsciiValue = lastAsciiValue,
                     HorizontalPadding = horizontalPadding,
                     VerticalPadding = verticalPadding,
-                    MaximumCharWidth = (byte)charWidths.Values.Max(),
+                    CharacterWidths = charWidths,
                     CharHeight = (byte)charHeight
                 };
                 fonts.Fonts.Add(new FontsModel.Font()
                 {
-                    CharacterImageData = charImageData
+                    CharacterImages = charImageData
                 });
             }
 
