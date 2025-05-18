@@ -13,12 +13,14 @@ public class SelectedFontWindow : BaseWindow
     private readonly ILogger<SelectedFontWindow> _logger;
     private readonly MainEditorState _mainEditorState;
     private readonly RenderWindow _renderWindow;
+    private readonly FontPreviewState _fontPreviewState;
 
-    public SelectedFontWindow(ILogger<SelectedFontWindow> logger, MainEditorState mainEditorState, RenderWindow renderWindow)
+    public SelectedFontWindow(ILogger<SelectedFontWindow> logger, MainEditorState mainEditorState, RenderWindow renderWindow, FontPreviewState fontPreviewState)
     {
         _logger = logger;
         _mainEditorState = mainEditorState;
         _renderWindow = renderWindow;
+        _fontPreviewState = fontPreviewState;
     }
 
     public override void Draw()
@@ -64,10 +66,51 @@ public class SelectedFontWindow : BaseWindow
     private void DrawFontWindow(PackageModel model, FontsModel fonts, int fontId)
     {
         //TODO: keep a pending model and have a save button?
-
+        var newSampleString = ImGuiExtensions.Input("Sample text", _fontPreviewState.SampleString, 64);
+        if (newSampleString != null)
+        {
+            _fontPreviewState.SampleString = newSampleString;
+        }
+        
         var font = fonts.Fonts[fontId];
         var fontMetadata = fonts.ExtraData.Fonts[fontId];
 
+        DrawFontSample(_fontPreviewState.SampleString, font, fontMetadata, fontId);
+        
+        ImGui.Text("");
+        
+        DrawFontSheet(font, fontMetadata, fontId);
+    }
+
+    private void DrawFontSample(string text, FontsModel.Font font, FontsModel.FontMetadata fontMetadata, int fontId)
+    {
+        var pos = ImGui.GetCursorPos();
+        var x = 0;
+        var y = 0;
+        //TODO: newlines?
+        foreach (var c in text)
+        {
+            var ox = x + fontMetadata.HorizontalPadding;
+            var oy = y + fontMetadata.VerticalPadding;
+            var imageBytes = font.CharacterImages[c];
+            var width = fontMetadata.CharacterWidths[c];
+            var height = fontMetadata.CharHeight;
+            
+            using var skBitmap = SKBitmap.Decode(imageBytes, new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul));
+            var image = skBitmap.Bytes.ToArray();
+            
+            ImGui.SetCursorPos(pos + new Vector2(ox, oy));
+            var id = $"font_{fontId}_{(byte)c}";
+            //TODO: cache?
+            var texture = _renderWindow.RenderImage(RenderWindow.RenderType.Image, id, width, height, image);
+            ImGui.Image(texture, new Vector2(width, height));
+
+            x += width + fontMetadata.HorizontalPadding;
+        }
+    }
+
+    private void DrawFontSheet(FontsModel.Font font, FontsModel.FontMetadata fontMetadata, int fontId)
+    {
         var pos = ImGui.GetCursorPos();
         var x = 0;
         var y = 0;
