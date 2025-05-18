@@ -90,17 +90,23 @@ public class SelectedFontWindow : BaseWindow
         //TODO: newlines?
         foreach (var c in text)
         {
+            var charToUse = c;
+            if (!font.CharacterImages.ContainsKey(c))
+            {
+                charToUse = ' ';
+            }
+            
             var ox = x + fontMetadata.HorizontalPadding;
             var oy = y + fontMetadata.VerticalPadding;
-            var imageBytes = font.CharacterImages[c];
-            var width = fontMetadata.CharacterWidths[c];
+            var imageBytes = font.CharacterImages[charToUse];
+            var width = fontMetadata.CharacterWidths[charToUse];
             var height = fontMetadata.CharHeight;
             
             using var skBitmap = SKBitmap.Decode(imageBytes, new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul));
             var image = skBitmap.Bytes.ToArray();
             
             ImGui.SetCursorPos(pos + new Vector2(ox, oy));
-            var id = $"font_{fontId}_{(byte)c}";
+            var id = $"font_{fontId}_{(byte)charToUse}";
             //TODO: cache?
             var texture = _renderWindow.RenderImage(RenderWindow.RenderType.Image, id, width, height, image);
             ImGui.Image(texture, new Vector2(width, height));
@@ -115,7 +121,7 @@ public class SelectedFontWindow : BaseWindow
         var x = 0;
         var y = 0;
         var i = 0;
-        for (var code = fontMetadata.FirstAsciiValue; code < fontMetadata.LastAsciiValue; code++)
+        for (var code = fontMetadata.FirstAsciiValue; code <= fontMetadata.LastAsciiValue; code++)
         {
             var ox = x + fontMetadata.HorizontalPadding;
             var oy = y + fontMetadata.VerticalPadding;

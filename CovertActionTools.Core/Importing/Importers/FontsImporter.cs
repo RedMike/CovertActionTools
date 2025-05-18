@@ -83,7 +83,7 @@ namespace CovertActionTools.Core.Importing.Importers
                 var firstAsciiCode = fontMetadata.FirstAsciiValue;
                 var lastAsciiCode = fontMetadata.LastAsciiValue;
                 var fontImages = new Dictionary<char, byte[]>(); 
-                for (var b = firstAsciiCode; b < lastAsciiCode; b++)
+                for (var b = firstAsciiCode; b <= lastAsciiCode; b++)
                 {
                     var fontImagePath = System.IO.Path.Combine(path, $"FONTS_{fontId}_{b}.png");
                     if (!File.Exists(fontImagePath))
