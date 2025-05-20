@@ -22,6 +22,7 @@ namespace CovertActionTools.Core.Importing
         private readonly LegacyCatalogParser _catalogImporter;
         private readonly LegacyAnimationParser _animationImporter;
         private readonly LegacyFontsParser _fontsImporter;
+        private readonly LegacyProseParser _proseImporter;
         private readonly IReadOnlyList<IImporter> _importers;
         
         private List<string> _errors = new List<string>();
@@ -30,7 +31,7 @@ namespace CovertActionTools.Core.Importing
         private ImportStatus.ImportStage _currentStage = ImportStatus.ImportStage.Unknown;
         private IImporter? _currentImporter = null;
         
-        public LegacyFolderImporter(ILogger<LegacyFolderImporter> logger, LegacySimpleImageParser simpleImageImporter, LegacyCrimeParser crimeImporter, LegacyTextParser textImporter, LegacyClueParser clueImporter, LegacyPlotParser plotImporter, LegacyWorldParser worldImporter, LegacyCatalogParser catalogImporter, LegacyAnimationParser animationImporter, LegacyFontsParser fontsImporter)
+        public LegacyFolderImporter(ILogger<LegacyFolderImporter> logger, LegacySimpleImageParser simpleImageImporter, LegacyCrimeParser crimeImporter, LegacyTextParser textImporter, LegacyClueParser clueImporter, LegacyPlotParser plotImporter, LegacyWorldParser worldImporter, LegacyCatalogParser catalogImporter, LegacyAnimationParser animationImporter, LegacyFontsParser fontsImporter, LegacyProseParser proseImporter)
         {
             _logger = logger;
             _simpleImageImporter = simpleImageImporter;
@@ -42,7 +43,8 @@ namespace CovertActionTools.Core.Importing
             _catalogImporter = catalogImporter;
             _animationImporter = animationImporter;
             _fontsImporter = fontsImporter;
-            _importers = new IImporter[] { _simpleImageImporter, _crimeImporter, _textImporter, _clueImporter, _plotImporter, _worldImporter, _catalogImporter, _animationImporter, _fontsImporter };
+            _proseImporter = proseImporter;
+            _importers = new IImporter[] { _simpleImageImporter, _crimeImporter, _textImporter, _clueImporter, _plotImporter, _worldImporter, _catalogImporter, _animationImporter, _fontsImporter, _proseImporter };
         }
 
         public bool CheckIfValidForImport(string path)
@@ -325,6 +327,25 @@ namespace CovertActionTools.Core.Importing
                     }
                 } while (!done);
                 model.Fonts = _fontsImporter.GetResult();
+                
+                //prose
+                _currentStage = ImportStatus.ImportStage.ProcessingProse;
+                _currentImporter = _proseImporter;
+                done = false;
+                do
+                {
+                    await Task.Yield();
+                    try
+                    {
+                        done |= _currentImporter.RunStep();
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError($"Exception while running step: {e}");
+                        _errors.Add(e.ToString());
+                    }
+                } while (!done);
+                model.Prose = _proseImporter.GetResult();
 
                 _currentStage = ImportStatus.ImportStage.ImportDone;
                 await Task.Yield();
@@ -339,7 +360,7 @@ namespace CovertActionTools.Core.Importing
                 _currentStage = ImportStatus.ImportStage.ImportDone;
             }
 
-            _logger.LogInformation($"Import done: {model.SimpleImages.Count} images, {model.Crimes.Count} crimes, {model.Texts.Count} texts, {model.Clues.Count} clues, {model.Worlds.Count} worlds, {model.Catalogs.Count} catalogs, ...");
+            _logger.LogInformation($"Import done: {model.SimpleImages.Count} images, {model.Crimes.Count} crimes, {model.Texts.Count} texts, {model.Clues.Count} clues, {model.Worlds.Count} worlds, {model.Catalogs.Count} catalogs, {model.Prose.Count} prose, ...");
             return model;
         }
     }

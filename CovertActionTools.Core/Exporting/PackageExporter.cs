@@ -27,8 +27,9 @@ namespace CovertActionTools.Core.Exporting
         private readonly IExporter<Dictionary<string, CatalogModel>> _catalogExporter;
         private readonly IExporter<Dictionary<string, AnimationModel>> _animationExporter;
         private readonly IExporter<FontsModel> _fontsExporter;
+        private readonly IExporter<Dictionary<string, ProseModel>> _proseExporter;
 
-        public PackageExporter(ILogger<PackageExporter> logger, IExporter<Dictionary<string, SimpleImageModel>> simpleImageExporter, IExporter<Dictionary<int, CrimeModel>> crimeExporter, IExporter<Dictionary<string, TextModel>> textExporter, IExporter<Dictionary<string, ClueModel>> clueExporter, IExporter<Dictionary<string, PlotModel>> plotExporter, IExporter<Dictionary<int, WorldModel>> worldExporter, IExporter<Dictionary<string, CatalogModel>> catalogExporter, IExporter<Dictionary<string, AnimationModel>> animationExporter, IExporter<FontsModel> fontsExporter)
+        public PackageExporter(ILogger<PackageExporter> logger, IExporter<Dictionary<string, SimpleImageModel>> simpleImageExporter, IExporter<Dictionary<int, CrimeModel>> crimeExporter, IExporter<Dictionary<string, TextModel>> textExporter, IExporter<Dictionary<string, ClueModel>> clueExporter, IExporter<Dictionary<string, PlotModel>> plotExporter, IExporter<Dictionary<int, WorldModel>> worldExporter, IExporter<Dictionary<string, CatalogModel>> catalogExporter, IExporter<Dictionary<string, AnimationModel>> animationExporter, IExporter<FontsModel> fontsExporter, IExporter<Dictionary<string, ProseModel>> proseExporter)
         {
             _logger = logger;
             _simpleImageExporter = simpleImageExporter;
@@ -40,6 +41,7 @@ namespace CovertActionTools.Core.Exporting
             _catalogExporter = catalogExporter;
             _animationExporter = animationExporter;
             _fontsExporter = fontsExporter;
+            _proseExporter = proseExporter;
         }
         
         private List<string> _errors = new List<string>();
@@ -75,6 +77,8 @@ namespace CovertActionTools.Core.Exporting
             _logger.LogInformation($"Exporter {_animationExporter.GetType()} starting export to: {path} {publishPath}");
             _fontsExporter.Start(path, publishPath, model.Fonts);
             _logger.LogInformation($"Exporter {_fontsExporter.GetType()} starting export to: {path} {publishPath}");
+            _proseExporter.Start(path, publishPath, model.Prose);
+            _logger.LogInformation($"Exporter {_proseExporter.GetType()} starting export to: {path} {publishPath}");
             _exportTask = ExportInternal();
         }
 
@@ -288,6 +292,25 @@ namespace CovertActionTools.Core.Exporting
                 //fonts
                 _currentStage = ExportStatus.ExportStage.ProcessingFonts;
                 _currentExporter = _fontsExporter;
+                await Task.Yield();
+                done = false;
+                do
+                {
+                    await Task.Yield();
+                    try
+                    {
+                        done |= _currentExporter.RunStep();
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError($"Exception while running step: {e}");
+                        _errors.Add(e.ToString());
+                    }
+                } while (!done);
+                
+                //prose
+                _currentStage = ExportStatus.ExportStage.ProcessingProse;
+                _currentExporter = _proseExporter;
                 await Task.Yield();
                 done = false;
                 do

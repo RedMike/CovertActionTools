@@ -17,6 +17,7 @@ namespace CovertActionTools.Core.Importing
             ProcessingCatalogs = 70,
             ProcessingAnimations = 80,
             ProcessingFonts = 90,
+            ProcessingProse = 95,
             ImportDone = 100,
             
             FatalError = 999999,
