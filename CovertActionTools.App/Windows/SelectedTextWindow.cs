@@ -133,7 +133,7 @@ public class SelectedTextWindow : BaseWindow
             if (message != origMessage)
             {
                 var fixedMessage = message.Replace("\n", "\r\n"); //re-add \r, for consistency across OS
-                //TODO: change message
+                text.Message = fixedMessage;
             }
             
             ImGui.Text("");

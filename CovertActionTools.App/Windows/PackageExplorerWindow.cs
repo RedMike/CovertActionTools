@@ -335,7 +335,7 @@ public class PackageExplorerWindow : BaseWindow
             ImGui.TreePop();
         }
         
-        if (ImGui.TreeNodeEx("Fonts", ImGuiTreeNodeFlags.DefaultOpen | ImGuiTreeNodeFlags.SpanAvailWidth))
+        if (ImGui.TreeNodeEx("Fonts", ImGuiTreeNodeFlags.SpanAvailWidth))
         {
             foreach (var fontId in model.Fonts.ExtraData.Fonts.Keys.OrderBy(x => x))
             {
@@ -352,6 +352,32 @@ public class PackageExplorerWindow : BaseWindow
                     if (ImGui.IsItemClicked())
                     {
                         _mainEditorState.SelectedItem = (MainEditorState.ItemType.Font, fontId.ToString());
+                    }
+
+                    ImGui.TreePop();
+                }
+            }
+            
+            ImGui.TreePop();
+        }
+        
+        if (ImGui.TreeNodeEx("Prose", ImGuiTreeNodeFlags.DefaultOpen | ImGuiTreeNodeFlags.SpanAvailWidth))
+        {
+            foreach (var proseKey in model.Prose.Keys.OrderBy(x => x))
+            {
+                var nodeFlags = ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.SpanAvailWidth;
+                if (_mainEditorState.SelectedItem != null &&
+                    _mainEditorState.SelectedItem.Value.type == MainEditorState.ItemType.Prose &&
+                    _mainEditorState.SelectedItem.Value.id == proseKey)
+                {
+                    nodeFlags |= ImGuiTreeNodeFlags.Selected;
+                }
+
+                if (ImGui.TreeNodeEx($"{proseKey}", nodeFlags))
+                {
+                    if (ImGui.IsItemClicked())
+                    {
+                        _mainEditorState.SelectedItem = (MainEditorState.ItemType.Prose, proseKey);
                     }
 
                     ImGui.TreePop();
