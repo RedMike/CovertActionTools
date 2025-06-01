@@ -18,7 +18,7 @@ const int h = 800;
 #if DEBUG
 //start by parsing the default
 const bool startWithParsePublishDefault = false;
-const bool startWithLoadSampleDefault = true;
+const bool startWithLoadSampleDefault = false;
 #endif
 
 var configuration = new ConfigurationBuilder()
