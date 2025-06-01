@@ -181,10 +181,10 @@ namespace CovertActionTools.Core.Models
             public int BoundingHeight { get; set; }
             
             /// <summary>
-            /// Unknown purpose
-            /// Normally 1 for most animations.
+            /// Global frame skip value, 1 means play normally, higher values skip increasing numbers of frames.
+            /// Building animations in legacy data have non-1 values (3 or 4)
             /// </summary>
-            public int Unknown1 { get; set; }
+            public int GlobalFrameSkip { get; set; }
 
             /// <summary>
             /// How the game draws a background before updating or drawing images based on the animations

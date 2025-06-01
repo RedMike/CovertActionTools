@@ -111,7 +111,7 @@ namespace CovertActionTools.Core.Importing.Parsers
             
             var aWidth = reader.ReadUInt16(); //width - 1
             var aHeight = reader.ReadUInt16(); //height - 1
-            var unknown1 = reader.ReadUInt16();
+            var frameSkip = reader.ReadUInt16();
             var backgroundType = (AnimationModel.BackgroundType)reader.ReadByte();
             
             //for ClearToImage, there is an image before the header, otherwise it's straight to the header
@@ -574,7 +574,6 @@ namespace CovertActionTools.Core.Importing.Parsers
                     {
                         reader.ReadBytes(16);
                         continue;
-                        //throw new Exception($"Got step {(byte)type:X2} while not in active sequence: {memStream.Position} {memStream.Length}");
                     }
 
                     if (isEnd)
@@ -604,15 +603,6 @@ namespace CovertActionTools.Core.Importing.Parsers
                     }
                 }
             } while (memStream.Position < memStream.Length);
-            
-            //remove the last few instructions after the end, they're garbage padding
-            // var lastEndStep = steps.Last(x =>
-            //     x.Value.Type == AnimationModel.AnimationStep.StepType.Loop ||
-            //     x.Value.Type == AnimationModel.AnimationStep.StepType.Pause ||
-            //     x.Value.Type == AnimationModel.AnimationStep.StepType.Restart ||
-            //     x.Value.Type == AnimationModel.AnimationStep.StepType.Stop
-            // ).Key;
-            // var lastLabel = dataLabels.Max(x => x.Key);
             
             //double check that all data labels point to valid steps
             var missingDataLabels = dataLabels
@@ -650,7 +640,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                 {
                     Name = key,
                     Comment = "Legacy import",
-                    Unknown1 = unknown1,
+                    GlobalFrameSkip = frameSkip,
                     BackgroundType = backgroundType,
                     BoundingWidth = aWidth,
                     BoundingHeight = aHeight,

@@ -143,7 +143,7 @@ namespace CovertActionTools.Core.Exporting.Exporters
             //initial data
             writer.Write((ushort)animation.ExtraData.BoundingWidth);
             writer.Write((ushort)animation.ExtraData.BoundingHeight);
-            writer.Write((ushort)animation.ExtraData.Unknown1);
+            writer.Write((ushort)animation.ExtraData.GlobalFrameSkip);
             writer.Write((byte)animation.ExtraData.BackgroundType);
             
             //for ClearToImage, the background image is encoded before the indexing data
