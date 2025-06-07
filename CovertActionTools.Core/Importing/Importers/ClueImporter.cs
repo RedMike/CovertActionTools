@@ -20,6 +20,14 @@ namespace CovertActionTools.Core.Importing.Importers
         }
 
         protected override string Message => "Processing clues..";
+        
+        public override ImportStatus.ImportStage GetStage() => ImportStatus.ImportStage.ProcessingClues;
+
+        public override void SetResult(PackageModel model)
+        {
+            model.Clues = GetResult();
+        }
+
         protected override bool CheckIfValidForImportInternal(string path)
         {
             if (Directory.GetFiles(path, "CLUES.json").Length == 0)

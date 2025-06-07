@@ -1,9 +1,11 @@
 ﻿using System;
+using CovertActionTools.Core.Models;
 
 namespace CovertActionTools.Core.Importing
 {
     public interface IImporter
     {
+        ImportStatus.ImportStage GetStage();
         bool CheckIfValid(string path);
         void Start(string path);
         /// <summary>
@@ -13,14 +15,15 @@ namespace CovertActionTools.Core.Importing
         bool RunStep();
         (int current, int total) GetItemCount();
         string GetMessage();
+        void SetResult(PackageModel model);
     }
 
-    public interface IImporter<out TData> : IImporter
+    public interface ILegacyParser : IImporter
     {
-        TData GetResult();
+        
     }
 
-    public abstract class BaseImporter<TData>: IImporter<TData>
+    internal abstract class BaseImporter<TData>: IImporter
     {
         private bool _importing = false;
         private bool _done = false;
@@ -32,7 +35,9 @@ namespace CovertActionTools.Core.Importing
         /// Should be static
         /// </summary>
         protected abstract string Message { get; }
-        
+
+        public abstract ImportStatus.ImportStage GetStage();
+
         public bool CheckIfValid(string path)
         {
             if (_importing)
@@ -86,6 +91,8 @@ namespace CovertActionTools.Core.Importing
         {
             return Message;
         }
+
+        public abstract void SetResult(PackageModel model);
 
         public TData GetResult()
         {

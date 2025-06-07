@@ -2,12 +2,13 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using CovertActionTools.Core.Importing.Shared;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
 
 namespace CovertActionTools.Core.Importing.Parsers
 {
-    public class LegacyCatalogParser : BaseImporter<Dictionary<string, CatalogModel>>
+    internal class LegacyCatalogParser : BaseImporter<Dictionary<string, CatalogModel>>, ILegacyParser
     {
         private readonly ILogger<LegacyCatalogParser> _logger;
         private readonly SharedImageParser _imageParser;
@@ -24,6 +25,13 @@ namespace CovertActionTools.Core.Importing.Parsers
         }
 
         protected override string Message => "Processing catalogs..";
+        public override ImportStatus.ImportStage GetStage() => ImportStatus.ImportStage.ProcessingCatalogs;
+
+        public override void SetResult(PackageModel model)
+        {
+            model.Catalogs = GetResult();
+        }
+
         protected override bool CheckIfValidForImportInternal(string path)
         {
             if (Directory.GetFiles(path, "*.CAT").Length == 0)

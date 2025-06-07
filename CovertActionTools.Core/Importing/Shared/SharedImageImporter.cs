@@ -7,7 +7,7 @@ using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
 
-namespace CovertActionTools.Core.Importing.Importers
+namespace CovertActionTools.Core.Importing.Shared
 {
     public class SharedImageImporter
     {

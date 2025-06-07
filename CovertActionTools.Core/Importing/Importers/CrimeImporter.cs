@@ -23,6 +23,14 @@ namespace CovertActionTools.Core.Importing.Importers
         }
 
         protected override string Message => "Processing crimes..";
+        
+        public override ImportStatus.ImportStage GetStage() => ImportStatus.ImportStage.ProcessingCrimes;
+
+        public override void SetResult(PackageModel model)
+        {
+            model.Crimes = GetResult();
+        }
+
         protected override bool CheckIfValidForImportInternal(string path)
         {
             if (Directory.GetFiles(path, "*_crime.json").Length == 0)

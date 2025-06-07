@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace CovertActionTools.Core.Importing.Parsers
 {
-    public class LegacyTextParser : BaseImporter<Dictionary<string, TextModel>>
+    internal class LegacyTextParser : BaseImporter<Dictionary<string, TextModel>>, ILegacyParser
     {
         private readonly ILogger<LegacyTextParser> _logger;
         
@@ -20,6 +20,13 @@ namespace CovertActionTools.Core.Importing.Parsers
         }
 
         protected override string Message => "Processing texts..";
+        public override ImportStatus.ImportStage GetStage() => ImportStatus.ImportStage.ProcessingTexts;
+
+        public override void SetResult(PackageModel model)
+        {
+            model.Texts = GetResult();
+        }
+
         protected override bool CheckIfValidForImportInternal(string path)
         {
             if (Directory.GetFiles(path, "TEXT.DTA").Length == 0)

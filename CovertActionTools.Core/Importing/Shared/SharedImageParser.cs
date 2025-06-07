@@ -6,7 +6,7 @@ using CovertActionTools.Core.Conversion;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
 
-namespace CovertActionTools.Core.Importing.Parsers
+namespace CovertActionTools.Core.Importing.Shared
 {
     public class SharedImageParser
     {

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using CovertActionTools.Core.Conversion;
+using CovertActionTools.Core.Importing.Shared;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
@@ -26,6 +27,14 @@ namespace CovertActionTools.Core.Importing.Importers
         }
         
         protected override string Message => "Processing simple images..";
+        
+        public override ImportStatus.ImportStage GetStage() => ImportStatus.ImportStage.ProcessingSimpleImages;
+
+        public override void SetResult(PackageModel model)
+        {
+            model.SimpleImages = GetResult();
+        }
+
         protected override bool CheckIfValidForImportInternal(string path)
         {
             if (Directory.GetFiles(path, "*_image.json").Length == 0)

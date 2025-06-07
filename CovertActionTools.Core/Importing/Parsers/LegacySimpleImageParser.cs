@@ -2,12 +2,13 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using CovertActionTools.Core.Importing.Shared;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
 
 namespace CovertActionTools.Core.Importing.Parsers
 {
-    public class LegacySimpleImageParser : BaseImporter<Dictionary<string, SimpleImageModel>>
+    internal class LegacySimpleImageParser : BaseImporter<Dictionary<string, SimpleImageModel>>, ILegacyParser
     {
         private readonly ILogger<LegacySimpleImageParser> _logger;
         private readonly SharedImageParser _imageParser;
@@ -24,6 +25,13 @@ namespace CovertActionTools.Core.Importing.Parsers
         }
 
         protected override string Message => "Processing simple images..";
+        public override ImportStatus.ImportStage GetStage() => ImportStatus.ImportStage.ProcessingSimpleImages;
+
+        public override void SetResult(PackageModel model)
+        {
+            model.SimpleImages = GetResult();
+        }
+
         protected override bool CheckIfValidForImportInternal(string path)
         {
             if (Directory.GetFiles(path, "*.PIC").Length == 0)

@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace CovertActionTools.Core.Importing.Parsers
 {
-    public class LegacyPlotParser: BaseImporter<Dictionary<string, PlotModel>>
+    internal class LegacyPlotParser: BaseImporter<Dictionary<string, PlotModel>>, ILegacyParser
     {
         private readonly ILogger<LegacyPlotParser> _logger;
         
@@ -21,6 +21,13 @@ namespace CovertActionTools.Core.Importing.Parsers
         }
 
         protected override string Message => "Processing plots..";
+        public override ImportStatus.ImportStage GetStage() => ImportStatus.ImportStage.ProcessingPlots;
+
+        public override void SetResult(PackageModel model)
+        {
+            model.Plots = GetResult();
+        }
+
         protected override bool CheckIfValidForImportInternal(string path)
         {
             if (Directory.GetFiles(path, "PLOT.TXT").Length == 0)

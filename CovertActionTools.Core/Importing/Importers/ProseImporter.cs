@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace CovertActionTools.Core.Importing.Importers
 {
-    public class ProseImporter : BaseImporter<Dictionary<string, ProseModel>>
+    internal class ProseImporter : BaseImporter<Dictionary<string, ProseModel>>
     {
         private readonly ILogger<ProseImporter> _logger;
         
@@ -20,6 +20,13 @@ namespace CovertActionTools.Core.Importing.Importers
         }
 
         protected override string Message => "Processing prose..";
+        public override ImportStatus.ImportStage GetStage() => ImportStatus.ImportStage.ProcessingProse;
+
+        public override void SetResult(PackageModel model)
+        {
+            model.Prose = GetResult();
+        }
+
         protected override bool CheckIfValidForImportInternal(string path)
         {
             if (Directory.GetFiles(path, "PROSE.json").Length == 0)

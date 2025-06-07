@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace CovertActionTools.Core.Importing.Parsers
 {
-    public class LegacyWorldParser : BaseImporter<Dictionary<int, WorldModel>>
+    internal class LegacyWorldParser : BaseImporter<Dictionary<int, WorldModel>>, ILegacyParser
     {
         private readonly ILogger<LegacyWorldParser> _logger;
         
@@ -22,6 +22,13 @@ namespace CovertActionTools.Core.Importing.Parsers
         }
 
         protected override string Message => "Processing worlds..";
+        public override ImportStatus.ImportStage GetStage() => ImportStatus.ImportStage.ProcessingWorlds;
+
+        public override void SetResult(PackageModel model)
+        {
+            model.Worlds = GetResult();
+        }
+
         protected override bool CheckIfValidForImportInternal(string path)
         {
             if (Directory.GetFiles(path, "WORLD*.DTA").Length == 0)

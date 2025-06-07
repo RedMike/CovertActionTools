@@ -7,53 +7,24 @@ using Microsoft.Extensions.Logging;
 
 namespace CovertActionTools.Core.Importing
 {
-    internal class PackageImporter : IPackageImporter
+    internal class PackageImporter<TImporter> : IPackageImporter<TImporter>
+        where TImporter : IImporter
     {
-        private readonly ILogger<PackageImporter> _logger;
-        private readonly IReadOnlyList<IImporter> _importers;
-        private readonly IImporter<Dictionary<string, SimpleImageModel>> _simpleImageImporter;
-        private readonly IImporter<Dictionary<int, CrimeModel>> _crimeImporter;
-        private readonly IImporter<Dictionary<string, TextModel>> _textImporter;
-        private readonly IImporter<Dictionary<string, ClueModel>> _clueImporter;
-        private readonly IImporter<Dictionary<string, PlotModel>> _plotImporter;
-        private readonly IImporter<Dictionary<int, WorldModel>> _worldImporter;
-        private readonly IImporter<Dictionary<string, CatalogModel>> _catalogImporter;
-        private readonly IImporter<Dictionary<string, AnimationModel>> _animationImporter;
-        private readonly IImporter<FontsModel> _fontsImporter;
-        private readonly IImporter<Dictionary<string, ProseModel>> _proseImporter;
+        private readonly ILogger<PackageImporter<TImporter>> _logger;
+        private readonly IReadOnlyList<TImporter> _importers;
         
         private List<string> _errors = new List<string>();
 
         private Task<PackageModel?>? _importTask = null;
         private ImportStatus.ImportStage _currentStage = ImportStatus.ImportStage.Unknown;
-        private IImporter? _currentImporter = null;
+        private string _currentMessage = string.Empty;
+        private int _currentTotal = 0;
+        private int _currentCount = 0;
 
-        public PackageImporter(ILogger<PackageImporter> logger, IImporter<Dictionary<string, SimpleImageModel>> simpleImageImporter, IImporter<Dictionary<int, CrimeModel>> crimeImporter, IImporter<Dictionary<string, TextModel>> textImporter, IImporter<Dictionary<string, ClueModel>> clueImporter, IImporter<Dictionary<string, PlotModel>> plotImporter, IImporter<Dictionary<int, WorldModel>> worldImporter, IImporter<Dictionary<string, CatalogModel>> catalogImporter, IImporter<Dictionary<string, AnimationModel>> animationImporter, IImporter<FontsModel> fontsImporter, IImporter<Dictionary<string, ProseModel>> proseImporter)
+        public PackageImporter(ILogger<PackageImporter<TImporter>> logger, IList<TImporter> importers)
         {
             _logger = logger;
-            _simpleImageImporter = simpleImageImporter;
-            _crimeImporter = crimeImporter;
-            _textImporter = textImporter;
-            _clueImporter = clueImporter;
-            _plotImporter = plotImporter;
-            _worldImporter = worldImporter;
-            _catalogImporter = catalogImporter;
-            _animationImporter = animationImporter;
-            _fontsImporter = fontsImporter;
-            _proseImporter = proseImporter;
-            _importers = new IImporter[]
-            {
-                _simpleImageImporter,
-                _crimeImporter,
-                _textImporter,
-                _clueImporter,
-                _plotImporter,
-                _worldImporter,
-                _catalogImporter,
-                _animationImporter,
-                _fontsImporter,
-                _proseImporter
-            };
+            _importers = importers.ToList();
         }
 
         public bool CheckIfValidForImport(string path)
@@ -119,19 +90,13 @@ namespace CovertActionTools.Core.Importing
                 };
             }
 
-            if (_currentImporter == null)
-            {
-                throw new Exception("Missing importer");
-            }
-
-            var (current, total) = _currentImporter.GetItemCount(); 
             return new ImportStatus()
             {
                 Errors = errors,
                 Stage = _currentStage,
-                StageMessage = _currentImporter.GetMessage(),
-                StageItems = total,
-                StageItemsDone = current,
+                StageMessage = _currentMessage,
+                StageItems = _currentTotal,
+                StageItemsDone = _currentCount,
             };
         }
 
@@ -166,218 +131,54 @@ namespace CovertActionTools.Core.Importing
                 //_logger.LogInformation($"Index: {_simpleImagesToRead.Count} images, {_crimesToRead.Count} crimes, ...");
                 await Task.Yield();
 
-                //images
-                _currentStage = ImportStatus.ImportStage.ProcessingSimpleImages;
-                _currentImporter = _simpleImageImporter;
-                var done = false;
-                do
+                foreach (var importer in _importers)
                 {
-                    await Task.Yield();
-                    try
+                    _currentStage = importer.GetStage();
+                    var done = false;
+                    var error = false;
+                    do
                     {
-                        done |= _currentImporter.RunStep();
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogError($"Exception while running step: {e}");
-                        _errors.Add(e.ToString());
-                    }
-                } while (!done);
-                model.SimpleImages = _simpleImageImporter.GetResult();
-                
-                //crimes
-                _currentStage = ImportStatus.ImportStage.ProcessingCrimes;
-                _currentImporter = _crimeImporter;
-                done = false;
-                do
-                {
-                    await Task.Yield();
-                    try
-                    {
-                        done |= _currentImporter.RunStep();
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogError($"Exception while running step: {e}");
-                        _errors.Add(e.ToString());
-                    }
-                } while (!done);
-                model.Crimes = _crimeImporter.GetResult();
+                        _currentMessage = importer.GetMessage();
+                        (_currentCount, _currentTotal) = importer.GetItemCount();
+                        await Task.Yield();
+                        try
+                        {
+                            done |= importer.RunStep();
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.LogError($"Exception while running step: {e}");
+                            _errors.Add(e.ToString());
+                            done = true;
+                            error = true;
+                        }
+                    } while (!done);
 
-                //texts
-                _currentStage = ImportStatus.ImportStage.ProcessingTexts;
-                _currentImporter = _textImporter;
-                done = false;
-                do
-                {
-                    await Task.Yield();
-                    try
+                    if (!error)
                     {
-                        done |= _currentImporter.RunStep();
+                        importer.SetResult(model);
                     }
-                    catch (Exception e)
-                    {
-                        _logger.LogError($"Exception while running step: {e}");
-                        _errors.Add(e.ToString());
-                    }
-                } while (!done);
-                model.Texts = _textImporter.GetResult();
-                
-                //clues
-                _currentStage = ImportStatus.ImportStage.ProcessingClues;
-                _currentImporter = _clueImporter;
-                done = false;
-                do
-                {
-                    await Task.Yield();
-                    try
-                    {
-                        done |= _currentImporter.RunStep();
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogError($"Exception while running step: {e}");
-                        _errors.Add(e.ToString());
-                    }
-                } while (!done);
-                model.Clues = _clueImporter.GetResult();
-                
-                //plots
-                _currentStage = ImportStatus.ImportStage.ProcessingPlots;
-                _currentImporter = _plotImporter;
-                done = false;
-                do
-                {
-                    await Task.Yield();
-                    try
-                    {
-                        done |= _currentImporter.RunStep();
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogError($"Exception while running step: {e}");
-                        _errors.Add(e.ToString());
-                    }
-                } while (!done);
-                model.Plots = _plotImporter.GetResult();
-                
-                //worlds
-                _currentStage = ImportStatus.ImportStage.ProcessingWorlds;
-                _currentImporter = _worldImporter;
-                done = false;
-                do
-                {
-                    await Task.Yield();
-                    try
-                    {
-                        done |= _currentImporter.RunStep();
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogError($"Exception while running step: {e}");
-                        _errors.Add(e.ToString());
-                    }
-                } while (!done);
-                model.Worlds = _worldImporter.GetResult();
-                
-                //catalogs
-                _currentStage = ImportStatus.ImportStage.ProcessingCatalogs;
-                _currentImporter = _catalogImporter;
-                done = false;
-                do
-                {
-                    await Task.Yield();
-                    try
-                    {
-                        done |= _currentImporter.RunStep();
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogError($"Exception while running step: {e}");
-                        _errors.Add(e.ToString());
-                    }
-                } while (!done);
-                model.Catalogs = _catalogImporter.GetResult();
-                
-                
-                //animations
-                _currentStage = ImportStatus.ImportStage.ProcessingAnimations;
-                _currentImporter = _animationImporter;
-                done = false;
-                do
-                {
-                    await Task.Yield();
-                    try
-                    {
-                        done |= _currentImporter.RunStep();
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogError($"Exception while running step: {e}");
-                        _errors.Add(e.ToString());
-                    }
-                } while (!done);
-                model.Animations = _animationImporter.GetResult();
-                
-                //fonts
-                _currentStage = ImportStatus.ImportStage.ProcessingFonts;
-                _currentImporter = _fontsImporter;
-                done = false;
-                do
-                {
-                    await Task.Yield();
-                    try
-                    {
-                        done |= _currentImporter.RunStep();
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogError($"Exception while running step: {e}");
-                        _errors.Add(e.ToString());
-                    }
-                } while (!done);
-                model.Fonts = _fontsImporter.GetResult();
-                
-                //prose
-                _currentStage = ImportStatus.ImportStage.ProcessingProse;
-                _currentImporter = _proseImporter;
-                done = false;
-                do
-                {
-                    await Task.Yield();
-                    try
-                    {
-                        done |= _currentImporter.RunStep();
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogError($"Exception while running step: {e}");
-                        _errors.Add(e.ToString());
-                    }
-                } while (!done);
-                model.Prose = _proseImporter.GetResult();
+                }
 
                 await Task.Yield();
                 
-                _logger.LogInformation($"Import done: {model.SimpleImages.Count} images, " +
-                                       $"{model.Crimes.Count} crimes, " +
-                                       $"{model.Texts.Count} texts, " +
-                                       $"{model.Clues.Count} clues, " +
-                                       $"{model.Plots.Count} plots, " +
-                                       $"{model.Worlds.Count} worlds, " +
-                                       $"{model.Catalogs.Count} catalogs, " +
-                                       $"{model.Animations.Count} animations, " +
-                                       $"{model.Prose.Count} prose, " +
-                                       $"...");
+                _logger.LogInformation($"Import done"); //TODO: extra info
             }
             catch (Exception e)
             {
                 _logger.LogError($"Exception while processing import: {e}");
+                _currentStage = ImportStatus.ImportStage.Unknown;
+                _currentMessage = "Error!";
+                _currentTotal = 0;
+                _currentCount = 0;
                 throw; //we don't want to finish normally
             }
             finally
             {
                 _currentStage = ImportStatus.ImportStage.ImportDone;
+                _currentMessage = "Done!";
+                _currentTotal = 0;
+                _currentCount = 0;
             }
             
             return model;

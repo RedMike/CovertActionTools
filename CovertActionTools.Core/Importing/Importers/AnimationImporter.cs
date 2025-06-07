@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CovertActionTools.Core.Conversion;
+using CovertActionTools.Core.Importing.Shared;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
@@ -40,6 +41,14 @@ namespace CovertActionTools.Core.Importing.Importers
         }
 
         protected override string Message => "Processing animations..";
+        
+        public override ImportStatus.ImportStage GetStage() => ImportStatus.ImportStage.ProcessingAnimations;
+
+        public override void SetResult(PackageModel model)
+        {
+            model.Animations = GetResult();
+        }
+
         protected override bool CheckIfValidForImportInternal(string path)
         {
             if (Directory.GetFiles(path, "*_animation.json").Length == 0)

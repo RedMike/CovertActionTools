@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace CovertActionTools.Core.Importing.Parsers
 {
-    public class LegacyCrimeParser : BaseImporter<Dictionary<int, CrimeModel>>
+    internal class LegacyCrimeParser : BaseImporter<Dictionary<int, CrimeModel>>, ILegacyParser
     {
         private readonly ILogger<LegacyCrimeParser> _logger;
         
@@ -23,6 +23,13 @@ namespace CovertActionTools.Core.Importing.Parsers
         }
 
         protected override string Message => "Processing crimes..";
+        public override ImportStatus.ImportStage GetStage() => ImportStatus.ImportStage.ProcessingCrimes;
+
+        public override void SetResult(PackageModel model)
+        {
+            model.Crimes = GetResult();
+        }
+
         protected override bool CheckIfValidForImportInternal(string path)
         {
             if (Directory.GetFiles(path, "CRIME*.DTA").Length == 0)

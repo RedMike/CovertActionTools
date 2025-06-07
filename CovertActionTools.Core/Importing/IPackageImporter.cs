@@ -9,4 +9,10 @@ namespace CovertActionTools.Core.Importing
         ImportStatus? CheckStatus();
         PackageModel GetImportedModel();
     }
+    
+    public interface IPackageImporter<TImporter> : IPackageImporter
+        where TImporter : IImporter
+    {
+        
+    }
 }

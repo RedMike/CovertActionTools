@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace CovertActionTools.Core.Importing.Parsers
 {
-    public class LegacyClueParser : BaseImporter<Dictionary<string, ClueModel>>
+    internal class LegacyClueParser : BaseImporter<Dictionary<string, ClueModel>>, ILegacyParser
     {
         private readonly ILogger<LegacyClueParser> _logger;
         
@@ -20,6 +20,13 @@ namespace CovertActionTools.Core.Importing.Parsers
         }
 
         protected override string Message => "Processing clues..";
+        public override ImportStatus.ImportStage GetStage() => ImportStatus.ImportStage.ProcessingClues;
+
+        public override void SetResult(PackageModel model)
+        {
+            model.Clues = GetResult();
+        }
+
         protected override bool CheckIfValidForImportInternal(string path)
         {
             if (Directory.GetFiles(path, "CLUES.TXT").Length == 0)

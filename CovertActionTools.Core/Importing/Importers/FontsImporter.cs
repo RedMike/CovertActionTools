@@ -20,6 +20,13 @@ namespace CovertActionTools.Core.Importing.Importers
         }
 
         protected override string Message => "Processing fonts..";
+        public override ImportStatus.ImportStage GetStage() => ImportStatus.ImportStage.ProcessingFonts;
+
+        public override void SetResult(PackageModel model)
+        {
+            model.Fonts = GetResult();
+        }
+
         protected override bool CheckIfValidForImportInternal(string path)
         {
             if (Directory.GetFiles(path, "FONTS.json").Length == 0)

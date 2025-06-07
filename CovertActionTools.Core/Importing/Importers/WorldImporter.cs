@@ -24,6 +24,14 @@ namespace CovertActionTools.Core.Importing.Importers
 
 
         protected override string Message => "Processing worlds..";
+        
+        public override ImportStatus.ImportStage GetStage() => ImportStatus.ImportStage.ProcessingWorlds;
+
+        public override void SetResult(PackageModel model)
+        {
+            model.Worlds = GetResult();
+        }
+
         protected override bool CheckIfValidForImportInternal(string path)
         {
             if (Directory.GetFiles(path, "*_world.json").Length == 0)

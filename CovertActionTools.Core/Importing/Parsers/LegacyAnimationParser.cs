@@ -2,12 +2,13 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using CovertActionTools.Core.Importing.Shared;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
 
 namespace CovertActionTools.Core.Importing.Parsers
 {
-    public class LegacyAnimationParser : BaseImporter<Dictionary<string, AnimationModel>>
+    internal class LegacyAnimationParser : BaseImporter<Dictionary<string, AnimationModel>>, ILegacyParser
     {
         private readonly ILogger<LegacyAnimationParser> _logger;
         private readonly SharedImageParser _imageParser;
@@ -24,6 +25,13 @@ namespace CovertActionTools.Core.Importing.Parsers
         }
 
         protected override string Message => "Processing animations..";
+        public override ImportStatus.ImportStage GetStage() => ImportStatus.ImportStage.ProcessingAnimations;
+
+        public override void SetResult(PackageModel model)
+        {
+            model.Animations = GetResult();
+        }
+
         protected override bool CheckIfValidForImportInternal(string path)
         {
             if (Directory.GetFiles(path, "*.PAN").Length == 0)

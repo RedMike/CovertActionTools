@@ -12,9 +12,9 @@ public class LoadPackageWindow : BaseWindow
     private readonly AppLoggingState _appLogging;
     private readonly LoadPackageState _loadPackageState;
     private readonly MainEditorState _mainEditorState;
-    private readonly IPackageImporter _importer;
+    private readonly IPackageImporter<IImporter> _importer;
 
-    public LoadPackageWindow(ILogger<LoadPackageWindow> logger, AppLoggingState appLogging, LoadPackageState loadPackageState, MainEditorState mainEditorState, IPackageImporter importer)
+    public LoadPackageWindow(ILogger<LoadPackageWindow> logger, AppLoggingState appLogging, LoadPackageState loadPackageState, MainEditorState mainEditorState, IPackageImporter<IImporter> importer)
     {
         _logger = logger;
         _appLogging = appLogging;

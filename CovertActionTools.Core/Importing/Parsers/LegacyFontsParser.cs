@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace CovertActionTools.Core.Importing.Parsers
 {
-    public class LegacyFontsParser : BaseImporter<FontsModel>
+    internal class LegacyFontsParser : BaseImporter<FontsModel>, ILegacyParser
     {
         private readonly ILogger<LegacyFontsParser> _logger;
         
@@ -21,6 +21,13 @@ namespace CovertActionTools.Core.Importing.Parsers
         }
 
         protected override string Message => "Processing fonts..";
+        public override ImportStatus.ImportStage GetStage() => ImportStatus.ImportStage.ProcessingFonts;
+
+        public override void SetResult(PackageModel model)
+        {
+            model.Fonts = GetResult();
+        }
+
         protected override bool CheckIfValidForImportInternal(string path)
         {
             if (Directory.GetFiles(path, "FONTS.CV").Length == 0)

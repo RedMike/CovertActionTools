@@ -20,6 +20,13 @@ namespace CovertActionTools.Core.Importing.Importers
         }
 
         protected override string Message => "Processing plots..";
+        public override ImportStatus.ImportStage GetStage() => ImportStatus.ImportStage.ProcessingPlots;
+
+        public override void SetResult(PackageModel model)
+        {
+            model.Plots = GetResult();
+        }
+
         protected override bool CheckIfValidForImportInternal(string path)
         {
             if (Directory.GetFiles(path, "PLOT.json").Length == 0)

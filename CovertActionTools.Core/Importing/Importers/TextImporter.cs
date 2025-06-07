@@ -20,6 +20,14 @@ namespace CovertActionTools.Core.Importing.Importers
         }
 
         protected override string Message => "Processing texts..";
+        
+        public override ImportStatus.ImportStage GetStage() => ImportStatus.ImportStage.ProcessingTexts;
+
+        public override void SetResult(PackageModel model)
+        {
+            model.Texts = GetResult();
+        }
+
         protected override bool CheckIfValidForImportInternal(string path)
         {
             if (Directory.GetFiles(path, "TEXT.json").Length == 0)

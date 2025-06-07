@@ -12,10 +12,10 @@ public class ParsePublishedWindow : BaseWindow
     private readonly ILogger<ParsePublishedWindow> _logger;
     private readonly AppLoggingState _appLogging;
     private readonly ParsePublishedState _parsePublishedState;
-    private readonly LegacyFolderImporter _importer;
+    private readonly IPackageImporter<ILegacyParser> _importer;
     private readonly IPackageExporter _exporter;
 
-    public ParsePublishedWindow(ILogger<ParsePublishedWindow> logger, AppLoggingState appLogging, ParsePublishedState parsePublishedState, LegacyFolderImporter importer, IPackageExporter exporter)
+    public ParsePublishedWindow(ILogger<ParsePublishedWindow> logger, AppLoggingState appLogging, ParsePublishedState parsePublishedState, IPackageImporter<ILegacyParser> importer, IPackageExporter exporter)
     {
         _logger = logger;
         _appLogging = appLogging;
