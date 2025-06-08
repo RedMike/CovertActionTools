@@ -14,19 +14,21 @@ public class ParsePublishedWindow : BaseWindow
     private readonly ParsePublishedState _parsePublishedState;
     private readonly IPackageImporter<ILegacyParser> _importer;
     private readonly IPackageExporter _exporter;
+    private readonly FileBrowserState _fileBrowserState;
 
-    public ParsePublishedWindow(ILogger<ParsePublishedWindow> logger, AppLoggingState appLogging, ParsePublishedState parsePublishedState, IPackageImporter<ILegacyParser> importer, IPackageExporter<IExporter> exporter)
+    public ParsePublishedWindow(ILogger<ParsePublishedWindow> logger, AppLoggingState appLogging, ParsePublishedState parsePublishedState, IPackageImporter<ILegacyParser> importer, IPackageExporter<IExporter> exporter, FileBrowserState fileBrowserState)
     {
         _logger = logger;
         _appLogging = appLogging;
         _parsePublishedState = parsePublishedState;
         _importer = importer;
         _exporter = exporter;
+        _fileBrowserState = fileBrowserState;
     }
 
     public override void Draw()
     {
-        if (!_parsePublishedState.Show)
+        if (!_parsePublishedState.Show || _fileBrowserState.Shown)
         {
             return;
         }
@@ -136,7 +138,7 @@ public class ParsePublishedWindow : BaseWindow
     
     private void DrawNotRunning()
     {
-        //TODO: better file explorer?
+        ImGui.PushID("Source");
         var origSourcePath = _parsePublishedState.SourcePath ?? "";
         var sourcePath = origSourcePath;
         ImGui.InputText("Source Path", ref sourcePath, 256);
@@ -145,7 +147,21 @@ public class ParsePublishedWindow : BaseWindow
             _parsePublishedState.SourcePath = sourcePath;
         }
         
-        //TODO: better file explorer?
+        ImGui.SameLine();
+
+        if (ImGui.Button("Browse"))
+        {
+            _fileBrowserState.CurrentPath = sourcePath + Path.DirectorySeparatorChar;
+            _fileBrowserState.CurrentDir = Directory.GetParent(sourcePath)!.FullName;
+            _fileBrowserState.FoldersOnly = true;
+            _fileBrowserState.NewFolderButton = false;
+            _fileBrowserState.Shown = true;
+            _fileBrowserState.Callback = (newPath) => _parsePublishedState.SourcePath = newPath;
+        }
+
+        ImGui.PopID();
+
+        ImGui.PushID("Destination");
         var origDestinationPath = _parsePublishedState.DestinationPath ?? "";
         var destinationPath = origDestinationPath;
         ImGui.InputText("Destination Path", ref destinationPath, 256);
@@ -153,6 +169,19 @@ public class ParsePublishedWindow : BaseWindow
         {
             _parsePublishedState.DestinationPath = destinationPath;
         }
+        
+        ImGui.SameLine();
+
+        if (ImGui.Button("Browse"))
+        {
+            _fileBrowserState.CurrentPath = destinationPath + Path.DirectorySeparatorChar;
+            _fileBrowserState.CurrentDir = Directory.GetParent(destinationPath)!.FullName;
+            _fileBrowserState.FoldersOnly = true;
+            _fileBrowserState.NewFolderButton = true;
+            _fileBrowserState.Shown = true;
+            _fileBrowserState.Callback = (newPath) => _parsePublishedState.DestinationPath = newPath;
+        }
+        ImGui.PopID();
         
         ImGui.Separator();
 

@@ -13,19 +13,21 @@ public class LoadPackageWindow : BaseWindow
     private readonly LoadPackageState _loadPackageState;
     private readonly MainEditorState _mainEditorState;
     private readonly IPackageImporter<IImporter> _importer;
+    private readonly FileBrowserState _fileBrowserState;
 
-    public LoadPackageWindow(ILogger<LoadPackageWindow> logger, AppLoggingState appLogging, LoadPackageState loadPackageState, MainEditorState mainEditorState, IPackageImporter<IImporter> importer)
+    public LoadPackageWindow(ILogger<LoadPackageWindow> logger, AppLoggingState appLogging, LoadPackageState loadPackageState, MainEditorState mainEditorState, IPackageImporter<IImporter> importer, FileBrowserState fileBrowserState)
     {
         _logger = logger;
         _appLogging = appLogging;
         _loadPackageState = loadPackageState;
         _mainEditorState = mainEditorState;
         _importer = importer;
+        _fileBrowserState = fileBrowserState;
     }
 
     public override void Draw()
     {
-        if (!_loadPackageState.Show)
+        if (!_loadPackageState.Show || _fileBrowserState.Shown)
         {
             return;
         }
@@ -125,13 +127,24 @@ public class LoadPackageWindow : BaseWindow
     
     private void DrawNotRunning()
     {
-        //TODO: better file explorer?
         var origSourcePath = _loadPackageState.SourcePath ?? "";
         var sourcePath = origSourcePath;
         ImGui.InputText("Source Path", ref sourcePath, 256);
         if (sourcePath != origSourcePath)
         {
             _loadPackageState.SourcePath = sourcePath;
+        }
+        
+        ImGui.SameLine();
+
+        if (ImGui.Button("Browse"))
+        {
+            _fileBrowserState.CurrentPath = sourcePath + Path.DirectorySeparatorChar;
+            _fileBrowserState.CurrentDir = Directory.GetParent(sourcePath)!.FullName;
+            _fileBrowserState.FoldersOnly = true;
+            _fileBrowserState.NewFolderButton = false;
+            _fileBrowserState.Shown = true;
+            _fileBrowserState.Callback = (newPath) => _loadPackageState.SourcePath = newPath;
         }
         
         ImGui.Separator();
