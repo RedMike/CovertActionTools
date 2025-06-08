@@ -37,7 +37,13 @@ namespace CovertActionTools.Core.Exporting.Exporters
         }
 
         protected override string Message => "Processing clues..";
-        
+        public override ExportStatus.ExportStage GetStage() => ExportStatus.ExportStage.ProcessingClues;
+
+        protected override Dictionary<string, ClueModel> GetFromModel(PackageModel model)
+        {
+            return model.Clues;
+        }
+
         protected override void Reset()
         {
             _done = false;

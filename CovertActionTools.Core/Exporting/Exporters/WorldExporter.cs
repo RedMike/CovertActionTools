@@ -37,6 +37,13 @@ namespace CovertActionTools.Core.Exporting.Exporters
 
         protected override string Message => "Processing worlds..";
         
+        public override ExportStatus.ExportStage GetStage() => ExportStatus.ExportStage.ProcessingWorlds;
+
+        protected override Dictionary<int, WorldModel> GetFromModel(PackageModel model)
+        {
+            return model.Worlds;
+        }
+
         protected override void Reset()
         {
             _keys.Clear();

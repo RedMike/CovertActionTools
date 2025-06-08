@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using CovertActionTools.Core.Exporting.Shared;
 using CovertActionTools.Core.Importing;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -46,6 +47,13 @@ namespace CovertActionTools.Core.Exporting.Exporters
 
         protected override string Message => "Processing animations..";
         
+        public override ExportStatus.ExportStage GetStage() => ExportStatus.ExportStage.ProcessingAnimations;
+
+        protected override Dictionary<string, AnimationModel> GetFromModel(PackageModel model)
+        {
+            return model.Animations;
+        }
+
         protected override void Reset()
         {
             _keys.Clear();

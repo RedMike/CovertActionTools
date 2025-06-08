@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using CovertActionTools.Core.Exporting.Shared;
 using CovertActionTools.Core.Importing;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -41,6 +42,13 @@ namespace CovertActionTools.Core.Exporting.Exporters
 
         protected override string Message => "Processing catalogs..";
         
+        public override ExportStatus.ExportStage GetStage() => ExportStatus.ExportStage.ProcessingCatalogs;
+
+        protected override Dictionary<string, CatalogModel> GetFromModel(PackageModel model)
+        {
+            return model.Catalogs;
+        }
+
         protected override void Reset()
         {
             _keys.Clear();

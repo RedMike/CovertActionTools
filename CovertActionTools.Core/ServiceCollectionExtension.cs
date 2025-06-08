@@ -3,6 +3,7 @@ using System.Linq;
 using CovertActionTools.Core.Compression;
 using CovertActionTools.Core.Exporting;
 using CovertActionTools.Core.Exporting.Exporters;
+using CovertActionTools.Core.Exporting.Shared;
 using CovertActionTools.Core.Importing;
 using CovertActionTools.Core.Importing.Importers;
 using CovertActionTools.Core.Importing.Parsers;
@@ -46,20 +47,21 @@ namespace CovertActionTools.Core
             services.AddSingleton<IList<IImporter>>(sp => sp.GetServices<IImporter>().ToList());
             
             services.AddSingleton<SharedImageExporter>();
-            services.AddSingleton<IExporter<Dictionary<string, SimpleImageModel>>, SimpleImageExporter>();
-            services.AddSingleton<IExporter<Dictionary<int, CrimeModel>>, CrimeExporter>();
-            services.AddSingleton<IExporter<Dictionary<string, TextModel>>, TextExporter>();
-            services.AddSingleton<IExporter<Dictionary<string, ClueModel>>, ClueExporter>();
-            services.AddSingleton<IExporter<Dictionary<string, PlotModel>>, PlotExporter>();
-            services.AddSingleton<IExporter<Dictionary<int, WorldModel>>, WorldExporter>();
-            services.AddSingleton<IExporter<Dictionary<string, CatalogModel>>, CatalogExporter>();
-            services.AddSingleton<IExporter<Dictionary<string, AnimationModel>>, AnimationExporter>();
-            services.AddSingleton<IExporter<FontsModel>, FontsExporter>();
-            services.AddSingleton<IExporter<Dictionary<string, ProseModel>>, ProseExporter>();
+            services.AddSingleton<IExporter, SimpleImageExporter>();
+            services.AddSingleton<IExporter, CrimeExporter>();
+            services.AddSingleton<IExporter, TextExporter>();
+            services.AddSingleton<IExporter, ClueExporter>();
+            services.AddSingleton<IExporter, PlotExporter>();
+            services.AddSingleton<IExporter, WorldExporter>();
+            services.AddSingleton<IExporter, CatalogExporter>();
+            services.AddSingleton<IExporter, AnimationExporter>();
+            services.AddSingleton<IExporter, FontsExporter>();
+            services.AddSingleton<IExporter, ProseExporter>();
+            services.AddSingleton<IList<IExporter>>(sp => sp.GetServices<IExporter>().ToList());
             
             services.AddTransient<IPackageImporter<ILegacyParser>, PackageImporter<ILegacyParser>>();
             services.AddTransient<IPackageImporter<IImporter>, PackageImporter<IImporter>>();
-            services.AddTransient<IPackageExporter, PackageExporter>();
+            services.AddTransient<IPackageExporter<IExporter>, PackageExporter<IExporter>>();
 
             services.AddSingleton<ICrimeTimelineProcessor, CrimeTimelineProcessor>();
             services.AddSingleton<IAnimationProcessor, AnimationProcessor>();

@@ -7,7 +7,7 @@ using CovertActionTools.Core.Conversion;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
 
-namespace CovertActionTools.Core.Exporting.Exporters
+namespace CovertActionTools.Core.Exporting.Shared
 {
     internal class SharedImageExporter
     {

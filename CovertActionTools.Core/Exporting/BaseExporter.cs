@@ -1,9 +1,12 @@
 ﻿using System;
+using CovertActionTools.Core.Exporting;
+using CovertActionTools.Core.Models;
 
 namespace CovertActionTools.Core.Importing
 {
     public interface IExporter
     {
+        ExportStatus.ExportStage GetStage();
         /// <summary>
         /// Returns true when process is finished
         /// </summary>
@@ -11,14 +14,15 @@ namespace CovertActionTools.Core.Importing
         bool RunStep();
         (int current, int total) GetItemCount();
         string GetMessage();
+        void Start(string path, PackageModel model);
     }
 
-    public interface IExporter<in TData> : IExporter
+    public interface ILegacyPublisher : IExporter
     {
-        void Start(string path, string? publishPath, TData data);
+        
     }
 
-    public abstract class BaseExporter<TData>: IExporter<TData>
+    public abstract class BaseExporter<TData>: IExporter
     {
         private bool _exporting = false;
         private bool _done = false;
@@ -32,6 +36,10 @@ namespace CovertActionTools.Core.Importing
         /// Should be static
         /// </summary>
         protected abstract string Message { get; }
+
+        public abstract ExportStatus.ExportStage GetStage();
+
+        protected abstract TData GetFromModel(PackageModel model);
 
         public void Start(string path, string? publishPath, TData data)
         {
@@ -86,6 +94,20 @@ namespace CovertActionTools.Core.Importing
         public string GetMessage()
         {
             return Message;
+        }
+
+        public void Start(string path, PackageModel model)
+        {
+            if (_exporting)
+            {
+                throw new Exception("Already exporting");
+            }
+            Path = path;
+            Data = GetFromModel(model);
+            _exporting = true;
+            OnExportStart();
+            _totalItems = GetTotalItemCountInPath();
+            _currentItem = 0;
         }
 
         protected abstract void Reset();

@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
+using CovertActionTools.Core.Exporting.Shared;
 using CovertActionTools.Core.Importing;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -41,6 +41,13 @@ namespace CovertActionTools.Core.Exporting.Exporters
 
         protected override string Message => "Processing simple images..";
         
+        public override ExportStatus.ExportStage GetStage() => ExportStatus.ExportStage.ProcessingSimpleImages;
+
+        protected override Dictionary<string, SimpleImageModel> GetFromModel(PackageModel model)
+        {
+            return model.SimpleImages;
+        }
+
         protected override void Reset()
         {
             _keys.Clear();

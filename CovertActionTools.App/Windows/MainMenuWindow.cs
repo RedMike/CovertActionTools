@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using CovertActionTools.App.ViewModels;
 using CovertActionTools.Core.Exporting;
+using CovertActionTools.Core.Importing;
 using ImGuiNET;
 using Microsoft.Extensions.Logging;
 
@@ -15,7 +16,7 @@ public class MainMenuWindow : BaseWindow
     private readonly SavePackageState _savePackageState;
     private readonly IPackageExporter _exporter;
     
-    public MainMenuWindow(ILogger<MainMenuWindow> logger, MainEditorState mainEditorState, ParsePublishedState parsePublishedState, LoadPackageState loadPackageState, SavePackageState savePackageState, IPackageExporter exporter)
+    public MainMenuWindow(ILogger<MainMenuWindow> logger, MainEditorState mainEditorState, ParsePublishedState parsePublishedState, LoadPackageState loadPackageState, SavePackageState savePackageState, IPackageExporter<IExporter> exporter)
     {
         _logger = logger;
         _mainEditorState = mainEditorState;
@@ -86,7 +87,7 @@ public class MainMenuWindow : BaseWindow
         _savePackageState.Show = true;
         _savePackageState.Run = true;
         _savePackageState.Exporter = _exporter;
-        _savePackageState.Exporter.StartExport(_mainEditorState.LoadedPackage!, _mainEditorState.LoadedPackagePath!, _mainEditorState.DefaultPublishPath);
+        _savePackageState.Exporter.StartExport(_mainEditorState.LoadedPackage!, _mainEditorState.LoadedPackagePath!);
     }
 
     private void RunPublished()

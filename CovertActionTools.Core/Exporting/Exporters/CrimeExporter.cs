@@ -36,7 +36,13 @@ namespace CovertActionTools.Core.Exporting.Exporters
         }
 
         protected override string Message => "Processing crimes..";
-        
+        public override ExportStatus.ExportStage GetStage() => ExportStatus.ExportStage.ProcessingCrimes;
+
+        protected override Dictionary<int, CrimeModel> GetFromModel(PackageModel model)
+        {
+            return model.Crimes;
+        }
+
         protected override void Reset()
         {
             _keys.Clear();

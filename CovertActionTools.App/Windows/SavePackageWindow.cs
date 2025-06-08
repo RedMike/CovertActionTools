@@ -1,6 +1,7 @@
 ﻿using System.Numerics;
 using CovertActionTools.App.ViewModels;
 using CovertActionTools.Core.Exporting;
+using CovertActionTools.Core.Importing;
 using ImGuiNET;
 using Microsoft.Extensions.Logging;
 
@@ -14,7 +15,7 @@ public class SavePackageWindow : BaseWindow
     private readonly MainEditorState _mainEditorState;
     private readonly IPackageExporter _exporter;
 
-    public SavePackageWindow(ILogger<SavePackageWindow> logger, AppLoggingState appLogging, SavePackageState savePackageState, MainEditorState mainEditorState, IPackageExporter exporter)
+    public SavePackageWindow(ILogger<SavePackageWindow> logger, AppLoggingState appLogging, SavePackageState savePackageState, MainEditorState mainEditorState, IPackageExporter<IExporter> exporter)
     {
         _logger = logger;
         _appLogging = appLogging;
@@ -241,7 +242,7 @@ public class SavePackageWindow : BaseWindow
             var now = DateTime.Now;
             _savePackageState.Exporter = _exporter;
             _logger.LogInformation($"Starting exporting at: {now:s}");
-            _savePackageState.Exporter.StartExport(_mainEditorState.LoadedPackage!, destPath, publishPath);
+            _savePackageState.Exporter.StartExport(_mainEditorState.LoadedPackage!, destPath);
             _savePackageState.Run = true;
         }
     }

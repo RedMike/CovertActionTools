@@ -37,6 +37,13 @@ namespace CovertActionTools.Core.Exporting.Exporters
 
         protected override string Message => "Processing texts..";
         
+        public override ExportStatus.ExportStage GetStage() => ExportStatus.ExportStage.ProcessingTexts;
+
+        protected override Dictionary<string, TextModel> GetFromModel(PackageModel model)
+        {
+            return model.Texts;
+        }
+
         protected override void Reset()
         {
             _done = false;

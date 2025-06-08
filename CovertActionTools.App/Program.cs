@@ -89,7 +89,7 @@ if (startWithParsePublishDefault)
     parsePublishState.DestinationPath = Path.Combine(Constants.DefaultParseDestinationPath, newName);
     parsePublishState.Importer = sp.GetRequiredService<IPackageImporter<ILegacyParser>>();
     parsePublishState.Importer.StartImport(parsePublishState.SourcePath);
-    parsePublishState.Exporter = sp.GetRequiredService<IPackageExporter>();
+    parsePublishState.Exporter = sp.GetRequiredService<IPackageExporter<IExporter>>();
     parsePublishState.Run = true;
 }
 if (startWithLoadSampleDefault)

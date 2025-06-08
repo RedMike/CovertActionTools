@@ -15,7 +15,7 @@ public class ParsePublishedWindow : BaseWindow
     private readonly IPackageImporter<ILegacyParser> _importer;
     private readonly IPackageExporter _exporter;
 
-    public ParsePublishedWindow(ILogger<ParsePublishedWindow> logger, AppLoggingState appLogging, ParsePublishedState parsePublishedState, IPackageImporter<ILegacyParser> importer, IPackageExporter exporter)
+    public ParsePublishedWindow(ILogger<ParsePublishedWindow> logger, AppLoggingState appLogging, ParsePublishedState parsePublishedState, IPackageImporter<ILegacyParser> importer, IPackageExporter<IExporter> exporter)
     {
         _logger = logger;
         _appLogging = appLogging;
@@ -270,7 +270,7 @@ public class ParsePublishedWindow : BaseWindow
                 var now = DateTime.Now;
                 _logger.LogInformation($"Starting exporting at: {now:s}");
                 _parsePublishedState.Export = true;
-                _parsePublishedState.Exporter.StartExport(_parsePublishedState.Importer.GetImportedModel(), destinationPath ?? string.Empty, null);
+                _parsePublishedState.Exporter.StartExport(_parsePublishedState.Importer.GetImportedModel(), destinationPath ?? string.Empty);
             }
         }
 

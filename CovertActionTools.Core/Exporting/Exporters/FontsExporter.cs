@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
-using CovertActionTools.Core.Conversion;
 using CovertActionTools.Core.Importing;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -39,6 +38,14 @@ namespace CovertActionTools.Core.Exporting.Exporters
         }
 
         protected override string Message => "Processing fonts..";
+        
+        public override ExportStatus.ExportStage GetStage() => ExportStatus.ExportStage.ProcessingFonts;
+
+        protected override FontsModel GetFromModel(PackageModel model)
+        {
+            return model.Fonts;
+        }
+
         protected override void Reset()
         {
             _done = false;

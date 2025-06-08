@@ -37,6 +37,13 @@ namespace CovertActionTools.Core.Exporting.Exporters
 
         protected override string Message => "Processing plots..";
         
+        public override ExportStatus.ExportStage GetStage() => ExportStatus.ExportStage.ProcessingPlots;
+
+        protected override Dictionary<string, PlotModel> GetFromModel(PackageModel model)
+        {
+            return model.Plots;
+        }
+
         protected override void Reset()
         {
             _done = false;
