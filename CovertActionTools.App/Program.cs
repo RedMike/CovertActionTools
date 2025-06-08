@@ -17,7 +17,7 @@ const int h = 800;
 //debug flags
 #if DEBUG
 //start by parsing the default
-const bool startWithParsePublishDefault = true;
+const bool startWithParsePublishDefault = false;
 const bool startWithLoadSampleDefault = false;
 #endif
 
