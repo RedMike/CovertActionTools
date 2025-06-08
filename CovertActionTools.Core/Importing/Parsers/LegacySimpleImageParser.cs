@@ -25,7 +25,6 @@ namespace CovertActionTools.Core.Importing.Parsers
         }
 
         protected override string Message => "Processing simple images..";
-        public override ImportStatus.ImportStage GetStage() => ImportStatus.ImportStage.ProcessingSimpleImages;
 
         public override void SetResult(PackageModel model)
         {

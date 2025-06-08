@@ -34,8 +34,6 @@ namespace CovertActionTools.Core.Exporting.Exporters
         }
 
         protected override string Message => "Processing prose..";
-        
-        public override ExportStatus.ExportStage GetStage() => ExportStatus.ExportStage.ProcessingProse;
 
         protected override Dictionary<string, ProseModel> GetFromModel(PackageModel model)
         {
@@ -71,7 +69,6 @@ namespace CovertActionTools.Core.Exporting.Exporters
         protected override void OnExportStart()
         {
             _done = false;
-            _logger.LogInformation($"Starting export of prose");
         }
         
         private IDictionary<string, byte[]> Export(Dictionary<string, ProseModel> prose)

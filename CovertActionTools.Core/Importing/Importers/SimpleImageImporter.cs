@@ -28,8 +28,6 @@ namespace CovertActionTools.Core.Importing.Importers
         
         protected override string Message => "Processing simple images..";
         
-        public override ImportStatus.ImportStage GetStage() => ImportStatus.ImportStage.ProcessingSimpleImages;
-
         public override void SetResult(PackageModel model)
         {
             model.SimpleImages = GetResult();

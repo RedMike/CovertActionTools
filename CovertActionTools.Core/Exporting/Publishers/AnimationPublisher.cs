@@ -28,8 +28,6 @@ namespace CovertActionTools.Core.Exporting.Publishers
         }
 
         protected override string Message => "Processing animations..";
-        
-        public override ExportStatus.ExportStage GetStage() => ExportStatus.ExportStage.ProcessingAnimations;
 
         protected override Dictionary<string, AnimationModel> GetFromModel(PackageModel model)
         {
@@ -64,7 +62,6 @@ namespace CovertActionTools.Core.Exporting.Publishers
         {
             _keys.AddRange(GetKeys());
             _index = 0;
-            _logger.LogInformation($"Starting export of animations: {_keys.Count}");
         }
         
         private List<string> GetKeys()

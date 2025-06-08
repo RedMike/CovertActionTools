@@ -20,7 +20,6 @@ namespace CovertActionTools.Core.Importing.Importers
         }
 
         protected override string Message => "Processing fonts..";
-        public override ImportStatus.ImportStage GetStage() => ImportStatus.ImportStage.ProcessingFonts;
 
         public override void SetResult(PackageModel model)
         {

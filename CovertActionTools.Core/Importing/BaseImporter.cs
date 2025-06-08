@@ -5,7 +5,6 @@ namespace CovertActionTools.Core.Importing
 {
     public interface IImporter
     {
-        ImportStatus.ImportStage GetStage();
         bool CheckIfValid(string path);
         void Start(string path);
         /// <summary>
@@ -35,8 +34,6 @@ namespace CovertActionTools.Core.Importing
         /// Should be static
         /// </summary>
         protected abstract string Message { get; }
-
-        public abstract ImportStatus.ImportStage GetStage();
 
         public bool CheckIfValid(string path)
         {

@@ -20,7 +20,6 @@ namespace CovertActionTools.Core.Importing.Importers
         }
 
         protected override string Message => "Processing prose..";
-        public override ImportStatus.ImportStage GetStage() => ImportStatus.ImportStage.ProcessingProse;
 
         public override void SetResult(PackageModel model)
         {

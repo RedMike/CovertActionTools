@@ -41,8 +41,6 @@ namespace CovertActionTools.Core.Importing.Importers
         }
 
         protected override string Message => "Processing animations..";
-        
-        public override ImportStatus.ImportStage GetStage() => ImportStatus.ImportStage.ProcessingAnimations;
 
         public override void SetResult(PackageModel model)
         {

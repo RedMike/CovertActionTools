@@ -28,8 +28,6 @@ namespace CovertActionTools.Core.Importing.Importers
         }
 
         protected override string Message => "Processing catalogs..";
-        
-        public override ImportStatus.ImportStage GetStage() => ImportStatus.ImportStage.ProcessingCatalogs;
 
         public override void SetResult(PackageModel model)
         {

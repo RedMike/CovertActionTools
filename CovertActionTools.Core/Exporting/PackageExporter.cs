@@ -23,11 +23,13 @@ namespace CovertActionTools.Core.Exporting
         
         private List<string> _errors = new List<string>();
         
+        private int _stageCount = 0;
+        private int _currentStage = 0;
         private Task? _exportTask = null;
-        private ExportStatus.ExportStage _currentStage = ExportStatus.ExportStage.Unknown;
         private string _currentMessage = string.Empty;
         private int _currentTotal = 0;
         private int _currentCount = 0;
+        private bool _done = false;
         private string _path = string.Empty;
 
         public void StartExport(PackageModel model, string path)
@@ -38,8 +40,11 @@ namespace CovertActionTools.Core.Exporting
             }
 
             _path = path;
+            _stageCount = 0;
+            _currentStage = 0;
             foreach (var exporter in _exporters)
             {
+                _stageCount += 1;
                 exporter.Start(path, model);
                 _logger.LogInformation($"Exporter {exporter.GetType()} starting export to: {path}");
             }
@@ -62,26 +67,32 @@ namespace CovertActionTools.Core.Exporting
                     return new ExportStatus()
                     {
                         Errors = errors,
-                        Stage = ExportStatus.ExportStage.FatalError,
-                        StageMessage = _exportTask.Exception!.InnerException!.Message
+                        StageMessage = _exportTask.Exception!.InnerException!.Message,
+                        StageCount = _stageCount,
+                        StagesDone = _currentStage,
+                        Done = _done,
                     };
                 }
 
                 return new ExportStatus()
                 {
                     Errors = errors,
-                    Stage = ExportStatus.ExportStage.ExportDone,
-                    StageMessage = "Done!"
+                    StageMessage = "Done!",
+                    StageCount = _stageCount,
+                    StagesDone = _currentStage,
+                    Done = _done,
                 };
             }
  
             return new ExportStatus()
             {
                 Errors = errors,
-                Stage = _currentStage,
                 StageMessage = _currentMessage,
                 StageItems = _currentTotal,
-                StageItemsDone = _currentCount
+                StageItemsDone = _currentCount,
+                StageCount = _stageCount,
+                StagesDone = _currentStage,
+                Done = _done,
             };
         }
 
@@ -89,7 +100,6 @@ namespace CovertActionTools.Core.Exporting
         {
             try
             {
-                _currentStage = ExportStatus.ExportStage.Preparing;
                 Directory.CreateDirectory(_path);
                 _errors = new List<string>();
                 //_logger.LogInformation($"Index: {_simpleImagesToWrite.Count} images, {_crimesToWrite.Count} crimes, ...");
@@ -97,7 +107,6 @@ namespace CovertActionTools.Core.Exporting
 
                 foreach (var exporter in _exporters)
                 {
-                    _currentStage = exporter.GetStage();
                     var done = false;
                     do
                     {
@@ -115,31 +124,30 @@ namespace CovertActionTools.Core.Exporting
                             done = true;
                         }
                     } while (!done);
+                    
+                    _currentStage += 1;
                 }
                 
-                _currentStage = ExportStatus.ExportStage.ExportDone;
                 await Task.Yield();
+                
+                _logger.LogInformation($"Export done"); //TODO: extra info
             }
             catch (Exception e)
             {
                 _logger.LogError($"Exception while processing export: {e}");
-                _currentStage = ExportStatus.ExportStage.Unknown;
                 _currentMessage = "Error!";
                 _currentTotal = 0;
                 _currentCount = 0;
+                _done = true;
                 throw; //we don't want to finish normally
             }
             finally
             {
-                _currentStage = ExportStatus.ExportStage.ExportDone;
                 _currentMessage = "Done!";
                 _currentTotal = 0;
                 _currentCount = 0;
+                _done = true;
             }
-            
-            await Task.Yield();
-            
-            _logger.LogInformation($"Export done"); //TODO: extra info
         }
     }
 }

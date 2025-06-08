@@ -24,7 +24,6 @@ namespace CovertActionTools.Core.Exporting.Publishers
         }
 
         protected override string Message => "Processing clues..";
-        public override ExportStatus.ExportStage GetStage() => ExportStatus.ExportStage.ProcessingClues;
 
         protected override Dictionary<string, ClueModel> GetFromModel(PackageModel model)
         {
@@ -59,7 +58,6 @@ namespace CovertActionTools.Core.Exporting.Publishers
         protected override void OnExportStart()
         {
             _done = false;
-            _logger.LogInformation($"Starting export of clues");
         }
         
         private IDictionary<string, byte[]> Export(Dictionary<string, ClueModel> clues)

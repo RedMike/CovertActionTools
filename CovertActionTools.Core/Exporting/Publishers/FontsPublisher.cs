@@ -25,8 +25,6 @@ namespace CovertActionTools.Core.Exporting.Publishers
         }
 
         protected override string Message => "Processing fonts..";
-        
-        public override ExportStatus.ExportStage GetStage() => ExportStatus.ExportStage.ProcessingFonts;
 
         protected override FontsModel GetFromModel(PackageModel model)
         {
@@ -63,7 +61,6 @@ namespace CovertActionTools.Core.Exporting.Publishers
         protected override void OnExportStart()
         {
             _done = false;
-            _logger.LogInformation($"Starting export of fonts");
         }
         
         private IDictionary<string, byte[]> Export(FontsModel fonts)

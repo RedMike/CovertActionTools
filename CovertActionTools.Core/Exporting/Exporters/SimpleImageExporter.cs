@@ -39,8 +39,6 @@ namespace CovertActionTools.Core.Exporting.Exporters
         }
 
         protected override string Message => "Processing simple images..";
-        
-        public override ExportStatus.ExportStage GetStage() => ExportStatus.ExportStage.ProcessingSimpleImages;
 
         protected override Dictionary<string, SimpleImageModel> GetFromModel(PackageModel model)
         {
@@ -75,7 +73,6 @@ namespace CovertActionTools.Core.Exporting.Exporters
         {
             _keys.AddRange(GetKeys());
             _index = 0;
-            _logger.LogInformation($"Starting export of images: {_keys.Count}");
         }
         
         private List<string> GetKeys()

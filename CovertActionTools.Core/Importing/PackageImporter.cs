@@ -15,11 +15,13 @@ namespace CovertActionTools.Core.Importing
         
         private List<string> _errors = new List<string>();
 
+        private int _stageCount = 0;
+        private int _currentStage = 0;
         private Task<PackageModel?>? _importTask = null;
-        private ImportStatus.ImportStage _currentStage = ImportStatus.ImportStage.Unknown;
         private string _currentMessage = string.Empty;
         private int _currentTotal = 0;
         private int _currentCount = 0;
+        private bool _done = false;
 
         public PackageImporter(ILogger<PackageImporter<TImporter>> logger, IList<TImporter> importers)
         {
@@ -53,8 +55,11 @@ namespace CovertActionTools.Core.Importing
                 throw new Exception("Trying to import when already importing");
             }
 
+            _stageCount = 0;
+            _currentStage = 0;
             foreach (var importer in _importers)
             {
+                _stageCount += 1;
                 importer.Start(path);
                 _logger.LogInformation($"Importer {importer.GetType()} starting import from: {path}");
             }
@@ -77,26 +82,32 @@ namespace CovertActionTools.Core.Importing
                     return new ImportStatus()
                     {
                         Errors = errors,
-                        Stage = ImportStatus.ImportStage.FatalError,
-                        StageMessage = _importTask.Exception!.InnerException!.Message
+                        StageMessage = _importTask.Exception!.InnerException!.Message,
+                        StageCount = _stageCount,
+                        StagesDone = _currentStage,
+                        Done = _done,
                     };
                 }
 
                 return new ImportStatus()
                 {
                     Errors = errors,
-                    Stage = ImportStatus.ImportStage.ImportDone,
-                    StageMessage = "Done!"
+                    StageMessage = "Done!",
+                    StageCount = _stageCount,
+                    StagesDone = _currentStage,
+                    Done = _done,
                 };
             }
 
             return new ImportStatus()
             {
                 Errors = errors,
-                Stage = _currentStage,
                 StageMessage = _currentMessage,
+                StageCount = _stageCount,
+                StagesDone = _currentStage,
                 StageItems = _currentTotal,
                 StageItemsDone = _currentCount,
+                Done = _done,
             };
         }
 
@@ -126,14 +137,12 @@ namespace CovertActionTools.Core.Importing
 
             try
             {
-                _currentStage = ImportStatus.ImportStage.ReadingIndex;
                 _errors = new List<string>();
                 //_logger.LogInformation($"Index: {_simpleImagesToRead.Count} images, {_crimesToRead.Count} crimes, ...");
                 await Task.Yield();
 
                 foreach (var importer in _importers)
                 {
-                    _currentStage = importer.GetStage();
                     var done = false;
                     var error = false;
                     do
@@ -158,27 +167,30 @@ namespace CovertActionTools.Core.Importing
                     {
                         importer.SetResult(model);
                     }
+
+                    _currentStage += 1;
                 }
 
                 await Task.Yield();
+                
                 
                 _logger.LogInformation($"Import done"); //TODO: extra info
             }
             catch (Exception e)
             {
                 _logger.LogError($"Exception while processing import: {e}");
-                _currentStage = ImportStatus.ImportStage.Unknown;
                 _currentMessage = "Error!";
                 _currentTotal = 0;
                 _currentCount = 0;
+                _done = true;
                 throw; //we don't want to finish normally
             }
             finally
             {
-                _currentStage = ImportStatus.ImportStage.ImportDone;
                 _currentMessage = "Done!";
                 _currentTotal = 0;
                 _currentCount = 0;
+                _done = true;
             }
             
             return model;

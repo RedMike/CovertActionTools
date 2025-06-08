@@ -6,7 +6,6 @@ namespace CovertActionTools.Core.Importing
 {
     public interface IExporter
     {
-        ExportStatus.ExportStage GetStage();
         /// <summary>
         /// Returns true when process is finished
         /// </summary>
@@ -29,7 +28,6 @@ namespace CovertActionTools.Core.Importing
         private int _totalItems = 0;
         private int _currentItem = 0;
         protected string Path = string.Empty;
-        protected string? PublishPath = null;
         protected TData Data = default!;
         
         /// <summary>
@@ -37,24 +35,7 @@ namespace CovertActionTools.Core.Importing
         /// </summary>
         protected abstract string Message { get; }
 
-        public abstract ExportStatus.ExportStage GetStage();
-
         protected abstract TData GetFromModel(PackageModel model);
-
-        public void Start(string path, string? publishPath, TData data)
-        {
-            if (_exporting)
-            {
-                throw new Exception("Already exporting");
-            }
-            Path = path;
-            PublishPath = publishPath;
-            Data = data;
-            _exporting = true;
-            OnExportStart();
-            _totalItems = GetTotalItemCountInPath();
-            _currentItem = 0;
-        }
 
         public bool RunStep()
         {

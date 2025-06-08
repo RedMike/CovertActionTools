@@ -24,7 +24,6 @@ namespace CovertActionTools.Core.Exporting.Publishers
         }
 
         protected override string Message => "Processing crimes..";
-        public override ExportStatus.ExportStage GetStage() => ExportStatus.ExportStage.ProcessingCrimes;
 
         protected override Dictionary<int, CrimeModel> GetFromModel(PackageModel model)
         {
@@ -58,7 +57,6 @@ namespace CovertActionTools.Core.Exporting.Publishers
         {
             _keys.AddRange(GetKeys());
             _index = 0;
-            _logger.LogInformation($"Starting export of crimes: {_keys.Count}");
         }
         
         private List<int> GetKeys()

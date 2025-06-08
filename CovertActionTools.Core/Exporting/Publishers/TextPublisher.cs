@@ -24,8 +24,6 @@ namespace CovertActionTools.Core.Exporting.Publishers
         }
 
         protected override string Message => "Processing texts..";
-        
-        public override ExportStatus.ExportStage GetStage() => ExportStatus.ExportStage.ProcessingTexts;
 
         protected override Dictionary<string, TextModel> GetFromModel(PackageModel model)
         {
@@ -61,7 +59,6 @@ namespace CovertActionTools.Core.Exporting.Publishers
         protected override void OnExportStart()
         {
             _done = false;
-            _logger.LogInformation($"Starting export of texts");
         }
 
         private IDictionary<string, byte[]> Export(Dictionary<string, TextModel> texts)

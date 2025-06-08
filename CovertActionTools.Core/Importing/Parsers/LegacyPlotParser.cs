@@ -21,7 +21,6 @@ namespace CovertActionTools.Core.Importing.Parsers
         }
 
         protected override string Message => "Processing plots..";
-        public override ImportStatus.ImportStage GetStage() => ImportStatus.ImportStage.ProcessingPlots;
 
         public override void SetResult(PackageModel model)
         {

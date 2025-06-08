@@ -39,8 +39,6 @@ namespace CovertActionTools.Core.Exporting.Exporters
         }
 
         protected override string Message => "Processing catalogs..";
-        
-        public override ExportStatus.ExportStage GetStage() => ExportStatus.ExportStage.ProcessingCatalogs;
 
         protected override Dictionary<string, CatalogModel> GetFromModel(PackageModel model)
         {
@@ -74,7 +72,6 @@ namespace CovertActionTools.Core.Exporting.Exporters
         {
             _keys.AddRange(GetKeys());
             _index = 0;
-            _logger.LogInformation($"Starting export of catalogs: {_keys.Count}");
         }
         
         private List<string> GetKeys()

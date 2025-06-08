@@ -68,86 +68,7 @@ public class LoadPackageWindow : BaseWindow
 
         var windowSize = ImGui.GetContentRegionMax();
 
-        var progress = 0.1f;
-        switch (importStatus.Stage)
-        {
-            case ImportStatus.ImportStage.ReadingIndex:
-                progress = 0.1f;
-                break;
-            case ImportStatus.ImportStage.ProcessingSimpleImages:
-                if (importStatus.StageItems <= 0)
-                {
-                    progress = 0.1f;
-                }
-                else
-                {
-                    progress = 0.1f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
-                }
-                break;
-            case ImportStatus.ImportStage.ProcessingCrimes:
-                if (importStatus.StageItems <= 0)
-                {
-                    progress = 0.2f;
-                }
-                else
-                {
-                    progress = 0.2f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
-                }
-                break;
-            case ImportStatus.ImportStage.ProcessingTexts:
-                if (importStatus.StageItems <= 0)
-                {
-                    progress = 0.3f;
-                }
-                else
-                {
-                    progress = 0.3f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
-                }
-                break;
-            case ImportStatus.ImportStage.ProcessingClues:
-                if (importStatus.StageItems <= 0)
-                {
-                    progress = 0.4f;
-                }
-                else
-                {
-                    progress = 0.4f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
-                }
-                break;
-            case ImportStatus.ImportStage.ProcessingPlots:
-                if (importStatus.StageItems <= 0)
-                {
-                    progress = 0.5f;
-                }
-                else
-                {
-                    progress = 0.5f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
-                }
-                break;
-            case ImportStatus.ImportStage.ProcessingWorlds:
-                if (importStatus.StageItems <= 0)
-                {
-                    progress = 0.6f;
-                }
-                else
-                {
-                    progress = 0.6f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
-                }
-                break;
-            case ImportStatus.ImportStage.ProcessingCatalogs:
-                if (importStatus.StageItems <= 0)
-                {
-                    progress = 0.7f;
-                }
-                else
-                {
-                    progress = 0.7f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
-                }
-                break;
-            case ImportStatus.ImportStage.ImportDone:
-                progress = 1.0f;
-                break;
-        }
+        var progress = importStatus.GetProgress();
 
         var progressBarSize = new Vector2(windowSize.X - 20.0f, 15.0f);
         ImGui.ProgressBar(progress, progressBarSize);
@@ -167,9 +88,7 @@ public class LoadPackageWindow : BaseWindow
         }
 
         ImGui.Text("");
-        if (importStatus.Stage == ImportStatus.ImportStage.Unknown || 
-            importStatus.Stage == ImportStatus.ImportStage.FatalError ||
-            importStatus.Stage == ImportStatus.ImportStage.ImportDone)
+        if (importStatus.Done)
         {
             if (importStatus.Errors.Count == 0)
             {

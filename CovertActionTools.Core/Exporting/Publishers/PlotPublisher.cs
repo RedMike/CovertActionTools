@@ -24,8 +24,6 @@ namespace CovertActionTools.Core.Exporting.Publishers
         }
 
         protected override string Message => "Processing plots..";
-        
-        public override ExportStatus.ExportStage GetStage() => ExportStatus.ExportStage.ProcessingPlots;
 
         protected override Dictionary<string, PlotModel> GetFromModel(PackageModel model)
         {
@@ -61,7 +59,6 @@ namespace CovertActionTools.Core.Exporting.Publishers
         protected override void OnExportStart()
         {
             _done = false;
-            _logger.LogInformation($"Starting export of plots");
         }
         
         private IDictionary<string, byte[]> Export(Dictionary<string, PlotModel> plots)

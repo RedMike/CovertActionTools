@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using CovertActionTools.Core.Conversion;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -21,7 +20,6 @@ namespace CovertActionTools.Core.Importing.Parsers
         }
 
         protected override string Message => "Processing fonts..";
-        public override ImportStatus.ImportStage GetStage() => ImportStatus.ImportStage.ProcessingFonts;
 
         public override void SetResult(PackageModel model)
         {

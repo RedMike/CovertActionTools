@@ -76,171 +76,13 @@ public class ParsePublishedWindow : BaseWindow
 
         var windowSize = ImGui.GetContentRegionMax();
 
-        var progress = 0.1f;
-        switch (importStatus.Stage)
-        {
-            case ImportStatus.ImportStage.ReadingIndex:
-                progress = 0.1f;
-                break;
-            case ImportStatus.ImportStage.ProcessingSimpleImages:
-                if (importStatus.StageItems <= 0)
-                {
-                    progress = 0.1f;
-                }
-                else
-                {
-                    progress = 0.1f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
-                }
-                break;
-            case ImportStatus.ImportStage.ProcessingCrimes:
-                if (importStatus.StageItems <= 0)
-                {
-                    progress = 0.2f;
-                }
-                else
-                {
-                    progress = 0.2f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
-                }
-                break;
-            case ImportStatus.ImportStage.ProcessingTexts:
-                if (importStatus.StageItems <= 0)
-                {
-                    progress = 0.3f;
-                }
-                else
-                {
-                    progress = 0.3f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
-                }
-                break;
-            case ImportStatus.ImportStage.ProcessingClues:
-                if (importStatus.StageItems <= 0)
-                {
-                    progress = 0.4f;
-                }
-                else
-                {
-                    progress = 0.4f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
-                }
-                break;
-            case ImportStatus.ImportStage.ProcessingPlots:
-                if (importStatus.StageItems <= 0)
-                {
-                    progress = 0.5f;
-                }
-                else
-                {
-                    progress = 0.5f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
-                }
-                break;
-            case ImportStatus.ImportStage.ProcessingWorlds:
-                if (importStatus.StageItems <= 0)
-                {
-                    progress = 0.6f;
-                }
-                else
-                {
-                    progress = 0.6f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
-                }
-                break;
-            case ImportStatus.ImportStage.ProcessingCatalogs:
-                if (importStatus.StageItems <= 0)
-                {
-                    progress = 0.7f;
-                }
-                else
-                {
-                    progress = 0.7f + ((float)importStatus.StageItemsDone / importStatus.StageItems) * 0.1f;
-                }
-                break;
-            case ImportStatus.ImportStage.ImportDone:
-                progress = 1.0f;
-                break;
-        }
+        var progress = importStatus.GetProgress();
 
         var text = $"{importStatus.StageMessage} {importStatus.StageItemsDone}/{importStatus.StageItems}";
-        if (importStatus.Stage == ImportStatus.ImportStage.ImportDone && _parsePublishedState.Export)
+        if (importStatus.Done && _parsePublishedState.Export)
         {
             text = $"{exportStatus.StageMessage} {exportStatus.StageItemsDone}/{exportStatus.StageItems}";
-            progress = 0.1f;
-            switch (exportStatus.Stage)
-            {
-                case ExportStatus.ExportStage.Preparing:
-                    progress = 0.1f;
-                    break;
-                case ExportStatus.ExportStage.ProcessingSimpleImages:
-                    if (exportStatus.StageItems <= 0)
-                    {
-                        progress = 0.1f;
-                    }
-                    else
-                    {
-                        progress = 0.1f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.1f;
-                    }
-                    break;
-                case ExportStatus.ExportStage.ProcessingCrimes:
-                    if (exportStatus.StageItems <= 0)
-                    {
-                        progress = 0.2f;
-                    }
-                    else
-                    {
-                        progress = 0.2f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.1f;
-                    }
-                    break;
-                case ExportStatus.ExportStage.ProcessingTexts:
-                    if (exportStatus.StageItems <= 0)
-                    {
-                        progress = 0.3f;
-                    }
-                    else
-                    {
-                        progress = 0.3f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.1f;
-                    }
-                    break;
-                case ExportStatus.ExportStage.ProcessingClues:
-                    if (exportStatus.StageItems <= 0)
-                    {
-                        progress = 0.4f;
-                    }
-                    else
-                    {
-                        progress = 0.4f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.1f;
-                    }
-                    break;
-                case ExportStatus.ExportStage.ProcessingPlots:
-                    if (exportStatus.StageItems <= 0)
-                    {
-                        progress = 0.5f;
-                    }
-                    else
-                    {
-                        progress = 0.5f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.1f;
-                    }
-                    break;
-                case ExportStatus.ExportStage.ProcessingWorlds:
-                    if (exportStatus.StageItems <= 0)
-                    {
-                        progress = 0.6f;
-                    }
-                    else
-                    {
-                        progress = 0.6f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.1f;
-                    }
-                    break;
-                case ExportStatus.ExportStage.ProcessingCatalogs:
-                    if (exportStatus.StageItems <= 0)
-                    {
-                        progress = 0.7f;
-                    }
-                    else
-                    {
-                        progress = 0.7f + ((float)exportStatus.StageItemsDone / exportStatus.StageItems) * 0.1f;
-                    }
-                    break;
-                case ExportStatus.ExportStage.ExportDone:
-                    progress = 1.0f;
-                    break;
-            }
+            progress = exportStatus.GetProgress();
         }
         var progressBarSize = new Vector2(windowSize.X - 20.0f, 15.0f);
         ImGui.ProgressBar(progress, progressBarSize);
@@ -259,11 +101,7 @@ public class ParsePublishedWindow : BaseWindow
         }
 
         ImGui.Text("");
-        if (!_parsePublishedState.Export && (
-                importStatus.Stage == ImportStatus.ImportStage.Unknown || 
-                importStatus.Stage == ImportStatus.ImportStage.FatalError ||
-                importStatus.Stage == ImportStatus.ImportStage.ImportDone)
-            )
+        if (!_parsePublishedState.Export && importStatus.Done)
         {
             if (ImGui.Button("Save"))
             {
@@ -274,11 +112,7 @@ public class ParsePublishedWindow : BaseWindow
             }
         }
 
-        if (_parsePublishedState.Export && (
-                exportStatus.Stage == ExportStatus.ExportStage.Unknown ||
-                exportStatus.Stage == ExportStatus.ExportStage.FatalError ||
-                exportStatus.Stage == ExportStatus.ExportStage.ExportDone
-            ))
+        if (_parsePublishedState.Export && exportStatus.Done)
         {
             if (ImGui.Button("Close"))
             {

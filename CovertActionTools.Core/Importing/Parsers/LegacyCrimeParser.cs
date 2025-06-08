@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using CovertActionTools.Core.Models;
@@ -23,7 +22,6 @@ namespace CovertActionTools.Core.Importing.Parsers
         }
 
         protected override string Message => "Processing crimes..";
-        public override ImportStatus.ImportStage GetStage() => ImportStatus.ImportStage.ProcessingCrimes;
 
         public override void SetResult(PackageModel model)
         {

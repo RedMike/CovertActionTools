@@ -24,8 +24,6 @@ namespace CovertActionTools.Core.Importing.Importers
 
 
         protected override string Message => "Processing worlds..";
-        
-        public override ImportStatus.ImportStage GetStage() => ImportStatus.ImportStage.ProcessingWorlds;
 
         public override void SetResult(PackageModel model)
         {

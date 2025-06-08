@@ -24,8 +24,6 @@ namespace CovertActionTools.Core.Exporting.Publishers
         }
 
         protected override string Message => "Processing worlds..";
-        
-        public override ExportStatus.ExportStage GetStage() => ExportStatus.ExportStage.ProcessingWorlds;
 
         protected override Dictionary<int, WorldModel> GetFromModel(PackageModel model)
         {
@@ -60,7 +58,6 @@ namespace CovertActionTools.Core.Exporting.Publishers
         {
             _keys.AddRange(GetKeys());
             _index = 0;
-            _logger.LogInformation($"Starting export of worlds: {_keys.Count}");
         }
         
         private List<int> GetKeys()

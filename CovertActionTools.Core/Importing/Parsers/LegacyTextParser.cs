@@ -20,7 +20,6 @@ namespace CovertActionTools.Core.Importing.Parsers
         }
 
         protected override string Message => "Processing texts..";
-        public override ImportStatus.ImportStage GetStage() => ImportStatus.ImportStage.ProcessingTexts;
 
         public override void SetResult(PackageModel model)
         {
