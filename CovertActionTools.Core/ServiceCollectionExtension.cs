@@ -3,6 +3,7 @@ using System.Linq;
 using CovertActionTools.Core.Compression;
 using CovertActionTools.Core.Exporting;
 using CovertActionTools.Core.Exporting.Exporters;
+using CovertActionTools.Core.Exporting.Publishers;
 using CovertActionTools.Core.Exporting.Shared;
 using CovertActionTools.Core.Importing;
 using CovertActionTools.Core.Importing.Importers;
@@ -58,10 +59,23 @@ namespace CovertActionTools.Core
             services.AddSingleton<IExporter, FontsExporter>();
             services.AddSingleton<IExporter, ProseExporter>();
             services.AddSingleton<IList<IExporter>>(sp => sp.GetServices<IExporter>().ToList());
+
+            services.AddSingleton<ILegacyPublisher, AnimationPublisher>();
+            services.AddSingleton<ILegacyPublisher, CatalogPublisher>();
+            services.AddSingleton<ILegacyPublisher, CluePublisher>();
+            services.AddSingleton<ILegacyPublisher, CrimePublisher>();
+            services.AddSingleton<ILegacyPublisher, FontsPublisher>();
+            services.AddSingleton<ILegacyPublisher, PlotPublisher>();
+            services.AddSingleton<ILegacyPublisher, ProsePublisher>();
+            services.AddSingleton<ILegacyPublisher, SimpleImagePublisher>();
+            services.AddSingleton<ILegacyPublisher, TextPublisher>();
+            services.AddSingleton<ILegacyPublisher, WorldPublisher>();
+            services.AddSingleton<IList<ILegacyPublisher>>(sp => sp.GetServices<ILegacyPublisher>().ToList());
             
             services.AddTransient<IPackageImporter<ILegacyParser>, PackageImporter<ILegacyParser>>();
             services.AddTransient<IPackageImporter<IImporter>, PackageImporter<IImporter>>();
             services.AddTransient<IPackageExporter<IExporter>, PackageExporter<IExporter>>();
+            services.AddTransient<IPackageExporter<ILegacyPublisher>, PackageExporter<ILegacyPublisher>>();
 
             services.AddSingleton<ICrimeTimelineProcessor, CrimeTimelineProcessor>();
             services.AddSingleton<IAnimationProcessor, AnimationProcessor>();

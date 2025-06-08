@@ -61,12 +61,7 @@ namespace CovertActionTools.Core.Exporting.Exporters
             var files = Export(Data);
             foreach (var pair in files)
             {
-                var exportPath = Path;
-                if (!string.IsNullOrEmpty(PublishPath) || !pair.Key.publish)
-                {
-                    var publishPath = PublishPath ?? exportPath;
-                    File.WriteAllBytes(System.IO.Path.Combine(pair.Key.publish ? publishPath : exportPath, pair.Key.filename), pair.Value);
-                }
+                File.WriteAllBytes(System.IO.Path.Combine(Path, pair.Key), pair.Value);
             }
 
             _done = true;
@@ -79,12 +74,11 @@ namespace CovertActionTools.Core.Exporting.Exporters
             _logger.LogInformation($"Starting export of prose");
         }
         
-        private IDictionary<(string filename, bool publish), byte[]> Export(Dictionary<string, ProseModel> prose)
+        private IDictionary<string, byte[]> Export(Dictionary<string, ProseModel> prose)
         {
-            var dict = new Dictionary<(string filename, bool publish), byte[]>()
+            var dict = new Dictionary<string, byte[]>()
             {
-                //[("TEXT.DTA", true)] = GetLegacyTextData(texts),
-                [("PROSE.json", false)] = GetModernProseData(prose),
+                ["PROSE.json"] = GetModernProseData(prose),
             };
 
             return dict;

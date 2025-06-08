@@ -1,38 +1,26 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using CovertActionTools.Core.Exporting.Shared;
 using CovertActionTools.Core.Importing;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
 
-namespace CovertActionTools.Core.Exporting.Exporters
+namespace CovertActionTools.Core.Exporting.Publishers
 {
     /// <summary>
     /// Given a loaded model for a SimpleImage, returns multiple assets to save:
-    ///   * JSON file _image (metadata)
-    ///   * PNG file _modern (modern image)
-    ///   * PNG file _VGA (VGA legacy image)
+    ///   * PIC file (legacy image)
     /// </summary>
-    internal class SimpleImageExporter : BaseExporter<Dictionary<string, SimpleImageModel>>
+    internal class SimpleImagePublisher : BaseExporter<Dictionary<string, SimpleImageModel>>, ILegacyPublisher
     {
-        #if DEBUG
-        private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions()
-        {
-            WriteIndented = true
-        };
-        #else
-        private static readonly JsonSerializerOptions JsonOptions = JsonSerializerOptions.Default;
-        #endif
-        
-        private readonly ILogger<SimpleImageExporter> _logger;
+        private readonly ILogger<SimpleImagePublisher> _logger;
         private readonly SharedImageExporter _imageExporter;
         
         private readonly List<string> _keys = new();
         private int _index = 0;
 
-        public SimpleImageExporter(ILogger<SimpleImageExporter> logger, SharedImageExporter imageExporter)
+        public SimpleImagePublisher(ILogger<SimpleImagePublisher> logger, SharedImageExporter imageExporter)
         {
             _logger = logger;
             _imageExporter = imageExporter;
@@ -87,9 +75,7 @@ namespace CovertActionTools.Core.Exporting.Exporters
         {
             var dict = new Dictionary<string, byte[]>
             {
-                [$"{image.Key}_image.json"] = _imageExporter.GetMetadata(image),
-                [$"{image.Key}_modern.png"] = _imageExporter.GetModernImageData(image),
-                [$"{image.Key}_VGA.png"] = _imageExporter.GetVgaImageData(image) 
+                [$"{image.Key}.PIC"] = _imageExporter.GetLegacyFileData(image) 
             };
             return dict;
         }
