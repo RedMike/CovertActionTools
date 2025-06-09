@@ -91,7 +91,7 @@ namespace CovertActionTools.Core.Importing
 
         public abstract void SetResult(PackageModel model);
 
-        public TData GetResult()
+        protected TData GetResult()
         {
             if (!_done)
             {

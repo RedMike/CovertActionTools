@@ -8,6 +8,7 @@ namespace CovertActionTools.Core.Models
 {
     public class PackageModel
     {
+        public PackageIndex Index { get; set; } = new();
         public Dictionary<string, SimpleImageModel> SimpleImages { get; set; } = new();
         public Dictionary<int, CrimeModel> Crimes { get; set; } = new();
         public Dictionary<string, TextModel> Texts { get; set; } = new();

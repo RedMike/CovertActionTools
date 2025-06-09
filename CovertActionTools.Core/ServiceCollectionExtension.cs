@@ -9,7 +9,6 @@ using CovertActionTools.Core.Importing;
 using CovertActionTools.Core.Importing.Importers;
 using CovertActionTools.Core.Importing.Parsers;
 using CovertActionTools.Core.Importing.Shared;
-using CovertActionTools.Core.Models;
 using CovertActionTools.Core.Processors;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -22,6 +21,7 @@ namespace CovertActionTools.Core
             services.AddSingleton<ILzwDecompression, LzwDecompression>();
             
             services.AddSingleton<SharedImageParser>();
+            services.AddSingleton<ILegacyParser, LegacyIndexParser>();
             services.AddSingleton<ILegacyParser, LegacySimpleImageParser>();
             services.AddSingleton<ILegacyParser, LegacyCrimeParser>();
             services.AddSingleton<ILegacyParser, LegacyTextParser>();
@@ -35,6 +35,7 @@ namespace CovertActionTools.Core
             services.AddSingleton<IList<ILegacyParser>>(sp => sp.GetServices<ILegacyParser>().ToList());
 
             services.AddSingleton<SharedImageImporter>();
+            services.AddSingleton<IImporter, IndexImporter>();
             services.AddSingleton<IImporter, SimpleImageImporter>();
             services.AddSingleton<IImporter, CrimeImporter>();
             services.AddSingleton<IImporter, TextImporter>();
@@ -48,6 +49,7 @@ namespace CovertActionTools.Core
             services.AddSingleton<IList<IImporter>>(sp => sp.GetServices<IImporter>().ToList());
             
             services.AddSingleton<SharedImageExporter>();
+            services.AddSingleton<IExporter, IndexExporter>();
             services.AddSingleton<IExporter, SimpleImageExporter>();
             services.AddSingleton<IExporter, CrimeExporter>();
             services.AddSingleton<IExporter, TextExporter>();

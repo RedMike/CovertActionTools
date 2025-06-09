@@ -4,8 +4,10 @@ using CovertActionTools.Core.Models;
 
 namespace CovertActionTools.Core
 {
-    public class Constants
+    public static class Constants
     {
+        public const int CurrentFormatVersion = 1;
+        
         #region Colors
         /// <summary>
         /// Color that is explicitly transparent
