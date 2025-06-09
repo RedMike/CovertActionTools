@@ -20,6 +20,8 @@ public class MainEditorState : IViewModel
         Animation = 7,
         Font = 8,
         Prose = 9,
+        
+        Package = 100,
     }
     public string? DefaultPublishPath { get; set; }
     public string? DefaultRunPath { get; set; }

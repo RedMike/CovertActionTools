@@ -50,6 +50,40 @@ public class PackageExplorerWindow : BaseWindow
 
     private void DrawTreeView(PackageModel model)
     {
+        var packageName = "Package";
+        if (!string.IsNullOrEmpty(model.Index.Metadata.Name))
+        {
+            packageName = model.Index.Metadata.Name;
+        }
+
+        var flags = ImGuiTreeNodeFlags.DefaultOpen |
+                    ImGuiTreeNodeFlags.SpanFullWidth |
+                    ImGuiTreeNodeFlags.OpenOnDoubleClick |
+                    ImGuiTreeNodeFlags.OpenOnArrow;
+        if (ImGui.TreeNodeEx(packageName, flags))
+        {
+            if (ImGui.IsItemClicked())
+            {
+                _mainEditorState.SelectedItem = (MainEditorState.ItemType.Package, string.Empty);
+            }
+            
+            DrawFontsView(model);
+            DrawImagesView(model);
+            DrawCatalogsView(model);
+            DrawAnimationsView(model);
+            DrawCrimesView(model);
+            DrawCluesView(model);
+            DrawTextsView(model);
+            DrawPlotsView(model);
+            DrawProseView(model);
+            DrawWorldsView(model);
+
+            ImGui.TreePop();
+        }
+    }
+
+    private void DrawImagesView(PackageModel model)
+    {
         if (ImGui.TreeNodeEx("Images", ImGuiTreeNodeFlags.SpanAvailWidth))
         {
             foreach (var image in model.SimpleImages.OrderBy(x => x.Key))
@@ -67,20 +101,24 @@ public class PackageExplorerWindow : BaseWindow
                 {
                     name += $" ({image.Value.ExtraData.Name})";
                 }
+
                 if (ImGui.TreeNodeEx(name, nodeFlags))
                 {
                     if (ImGui.IsItemClicked())
                     {
                         _mainEditorState.SelectedItem = (MainEditorState.ItemType.SimpleImage, image.Key);
                     }
-                    
+
                     ImGui.TreePop();
                 }
             }
-            
+
             ImGui.TreePop();
         }
-        
+    }
+
+    private void DrawCrimesView(PackageModel model)
+    {
         if (ImGui.TreeNodeEx("Crimes", ImGuiTreeNodeFlags.SpanAvailWidth))
         {
             foreach (var crime in model.Crimes.OrderBy(x => x.Key))
@@ -93,27 +131,31 @@ public class PackageExplorerWindow : BaseWindow
                     nodeFlags |= ImGuiTreeNodeFlags.Selected;
                 }
 
-                var name = $"Crime {crime.Key} ({crime.Value.Participants.Count} p, {crime.Value.Events.Count} e, {crime.Value.Objects.Count} o)";
+                var name =
+                    $"Crime {crime.Key} ({crime.Value.Participants.Count} p, {crime.Value.Events.Count} e, {crime.Value.Objects.Count} o)";
                 if (ImGui.TreeNodeEx(name, nodeFlags))
                 {
                     if (ImGui.IsItemClicked())
                     {
                         _mainEditorState.SelectedItem = (MainEditorState.ItemType.Crime, crime.Key.ToString());
                     }
-                    
+
                     ImGui.TreePop();
                 }
             }
-            
+
             ImGui.TreePop();
         }
-        
+    }
+
+    private void DrawTextsView(PackageModel model)
+    {
         if (ImGui.TreeNodeEx("Texts", ImGuiTreeNodeFlags.SpanAvailWidth))
         {
             var types = Enum.GetValues<TextModel.StringType>()
                 .Where(x => x != TextModel.StringType.Unknown)
                 .ToList();
-            
+
             foreach (var textType in types)
             {
                 var secondaryIds = new List<string>() { "" };
@@ -129,10 +171,10 @@ public class PackageExplorerWindow : BaseWindow
                     {
                         textTypeString += $" {secondaryId}";
                     }
-                    
+
                     var texts = model.Texts.Values
-                        .Where(x => x.Type == textType && 
-                            (string.IsNullOrEmpty(secondaryId) || int.Parse(secondaryId) == x.CrimeId)
+                        .Where(x => x.Type == textType &&
+                                    (string.IsNullOrEmpty(secondaryId) || int.Parse(secondaryId) == x.CrimeId)
                         )
                         .OrderBy(x => x.Id)
                         .ThenBy(x => x.CrimeId)
@@ -158,13 +200,17 @@ public class PackageExplorerWindow : BaseWindow
                     }
                 }
             }
-            
+
             ImGui.TreePop();
         }
+    }
 
+    private void DrawCluesView(PackageModel model)
+    {
         if (ImGui.TreeNodeEx("Clues", ImGuiTreeNodeFlags.SpanAvailWidth))
         {
-            var crimeIds = model.Clues.Values.Select(x => x.CrimeId).Distinct().OrderBy(x => x ?? int.MinValue).ToList();
+            var crimeIds = model.Clues.Values.Select(x => x.CrimeId).Distinct().OrderBy(x => x ?? int.MinValue)
+                .ToList();
             foreach (var crimeId in crimeIds)
             {
                 var crimeString = "Any Crime";
@@ -174,7 +220,7 @@ public class PackageExplorerWindow : BaseWindow
                     crimeString = $"Crime {crimeId}";
                     id = $"{crimeId}";
                 }
-                
+
                 var nodeFlags = ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.SpanAvailWidth;
                 if (_mainEditorState.SelectedItem != null &&
                     _mainEditorState.SelectedItem.Value.type == MainEditorState.ItemType.Clue &&
@@ -194,10 +240,13 @@ public class PackageExplorerWindow : BaseWindow
                     ImGui.TreePop();
                 }
             }
-            
+
             ImGui.TreePop();
         }
-        
+    }
+
+    private void DrawPlotsView(PackageModel model)
+    {
         if (ImGui.TreeNodeEx("Plots", ImGuiTreeNodeFlags.SpanAvailWidth))
         {
             var missionSetIds = model.Plots.Values.Select(x => x.MissionSetId)
@@ -225,10 +274,13 @@ public class PackageExplorerWindow : BaseWindow
                     ImGui.TreePop();
                 }
             }
-            
+
             ImGui.TreePop();
         }
-        
+    }
+
+    private void DrawWorldsView(PackageModel model)
+    {
         if (ImGui.TreeNodeEx("Worlds", ImGuiTreeNodeFlags.SpanAvailWidth))
         {
             foreach (var worldId in model.Worlds.Keys)
@@ -252,10 +304,13 @@ public class PackageExplorerWindow : BaseWindow
                     ImGui.TreePop();
                 }
             }
-            
+
             ImGui.TreePop();
         }
-        
+    }
+
+    private void DrawCatalogsView(PackageModel model)
+    {
         if (ImGui.TreeNodeEx("Catalog Images", ImGuiTreeNodeFlags.SpanAvailWidth))
         {
             foreach (var catalogKey in model.Catalogs.Keys.OrderBy(x => x))
@@ -266,6 +321,7 @@ public class PackageExplorerWindow : BaseWindow
                 {
                     catalogName += $" ({catalog.ExtraData.Name})";
                 }
+
                 if (ImGui.TreeNodeEx(catalogName, ImGuiTreeNodeFlags.SpanAvailWidth))
                 {
                     foreach (var entryKey in catalog.ExtraData.Keys)
@@ -278,30 +334,35 @@ public class PackageExplorerWindow : BaseWindow
                         {
                             nodeFlags |= ImGuiTreeNodeFlags.Selected;
                         }
-        
+
                         var name = $"{entryKey}";
                         if (!string.IsNullOrEmpty(entry.ExtraData.Name) && entry.ExtraData.Name != entryKey)
                         {
                             name += $" ({entry.ExtraData.Name})";
                         }
+
                         if (ImGui.TreeNodeEx(name, nodeFlags))
                         {
                             if (ImGui.IsItemClicked())
                             {
-                                _mainEditorState.SelectedItem = (MainEditorState.ItemType.CatalogImage, $"{catalogKey}:{entryKey}");
+                                _mainEditorState.SelectedItem = (MainEditorState.ItemType.CatalogImage,
+                                    $"{catalogKey}:{entryKey}");
                             }
-        
+
                             ImGui.TreePop();
                         }
                     }
-        
+
                     ImGui.TreePop();
                 }
             }
-            
+
             ImGui.TreePop();
         }
-        
+    }
+
+    private void DrawAnimationsView(PackageModel model)
+    {
         if (ImGui.TreeNodeEx("Animations", ImGuiTreeNodeFlags.SpanAvailWidth))
         {
             foreach (var animationKey in model.Animations.Keys.OrderBy(x => x))
@@ -312,7 +373,7 @@ public class PackageExplorerWindow : BaseWindow
                 {
                     animationName += $" ({animation.ExtraData.Name})";
                 }
-                
+
                 var nodeFlags = ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.SpanAvailWidth;
                 if (_mainEditorState.SelectedItem != null &&
                     _mainEditorState.SelectedItem.Value.type == MainEditorState.ItemType.Animation &&
@@ -331,10 +392,13 @@ public class PackageExplorerWindow : BaseWindow
                     ImGui.TreePop();
                 }
             }
-            
+
             ImGui.TreePop();
         }
-        
+    }
+
+    private void DrawFontsView(PackageModel model)
+    {
         if (ImGui.TreeNodeEx("Fonts", ImGuiTreeNodeFlags.SpanAvailWidth))
         {
             foreach (var fontId in model.Fonts.ExtraData.Fonts.Keys.OrderBy(x => x))
@@ -357,11 +421,14 @@ public class PackageExplorerWindow : BaseWindow
                     ImGui.TreePop();
                 }
             }
-            
+
             ImGui.TreePop();
         }
-        
-        if (ImGui.TreeNodeEx("Prose", ImGuiTreeNodeFlags.DefaultOpen | ImGuiTreeNodeFlags.SpanAvailWidth))
+    }
+
+    private void DrawProseView(PackageModel model)
+    {
+        if (ImGui.TreeNodeEx("Prose", ImGuiTreeNodeFlags.SpanAvailWidth))
         {
             foreach (var proseKey in model.Prose.Keys.OrderBy(x => x))
             {
