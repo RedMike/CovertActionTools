@@ -40,5 +40,17 @@
 
             return $"C{Type:D}{Id:D1}";
         }
+
+        public ClueModel Clone()
+        {
+            return new ClueModel()
+            {
+                Id = Id,
+                CrimeId = CrimeId,
+                Message = Message,
+                Source = Source,
+                Type = Type
+            };
+        }
     }
 }

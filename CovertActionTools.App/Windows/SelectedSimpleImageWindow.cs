@@ -68,7 +68,7 @@ public class SelectedSimpleImageWindow : SharedImageWindow
         SimpleImageModel image;
         if (_pendingState.Id != key)
         {
-            image = model.SimpleImages[key];
+            image = model.SimpleImages[key].Clone();
             _pendingState.Reset(key, image);
         }
         else
@@ -86,7 +86,7 @@ public class SelectedSimpleImageWindow : SharedImageWindow
             if (ImGui.Button("Save Changes", new Vector2(windowSize.X, 30.0f)))
             {
                 model.SimpleImages[image.Key] = _pendingState.PendingData;
-                _pendingState.Reset(key, image);
+                _pendingState.Reset(key, image.Clone());
                 _mainEditorState.RecordChange();
                 if (model.Index.SimpleImageChanges.Add(key))
                 {

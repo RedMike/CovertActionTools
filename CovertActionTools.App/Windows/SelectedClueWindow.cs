@@ -11,12 +11,14 @@ public class SelectedClueWindow : BaseWindow
     private readonly ILogger<SelectedClueWindow> _logger;
     private readonly MainEditorState _mainEditorState;
     private readonly RenderWindow _renderWindow;
+    private readonly PendingEditorClueState _pendingState;
 
-    public SelectedClueWindow(ILogger<SelectedClueWindow> logger, MainEditorState mainEditorState, RenderWindow renderWindow)
+    public SelectedClueWindow(ILogger<SelectedClueWindow> logger, MainEditorState mainEditorState, RenderWindow renderWindow, PendingEditorClueState pendingState)
     {
         _logger = logger;
         _mainEditorState = mainEditorState;
         _renderWindow = renderWindow;
+        _pendingState = pendingState;
     }
     
     
@@ -33,10 +35,10 @@ public class SelectedClueWindow : BaseWindow
             return;
         }
 
-        int? crimeId = null;
+        int? id = null;
         if (_mainEditorState.SelectedItem.Value.id != "any")
         {
-            crimeId = int.Parse(_mainEditorState.SelectedItem.Value.id);
+            id = int.Parse(_mainEditorState.SelectedItem.Value.id);
         }
         
         var screenSize = ImGui.GetMainViewport().Size;
@@ -44,7 +46,7 @@ public class SelectedClueWindow : BaseWindow
         var initialSize = new Vector2(screenSize.X - 300.0f, screenSize.Y - 200.0f);
         ImGui.SetNextWindowSize(initialSize);
         ImGui.SetNextWindowPos(initialPos);
-        ImGui.Begin($"Clues {crimeId}", //TODO: change label but not ID to prevent unfocusing
+        ImGui.Begin("Clue",
             ImGuiWindowFlags.NoResize |
             ImGuiWindowFlags.NoMove |
             ImGuiWindowFlags.NoNav | 
@@ -54,7 +56,7 @@ public class SelectedClueWindow : BaseWindow
         {
             var model = _mainEditorState.LoadedPackage;
             
-            DrawClueWindow(model, crimeId);
+            DrawClueWindow(model, id);
         }
         else
         {
@@ -66,15 +68,44 @@ public class SelectedClueWindow : BaseWindow
 
     private void DrawClueWindow(PackageModel model, int? crimeId)
     {
-        //TODO: keep a pending model and have a save button?
-
+        Dictionary<string, ClueModel> allClues;
+        if (string.IsNullOrEmpty(_pendingState.Id))
+        {
+            allClues = model.Clues.ToDictionary(x => x.Key, x => x.Value.Clone());
+            _pendingState.Reset("id", allClues);
+        }
+        else
+        {
+            if (_pendingState.PendingData == null)
+            {
+                return;
+            }
+            allClues = _pendingState.PendingData;
+        }
+        var windowSize = ImGui.GetContentRegionAvail();
+        if (_pendingState.HasChanges && _pendingState.PendingData != null)
+        {
+            if (ImGui.Button("Save Changes", new Vector2(windowSize.X, 30.0f)))
+            {
+                model.Clues = _pendingState.PendingData;
+                _pendingState.Reset("id", model.Clues.ToDictionary(x => x.Key, x => x.Value.Clone()));
+                _mainEditorState.RecordChange();
+                if (!model.Index.ClueChanges)
+                {
+                    model.Index.ClueChanges = true;
+                    model.Index.ClueIncluded = true;
+                }
+            }
+            ImGui.NewLine();
+        }
         if (ImGui.Button("Add Clue"))
         {
+            _pendingState.RecordChange();
             var clue = new ClueModel();
             if (crimeId == null)
             {
                 clue.Type = ClueType.Weapon;
-                clue.Id = model.Clues.Where(x =>
+                clue.Id = allClues.Where(x =>
                         x.Value.CrimeId == null &&
                         x.Value.Type == ClueType.Weapon)
                     .Max(x => x.Value.Id) + 1;
@@ -82,12 +113,12 @@ public class SelectedClueWindow : BaseWindow
             else
             {
                 clue.CrimeId = crimeId;
-                clue.Id = model.Clues.Where(x => x.Value.CrimeId == crimeId)
+                clue.Id = allClues.Where(x => x.Value.CrimeId == crimeId)
                     .Max(x => x.Value.Id) + 1;
             }
-            model.Clues.Add(clue.GetMessagePrefix(), clue);
+            allClues.Add(clue.GetMessagePrefix(), clue);
         }
-        var clues = model.Clues.Values
+        var clues = allClues.Values
             .Where(x => x.CrimeId == crimeId)
             .OrderBy(x => x.CrimeId != null ? x.Id : (int)x.Type)
             .ThenBy(x => x.Id)
@@ -95,13 +126,13 @@ public class SelectedClueWindow : BaseWindow
         for (var i = 0; i < clues.Count; i++)
         {
             ImGui.PushID($"Clue_{i}");
-            DrawClue(model, clues[i], i);
+            DrawClue(allClues, clues[i], i);
             ImGui.Text("");
             ImGui.PopID();
         }
     }
 
-    private void DrawClue(PackageModel model, ClueModel clue, int i)
+    private void DrawClue(Dictionary<string, ClueModel> clues, ClueModel clue, int i)
     {
         var windowSize = ImGui.GetContentRegionAvail();
         
@@ -116,7 +147,8 @@ public class SelectedClueWindow : BaseWindow
         ImGui.SetCursorPos(new Vector2(windowSize.X - o.X, cursorPos.Y));
         if (ImGui.Button("Remove"))
         {
-            model.Clues.Remove(clue.GetMessagePrefix());
+            clues.Remove(clue.GetMessagePrefix());
+            _pendingState.RecordChange();
             return;
         }
         
@@ -135,16 +167,17 @@ public class SelectedClueWindow : BaseWindow
                 var oldCrimeId = clue.CrimeId;
                 clue.CrimeId = newCrimeId;
                 var newPrefix = clue.GetMessagePrefix();
-                if (model.Clues.ContainsKey(newPrefix))
+                if (clues.ContainsKey(newPrefix))
                 {
                     //TODO: error
                     clue.CrimeId = oldCrimeId;
                 }
                 else
                 {
-                    model.Clues.Remove(oldPrefix);
-                    model.Clues.Add(newPrefix, clue);
+                    clues.Remove(oldPrefix);
+                    clues.Add(newPrefix, clue);
                 }
+                _pendingState.RecordChange();
             }
 
             ImGui.TableNextColumn();
@@ -155,16 +188,17 @@ public class SelectedClueWindow : BaseWindow
                 var oldId = clue.Id;
                 clue.Id = newId.Value;
                 var newPrefix = clue.GetMessagePrefix();
-                if (model.Clues.ContainsKey(newPrefix))
+                if (clues.ContainsKey(newPrefix))
                 {
                     //TODO: error
                     clue.Id = oldId;
                 }
                 else
                 {
-                    model.Clues.Remove(oldPrefix);
-                    model.Clues.Add(newPrefix, clue);
+                    clues.Remove(oldPrefix);
+                    clues.Add(newPrefix, clue);
                 }
+                _pendingState.RecordChange();
             }
 
             ImGui.TableNextColumn();
@@ -175,16 +209,17 @@ public class SelectedClueWindow : BaseWindow
                 var oldType = clue.Type;
                 clue.Type = newClueType.Value;
                 var newPrefix = clue.GetMessagePrefix();
-                if (model.Clues.ContainsKey(newPrefix))
+                if (clues.ContainsKey(newPrefix))
                 {
                     //TODO: error
                     clue.Type = oldType;
                 }
                 else
                 {
-                    model.Clues.Remove(oldPrefix);
-                    model.Clues.Add(newPrefix, clue);
+                    clues.Remove(oldPrefix);
+                    clues.Add(newPrefix, clue);
                 }
+                _pendingState.RecordChange();
             }
 
 
@@ -194,6 +229,7 @@ public class SelectedClueWindow : BaseWindow
             if (newClueSource != null)
             {
                 clue.Source = newClueSource.Value;
+                _pendingState.RecordChange();
             }
             ImGui.EndTable();
         }
@@ -207,6 +243,7 @@ public class SelectedClueWindow : BaseWindow
         {
             var fixedMessage = message.Replace("\n", "\r\n"); //re-add \r, for consistency across OS
             clue.Message = fixedMessage;
+            _pendingState.RecordChange();
         }
 
         ImGui.EndChild();

@@ -26,3 +26,4 @@ public abstract class PendingEditorState<TData> : IViewModel
 
 public class PendingEditorSimpleImageState : PendingEditorState<SimpleImageModel> { }
 public class PendingEditorCatalogState : PendingEditorState<CatalogModel> { }
+public class PendingEditorClueState : PendingEditorState<Dictionary<string, ClueModel>> { }
