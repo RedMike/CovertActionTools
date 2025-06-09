@@ -103,7 +103,7 @@ public static class ImGuiExtensions
         return validValues[index];
     }
     
-    public static string? Input(string label, string value, int maxLength, string? id = null, int? width = null)
+    public static string? Input(string label, string value, int maxLength, string? id = null, int? width = null, bool readOnly = false)
     {
         if (width != null)
         {
@@ -115,7 +115,12 @@ public static class ImGuiExtensions
             ImGui.PushID(id);
         }
         var origValue = value;
-        ImGui.InputText(label, ref value, (uint)maxLength);
+        var flags = ImGuiInputTextFlags.None;
+        if (readOnly)
+        {
+            flags |= ImGuiInputTextFlags.ReadOnly;
+        }
+        ImGui.InputText(label, ref value, (uint)maxLength, flags);
         if (!string.IsNullOrEmpty(id))
         {
             ImGui.PopID();

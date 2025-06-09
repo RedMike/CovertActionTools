@@ -520,7 +520,7 @@ public class SelectedAnimationWindow : SharedImageWindow
             return;
         }
 
-        DrawImageTabs(image);
+        DrawImageTabs(image, () => { });
     }
     
     private string GetInstructionText(int index, AnimationModel.AnimationInstruction instruction)

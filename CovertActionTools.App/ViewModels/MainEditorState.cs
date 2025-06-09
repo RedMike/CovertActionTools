@@ -29,6 +29,7 @@ public class MainEditorState : IViewModel
     public string? LoadedPackagePath { get; private set; }
     public PackageModel? OriginalLoadedPackage { get; private set; }
     public PackageModel? LoadedPackage { get; private set; }
+    public bool HasChanges { get; private set; }
     public bool IsPackageLoaded => !string.IsNullOrEmpty(LoadedPackagePath);
     public (ItemType type, string id)? SelectedItem { get; set; }
 
@@ -37,6 +38,12 @@ public class MainEditorState : IViewModel
         LoadedPackagePath = path;
         LoadedPackage = model;
         OriginalLoadedPackage = model.Clone();
+        HasChanges = false;
+    }
+
+    public void RecordChange()
+    {
+        HasChanges = true;
     }
     
     private DateTime _lastPackageModificationCheck = DateTime.MinValue;

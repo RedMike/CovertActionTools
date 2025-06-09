@@ -171,6 +171,6 @@ public class SelectedCatalogImageWindow : SharedImageWindow
         ImGui.Separator();
         ImGui.Text("");
 
-        DrawImageTabs(image);
+        DrawImageTabs(image, () => { });
     }
 }

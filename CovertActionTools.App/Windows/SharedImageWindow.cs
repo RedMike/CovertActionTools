@@ -13,7 +13,7 @@ public abstract class SharedImageWindow : BaseWindow
         RenderWindow = renderWindow;
     }
 
-    protected void DrawImageTabs(SimpleImageModel image)
+    protected void DrawImageTabs(SimpleImageModel image, Action recordChange)
     {
         ImGui.BeginTabBar("ImageTabs", ImGuiTabBarFlags.NoCloseWithMiddleMouseButton);
 
@@ -21,7 +21,7 @@ public abstract class SharedImageWindow : BaseWindow
         {
             if (ImGui.BeginTabItem("Modern"))
             {
-                DrawModernImageTab(image);
+                DrawModernImageTab(image, recordChange);
 
                 ImGui.EndTabItem();
             }
@@ -29,14 +29,14 @@ public abstract class SharedImageWindow : BaseWindow
 
         if (ImGui.BeginTabItem("Legacy VGA"))
         {
-            DrawVgaImageTab(image);
+            DrawVgaImageTab(image, recordChange);
             
             ImGui.EndTabItem();
         }
         
         if (ImGui.BeginTabItem("Legacy CGA"))
         {
-            DrawCgaImageTab(image);
+            DrawCgaImageTab(image, recordChange);
             
             ImGui.EndTabItem();
         }
@@ -44,7 +44,7 @@ public abstract class SharedImageWindow : BaseWindow
         ImGui.EndTabBar();
     }
 
-    private void DrawVgaImageTab(SimpleImageModel image)
+    private void DrawVgaImageTab(SimpleImageModel image, Action recordChange)
     {
         var width = image.ExtraData.LegacyWidth;
         var height = image.ExtraData.LegacyHeight;
@@ -63,7 +63,7 @@ public abstract class SharedImageWindow : BaseWindow
         ImGui.Image(texture, new Vector2(width, height));
     }
     
-    private void DrawCgaImageTab(SimpleImageModel image)
+    private void DrawCgaImageTab(SimpleImageModel image, Action recordChange)
     {
         if (image.ExtraData.LegacyColorMappings == null)
         {
@@ -104,7 +104,7 @@ public abstract class SharedImageWindow : BaseWindow
         }
     }
     
-    private void DrawModernImageTab(SimpleImageModel image)
+    private void DrawModernImageTab(SimpleImageModel image, Action recordChange)
     {
         ImGui.Text("Note: this image will not be shown in the original game engine.");
         var width = image.ExtraData.Width;
@@ -129,12 +129,12 @@ public abstract class SharedImageWindow : BaseWindow
 
         ImGui.Text("");
 
-        DrawModernImage(image);
+        DrawModernImage(image, recordChange);
         
         //TODO: 'generate VGA from this' button?
     }
 
-    private void DrawModernImage(SimpleImageModel image)
+    private void DrawModernImage(SimpleImageModel image, Action recordChange)
     {
         var width = image.ExtraData.Width;
         var height = image.ExtraData.Height;
