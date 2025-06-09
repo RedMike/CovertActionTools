@@ -10,11 +10,13 @@ public class SelectedCatalogImageWindow : SharedImageWindow
 {
     private readonly ILogger<SelectedCatalogImageWindow> _logger;
     private readonly MainEditorState _mainEditorState;
+    private readonly PendingEditorCatalogState _pendingState;
 
-    public SelectedCatalogImageWindow(ILogger<SelectedCatalogImageWindow> logger, MainEditorState mainEditorState, RenderWindow renderWindow) : base(renderWindow)
+    public SelectedCatalogImageWindow(ILogger<SelectedCatalogImageWindow> logger, MainEditorState mainEditorState, RenderWindow renderWindow, PendingEditorCatalogState pendingState) : base(renderWindow)
     {
         _logger = logger;
         _mainEditorState = mainEditorState;
+        _pendingState = pendingState;
     }
 
     public override void Draw()
@@ -39,7 +41,7 @@ public class SelectedCatalogImageWindow : SharedImageWindow
         var initialSize = new Vector2(screenSize.X - 300.0f, screenSize.Y - 200.0f);
         ImGui.SetNextWindowSize(initialSize);
         ImGui.SetNextWindowPos(initialPos);
-        ImGui.Begin($"Catalog", //TODO: change label but not ID to prevent unfocusing
+        ImGui.Begin($"Catalog",
             ImGuiWindowFlags.NoResize |
             ImGuiWindowFlags.NoMove |
             ImGuiWindowFlags.NoNav | 
@@ -48,21 +50,7 @@ public class SelectedCatalogImageWindow : SharedImageWindow
         if (_mainEditorState.LoadedPackage != null)
         {
             var model = _mainEditorState.LoadedPackage;
-            if (model.Catalogs.TryGetValue(catalogKey, out var catalog))
-            {
-                if (catalog.Entries.TryGetValue(imageId, out var image))
-                {
-                    DrawCatalogWindow(model, catalog, image);
-                }
-                else
-                {
-                    ImGui.Text("Something went wrong, image is missing in catalog..");    
-                }
-            }
-            else
-            {
-                ImGui.Text("Something went wrong, catalog is missing..");
-            }
+            DrawCatalogWindow(model, catalogKey, imageId);
         }
         else
         {
@@ -72,16 +60,57 @@ public class SelectedCatalogImageWindow : SharedImageWindow
         ImGui.End();
     }
 
-    private void DrawCatalogWindow(PackageModel model, CatalogModel catalog, SimpleImageModel image)
+    private void DrawCatalogWindow(PackageModel model, string catalogKey, string imageId)
     {
-        var windowSize = ImGui.GetContentRegionAvail();
+        if (!model.Catalogs.TryGetValue(catalogKey, out var existingCatalog))
+        {
+            ImGui.Text("Something went wrong, missing catalog");
+            return;
+        }
+
+        CatalogModel catalog;
+        if (_pendingState.Id != catalogKey)
+        {
+            catalog = existingCatalog.Clone();
+            _pendingState.Reset(catalogKey, catalog);
+        }
+        else
+        {
+            if (_pendingState.PendingData == null)
+            {
+                return;
+            }
+
+            catalog = _pendingState.PendingData;
+        }
+        if (!catalog.Entries.TryGetValue(imageId, out var image))
+        {
+            ImGui.Text("Something went wrong, missing image in catalog");
+            return;
+        }
         
-        //TODO: keep a pending model and have a save button?
+        var windowSize = ImGui.GetContentRegionAvail();
+        if (_pendingState.HasChanges && _pendingState.PendingData != null)
+        {
+            if (ImGui.Button("Save Changes", new Vector2(windowSize.X, 30.0f)))
+            {
+                model.Catalogs[catalogKey] = _pendingState.PendingData;
+                _pendingState.Reset(catalogKey, catalog.Clone());
+                _mainEditorState.RecordChange();
+                if (model.Index.CatalogChanges.Add(catalogKey))
+                {
+                    model.Index.CatalogIncluded.Add(catalogKey);
+                }
+            }
+            ImGui.NewLine();
+        }
+        
         //first draw the catalog-specific info
         var newName = ImGuiExtensions.Input("Catalog Name", catalog.ExtraData.Name, 128);
         if (newName != null)
         {
             catalog.ExtraData.Name = newName;
+            _pendingState.RecordChange();
         }
 
         var oldComment = catalog.ExtraData.Comment;
@@ -90,6 +119,7 @@ public class SelectedCatalogImageWindow : SharedImageWindow
         if (comment != oldComment)
         {
             catalog.ExtraData.Comment = comment;
+            _pendingState.RecordChange();
         }
         
         ImGui.Text("");
@@ -103,7 +133,6 @@ public class SelectedCatalogImageWindow : SharedImageWindow
 
     private void DrawImageWindow(PackageModel model, CatalogModel catalog, SimpleImageModel image)
     {
-        //TODO: keep a pending model and have a save button?
         var windowSize = ImGui.GetContentRegionAvail();
         if (ImGui.BeginTable("i_1", 4))
         {
@@ -113,27 +142,29 @@ public class SelectedCatalogImageWindow : SharedImageWindow
             if (newType != null)
             {
                 image.ExtraData.Type = newType.Value;
+                _pendingState.RecordChange();
             }
 
             ImGui.TableNextColumn();
-            var newKey = ImGuiExtensions.Input("Key", image.Key, 128);
+            var newKey = ImGuiExtensions.Input("Key", image.Key, 128, readOnly: true);
             if (newKey != null)
             {
-                newKey = newKey.ToUpperInvariant();
-                if (catalog.Entries.ContainsKey(newKey))
-                {
-                    //TODO: error
-                }
-                else
-                {
-                    catalog.Entries.Remove(image.Key);
-                    catalog.ExtraData.Keys.Remove(image.Key);
-                    image.Key = newKey;
-                    catalog.Entries[newKey] = image;
-                    catalog.ExtraData.Keys.Add(newKey);
-                    //we also have the change the "selected" item
-                    _mainEditorState.SelectedItem = (MainEditorState.ItemType.CatalogImage, $"{catalog.Key}:{newKey}");
-                }
+                //not currently handled
+                // newKey = newKey.ToUpperInvariant();
+                // if (catalog.Entries.ContainsKey(newKey))
+                // {
+                //     //TODO: error
+                // }
+                // else
+                // {
+                //     catalog.Entries.Remove(image.Key);
+                //     catalog.ExtraData.Keys.Remove(image.Key);
+                //     image.Key = newKey;
+                //     catalog.Entries[newKey] = image;
+                //     catalog.ExtraData.Keys.Add(newKey);
+                //     //we also have the change the "selected" item
+                //     _mainEditorState.SelectedItem = (MainEditorState.ItemType.CatalogImage, $"{catalog.Key}:{newKey}");
+                // }
             }
 
             ImGui.TableNextColumn();
@@ -141,6 +172,7 @@ public class SelectedCatalogImageWindow : SharedImageWindow
             if (newWidth != null)
             {
                 //TODO: resize? confirmation dialog?
+                _pendingState.RecordChange();
             }
 
             ImGui.TableNextColumn();
@@ -148,6 +180,7 @@ public class SelectedCatalogImageWindow : SharedImageWindow
             if (newHeight != null)
             {
                 //TODO: resize? confirmation dialog?
+                _pendingState.RecordChange();
             }
             
             ImGui.EndTable();
@@ -157,6 +190,7 @@ public class SelectedCatalogImageWindow : SharedImageWindow
         if (newName != null)
         {
             image.ExtraData.Name = newName;
+            _pendingState.RecordChange();
         }
 
         var origComment = image.ExtraData.Comment;
@@ -165,12 +199,13 @@ public class SelectedCatalogImageWindow : SharedImageWindow
         if (comment != origComment)
         {
             image.ExtraData.Comment = comment;
+            _pendingState.RecordChange();
         }
 
         ImGui.Text("");
         ImGui.Separator();
         ImGui.Text("");
 
-        DrawImageTabs(image, () => { });
+        DrawImageTabs(image, () => { _pendingState.RecordChange(); });
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace CovertActionTools.Core.Models
 {
@@ -28,5 +29,21 @@ namespace CovertActionTools.Core.Models
         /// </summary>
         public Dictionary<string, SimpleImageModel> Entries { get; set; } = new();
         public Metadata ExtraData { get; set; } = new();
+
+        public CatalogModel Clone()
+        {
+            return new CatalogModel()
+            {
+                Key = Key,
+                ExtraData = new Metadata()
+                {
+                    Name = ExtraData.Name,
+                    Comment = ExtraData.Comment,
+                    Keys = ExtraData.Keys.ToList()
+                },
+                Entries = Entries.ToDictionary(x => x.Key,
+                    x => x.Value.Clone())
+            };
+        }
     }
 }

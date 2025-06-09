@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json;
 
 namespace CovertActionTools.Core.Models
 {
@@ -99,5 +100,11 @@ namespace CovertActionTools.Core.Models
         public byte[] ModernImageData { get; set; } = Array.Empty<byte>();
 
         public Metadata ExtraData { get; set; } = null!;
+
+        public SimpleImageModel Clone()
+        {
+            //TODO: avoid JSON here
+            return JsonSerializer.Deserialize<SimpleImageModel>(JsonSerializer.Serialize(this))!;
+        }
     }
 }

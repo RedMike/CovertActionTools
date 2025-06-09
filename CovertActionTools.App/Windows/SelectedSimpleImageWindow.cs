@@ -48,14 +48,7 @@ public class SelectedSimpleImageWindow : SharedImageWindow
         if (_mainEditorState.LoadedPackage != null)
         {
             var model = _mainEditorState.LoadedPackage;
-            if (model.SimpleImages.TryGetValue(key, out var _))
-            {
-                DrawImageWindow(model, key);
-            }
-            else
-            {
-                ImGui.Text("Something went wrong, image is missing..");
-            }
+            DrawImageWindow(model, key);
         }
         else
         {
@@ -67,6 +60,11 @@ public class SelectedSimpleImageWindow : SharedImageWindow
 
     private void DrawImageWindow(PackageModel model, string key)
     {
+        if (!model.SimpleImages.ContainsKey(key))
+        {
+            ImGui.Text("Something went wrong, missing image");
+            return;
+        }
         SimpleImageModel image;
         if (_pendingState.Id != key)
         {
@@ -85,8 +83,7 @@ public class SelectedSimpleImageWindow : SharedImageWindow
         var windowSize = ImGui.GetContentRegionAvail();
         if (_pendingState.HasChanges && _pendingState.PendingData != null)
         {
-            ImGui.SetNextItemWidth(windowSize.X);
-            if (ImGui.Button("Save Changes"))
+            if (ImGui.Button("Save Changes", new Vector2(windowSize.X, 30.0f)))
             {
                 model.SimpleImages[image.Key] = _pendingState.PendingData;
                 _pendingState.Reset(key, image);

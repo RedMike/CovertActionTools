@@ -24,7 +24,5 @@ public abstract class PendingEditorState<TData> : IViewModel
     }
 }
 
-public class PendingEditorSimpleImageState : PendingEditorState<SimpleImageModel>
-{
-    
-}
+public class PendingEditorSimpleImageState : PendingEditorState<SimpleImageModel> { }
+public class PendingEditorCatalogState : PendingEditorState<CatalogModel> { }
