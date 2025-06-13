@@ -55,5 +55,17 @@ namespace CovertActionTools.Core.Models
                     throw new Exception($"Unknown type: {StringType}");
             }
         }
+
+        public PlotModel Clone()
+        {
+            return new PlotModel()
+            {
+                MissionSetId = MissionSetId,
+                CrimeIndex = CrimeIndex,
+                Message = Message,
+                MessageNumber = MessageNumber,
+                StringType = StringType
+            };
+        }
     }
 }
