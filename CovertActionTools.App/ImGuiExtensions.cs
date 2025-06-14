@@ -227,7 +227,7 @@ public static class ImGuiExtensions
     public static TData PendingSaveChanges<TData>(PendingEditorState<TData> pendingState, string selectedIndex, Func<TData> get, Action<TData> onSave)
     {
         TData data;
-        if (string.IsNullOrEmpty(pendingState.Id))
+        if (string.IsNullOrEmpty(pendingState.Id) || pendingState.Id != selectedIndex)
         {
             data = get();
             pendingState.Reset(selectedIndex, data);

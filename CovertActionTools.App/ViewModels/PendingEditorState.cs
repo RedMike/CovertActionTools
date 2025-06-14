@@ -32,3 +32,4 @@ public class PendingEditorAnimationState : PendingEditorState<AnimationModel> { 
 public class PendingEditorFontState : PendingEditorState<FontsModel> { }
 public class PendingEditorProseState : PendingEditorState<Dictionary<string, ProseModel>> { }
 public class PendingEditorTextState : PendingEditorState<Dictionary<string, TextModel>> { }
+public class PendingEditorWorldState : PendingEditorState<WorldModel> { }

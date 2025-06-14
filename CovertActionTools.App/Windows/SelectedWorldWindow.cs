@@ -11,12 +11,14 @@ public class SelectedWorldWindow : BaseWindow
     private readonly ILogger<SelectedWorldWindow> _logger;
     private readonly MainEditorState _mainEditorState;
     private readonly RenderWindow _renderWindow;
+    private readonly PendingEditorWorldState _pendingState;
 
-    public SelectedWorldWindow(ILogger<SelectedWorldWindow> logger, MainEditorState mainEditorState, RenderWindow renderWindow)
+    public SelectedWorldWindow(ILogger<SelectedWorldWindow> logger, MainEditorState mainEditorState, RenderWindow renderWindow, PendingEditorWorldState pendingState)
     {
         _logger = logger;
         _mainEditorState = mainEditorState;
         _renderWindow = renderWindow;
+        _pendingState = pendingState;
     }
 
     public override void Draw()
@@ -39,7 +41,7 @@ public class SelectedWorldWindow : BaseWindow
         var initialSize = new Vector2(screenSize.X - 300.0f, screenSize.Y - 200.0f);
         ImGui.SetNextWindowSize(initialSize);
         ImGui.SetNextWindowPos(initialPos);
-        ImGui.Begin($"World {key}", //TODO: change label but not ID to prevent unfocusing
+        ImGui.Begin("World",
             ImGuiWindowFlags.NoResize |
             ImGuiWindowFlags.NoMove |
             ImGuiWindowFlags.NoNav | 
@@ -48,14 +50,7 @@ public class SelectedWorldWindow : BaseWindow
         if (_mainEditorState.LoadedPackage != null)
         {
             var model = _mainEditorState.LoadedPackage;
-            if (model.Worlds.TryGetValue(key, out var world))
-            {
-                DrawWorldWindow(model, world);
-            }
-            else
-            {
-                ImGui.Text("Something went wrong, world is missing..");
-            }
+            DrawWorldWindow(model, key);
         }
         else
         {
@@ -65,9 +60,25 @@ public class SelectedWorldWindow : BaseWindow
         ImGui.End();
     }
 
-    private void DrawWorldWindow(PackageModel model, WorldModel world)
+    private void DrawWorldWindow(PackageModel model, int key)
     {
-        //TODO: keep a pending model and have a save button?
+        if (!model.Worlds.ContainsKey(key))
+        {
+            ImGui.Text("Something went wrong, missing world");
+            return;
+        }
+        var world = ImGuiExtensions.PendingSaveChanges(_pendingState, key.ToString(),
+            () => model.Worlds[key].Clone(),
+            (data) =>
+            {
+                model.Worlds[key] = data;
+                _mainEditorState.RecordChange();
+                if (model.Index.WorldChanges.Add(key))
+                {
+                    model.Index.WorldIncluded.Add(key);
+                }
+            });
+        
         var origId = world.Id;
         var id = origId;
         ImGui.SetNextItemWidth(100.0f);
@@ -98,6 +109,7 @@ public class SelectedWorldWindow : BaseWindow
         if (name != origName)
         {
             world.ExtraData.Name = name;
+            _pendingState.RecordChange();
         }
         
         var windowSize = ImGui.GetContentRegionAvail();
@@ -107,6 +119,7 @@ public class SelectedWorldWindow : BaseWindow
         if (comment != origComment)
         {
             world.ExtraData.Comment = comment;
+            _pendingState.RecordChange();
         }
 
         var cursorPos = ImGui.GetCursorPos();
@@ -129,6 +142,7 @@ public class SelectedWorldWindow : BaseWindow
                         Unknown1 = 0,
                         Unknown2 = 0
                     });
+                    _pendingState.RecordChange();
                 }
             }
 
@@ -149,6 +163,7 @@ public class SelectedWorldWindow : BaseWindow
                 if (cityName != origCityName)
                 {
                     city.Name = cityName;
+                    _pendingState.RecordChange();
                 }
 
                 var country = city.Country;
@@ -159,6 +174,7 @@ public class SelectedWorldWindow : BaseWindow
                 if (country != origCountry)
                 {
                     city.Country = country;
+                    _pendingState.RecordChange();
                 }
 
                 var x = city.MapX;
@@ -168,6 +184,7 @@ public class SelectedWorldWindow : BaseWindow
                 if (x != origX)
                 {
                     city.MapX = x;
+                    _pendingState.RecordChange();
                 }
                 
                 var y = city.MapY;
@@ -178,6 +195,7 @@ public class SelectedWorldWindow : BaseWindow
                 if (y != origY)
                 {
                     city.MapY = y;
+                    _pendingState.RecordChange();
                 }
                 
                 var u1 = city.Unknown1;
@@ -187,6 +205,7 @@ public class SelectedWorldWindow : BaseWindow
                 if (u1 != origU1)
                 {
                     city.Unknown1 = u1;
+                    _pendingState.RecordChange();
                 }
                 
                 var u2 = city.Unknown2;
@@ -197,6 +216,7 @@ public class SelectedWorldWindow : BaseWindow
                 if (u2 != origU2)
                 {
                     city.Unknown2 = u2;
+                    _pendingState.RecordChange();
                 }
 
                 ImGui.Separator();
@@ -220,6 +240,7 @@ public class SelectedWorldWindow : BaseWindow
                         Unknown3 = 0,
                         Unknown4 = 0
                     });
+                    _pendingState.RecordChange();
                 }
             }
 
@@ -240,6 +261,7 @@ public class SelectedWorldWindow : BaseWindow
                 if (shortName != origShortName)
                 {
                     org.ShortName = shortName;
+                    _pendingState.RecordChange();
                 }
                 
                 var longName = org.LongName;
@@ -250,6 +272,7 @@ public class SelectedWorldWindow : BaseWindow
                 if (longName != origLongName)
                 {
                     org.LongName = longName;
+                    _pendingState.RecordChange();
                 }
 
                 var u1 = org.Unknown1;
@@ -259,6 +282,7 @@ public class SelectedWorldWindow : BaseWindow
                 if (u1 != origU1)
                 {
                     org.Unknown1 = u1;
+                    _pendingState.RecordChange();
                 }
                 
                 var u2 = org.Unknown2;
@@ -269,6 +293,7 @@ public class SelectedWorldWindow : BaseWindow
                 if (u2 != origU2)
                 {
                     org.Unknown2 = u2;
+                    _pendingState.RecordChange();
                 }
                 
                 var u3 = org.Unknown3;
@@ -279,6 +304,7 @@ public class SelectedWorldWindow : BaseWindow
                 if (u3 != origU3)
                 {
                     org.Unknown3 = u3;
+                    _pendingState.RecordChange();
                 }
                 
                 var u4 = org.Unknown4;
@@ -288,6 +314,7 @@ public class SelectedWorldWindow : BaseWindow
                 if (u4 != origU4)
                 {
                     org.Unknown4 = u4;
+                    _pendingState.RecordChange();
                 }
                 
                 var uniqueId = org.UniqueId;
@@ -298,6 +325,7 @@ public class SelectedWorldWindow : BaseWindow
                 if (uniqueId != origUniqueId)
                 {
                     org.UniqueId = uniqueId;
+                    _pendingState.RecordChange();
                 }
 
                 var allowMastermind = org.AllowMastermind;
@@ -310,10 +338,12 @@ public class SelectedWorldWindow : BaseWindow
                     if (allowMastermind)
                     {
                         org.UniqueId = 0x01;
+                        _pendingState.RecordChange();
                     }
                     else
                     {
                         org.UniqueId = 0xFF;
+                        _pendingState.RecordChange();
                     }
                 }
                 
