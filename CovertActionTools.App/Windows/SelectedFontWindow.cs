@@ -14,13 +14,15 @@ public class SelectedFontWindow : BaseWindow
     private readonly MainEditorState _mainEditorState;
     private readonly RenderWindow _renderWindow;
     private readonly FontPreviewState _fontPreviewState;
+    private readonly PendingEditorFontState _pendingState;
 
-    public SelectedFontWindow(ILogger<SelectedFontWindow> logger, MainEditorState mainEditorState, RenderWindow renderWindow, FontPreviewState fontPreviewState)
+    public SelectedFontWindow(ILogger<SelectedFontWindow> logger, MainEditorState mainEditorState, RenderWindow renderWindow, FontPreviewState fontPreviewState, PendingEditorFontState pendingState)
     {
         _logger = logger;
         _mainEditorState = mainEditorState;
         _renderWindow = renderWindow;
         _fontPreviewState = fontPreviewState;
+        _pendingState = pendingState;
     }
 
     public override void Draw()
@@ -43,7 +45,7 @@ public class SelectedFontWindow : BaseWindow
         var initialSize = new Vector2(screenSize.X - 300.0f, screenSize.Y - 200.0f);
         ImGui.SetNextWindowSize(initialSize);
         ImGui.SetNextWindowPos(initialPos);
-        ImGui.Begin($"Font", //TODO: change label but not ID to prevent unfocusing
+        ImGui.Begin("Font",
             ImGuiWindowFlags.NoResize |
             ImGuiWindowFlags.NoMove |
             ImGuiWindowFlags.NoNav | 
@@ -53,7 +55,7 @@ public class SelectedFontWindow : BaseWindow
         {
             var model = _mainEditorState.LoadedPackage;
             
-            DrawFontWindow(model, model.Fonts, fontId);
+            DrawFontWindow(model, fontId);
         }
         else
         {
@@ -63,9 +65,21 @@ public class SelectedFontWindow : BaseWindow
         ImGui.End();
     }
 
-    private void DrawFontWindow(PackageModel model, FontsModel fonts, int fontId)
+    private void DrawFontWindow(PackageModel model, int fontId)
     {
-        //TODO: keep a pending model and have a save button?
+        var fonts = ImGuiExtensions.PendingSaveChanges(_pendingState, "id",
+            () => model.Fonts.Clone(),
+            (data) =>
+            {
+                model.Fonts = data;
+                _mainEditorState.RecordChange();
+                if (!model.Index.FontChanges)
+                {
+                    model.Index.FontChanges = true;
+                    model.Index.FontIncluded = true;
+                }
+            });
+        
         var newSampleString = ImGuiExtensions.Input("Sample text", _fontPreviewState.SampleString, 64);
         if (newSampleString != null)
         {

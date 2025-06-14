@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace CovertActionTools.Core.Models
 {
@@ -31,5 +32,30 @@ namespace CovertActionTools.Core.Models
         public Metadata ExtraData { get; set; } = new();
 
         public List<Font> Fonts { get; set; } = new();
+
+        public FontsModel Clone()
+        {
+            return new FontsModel()
+            {
+                ExtraData = new Metadata()
+                {
+                    Fonts = ExtraData.Fonts.ToDictionary(x => x.Key,
+                        x => new FontMetadata()
+                        {
+                            Comment = x.Value.Comment,
+                            FirstAsciiValue = x.Value.FirstAsciiValue,
+                            LastAsciiValue = x.Value.LastAsciiValue,
+                            HorizontalPadding = x.Value.HorizontalPadding,
+                            VerticalPadding = x.Value.VerticalPadding,
+                            CharHeight = x.Value.CharHeight,
+                            CharacterWidths = x.Value.CharacterWidths.ToDictionary(y => y.Key, y => y.Value)
+                        })
+                },
+                Fonts = Fonts.Select(x => new Font()
+                {
+                    CharacterImages = x.CharacterImages.ToDictionary(x => x.Key, x => x.Value.ToArray())
+                }).ToList()
+            };
+        }
     }
 }

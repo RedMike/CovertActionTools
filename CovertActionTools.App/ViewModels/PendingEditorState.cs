@@ -29,3 +29,4 @@ public class PendingEditorCatalogState : PendingEditorState<CatalogModel> { }
 public class PendingEditorClueState : PendingEditorState<Dictionary<string, ClueModel>> { }
 public class PendingEditorPlotState : PendingEditorState<Dictionary<string, PlotModel>> { }
 public class PendingEditorAnimationState : PendingEditorState<AnimationModel> { }
+public class PendingEditorFontState : PendingEditorState<FontsModel> { }
