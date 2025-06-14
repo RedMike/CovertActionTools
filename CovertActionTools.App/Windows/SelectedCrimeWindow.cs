@@ -14,15 +14,17 @@ public class SelectedCrimeWindow : BaseWindow
     private readonly MainEditorState _mainEditorState;
     private readonly RenderWindow _renderWindow;
     private readonly ICrimeTimelineProcessor _crimeTimelineProcessor;
+    private readonly PendingEditorCrimeState _pendingState;
 
     private string _idError = "";
 
-    public SelectedCrimeWindow(ILogger<SelectedCrimeWindow> logger, MainEditorState mainEditorState, RenderWindow renderWindow, ICrimeTimelineProcessor crimeTimelineProcessor)
+    public SelectedCrimeWindow(ILogger<SelectedCrimeWindow> logger, MainEditorState mainEditorState, RenderWindow renderWindow, ICrimeTimelineProcessor crimeTimelineProcessor, PendingEditorCrimeState pendingState)
     {
         _logger = logger;
         _mainEditorState = mainEditorState;
         _renderWindow = renderWindow;
         _crimeTimelineProcessor = crimeTimelineProcessor;
+        _pendingState = pendingState;
     }
 
 
@@ -46,7 +48,7 @@ public class SelectedCrimeWindow : BaseWindow
         var initialSize = new Vector2(screenSize.X - 300.0f, screenSize.Y - 200.0f);
         ImGui.SetNextWindowSize(initialSize);
         ImGui.SetNextWindowPos(initialPos);
-        ImGui.Begin($"Crime", //TODO: change label but not ID to prevent unfocusing
+        ImGui.Begin("Crime",
             ImGuiWindowFlags.NoResize |
             ImGuiWindowFlags.NoMove |
             ImGuiWindowFlags.NoNav | 
@@ -55,14 +57,7 @@ public class SelectedCrimeWindow : BaseWindow
         if (_mainEditorState.LoadedPackage != null)
         {
             var model = _mainEditorState.LoadedPackage;
-            if (model.Crimes.TryGetValue(key, out var crime))
-            {
-                DrawCrimeWindow(model, crime);
-            }
-            else
-            {
-                ImGui.Text("Something went wrong, crime is missing..");
-            }
+            DrawCrimeWindow(model, key);
         }
         else
         {
@@ -72,9 +67,24 @@ public class SelectedCrimeWindow : BaseWindow
         ImGui.End();
     }
 
-    private void DrawCrimeWindow(PackageModel model, CrimeModel crime)
+    private void DrawCrimeWindow(PackageModel model, int key)
     {
-        //TODO: keep a pending model and have a save button?
+        if (!model.Crimes.ContainsKey(key))
+        {
+            ImGui.Text("Something went wrong, missing crime");
+            return;
+        }
+        var crime = ImGuiExtensions.PendingSaveChanges(_pendingState, key.ToString(),
+            () => model.Crimes[key].Clone(),
+            (data) =>
+            {
+                model.Crimes[key] = data;
+                _mainEditorState.RecordChange();
+                if (model.Index.CrimeChanges.Add(key))
+                {
+                    model.Index.CrimeIncluded.Add(key);
+                }
+            });
 
         var newId = ImGuiExtensions.Input("ID", crime.Id, width: 100);
         if (newId != null)
@@ -105,6 +115,7 @@ public class SelectedCrimeWindow : BaseWindow
             if (ImGui.Button("Add Participant"))
             {
                 crime.Participants.Add(new CrimeModel.Participant());
+                _pendingState.RecordChange();
             }
 
             for (var i = 0; i < crime.Participants.Count; i++)
@@ -262,6 +273,7 @@ public class SelectedCrimeWindow : BaseWindow
         if (ImGui.Button("Remove"))
         {
             crime.Participants.RemoveAt(i);
+            _pendingState.RecordChange();
             return;
         }
         
@@ -276,6 +288,7 @@ public class SelectedCrimeWindow : BaseWindow
             if (newRole != null)
             {
                 participant.Role = newRole;
+                _pendingState.RecordChange();
             }
         
             ImGui.TableNextColumn();
@@ -283,6 +296,7 @@ public class SelectedCrimeWindow : BaseWindow
             if (newExposure != null)
             {
                 participant.Exposure = newExposure.Value;
+                _pendingState.RecordChange();
             }
         
             ImGui.TableNextColumn();
@@ -290,6 +304,7 @@ public class SelectedCrimeWindow : BaseWindow
             if (newClueType != null)
             {
                 participant.ClueType = newClueType.Value;
+                _pendingState.RecordChange();
             }
             
             ImGui.EndTable();
@@ -303,6 +318,7 @@ public class SelectedCrimeWindow : BaseWindow
             if (newMastermind != null)
             {
                 participant.IsMastermind = newMastermind.Value;
+                _pendingState.RecordChange();
             }
         
             
@@ -311,6 +327,7 @@ public class SelectedCrimeWindow : BaseWindow
             if (newFemale != null)
             {
                 participant.ForceFemale = newFemale.Value;
+                _pendingState.RecordChange();
             }
             
             ImGui.TableNextColumn();
@@ -318,6 +335,7 @@ public class SelectedCrimeWindow : BaseWindow
             if (canComeOut != null)
             {
                 participant.CanComeOutOfHiding = canComeOut.Value;
+                _pendingState.RecordChange();
             }
             
             ImGui.TableNextColumn();
@@ -326,6 +344,7 @@ public class SelectedCrimeWindow : BaseWindow
             {
                 participant.IsInsideContact = insideContact.Value;
                 participant.Unknown2 = (participant.Unknown2 & 0xFE) | (insideContact.Value ? 0x01 : 0x00);
+                _pendingState.RecordChange();
             }
             
             ImGui.EndTable();
@@ -340,6 +359,7 @@ public class SelectedCrimeWindow : BaseWindow
             if (newRank != null)
             {
                 participant.Rank = newRank.Value;
+                _pendingState.RecordChange();
             }
 
             ImGui.TableNextColumn();
@@ -348,6 +368,7 @@ public class SelectedCrimeWindow : BaseWindow
             {
                 participant.Unknown2 = u2Parsed;
                 participant.IsInsideContact = (u2Parsed & 0x01) == 0x01;
+                _pendingState.RecordChange();
             }
             
             ImGui.EndTable();
@@ -376,6 +397,7 @@ public class SelectedCrimeWindow : BaseWindow
         if (ImGui.Button("Remove"))
         {
             crime.Participants.RemoveAt(i);
+            _pendingState.RecordChange();
             return;
         }
         
@@ -389,6 +411,7 @@ public class SelectedCrimeWindow : BaseWindow
             if (newParticipant != null)
             {
                 ev.MainParticipantId = participantList.FindIndex(x => x == newParticipant);
+                _pendingState.RecordChange();
             }
 
             ImGui.TableNextColumn();
@@ -398,6 +421,7 @@ public class SelectedCrimeWindow : BaseWindow
                 if (secondParticipant != null)
                 {
                     ev.SecondaryParticipantId = participantList.FindIndex(x => x == secondParticipant);
+                    _pendingState.RecordChange();
                 }
                 
                 ImGui.TableNextColumn();
@@ -405,6 +429,7 @@ public class SelectedCrimeWindow : BaseWindow
                 if (itemsToSecondary != null)
                 {
                     ev.ItemsToSecondary = itemsToSecondary.Value;
+                    _pendingState.RecordChange();
                 }
             }
             else
@@ -429,6 +454,7 @@ public class SelectedCrimeWindow : BaseWindow
                 {
                     ev.SendDescription = newDescription;
                 }
+                _pendingState.RecordChange();
             }
 
             ImGui.TableNextColumn();
@@ -438,6 +464,7 @@ public class SelectedCrimeWindow : BaseWindow
                 if (newSendDescription != null)
                 {
                     ev.SendDescription = newSendDescription;
+                    _pendingState.RecordChange();
                 }
             }
 
@@ -452,6 +479,7 @@ public class SelectedCrimeWindow : BaseWindow
             if (isMessage != null)
             {
                 ev.IsMessage = isMessage.Value;
+                _pendingState.RecordChange();
             }
             
             ImGui.TableNextColumn();
@@ -459,6 +487,7 @@ public class SelectedCrimeWindow : BaseWindow
             if (isPackage != null)
             {
                 ev.IsPackage = isPackage.Value;
+                _pendingState.RecordChange();
             }
             
             ImGui.TableNextColumn();
@@ -466,6 +495,7 @@ public class SelectedCrimeWindow : BaseWindow
             if (isMeeting != null)
             {
                 ev.IsMeeting = isMeeting.Value;
+                _pendingState.RecordChange();
             }
             
             ImGui.TableNextColumn();
@@ -473,6 +503,7 @@ public class SelectedCrimeWindow : BaseWindow
             if (isBulletin != null)
             {
                 ev.IsBulletin = isBulletin.Value;
+                _pendingState.RecordChange();
             }
             
             ImGui.TableNextColumn();
@@ -480,6 +511,7 @@ public class SelectedCrimeWindow : BaseWindow
             if (isU1 != null)
             {
                 ev.Unknown1 = isU1.Value;
+                _pendingState.RecordChange();
             }
             
             ImGui.TableNextColumn();
@@ -487,6 +519,7 @@ public class SelectedCrimeWindow : BaseWindow
             if (score != null)
             {
                 ev.Score = score.Value;
+                _pendingState.RecordChange();
             }
             
             ImGui.EndTable();
@@ -515,6 +548,7 @@ public class SelectedCrimeWindow : BaseWindow
                         {
                             ev.ReceivedObjectIds.Remove(objId);
                         }
+                        _pendingState.RecordChange();
                     }
                 }
             }
@@ -541,6 +575,7 @@ public class SelectedCrimeWindow : BaseWindow
                         {
                             ev.DestroyedObjectIds.Remove(objId);
                         }
+                        _pendingState.RecordChange();
                     }
                 }
             }
@@ -552,6 +587,7 @@ public class SelectedCrimeWindow : BaseWindow
         if (messageId != null)
         {
             ev.MessageId = messageId.Value;
+            _pendingState.RecordChange();
         }
 
         ImGui.BeginChild($"Message text {messageId}", new Vector2(ImGui.GetContentRegionAvail().X, 50.0f), true, ImGuiWindowFlags.NoScrollbar);
@@ -581,6 +617,7 @@ public class SelectedCrimeWindow : BaseWindow
         if (name != origName)
         {
             obj.Name = name;
+            _pendingState.RecordChange();
         }
         
         ImGui.SameLine();
@@ -595,6 +632,7 @@ public class SelectedCrimeWindow : BaseWindow
         if (pictureId != origPictureId && pictureId >= 0 && pictureId < 16)
         {
             obj.PictureId = pictureId;
+            _pendingState.RecordChange();
         }
         
         if (model.SimpleImages.TryGetValue("ICONS", out var iconImage))

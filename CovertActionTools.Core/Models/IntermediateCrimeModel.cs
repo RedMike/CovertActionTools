@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace CovertActionTools.Core.Models
 {
@@ -245,6 +246,62 @@ namespace CovertActionTools.Core.Models
         public List<Event> Events { get; set; } = new();
         public List<Object> Objects { get; set; } = new();
         public Metadata ExtraData { get; set; } = new();
+
+        public CrimeModel Clone()
+        {
+            return new CrimeModel()
+            {
+                ExtraData = new Metadata()
+                {
+                    Name = ExtraData.Name,
+                    Comment = ExtraData.Comment
+                },
+                Id = Id,
+                Events = Events
+                    .Select(x => new Event()
+                    {
+                        MainParticipantId = x.MainParticipantId,
+                        SecondaryParticipantId = x.SecondaryParticipantId,
+                        MessageId = x.MessageId,
+                        ReceiveDescription = x.ReceiveDescription,
+                        SendDescription = x.SendDescription,
+                        IsMessage = x.IsMessage,
+                        IsPackage = x.IsPackage,
+                        IsMeeting = x.IsMeeting,
+                        IsBulletin = x.IsBulletin,
+                        Unknown1 = x.Unknown1,
+                        ItemsToSecondary = x.ItemsToSecondary,
+                        ReceivedObjectIds = new HashSet<int>(x.ReceivedObjectIds),
+                        DestroyedObjectIds = new HashSet<int>(x.DestroyedObjectIds),
+                        Score = x.Score
+                    })
+                    .ToList(),
+                Objects = Objects
+                    .Select(x => new Object()
+                    {
+                        Name = x.Name,
+                        PictureId = x.PictureId
+                    }).ToList(),
+                Participants = Participants
+                    .Select(x => new Participant()
+                    {
+                        Exposure = x.Exposure,
+                        Role = x.Role,
+                        IsMastermind = x.IsMastermind,
+                        ForceFemale = x.ForceFemale,
+                        CanComeOutOfHiding = x.CanComeOutOfHiding,
+                        IsInsideContact = x.IsInsideContact,
+                        Unknown1 = x.Unknown1,
+                        Unknown2 = x.Unknown2,
+                        Unknown3 = x.Unknown3,
+                        Unknown4 = x.Unknown4,
+                        Unknown5 = x.Unknown5,
+                        ClueType = x.ClueType,
+                        Rank = x.Rank
+                    })
+                    .ToList()
+            };
+        }
     }
     
     /// <summary>
