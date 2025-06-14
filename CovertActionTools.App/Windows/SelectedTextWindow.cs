@@ -11,12 +11,14 @@ public class SelectedTextWindow : BaseWindow
     private readonly ILogger<SelectedTextWindow> _logger;
     private readonly MainEditorState _mainEditorState;
     private readonly RenderWindow _renderWindow;
+    private readonly PendingEditorTextState _pendingState;
 
-    public SelectedTextWindow(ILogger<SelectedTextWindow> logger, MainEditorState mainEditorState, RenderWindow renderWindow)
+    public SelectedTextWindow(ILogger<SelectedTextWindow> logger, MainEditorState mainEditorState, RenderWindow renderWindow, PendingEditorTextState pendingState)
     {
         _logger = logger;
         _mainEditorState = mainEditorState;
         _renderWindow = renderWindow;
+        _pendingState = pendingState;
     }
 
 
@@ -51,7 +53,7 @@ public class SelectedTextWindow : BaseWindow
         var initialSize = new Vector2(screenSize.X - 300.0f, screenSize.Y - 200.0f);
         ImGui.SetNextWindowSize(initialSize);
         ImGui.SetNextWindowPos(initialPos);
-        ImGui.Begin($"Text {textType}", //TODO: change label but not ID to prevent unfocusing
+        ImGui.Begin("Text",
             ImGuiWindowFlags.NoResize |
             ImGuiWindowFlags.NoMove |
             ImGuiWindowFlags.NoNav | 
@@ -73,9 +75,20 @@ public class SelectedTextWindow : BaseWindow
 
     private void DrawTextWindow(PackageModel model, TextModel.StringType textType, int? crimeId)
     {
-        //TODO: keep a pending model and have a save button?
+        var allTexts = ImGuiExtensions.PendingSaveChanges(_pendingState, "id",
+            () => model.Texts.ToDictionary(x => x.Key, x => x.Value.Clone()),
+            (data) =>
+            {
+                model.Texts = data;
+                _mainEditorState.RecordChange();
+                if (!model.Index.TextChanges)
+                {
+                    model.Index.TextChanges = true;
+                    model.Index.TextIncluded = true;
+                }
+            });
 
-        var texts = model.Texts.Values
+        var texts = allTexts.Values
             .Where(x => x.Type == textType && x.CrimeId == crimeId)
             .OrderBy(x => x.CrimeId)
             .ThenBy(x => x.Id)
@@ -134,6 +147,7 @@ public class SelectedTextWindow : BaseWindow
             {
                 var fixedMessage = message.Replace("\n", "\r\n"); //re-add \r, for consistency across OS
                 text.Message = fixedMessage;
+                _pendingState.RecordChange();
             }
             
             ImGui.Text("");

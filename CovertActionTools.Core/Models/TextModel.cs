@@ -74,5 +74,16 @@ namespace CovertActionTools.Core.Models
                     throw new Exception($"Unknown type: {Type}");
             }
         }
+
+        public TextModel Clone()
+        {
+            return new TextModel()
+            {
+                Id = Id,
+                Type = Type,
+                Message = Message,
+                CrimeId = CrimeId
+            };
+        }
     }
 }
