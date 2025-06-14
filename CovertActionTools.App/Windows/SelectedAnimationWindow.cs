@@ -14,17 +14,19 @@ public class SelectedAnimationWindow : SharedImageWindow
     private readonly IAnimationProcessor _animationProcessor;
     private readonly AnimationPreviewState _animationPreviewState;
     private readonly AnimationEditorState _animationEditorState;
+    private readonly PendingEditorAnimationState _pendingState;
 
     private int _selectedImage = 0;
     private int _selectedSprite = 0;
 
-    public SelectedAnimationWindow(RenderWindow renderWindow, ILogger<SelectedAnimationWindow> logger, MainEditorState mainEditorState, IAnimationProcessor animationProcessor, AnimationPreviewState animationPreviewState, AnimationEditorState animationEditorState) : base(renderWindow)
+    public SelectedAnimationWindow(RenderWindow renderWindow, ILogger<SelectedAnimationWindow> logger, MainEditorState mainEditorState, IAnimationProcessor animationProcessor, AnimationPreviewState animationPreviewState, AnimationEditorState animationEditorState, PendingEditorAnimationState pendingState) : base(renderWindow)
     {
         _logger = logger;
         _mainEditorState = mainEditorState;
         _animationProcessor = animationProcessor;
         _animationPreviewState = animationPreviewState;
         _animationEditorState = animationEditorState;
+        _pendingState = pendingState;
     }
 
     public override void Draw()
@@ -55,7 +57,7 @@ public class SelectedAnimationWindow : SharedImageWindow
         var initialSize = new Vector2(screenSize.X - 300.0f, screenSize.Y - 200.0f);
         ImGui.SetNextWindowSize(initialSize);
         ImGui.SetNextWindowPos(initialPos);
-        ImGui.Begin($"Animation", //TODO: change label but not ID to prevent unfocusing
+        ImGui.Begin("Animation",
             ImGuiWindowFlags.NoResize |
             ImGuiWindowFlags.NoMove |
             ImGuiWindowFlags.NoNav | 
@@ -64,14 +66,7 @@ public class SelectedAnimationWindow : SharedImageWindow
         if (_mainEditorState.LoadedPackage != null)
         {
             var model = _mainEditorState.LoadedPackage;
-            if (model.Animations.TryGetValue(key, out var animation))
-            {
-                DrawAnimationWindow(model, animation);
-            }
-            else
-            {
-                ImGui.Text("Something went wrong, animation is missing..");
-            }
+            DrawAnimationWindow(model, key);
         }
         else
         {
@@ -81,11 +76,22 @@ public class SelectedAnimationWindow : SharedImageWindow
         ImGui.End();
     }
 
-    private void DrawAnimationWindow(PackageModel model, AnimationModel animation)
+    private void DrawAnimationWindow(PackageModel model, string key)
     {
+        var animation = ImGuiExtensions.PendingSaveChanges(_pendingState, key,
+            () => model.Animations[key].Clone(),
+            (data) =>
+            {
+                model.Animations[key] = data;
+                _mainEditorState.RecordChange();
+                if (model.Index.AnimationChanges.Add(key))
+                {
+                    model.Index.AnimationIncluded.Add(key);
+                }
+            });
+        
         _animationEditorState.Update(animation);
         
-        //TODO: keep a pending model and have a save button?
         ImGui.BeginTabBar("AnimationTabs", ImGuiTabBarFlags.NoCloseWithMiddleMouseButton);
         
         if (ImGui.BeginTabItem("Images"))
@@ -437,6 +443,7 @@ public class SelectedAnimationWindow : SharedImageWindow
 
                 //mark it for reset so that the model gets updated
                 _animationEditorState.Reset("");
+                _pendingState.RecordChange();
             }
         }
         

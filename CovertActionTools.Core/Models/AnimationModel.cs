@@ -591,6 +591,44 @@ namespace CovertActionTools.Core.Models
                     Console.WriteLine(e);
                 }
             }
+
+            public Metadata Clone()
+            {
+                return new Metadata()
+                {
+                    Name = Name,
+                    Comment = Comment,
+                    BoundingWidth = BoundingWidth,
+                    BoundingHeight = BoundingHeight,
+                    GlobalFrameSkip = GlobalFrameSkip,
+                    BackgroundType = BackgroundType,
+                    ColorMapping = ColorMapping.ToDictionary(x => x.Key, x => x.Value),
+                    ClearColor = ClearColor,
+                    Unknown2 = Unknown2,
+                    ImageIdToIndex = ImageIdToIndex.ToDictionary(x => x.Key, x => x.Value),
+                    ImageIndexToUnknownData = ImageIndexToUnknownData.ToDictionary(x => x.Key, x => x.Value),
+                    Instructions = Instructions
+                        .Select(x => new AnimationInstruction()
+                        {
+                            Opcode = x.Opcode,
+                            Comment = x.Comment,
+                            Data = x.Data.ToArray(),
+                            DataLabel = x.DataLabel,
+                            Label = x.Label,
+                            StackParameters = x.StackParameters.ToArray()
+                        }).ToList(),
+                    InstructionLabels = InstructionLabels.ToDictionary(x => x.Key, x => x.Value),
+                    Steps = Steps
+                        .Select(x => new AnimationStep()
+                        {
+                            Type = x.Type,
+                            Data = x.Data.ToArray(),
+                            Comment = x.Comment,
+                            Label = x.Label
+                        }).ToList(),
+                    DataLabels = DataLabels.ToDictionary(x => x.Key, x => x.Value)
+                };
+            }
         }
         
         /// <summary>
@@ -600,5 +638,16 @@ namespace CovertActionTools.Core.Models
 
         public Dictionary<int, SimpleImageModel> Images { get; set; } = new();
         public Metadata ExtraData { get; set; } = new();
+
+        public AnimationModel Clone()
+        {
+            return new AnimationModel()
+            {
+                Key = Key,
+                ExtraData = ExtraData.Clone(),
+                Images = Images.ToDictionary(x => x.Key,
+                    x => x.Value.Clone())
+            };
+        }
     }
 }
