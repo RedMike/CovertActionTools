@@ -63,36 +63,18 @@ public class SelectedPlotWindow : BaseWindow
 
     private void DrawPlotWindow(PackageModel model, int missionSetId)
     {
-        Dictionary<string, PlotModel> allPlots;
-        if (string.IsNullOrEmpty(_pendingState.Id))
-        {
-            allPlots = model.Plots.ToDictionary(x => x.Key, x => x.Value.Clone());
-            _pendingState.Reset("id", allPlots);
-        }
-        else
-        {
-            if (_pendingState.PendingData == null)
+        var allPlots = ImGuiExtensions.PendingSaveChanges(_pendingState, "id",
+            () => model.Plots.ToDictionary(x => x.Key, x => x.Value.Clone()),
+            (data) =>
             {
-                return;
-            }
-            allPlots = _pendingState.PendingData;
-        }
-        var windowSize = ImGui.GetContentRegionAvail();
-        if (_pendingState.HasChanges && _pendingState.PendingData != null)
-        {
-            if (ImGui.Button("Save Changes", new Vector2(windowSize.X, 30.0f)))
-            {
-                model.Plots = _pendingState.PendingData;
-                _pendingState.Reset("id", model.Plots.ToDictionary(x => x.Key, x => x.Value.Clone()));
+                model.Plots = data;
                 _mainEditorState.RecordChange();
                 if (!model.Index.PlotChanges)
                 {
                     model.Index.PlotChanges = true;
                     model.Index.PlotIncluded = true;
                 }
-            }
-            ImGui.NewLine();
-        }
+            });
         var plots = allPlots.Values
             .Where(x => x.MissionSetId == missionSetId)
             .OrderBy(x => x.CrimeIndex ?? -1)
@@ -159,6 +141,7 @@ public class SelectedPlotWindow : BaseWindow
                 //TODO: change message number
             }
             
+            var windowSize = ImGui.GetContentRegionAvail();
             var message = plot.Message.Replace("\r", ""); //strip out \r and re-add after, for consistency across OS
             var origMessage = message;
             ImGui.InputTextMultiline($"Message {plot.GetMessagePrefix()}", ref message, 1024, new Vector2(windowSize.X, 60.0f),

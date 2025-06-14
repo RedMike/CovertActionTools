@@ -67,42 +67,22 @@ public class SelectedCatalogImageWindow : SharedImageWindow
             ImGui.Text("Something went wrong, missing catalog");
             return;
         }
-
-        CatalogModel catalog;
-        if (_pendingState.Id != catalogKey)
-        {
-            catalog = existingCatalog.Clone();
-            _pendingState.Reset(catalogKey, catalog);
-        }
-        else
-        {
-            if (_pendingState.PendingData == null)
-            {
-                return;
-            }
-
-            catalog = _pendingState.PendingData;
-        }
-        if (!catalog.Entries.TryGetValue(imageId, out var image))
-        {
-            ImGui.Text("Something went wrong, missing image in catalog");
-            return;
-        }
         
-        var windowSize = ImGui.GetContentRegionAvail();
-        if (_pendingState.HasChanges && _pendingState.PendingData != null)
-        {
-            if (ImGui.Button("Save Changes", new Vector2(windowSize.X, 30.0f)))
+        var catalog = ImGuiExtensions.PendingSaveChanges(_pendingState, catalogKey,
+            () => model.Catalogs[catalogKey].Clone(),
+            (data) =>
             {
-                model.Catalogs[catalogKey] = _pendingState.PendingData;
-                _pendingState.Reset(catalogKey, catalog.Clone());
+                model.Catalogs[catalogKey] = data;
                 _mainEditorState.RecordChange();
                 if (model.Index.CatalogChanges.Add(catalogKey))
                 {
                     model.Index.CatalogIncluded.Add(catalogKey);
                 }
-            }
-            ImGui.NewLine();
+            });
+        if (!catalog.Entries.TryGetValue(imageId, out var image))
+        {
+            ImGui.Text("Something went wrong, missing image in catalog");
+            return;
         }
         
         //first draw the catalog-specific info
@@ -113,6 +93,7 @@ public class SelectedCatalogImageWindow : SharedImageWindow
             _pendingState.RecordChange();
         }
 
+        var windowSize = ImGui.GetContentRegionAvail();
         var oldComment = catalog.ExtraData.Comment;
         var comment = catalog.ExtraData.Comment;
         ImGui.InputTextMultiline("Comment", ref comment, 2048, new Vector2(windowSize.X, 50.0f));

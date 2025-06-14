@@ -68,36 +68,18 @@ public class SelectedClueWindow : BaseWindow
 
     private void DrawClueWindow(PackageModel model, int? crimeId)
     {
-        Dictionary<string, ClueModel> allClues;
-        if (string.IsNullOrEmpty(_pendingState.Id))
-        {
-            allClues = model.Clues.ToDictionary(x => x.Key, x => x.Value.Clone());
-            _pendingState.Reset("id", allClues);
-        }
-        else
-        {
-            if (_pendingState.PendingData == null)
+        var allClues = ImGuiExtensions.PendingSaveChanges(_pendingState, "id",
+            () => model.Clues.ToDictionary(x => x.Key, x => x.Value.Clone()),
+            (data) =>
             {
-                return;
-            }
-            allClues = _pendingState.PendingData;
-        }
-        var windowSize = ImGui.GetContentRegionAvail();
-        if (_pendingState.HasChanges && _pendingState.PendingData != null)
-        {
-            if (ImGui.Button("Save Changes", new Vector2(windowSize.X, 30.0f)))
-            {
-                model.Clues = _pendingState.PendingData;
-                _pendingState.Reset("id", model.Clues.ToDictionary(x => x.Key, x => x.Value.Clone()));
+                model.Clues = data;
                 _mainEditorState.RecordChange();
                 if (!model.Index.ClueChanges)
                 {
                     model.Index.ClueChanges = true;
                     model.Index.ClueIncluded = true;
                 }
-            }
-            ImGui.NewLine();
-        }
+            });
         if (ImGui.Button("Add Clue"))
         {
             _pendingState.RecordChange();

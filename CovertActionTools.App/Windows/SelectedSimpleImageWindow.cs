@@ -65,36 +65,17 @@ public class SelectedSimpleImageWindow : SharedImageWindow
             ImGui.Text("Something went wrong, missing image");
             return;
         }
-        SimpleImageModel image;
-        if (_pendingState.Id != key)
-        {
-            image = model.SimpleImages[key].Clone();
-            _pendingState.Reset(key, image);
-        }
-        else
-        {
-            if (_pendingState.PendingData == null)
+        var image = ImGuiExtensions.PendingSaveChanges(_pendingState, key,
+            () => model.SimpleImages[key].Clone(),
+            (data) =>
             {
-                return;
-            }
-            image = _pendingState.PendingData;
-        }
-
-        var windowSize = ImGui.GetContentRegionAvail();
-        if (_pendingState.HasChanges && _pendingState.PendingData != null)
-        {
-            if (ImGui.Button("Save Changes", new Vector2(windowSize.X, 30.0f)))
-            {
-                model.SimpleImages[image.Key] = _pendingState.PendingData;
-                _pendingState.Reset(key, image.Clone());
+                model.SimpleImages[key] = data;
                 _mainEditorState.RecordChange();
                 if (model.Index.SimpleImageChanges.Add(key))
                 {
                     model.Index.SimpleImageIncluded.Add(key);
                 }
-            }
-            ImGui.NewLine();
-        }
+            });
         if (ImGui.BeginTable("i_1", 4))
         {
             ImGui.TableNextRow();
@@ -153,6 +134,7 @@ public class SelectedSimpleImageWindow : SharedImageWindow
             _pendingState.RecordChange();
         }
 
+        var windowSize = ImGui.GetContentRegionAvail();
         var origComment = image.ExtraData.Comment;
         var comment = origComment;
         ImGui.InputTextMultiline("Comment", ref comment, 2048, new Vector2(windowSize.X, 50.0f));

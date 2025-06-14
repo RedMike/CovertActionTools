@@ -1,5 +1,8 @@
 ﻿using System.Linq.Expressions;
+using System.Numerics;
 using System.Reflection;
+using CovertActionTools.App.ViewModels;
+using CovertActionTools.Core.Models;
 using ImGuiNET;
 
 namespace CovertActionTools.App;
@@ -219,5 +222,35 @@ public static class ImGuiExtensions
         }
 
         return values[valueIndex];
+    }
+
+    public static TData PendingSaveChanges<TData>(PendingEditorState<TData> pendingState, string selectedIndex, Func<TData> get, Action<TData> onSave)
+    {
+        TData data;
+        if (string.IsNullOrEmpty(pendingState.Id))
+        {
+            data = get();
+            pendingState.Reset(selectedIndex, data);
+        }
+        else
+        {
+            if (pendingState.PendingData == null)
+            {
+                throw new Exception("Missing pending data");
+            }
+            data = pendingState.PendingData;
+        }
+        var windowSize = ImGui.GetContentRegionAvail();
+        if (pendingState.HasChanges && pendingState.PendingData != null)
+        {
+            if (ImGui.Button("Save Changes", new Vector2(windowSize.X, 30.0f)))
+            {
+                onSave(pendingState.PendingData);
+                pendingState.Reset(selectedIndex, get());
+            }
+            ImGui.NewLine();
+        }
+
+        return data;
     }
 }
