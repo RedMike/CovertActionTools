@@ -164,5 +164,15 @@ namespace CovertActionTools.Core.Models
                     throw new Exception($"Unknown type: {Type}");
             }
         }
+
+        public ProseModel Clone()
+        {
+            return new ProseModel()
+            {
+                Type = Type,
+                SecondaryId = SecondaryId,
+                Message = Message
+            };
+        }
     }
 }

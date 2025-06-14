@@ -11,12 +11,14 @@ public class SelectedProseWindow : BaseWindow
     private readonly ILogger<SelectedTextWindow> _logger;
     private readonly MainEditorState _mainEditorState;
     private readonly RenderWindow _renderWindow;
+    private readonly PendingEditorProseState _pendingState;
 
-    public SelectedProseWindow(ILogger<SelectedTextWindow> logger, MainEditorState mainEditorState, RenderWindow renderWindow)
+    public SelectedProseWindow(ILogger<SelectedTextWindow> logger, MainEditorState mainEditorState, RenderWindow renderWindow, PendingEditorProseState pendingState)
     {
         _logger = logger;
         _mainEditorState = mainEditorState;
         _renderWindow = renderWindow;
+        _pendingState = pendingState;
     }
 
     public override void Draw()
@@ -39,7 +41,7 @@ public class SelectedProseWindow : BaseWindow
         var initialSize = new Vector2(screenSize.X - 300.0f, screenSize.Y - 200.0f);
         ImGui.SetNextWindowSize(initialSize);
         ImGui.SetNextWindowPos(initialPos);
-        ImGui.Begin($"Prose", //TODO: change label but not ID to prevent unfocusing
+        ImGui.Begin("Prose",
             ImGuiWindowFlags.NoResize |
             ImGuiWindowFlags.NoMove |
             ImGuiWindowFlags.NoNav | 
@@ -49,7 +51,7 @@ public class SelectedProseWindow : BaseWindow
         {
             var model = _mainEditorState.LoadedPackage;
             
-            DrawProseWindow(model, model.Prose[proseKey]);
+            DrawProseWindow(model, proseKey);
         }
         else
         {
@@ -59,9 +61,22 @@ public class SelectedProseWindow : BaseWindow
         ImGui.End();
     }
 
-    private void DrawProseWindow(PackageModel model, ProseModel prose)
+    private void DrawProseWindow(PackageModel model, string key)
     {
-        //TODO: keep a pending model and have a save button?
+        var allProse = ImGuiExtensions.PendingSaveChanges(_pendingState, "id",
+            () => model.Prose.ToDictionary(x => x.Key, x => x.Value.Clone()),
+            (data) =>
+            {
+                model.Prose = data;
+                _mainEditorState.RecordChange();
+                if (!model.Index.ProseChanges)
+                {
+                    model.Index.ProseChanges = true;
+                    model.Index.ProseIncluded = true;
+                }
+            });
+        var prose = allProse[key];
+        
         var newPrefix = ImGuiExtensions.Input("Prefix", prose.GetMessagePrefix(), 64);
         if (newPrefix != null)
         {
@@ -77,6 +92,7 @@ public class SelectedProseWindow : BaseWindow
         {
             var fixedMessage = message.Replace("\n", "\r\n"); //re-add \r, for consistency across OS
             prose.Message = fixedMessage;
+            _pendingState.RecordChange();
         }
     }
 }
