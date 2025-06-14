@@ -48,7 +48,6 @@ public class MainMenuWindow : BaseWindow
 
     private void DrawLoadedMenus()
     {
-        var packageModified = _mainEditorState.IsPackageModified();
         if (ImGui.BeginMenu("File"))
         {
             if (ImGui.MenuItem("Close Package"))
@@ -66,16 +65,6 @@ public class MainMenuWindow : BaseWindow
             
             ImGui.EndMenu();
         }
-
-        if (!string.IsNullOrEmpty(_mainEditorState.DefaultRunPath))
-        {
-            if (ImGui.BeginMenu("Run", !_mainEditorState.Running))
-            {
-                RunPublished();
-                
-                ImGui.EndMenu();
-            }
-        }
     }
 
     private void SavePackage()
@@ -88,35 +77,6 @@ public class MainMenuWindow : BaseWindow
         _savePackageState.Run = true;
         _savePackageState.Exporter = _exporter;
         _savePackageState.Exporter.StartExport(_mainEditorState.LoadedPackage!, _mainEditorState.LoadedPackagePath!);
-    }
-
-    private void RunPublished()
-    {
-        if (_mainEditorState.DefaultRunPath == null)
-        {
-            return;
-        }
-        if (_mainEditorState.Running)
-        {
-            return;
-        }
-
-        _mainEditorState.Running = true;
-        var process = new Process();
-        process.StartInfo.FileName = _mainEditorState.DefaultRunPath;
-        process.StartInfo.WindowStyle = ProcessWindowStyle.Normal;
-        process.StartInfo.WorkingDirectory = Path.GetDirectoryName(_mainEditorState.DefaultRunPath);
-        //TODO: detect exit properly
-        process.Exited += (_, _) =>
-        {
-            _mainEditorState.Running = false;
-        };
-        var started = process.Start();
-        if (!started)
-        {
-            _logger.LogError($"Failed to start process: {process.ExitCode}");
-            _mainEditorState.Running = false;
-        }
     }
 
     private void DrawNotLoadedMenu()
@@ -148,7 +108,6 @@ public class MainMenuWindow : BaseWindow
                     _parsePublishedState.DestinationPath = Path.Combine(Constants.DefaultParseDestinationPath, newName);
                 }
 
-                _logger.LogInformation($"Showing Parse Published dialog");
                 _parsePublishedState.Show = true;
                 _parsePublishedState.Run = false;
             }
