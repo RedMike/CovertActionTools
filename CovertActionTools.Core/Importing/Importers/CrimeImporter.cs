@@ -31,7 +31,7 @@ namespace CovertActionTools.Core.Importing.Importers
 
         protected override bool CheckIfValidForImportInternal(string path)
         {
-            if (Directory.GetFiles(path, "*_crime.json").Length == 0)
+            if (Directory.GetFiles(GetPath(path), "*_crime.json").Length == 0)
             {
                 return false;
             }
@@ -41,14 +41,14 @@ namespace CovertActionTools.Core.Importing.Importers
 
         protected override int GetTotalItemCountInPath()
         {
-            return GetKeys(Path).Count;
+            return GetKeys(GetPath(Path)).Count;
         }
 
         protected override int RunImportStepInternal()
         {
             var nextKey = _keys[_index];
 
-            _result[nextKey] = Import(Path, nextKey);
+            _result[nextKey] = Import(GetPath(Path), nextKey);
 
             return _index++;
         }
@@ -60,7 +60,7 @@ namespace CovertActionTools.Core.Importing.Importers
 
         protected override void OnImportStart()
         {
-            _keys.AddRange(GetKeys(Path));
+            _keys.AddRange(GetKeys(GetPath(Path)));
             _index = 0;
         }
         
@@ -84,6 +84,11 @@ namespace CovertActionTools.Core.Importing.Importers
             var rawData = File.ReadAllText(filePath);
             var model = JsonSerializer.Deserialize<CrimeModel>(rawData);
             return model ?? throw new Exception("Invalid crime model");
+        }
+        
+        private string GetPath(string path)
+        {
+            return System.IO.Path.Combine(path, "crime");
         }
     }
 }

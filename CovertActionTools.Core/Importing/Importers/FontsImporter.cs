@@ -28,7 +28,7 @@ namespace CovertActionTools.Core.Importing.Importers
 
         protected override bool CheckIfValidForImportInternal(string path)
         {
-            if (Directory.GetFiles(path, "FONTS.json").Length == 0)
+            if (Directory.GetFiles(GetPath(path), "FONTS.json").Length == 0)
             {
                 return false;
             }
@@ -38,7 +38,7 @@ namespace CovertActionTools.Core.Importing.Importers
 
         protected override int GetTotalItemCountInPath()
         {
-            return Directory.GetFiles(Path, "FONTS.json").Length;
+            return Directory.GetFiles(GetPath(Path), "FONTS.json").Length;
         }
 
         protected override int RunImportStepInternal()
@@ -48,7 +48,7 @@ namespace CovertActionTools.Core.Importing.Importers
                 return 1;
             }
 
-            _result = Import(Path);
+            _result = Import(GetPath(Path));
             _done = true;
             return 1;
         }
@@ -109,6 +109,11 @@ namespace CovertActionTools.Core.Importing.Importers
             }
 
             return model;
+        }
+        
+        private string GetPath(string path)
+        {
+            return System.IO.Path.Combine(path, "font");
         }
     }
 }

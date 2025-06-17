@@ -36,7 +36,7 @@ namespace CovertActionTools.Core.Importing.Importers
 
         protected override bool CheckIfValidForImportInternal(string path)
         {
-            if (Directory.GetFiles(path, "*_catalog.json").Length == 0)
+            if (Directory.GetFiles(GetPath(path), "*_catalog.json").Length == 0)
             {
                 return false;
             }
@@ -53,7 +53,7 @@ namespace CovertActionTools.Core.Importing.Importers
         {
             var nextKey = _keys[_index];
 
-            _result[nextKey] = Import(Path, nextKey);
+            _result[nextKey] = Import(GetPath(Path), nextKey);
 
             return _index++;
         }
@@ -65,7 +65,7 @@ namespace CovertActionTools.Core.Importing.Importers
 
         protected override void OnImportStart()
         {
-            _keys.AddRange(GetKeys(Path));
+            _keys.AddRange(GetKeys(GetPath(Path)));
             _index = 0;
             _logger.LogInformation($"Starting import of catalogs: {_keys.Count} catalogs");
         }
@@ -123,6 +123,11 @@ namespace CovertActionTools.Core.Importing.Importers
             }
             model.ModernImageData = _imageImporter.ReadModernImageData(path, filename, model.ExtraData.Width, model.ExtraData.Height);
             return model;
+        }
+        
+        private string GetPath(string path)
+        {
+            return System.IO.Path.Combine(path, "catalog");
         }
     }
 }

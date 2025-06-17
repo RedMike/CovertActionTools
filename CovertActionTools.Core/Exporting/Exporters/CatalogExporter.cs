@@ -60,9 +60,14 @@ namespace CovertActionTools.Core.Exporting.Exporters
             var nextKey = _keys[_index];
 
             var files = Export(Data[nextKey]);
+            var path = GetPath(Path);
+            if (!Directory.Exists(path))
+            {
+                Directory.CreateDirectory(path);
+            }
             foreach (var pair in files)
             {
-                File.WriteAllBytes(System.IO.Path.Combine(Path, pair.Key), pair.Value);
+                File.WriteAllBytes(System.IO.Path.Combine(path, pair.Key), pair.Value);
             }
 
             return _index++;
@@ -100,6 +105,11 @@ namespace CovertActionTools.Core.Exporting.Exporters
             var serialisedMetadata = JsonSerializer.Serialize(catalog.ExtraData, JsonOptions);
             var bytes = Encoding.UTF8.GetBytes(serialisedMetadata);
             return bytes;
+        }
+        
+        private string GetPath(string path)
+        {
+            return System.IO.Path.Combine(path, "catalog");
         }
     }
 }
