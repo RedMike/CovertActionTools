@@ -89,8 +89,6 @@ public class ParsePublishedState : IViewModel
 
     public void CloseDialog()
     {
-        SourcePath = string.Empty;
-        DestinationPath = string.Empty;
         Show = false;
         Run = false;
         Export = false;

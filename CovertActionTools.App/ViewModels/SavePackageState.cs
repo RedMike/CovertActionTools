@@ -55,7 +55,6 @@ public class SavePackageState : IViewModel
 
     public void CloseDialog()
     {
-        DestinationPath = null;
         Show = false;
         AutoRun = false;
         Run = false;

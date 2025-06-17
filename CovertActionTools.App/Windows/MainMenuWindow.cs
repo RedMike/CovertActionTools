@@ -14,20 +14,20 @@ public class MainMenuWindow : BaseWindow
     private readonly ParsePublishedState _parsePublishedState;
     private readonly LoadPackageState _loadPackageState;
     private readonly SavePackageState _savePackageState;
-    private readonly IPackageExporter _exporter;
     private readonly EditorSettingsState _editorSettingsState;
     private readonly ConfirmDialogueState _confirmDialogueState;
+    private readonly PublishPackageState _publishPackageState;
     
-    public MainMenuWindow(ILogger<MainMenuWindow> logger, MainEditorState mainEditorState, ParsePublishedState parsePublishedState, LoadPackageState loadPackageState, SavePackageState savePackageState, IPackageExporter<IExporter> exporter, EditorSettingsState editorSettingsState, ConfirmDialogueState confirmDialogueState)
+    public MainMenuWindow(ILogger<MainMenuWindow> logger, MainEditorState mainEditorState, ParsePublishedState parsePublishedState, LoadPackageState loadPackageState, SavePackageState savePackageState, EditorSettingsState editorSettingsState, ConfirmDialogueState confirmDialogueState, PublishPackageState publishPackageState)
     {
         _logger = logger;
         _mainEditorState = mainEditorState;
         _parsePublishedState = parsePublishedState;
         _loadPackageState = loadPackageState;
         _savePackageState = savePackageState;
-        _exporter = exporter;
         _editorSettingsState = editorSettingsState;
         _confirmDialogueState = confirmDialogueState;
+        _publishPackageState = publishPackageState;
     }
 
     public override void Draw()
@@ -74,25 +74,57 @@ public class MainMenuWindow : BaseWindow
                 }
             }
             
-            ImGui.EndMenu();
-        }
-
-        if (ImGui.BeginMenu("Save Package"))
-        {
-            SavePackage();
+            if (ImGui.MenuItem("Save Package"))
+            {
+                SavePackage(_mainEditorState.LoadedPackagePath!, true);
+            }
+            
+            if (ImGui.MenuItem("Save Package As.."))
+            {
+                SavePackage(_mainEditorState.LoadedPackagePath!, false);
+            }
+            
+            if (ImGui.MenuItem("Publish Package"))
+            {
+                PublishPackage();
+            }
             
             ImGui.EndMenu();
         }
+
+        if (_mainEditorState.HasChanges)
+        {
+            if (ImGui.MenuItem("Save Package"))
+            {
+                SavePackage(_mainEditorState.LoadedPackagePath!, true);
+            }
+        }
     }
 
-    private void SavePackage()
+    private void SavePackage(string path, bool autoRun)
     {
         if (_savePackageState.Show)
         {
             return;
         }
 
-        _savePackageState.ShowDialog(_mainEditorState.LoadedPackagePath!, true);
+        _savePackageState.ShowDialog(path, autoRun);
+    }
+    
+    private void PublishPackage()
+    {
+        if (_publishPackageState.Show)
+        {
+            return;
+        }
+
+        var path = _publishPackageState.DestinationPath;
+        if (string.IsNullOrEmpty(path))
+        {
+            path = Path.Combine(_mainEditorState.LoadedPackagePath!, "published");
+        }
+
+        _publishPackageState.ShowDialog(path, false);
     }
 
     private void DrawNotLoadedMenu()
@@ -131,7 +163,7 @@ public class MainMenuWindow : BaseWindow
                     ImGui.EndMenu();
                 }
             }
-            if (ImGui.MenuItem("Parse Retail Game"))
+            if (ImGui.MenuItem("Parse Game Install"))
             {
                 var now = DateTime.Now;
                 var sourcePath = _parsePublishedState.SourcePath;
@@ -168,7 +200,6 @@ public class MainMenuWindow : BaseWindow
             ImGui.SetCursorPos(ImGui.GetWindowContentRegionMax() - ImGui.CalcTextSize(text));
             if (ImGui.BeginMenu(text, false))
             {
-                //TODO: extra info
                 ImGui.EndMenu();
             }
         }

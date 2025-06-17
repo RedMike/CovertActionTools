@@ -1,24 +1,24 @@
 ﻿namespace CovertActionTools.App.ViewModels;
 
-public class LoadPackageState : IViewModel
+public class PublishPackageState : IViewModel
 {
     public bool Show { get; private set; }
     public bool AutoRun { get; private set; }
     public bool Run { get; private set; }
-    public string? SourcePath { get; private set; }
-
+    public string? DestinationPath { get; private set; }
+    
     public void ShowDialog(string path, bool autorun)
     {
         if (Show)
         {
             throw new Exception("Dialog already being shown");
         }
-        SourcePath = path;
+        DestinationPath = path;
         Show = true;
         AutoRun = autorun;
         Run = false;
     }
-
+    
     public void UpdatePath(string path)
     {
         if (!Show)
@@ -31,9 +31,9 @@ public class LoadPackageState : IViewModel
             throw new Exception("Process already running");
         }
 
-        SourcePath = path;
+        DestinationPath = path;
     }
-
+    
     public void StartRunning()
     {
         if (!Show)
