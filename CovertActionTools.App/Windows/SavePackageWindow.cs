@@ -13,15 +13,17 @@ public class SavePackageWindow : BaseWindow
     private readonly AppLoggingState _appLogging;
     private readonly SavePackageState _savePackageState;
     private readonly MainEditorState _mainEditorState;
-    private readonly IPackageExporter _exporter;
+    private readonly IPackageExporter<IExporter> _exporter;
+    private readonly FileBrowserState _fileBrowserState;
 
-    public SavePackageWindow(ILogger<SavePackageWindow> logger, AppLoggingState appLogging, SavePackageState savePackageState, MainEditorState mainEditorState, IPackageExporter<IExporter> exporter)
+    public SavePackageWindow(ILogger<SavePackageWindow> logger, AppLoggingState appLogging, SavePackageState savePackageState, MainEditorState mainEditorState, IPackageExporter<IExporter> exporter, FileBrowserState fileBrowserState)
     {
         _logger = logger;
         _appLogging = appLogging;
         _savePackageState = savePackageState;
         _mainEditorState = mainEditorState;
         _exporter = exporter;
+        _fileBrowserState = fileBrowserState;
     }
 
     public override void Draw()
@@ -54,19 +56,10 @@ public class SavePackageWindow : BaseWindow
 
     private void DrawRunning()
     {
-        if (_savePackageState.Exporter == null)
-        {
-            throw new Exception("Missing exporter");
-        }
         var destPath = _savePackageState.DestinationPath;
-        var publishPath = _savePackageState.PublishPath;
-        var exportStatus = _savePackageState.Exporter.CheckStatus() ?? new ExportStatus();
+        var exportStatus = _exporter.CheckStatus() ?? new ExportStatus();
         
         ImGui.Text($"Saving package to folder: {destPath}");
-        if (!string.IsNullOrEmpty(publishPath))
-        {
-            ImGui.Text($"Publishing to folder: {publishPath}");
-        }
 
         ImGui.Text("");
         ImGui.Separator();
@@ -98,17 +91,14 @@ public class SavePackageWindow : BaseWindow
         {
             if (exportStatus.Errors.Count == 0)
             {
-                _savePackageState.Show = false;
-                _savePackageState.Run = false;
-                _savePackageState.Exporter = null;
+                _mainEditorState.PackageWasSaved();
+                _savePackageState.CloseDialog();
             }
             else
             {
                 if (ImGui.Button("Close"))
                 {
-                    _savePackageState.Show = false;
-                    _savePackageState.Run = false;
-                    _savePackageState.Exporter = null;
+                    _savePackageState.CloseDialog();
                 }
             }
         }
@@ -130,38 +120,40 @@ public class SavePackageWindow : BaseWindow
     
     private void DrawNotRunning()
     {
-        //TODO: better file explorer?
         var origDestPath = _savePackageState.DestinationPath ?? "";
-        var destPath = origDestPath;
-        ImGui.InputText("Package Path", ref destPath, 256);
-        if (destPath != origDestPath)
+        var destinationPath = origDestPath;
+        ImGui.InputText("Package Path", ref destinationPath, 256);
+        if (destinationPath != origDestPath)
         {
-            _savePackageState.DestinationPath = destPath;
+            _savePackageState.UpdatePath(destinationPath);
         }
         
-        var origPublishPath = _savePackageState.PublishPath ?? "";
-        var publishPath = origPublishPath;
-        ImGui.InputText("Publish Path", ref publishPath, 256);
-        if (publishPath != origPublishPath)
+        ImGui.SameLine();
+
+        if (ImGui.Button("Browse"))
         {
-            _savePackageState.PublishPath = publishPath;
+            _fileBrowserState.CurrentPath = destinationPath + Path.DirectorySeparatorChar;
+            _fileBrowserState.CurrentDir = Directory.GetParent(destinationPath)!.FullName;
+            _fileBrowserState.FoldersOnly = true;
+            _fileBrowserState.NewFolderButton = true;
+            _fileBrowserState.Shown = true;
+            _fileBrowserState.Callback = (newPath) => _savePackageState.UpdatePath(newPath);
         }
         
         ImGui.Separator();
 
         if (ImGui.Button("Cancel"))
         {
-            _savePackageState.Show = false;
+            _savePackageState.CloseDialog();
         }
 
         ImGui.SameLine();
-        if (ImGui.Button("Save"))
+        if (ImGui.Button("Save") || _savePackageState.AutoRun)
         {
             var now = DateTime.Now;
-            _savePackageState.Exporter = _exporter;
             _logger.LogInformation($"Starting exporting at: {now:s}");
-            _savePackageState.Exporter.StartExport(_mainEditorState.LoadedPackage!, destPath);
-            _savePackageState.Run = true;
+            _exporter.StartExport(_mainEditorState.LoadedPackage!, destinationPath);
+            _savePackageState.StartRunning();
         }
     }
 }

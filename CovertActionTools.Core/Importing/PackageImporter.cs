@@ -57,11 +57,16 @@ namespace CovertActionTools.Core.Importing
 
             _stageCount = 0;
             _currentStage = 0;
+            _importTask = null;
+            _currentMessage = string.Empty;
+            _currentTotal = 0;
+            _currentCount = 0;
+            _done = false;
             foreach (var importer in _importers)
             {
                 _stageCount += 1;
                 importer.Start(path);
-                _logger.LogInformation($"Importer {importer.GetType()} starting import from: {path}");
+                _logger.LogDebug($"Importer {importer.GetType()} starting import from: {path}");
             }
             _importTask = ImportInternal();
         }
@@ -172,9 +177,6 @@ namespace CovertActionTools.Core.Importing
                 }
 
                 await Task.Yield();
-                
-                
-                _logger.LogInformation($"Import done"); //TODO: extra info
             }
             catch (Exception e)
             {

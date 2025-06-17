@@ -16,8 +16,9 @@ public class MainMenuWindow : BaseWindow
     private readonly SavePackageState _savePackageState;
     private readonly IPackageExporter _exporter;
     private readonly EditorSettingsState _editorSettingsState;
+    private readonly ConfirmDialogueState _confirmDialogueState;
     
-    public MainMenuWindow(ILogger<MainMenuWindow> logger, MainEditorState mainEditorState, ParsePublishedState parsePublishedState, LoadPackageState loadPackageState, SavePackageState savePackageState, IPackageExporter<IExporter> exporter, EditorSettingsState editorSettingsState)
+    public MainMenuWindow(ILogger<MainMenuWindow> logger, MainEditorState mainEditorState, ParsePublishedState parsePublishedState, LoadPackageState loadPackageState, SavePackageState savePackageState, IPackageExporter<IExporter> exporter, EditorSettingsState editorSettingsState, ConfirmDialogueState confirmDialogueState)
     {
         _logger = logger;
         _mainEditorState = mainEditorState;
@@ -26,11 +27,12 @@ public class MainMenuWindow : BaseWindow
         _savePackageState = savePackageState;
         _exporter = exporter;
         _editorSettingsState = editorSettingsState;
+        _confirmDialogueState = confirmDialogueState;
     }
 
     public override void Draw()
     {
-        if (_parsePublishedState.Show)
+        if (_parsePublishedState.Show || _confirmDialogueState.Show)
         {
             return;
         }
@@ -54,8 +56,22 @@ public class MainMenuWindow : BaseWindow
         {
             if (ImGui.MenuItem("Close Package"))
             {
-                //TODO: check if need to save
-                //TODO: close
+                if (_mainEditorState.HasChanges)
+                {
+                    _confirmDialogueState.ShowDialog([
+                        "You have unsaved changes, are you sure?"
+                    ], (c) =>
+                    {
+                        if (c)
+                        {
+                            _mainEditorState.UnloadPackage();
+                        }
+                    });
+                }
+                else
+                {
+                    _mainEditorState.UnloadPackage();
+                }
             }
             
             ImGui.EndMenu();
@@ -75,10 +91,8 @@ public class MainMenuWindow : BaseWindow
         {
             return;
         }
-        _savePackageState.Show = true;
-        _savePackageState.Run = true;
-        _savePackageState.Exporter = _exporter;
-        _savePackageState.Exporter.StartExport(_mainEditorState.LoadedPackage!, _mainEditorState.LoadedPackagePath!);
+
+        _savePackageState.ShowDialog(_mainEditorState.LoadedPackagePath!, true);
     }
 
     private void DrawNotLoadedMenu()
@@ -87,15 +101,13 @@ public class MainMenuWindow : BaseWindow
         {
             if (ImGui.MenuItem("Open Package"))
             {
-                if (string.IsNullOrEmpty(_loadPackageState.SourcePath))
+                var path = _loadPackageState.SourcePath;
+                if (string.IsNullOrEmpty(path))
                 {
-                    _loadPackageState.SourcePath = Constants.DefaultParseSourcePath;
+                    path = Constants.DefaultParseSourcePath;
                 }
 
-                _logger.LogInformation($"Showing Load Package dialog");
-                _loadPackageState.Show = true;
-                _loadPackageState.Run = false;
-                _loadPackageState.AutoRun = false;
+                _loadPackageState.ShowDialog(path, false);
             }
 
             var recentlyOpenedProjects = _editorSettingsState.GetRecentlyOpenedProjects().ToList();
@@ -113,30 +125,29 @@ public class MainMenuWindow : BaseWindow
 
                         if (ImGui.MenuItem($"{shortenedPath}"))
                         {
-                            _loadPackageState.SourcePath = path;
-                            _loadPackageState.Show = true;
-                            _loadPackageState.AutoRun = true;
+                            _loadPackageState.ShowDialog(path, true);
                         }
                     }
                     ImGui.EndMenu();
                 }
             }
-            if (ImGui.MenuItem("Parse Published Folder"))
+            if (ImGui.MenuItem("Parse Retail Game"))
             {
                 var now = DateTime.Now;
-                if (string.IsNullOrEmpty(_parsePublishedState.SourcePath))
+                var sourcePath = _parsePublishedState.SourcePath;
+                if (string.IsNullOrEmpty(sourcePath))
                 {
-                    _parsePublishedState.SourcePath = Constants.DefaultParseSourcePath;
+                    sourcePath = Constants.DefaultParseSourcePath;
                 }
 
-                if (string.IsNullOrEmpty(_parsePublishedState.DestinationPath))
+                var destPath = _parsePublishedState.DestinationPath;
+                if (string.IsNullOrEmpty(destPath))
                 {
                     var newName = $"package-{now:yyyy-MM-dd_HH-mm-ss}";
-                    _parsePublishedState.DestinationPath = Path.Combine(Constants.DefaultParseDestinationPath, newName);
+                    destPath = Path.Combine(Constants.DefaultParseDestinationPath, newName);
                 }
 
-                _parsePublishedState.Show = true;
-                _parsePublishedState.Run = false;
+                _parsePublishedState.ShowDialog(sourcePath, destPath);
             }
             ImGui.EndMenu();
         }

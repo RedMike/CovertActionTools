@@ -42,11 +42,16 @@ namespace CovertActionTools.Core.Exporting
             _path = path;
             _stageCount = 0;
             _currentStage = 0;
+            _exportTask = null;
+            _currentMessage = string.Empty;
+            _currentTotal = 0;
+            _currentCount = 0;
+            _done = false;
             foreach (var exporter in _exporters)
             {
                 _stageCount += 1;
                 exporter.Start(path, model);
-                _logger.LogInformation($"Exporter {exporter.GetType()} starting export to: {path}");
+                _logger.LogDebug($"Exporter {exporter.GetType()} starting export to: {path}");
             }
             _exportTask = ExportInternal();
         }
@@ -102,7 +107,6 @@ namespace CovertActionTools.Core.Exporting
             {
                 Directory.CreateDirectory(_path);
                 _errors = new List<string>();
-                //_logger.LogInformation($"Index: {_simpleImagesToWrite.Count} images, {_crimesToWrite.Count} crimes, ...");
                 await Task.Yield();
 
                 foreach (var exporter in _exporters)
@@ -129,8 +133,6 @@ namespace CovertActionTools.Core.Exporting
                 }
                 
                 await Task.Yield();
-                
-                _logger.LogInformation($"Export done"); //TODO: extra info
             }
             catch (Exception e)
             {

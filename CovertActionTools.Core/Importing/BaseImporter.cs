@@ -74,7 +74,13 @@ namespace CovertActionTools.Core.Importing
             catch (Exception)
             {
                 _currentItem++;
+                _importing = false;
                 throw;
+            }
+
+            if (_done)
+            {
+                _importing = false;
             }
             return _done;
         }

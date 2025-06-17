@@ -3,23 +3,13 @@ using CovertActionTools.App.Logging;
 using CovertActionTools.App.ViewModels;
 using CovertActionTools.App.Windows;
 using CovertActionTools.Core;
-using CovertActionTools.Core.Exporting;
-using CovertActionTools.Core.Importing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Constants = CovertActionTools.App.Constants;
 
 const string title = "CovertAction.Tools";
 const int w = 1200;
 const int h = 800;
-
-//debug flags
-#if DEBUG
-//start by parsing the default
-const bool startWithParsePublishDefault = false;
-const bool startWithLoadSampleDefault = false;
-#endif
 
 var configuration = new ConfigurationBuilder()
     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
@@ -76,30 +66,6 @@ var sp = container.BuildServiceProvider();
 var windows = windowTypes
     .Select(t => (BaseWindow)(sp.GetService(t) ?? throw new Exception("Null window")))
     .ToList();
-
-//debug pre-set options
-#if DEBUG
-if (startWithParsePublishDefault)
-{
-    var parsePublishState = sp.GetRequiredService<ParsePublishedState>();
-    parsePublishState.Show = true;
-    var now = DateTime.Now;
-    parsePublishState.SourcePath = Constants.DefaultParseSourcePath;
-    var newName = $"package-{now:yyyy-MM-dd_HH-mm-ss}";
-    parsePublishState.DestinationPath = Path.Combine(Constants.DefaultParseDestinationPath, newName);
-    parsePublishState.Run = true;
-}
-if (startWithLoadSampleDefault)
-{
-    var mainEditorState = sp.GetRequiredService<MainEditorState>();
-    mainEditorState.DefaultPublishPath = Constants.DefaultPublishPath;
-    
-    var loadPackageState = sp.GetRequiredService<LoadPackageState>();
-    loadPackageState.Show = true;
-    loadPackageState.SourcePath = Path.GetFullPath(Path.Combine(Constants.DefaultParseSourcePath, "../../../Sample"));
-    loadPackageState.Run = true;
-}
-#endif
 
 while (renderWindow.IsOpen())
 {

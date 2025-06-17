@@ -100,8 +100,8 @@ public class ParsePublishedWindow : BaseWindow
             if (ImGui.Button("Save"))
             {
                 var now = DateTime.Now;
-                _logger.LogInformation($"Starting exporting at: {now:s}");
-                _parsePublishedState.Export = true;
+                _logger.LogInformation($"Starting export at: {now:s}");
+                _parsePublishedState.StartExport();
                 _exporter.StartExport(_importer.GetImportedModel(), destinationPath ?? string.Empty);
             }
         }
@@ -110,7 +110,7 @@ public class ParsePublishedWindow : BaseWindow
         {
             if (ImGui.Button("Close"))
             {
-                _parsePublishedState.Show = false;
+                _parsePublishedState.CloseDialog();
             }
         }
         ImGui.Text("");
@@ -136,7 +136,7 @@ public class ParsePublishedWindow : BaseWindow
         ImGui.InputText("Source Path", ref sourcePath, 256);
         if (sourcePath != origSourcePath)
         {
-            _parsePublishedState.SourcePath = sourcePath;
+            _parsePublishedState.UpdateSourcePath(sourcePath);
         }
         
         ImGui.SameLine();
@@ -148,7 +148,7 @@ public class ParsePublishedWindow : BaseWindow
             _fileBrowserState.FoldersOnly = true;
             _fileBrowserState.NewFolderButton = false;
             _fileBrowserState.Shown = true;
-            _fileBrowserState.Callback = (newPath) => _parsePublishedState.SourcePath = newPath;
+            _fileBrowserState.Callback = (newPath) => _parsePublishedState.UpdateSourcePath(newPath);
         }
 
         ImGui.PopID();
@@ -159,7 +159,7 @@ public class ParsePublishedWindow : BaseWindow
         ImGui.InputText("Destination Path", ref destinationPath, 256);
         if (destinationPath != origDestinationPath)
         {
-            _parsePublishedState.DestinationPath = destinationPath;
+            _parsePublishedState.UpdateDestinationPath(destinationPath);
         }
         
         ImGui.SameLine();
@@ -171,7 +171,7 @@ public class ParsePublishedWindow : BaseWindow
             _fileBrowserState.FoldersOnly = true;
             _fileBrowserState.NewFolderButton = true;
             _fileBrowserState.Shown = true;
-            _fileBrowserState.Callback = (newPath) => _parsePublishedState.DestinationPath = newPath;
+            _fileBrowserState.Callback = (newPath) => _parsePublishedState.UpdateDestinationPath(newPath);
         }
         ImGui.PopID();
         
@@ -179,7 +179,7 @@ public class ParsePublishedWindow : BaseWindow
 
         if (ImGui.Button("Cancel"))
         {
-            _parsePublishedState.Show = false;
+            _parsePublishedState.CloseDialog();
         }
 
         ImGui.SameLine();
@@ -188,8 +188,7 @@ public class ParsePublishedWindow : BaseWindow
             var now = DateTime.Now;
             _logger.LogInformation($"Starting importing at: {now:s}");
             _importer.StartImport(sourcePath);
-            _parsePublishedState.Run = true;
-            _parsePublishedState.Export = false;
+            _parsePublishedState.StartLoad();
         }
     }
 }

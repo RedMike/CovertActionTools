@@ -94,15 +94,13 @@ public class LoadPackageWindow : BaseWindow
             {
                 _mainEditorState.PackageWasLoaded(sourcePath!, _importer.GetImportedModel());
                 _editorSettingsState.AddRecentlyOpenedProject(sourcePath!);
-                _loadPackageState.Show = false;
-                _loadPackageState.Run = false;
+                _loadPackageState.CloseDialog();
             }
             else
             {
                 if (ImGui.Button("Close"))
                 {
-                    _loadPackageState.Show = false;
-                    _loadPackageState.Run = false;
+                    _loadPackageState.CloseDialog();
                 }
             }
         }
@@ -129,7 +127,7 @@ public class LoadPackageWindow : BaseWindow
         ImGui.InputText("Source Path", ref sourcePath, 256);
         if (sourcePath != origSourcePath)
         {
-            _loadPackageState.SourcePath = sourcePath;
+            _loadPackageState.UpdatePath(sourcePath);
         }
         
         ImGui.SameLine();
@@ -141,14 +139,14 @@ public class LoadPackageWindow : BaseWindow
             _fileBrowserState.FoldersOnly = true;
             _fileBrowserState.NewFolderButton = false;
             _fileBrowserState.Shown = true;
-            _fileBrowserState.Callback = (newPath) => _loadPackageState.SourcePath = newPath;
+            _fileBrowserState.Callback = (newPath) => _loadPackageState.UpdatePath(newPath);
         }
         
         ImGui.Separator();
 
         if (ImGui.Button("Cancel"))
         {
-            _loadPackageState.Show = false;
+            _loadPackageState.CloseDialog();
         }
 
         ImGui.SameLine();
@@ -157,7 +155,7 @@ public class LoadPackageWindow : BaseWindow
             var now = DateTime.Now;
             _logger.LogInformation($"Starting importing at: {now:s}");
             _importer.StartImport(sourcePath);
-            _loadPackageState.Run = true;
+            _loadPackageState.StartRunning();
         }
     }
 }

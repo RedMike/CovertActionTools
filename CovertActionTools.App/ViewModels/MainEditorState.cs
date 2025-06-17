@@ -23,8 +23,6 @@ public class MainEditorState : IViewModel
         
         Package = 100,
     }
-    public string? DefaultPublishPath { get; set; }
-    public bool Running { get; set; }
     public string? LoadedPackagePath { get; private set; }
     public PackageModel? OriginalLoadedPackage { get; private set; }
     public PackageModel? LoadedPackage { get; private set; }
@@ -40,8 +38,23 @@ public class MainEditorState : IViewModel
         HasChanges = false;
     }
 
+    public void PackageWasSaved()
+    {
+        HasChanges = false;
+        OriginalLoadedPackage = LoadedPackage!.Clone();
+    }
+
     public void RecordChange()
     {
         HasChanges = true;
+    }
+
+    public void UnloadPackage()
+    {
+        LoadedPackagePath = null;
+        LoadedPackage = null;
+        OriginalLoadedPackage = null;
+        HasChanges = false;
+        SelectedItem = null;
     }
 }
