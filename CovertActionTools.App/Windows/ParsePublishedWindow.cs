@@ -13,7 +13,7 @@ public class ParsePublishedWindow : BaseWindow
     private readonly AppLoggingState _appLogging;
     private readonly ParsePublishedState _parsePublishedState;
     private readonly IPackageImporter<ILegacyParser> _importer;
-    private readonly IPackageExporter _exporter;
+    private readonly IPackageExporter<IExporter> _exporter;
     private readonly FileBrowserState _fileBrowserState;
 
     public ParsePublishedWindow(ILogger<ParsePublishedWindow> logger, AppLoggingState appLogging, ParsePublishedState parsePublishedState, IPackageImporter<ILegacyParser> importer, IPackageExporter<IExporter> exporter, FileBrowserState fileBrowserState)
@@ -56,18 +56,10 @@ public class ParsePublishedWindow : BaseWindow
 
     private void DrawRunning()
     {
-        if (_parsePublishedState.Importer == null)
-        {
-            throw new Exception("Missing importer");
-        }
-        if (_parsePublishedState.Exporter == null)
-        {
-            throw new Exception("Missing exporter");
-        }
         var sourcePath = _parsePublishedState.SourcePath;
         var destinationPath = _parsePublishedState.DestinationPath;
-        var importStatus = _parsePublishedState.Importer.CheckStatus() ?? new ImportStatus();
-        var exportStatus = _parsePublishedState.Exporter.CheckStatus() ?? new ExportStatus();
+        var importStatus = _importer.CheckStatus() ?? new ImportStatus();
+        var exportStatus = _exporter.CheckStatus() ?? new ExportStatus();
         
         ImGui.Text($"Parsing published folder: {sourcePath}");
         ImGui.Text($"Saving into package: {destinationPath}");
@@ -110,7 +102,7 @@ public class ParsePublishedWindow : BaseWindow
                 var now = DateTime.Now;
                 _logger.LogInformation($"Starting exporting at: {now:s}");
                 _parsePublishedState.Export = true;
-                _parsePublishedState.Exporter.StartExport(_parsePublishedState.Importer.GetImportedModel(), destinationPath ?? string.Empty);
+                _exporter.StartExport(_importer.GetImportedModel(), destinationPath ?? string.Empty);
             }
         }
 
@@ -194,10 +186,8 @@ public class ParsePublishedWindow : BaseWindow
         if (ImGui.Button("Load"))
         {
             var now = DateTime.Now;
-            _parsePublishedState.Importer = _importer;
-            _parsePublishedState.Exporter = _exporter;
             _logger.LogInformation($"Starting importing at: {now:s}");
-            _parsePublishedState.Importer.StartImport(sourcePath);
+            _importer.StartImport(sourcePath);
             _parsePublishedState.Run = true;
             _parsePublishedState.Export = false;
         }

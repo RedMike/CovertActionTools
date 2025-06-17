@@ -14,8 +14,9 @@ public class LoadPackageWindow : BaseWindow
     private readonly MainEditorState _mainEditorState;
     private readonly IPackageImporter<IImporter> _importer;
     private readonly FileBrowserState _fileBrowserState;
+    private readonly EditorSettingsState _editorSettingsState;
 
-    public LoadPackageWindow(ILogger<LoadPackageWindow> logger, AppLoggingState appLogging, LoadPackageState loadPackageState, MainEditorState mainEditorState, IPackageImporter<IImporter> importer, FileBrowserState fileBrowserState)
+    public LoadPackageWindow(ILogger<LoadPackageWindow> logger, AppLoggingState appLogging, LoadPackageState loadPackageState, MainEditorState mainEditorState, IPackageImporter<IImporter> importer, FileBrowserState fileBrowserState, EditorSettingsState editorSettingsState)
     {
         _logger = logger;
         _appLogging = appLogging;
@@ -23,6 +24,7 @@ public class LoadPackageWindow : BaseWindow
         _mainEditorState = mainEditorState;
         _importer = importer;
         _fileBrowserState = fileBrowserState;
+        _editorSettingsState = editorSettingsState;
     }
 
     public override void Draw()
@@ -55,12 +57,8 @@ public class LoadPackageWindow : BaseWindow
 
     private void DrawRunning()
     {
-        if (_loadPackageState.Importer == null)
-        {
-            throw new Exception("Missing importer");
-        }
         var sourcePath = _loadPackageState.SourcePath;
-        var importStatus = _loadPackageState.Importer.CheckStatus() ?? new ImportStatus();
+        var importStatus = _importer.CheckStatus() ?? new ImportStatus();
         
         ImGui.Text($"Loading package folder: {sourcePath}");
         
@@ -94,10 +92,10 @@ public class LoadPackageWindow : BaseWindow
         {
             if (importStatus.Errors.Count == 0)
             {
-                _mainEditorState.PackageWasLoaded(sourcePath!, _loadPackageState.Importer.GetImportedModel());
+                _mainEditorState.PackageWasLoaded(sourcePath!, _importer.GetImportedModel());
+                _editorSettingsState.AddRecentlyOpenedProject(sourcePath!);
                 _loadPackageState.Show = false;
                 _loadPackageState.Run = false;
-                _loadPackageState.Importer = null;
             }
             else
             {
@@ -105,7 +103,6 @@ public class LoadPackageWindow : BaseWindow
                 {
                     _loadPackageState.Show = false;
                     _loadPackageState.Run = false;
-                    _loadPackageState.Importer = null;
                 }
             }
         }
@@ -155,12 +152,11 @@ public class LoadPackageWindow : BaseWindow
         }
 
         ImGui.SameLine();
-        if (ImGui.Button("Load"))
+        if (ImGui.Button("Load") || _loadPackageState.AutoRun)
         {
             var now = DateTime.Now;
-            _loadPackageState.Importer = _importer;
             _logger.LogInformation($"Starting importing at: {now:s}");
-            _loadPackageState.Importer.StartImport(sourcePath);
+            _importer.StartImport(sourcePath);
             _loadPackageState.Run = true;
         }
     }

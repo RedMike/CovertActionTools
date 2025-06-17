@@ -15,8 +15,9 @@ public class MainMenuWindow : BaseWindow
     private readonly LoadPackageState _loadPackageState;
     private readonly SavePackageState _savePackageState;
     private readonly IPackageExporter _exporter;
+    private readonly EditorSettingsState _editorSettingsState;
     
-    public MainMenuWindow(ILogger<MainMenuWindow> logger, MainEditorState mainEditorState, ParsePublishedState parsePublishedState, LoadPackageState loadPackageState, SavePackageState savePackageState, IPackageExporter<IExporter> exporter)
+    public MainMenuWindow(ILogger<MainMenuWindow> logger, MainEditorState mainEditorState, ParsePublishedState parsePublishedState, LoadPackageState loadPackageState, SavePackageState savePackageState, IPackageExporter<IExporter> exporter, EditorSettingsState editorSettingsState)
     {
         _logger = logger;
         _mainEditorState = mainEditorState;
@@ -24,6 +25,7 @@ public class MainMenuWindow : BaseWindow
         _loadPackageState = loadPackageState;
         _savePackageState = savePackageState;
         _exporter = exporter;
+        _editorSettingsState = editorSettingsState;
     }
 
     public override void Draw()
@@ -93,6 +95,31 @@ public class MainMenuWindow : BaseWindow
                 _logger.LogInformation($"Showing Load Package dialog");
                 _loadPackageState.Show = true;
                 _loadPackageState.Run = false;
+                _loadPackageState.AutoRun = false;
+            }
+
+            var recentlyOpenedProjects = _editorSettingsState.GetRecentlyOpenedProjects().ToList();
+            if (recentlyOpenedProjects.Count > 0)
+            {
+                if (ImGui.BeginMenu("Open Recent"))
+                {
+                    foreach (var path in recentlyOpenedProjects)
+                    {
+                        var shortenedPath = path;
+                        if (path.Length > 20)
+                        {
+                            shortenedPath = path.Substring(path.Length - 20, 20);
+                        }
+
+                        if (ImGui.MenuItem($"{shortenedPath}"))
+                        {
+                            _loadPackageState.SourcePath = path;
+                            _loadPackageState.Show = true;
+                            _loadPackageState.AutoRun = true;
+                        }
+                    }
+                    ImGui.EndMenu();
+                }
             }
             if (ImGui.MenuItem("Parse Published Folder"))
             {

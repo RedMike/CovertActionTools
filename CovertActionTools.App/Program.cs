@@ -87,9 +87,6 @@ if (startWithParsePublishDefault)
     parsePublishState.SourcePath = Constants.DefaultParseSourcePath;
     var newName = $"package-{now:yyyy-MM-dd_HH-mm-ss}";
     parsePublishState.DestinationPath = Path.Combine(Constants.DefaultParseDestinationPath, newName);
-    parsePublishState.Importer = sp.GetRequiredService<IPackageImporter<ILegacyParser>>();
-    parsePublishState.Importer.StartImport(parsePublishState.SourcePath);
-    parsePublishState.Exporter = sp.GetRequiredService<IPackageExporter<IExporter>>();
     parsePublishState.Run = true;
 }
 if (startWithLoadSampleDefault)
@@ -100,8 +97,6 @@ if (startWithLoadSampleDefault)
     var loadPackageState = sp.GetRequiredService<LoadPackageState>();
     loadPackageState.Show = true;
     loadPackageState.SourcePath = Path.GetFullPath(Path.Combine(Constants.DefaultParseSourcePath, "../../../Sample"));
-    loadPackageState.Importer = sp.GetRequiredService<IPackageImporter<IImporter>>();
-    loadPackageState.Importer.StartImport(loadPackageState.SourcePath);
     loadPackageState.Run = true;
 }
 #endif

@@ -10,6 +10,4 @@ public class ParsePublishedState : IViewModel
     public bool Export { get; set; }
     public string? SourcePath { get; set; }
     public string? DestinationPath { get; set; }
-    public IPackageImporter? Importer { get; set; }
-    public IPackageExporter? Exporter { get; set; }
 }
