@@ -27,7 +27,7 @@ namespace CovertActionTools.Core.Exporting.Publishers
 
         protected override Dictionary<string, ProseModel> GetFromModel(PackageModel model)
         {
-            return model.Prose;
+            return model.Index.ProseIncluded ? model.Prose : new();
         }
 
         protected override void Reset()

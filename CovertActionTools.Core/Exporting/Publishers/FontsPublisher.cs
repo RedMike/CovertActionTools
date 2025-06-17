@@ -28,7 +28,7 @@ namespace CovertActionTools.Core.Exporting.Publishers
 
         protected override FontsModel GetFromModel(PackageModel model)
         {
-            return model.Fonts;
+            return model.Index.FontIncluded ? model.Fonts : new();
         }
 
         protected override void Reset()

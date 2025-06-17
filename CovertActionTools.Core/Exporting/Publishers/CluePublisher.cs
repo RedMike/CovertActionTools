@@ -27,7 +27,7 @@ namespace CovertActionTools.Core.Exporting.Publishers
 
         protected override Dictionary<string, ClueModel> GetFromModel(PackageModel model)
         {
-            return model.Clues;
+            return model.Index.ClueIncluded ? model.Clues : new();
         }
 
         protected override void Reset()

@@ -31,7 +31,9 @@ namespace CovertActionTools.Core.Exporting.Publishers
 
         protected override Dictionary<string, AnimationModel> GetFromModel(PackageModel model)
         {
-            return model.Animations;
+            return model.Animations
+                .Where(x => model.Index.AnimationIncluded.Contains(x.Key))
+                .ToDictionary(x => x.Key, x => x.Value);
         }
 
         protected override void Reset()
@@ -47,6 +49,10 @@ namespace CovertActionTools.Core.Exporting.Publishers
 
         protected override int RunExportStepInternal()
         {
+            if (_index >= _keys.Count)
+            {
+                return _index;
+            }
             var nextKey = _keys[_index];
 
             var files = Export(Data[nextKey]);

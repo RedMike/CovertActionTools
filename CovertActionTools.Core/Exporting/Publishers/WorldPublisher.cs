@@ -27,7 +27,9 @@ namespace CovertActionTools.Core.Exporting.Publishers
 
         protected override Dictionary<int, WorldModel> GetFromModel(PackageModel model)
         {
-            return model.Worlds;
+            return model.Worlds
+                .Where(x => model.Index.WorldIncluded.Contains(x.Key))
+                .ToDictionary(x => x.Key, x => x.Value);
         }
 
         protected override void Reset()
@@ -43,6 +45,10 @@ namespace CovertActionTools.Core.Exporting.Publishers
 
         protected override int RunExportStepInternal()
         {
+            if (_index >= _keys.Count)
+            {
+                return _index;
+            }
             var nextKey = _keys[_index];
 
             var files = Export(Data[nextKey]);

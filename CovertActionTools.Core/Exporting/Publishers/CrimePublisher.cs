@@ -27,7 +27,9 @@ namespace CovertActionTools.Core.Exporting.Publishers
 
         protected override Dictionary<int, CrimeModel> GetFromModel(PackageModel model)
         {
-            return model.Crimes;
+            return model.Crimes
+                .Where(x => model.Index.CrimeIncluded.Contains(x.Key))
+                .ToDictionary(x => x.Key, x => x.Value);
         }
 
         protected override void Reset()
@@ -42,6 +44,10 @@ namespace CovertActionTools.Core.Exporting.Publishers
 
         protected override int RunExportStepInternal()
         {
+            if (_index >= _keys.Count)
+            {
+                return _index;
+            }
             var nextKey = _keys[_index];
 
             var files = Export(Data[nextKey]);

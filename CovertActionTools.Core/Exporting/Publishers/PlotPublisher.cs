@@ -27,7 +27,7 @@ namespace CovertActionTools.Core.Exporting.Publishers
 
         protected override Dictionary<string, PlotModel> GetFromModel(PackageModel model)
         {
-            return model.Plots;
+            return model.Index.PlotIncluded ? model.Plots : new();
         }
 
         protected override void Reset()
