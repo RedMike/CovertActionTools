@@ -49,7 +49,7 @@ namespace CovertActionTools.Core.Importing.Importers
 
         protected override bool CheckIfValidForImportInternal(string path)
         {
-            if (Directory.GetFiles(GetPath(path), "*_animation.json").Length == 0)
+            if (Directory.GetFiles(GetPath(path), "*.json").Length == 0)
             {
                 return false;
             }
@@ -84,9 +84,9 @@ namespace CovertActionTools.Core.Importing.Importers
         
         private List<string> GetKeys(string path)
         {
-            return Directory.GetFiles(path, "*_animation.json")
+            return Directory.GetFiles(path, "*_global.json")
                 .Select(System.IO.Path.GetFileNameWithoutExtension)
-                .Select(x => x.Replace("_animation", ""))
+                .Select(x => x.Replace("_global", ""))
                 .ToList();
         }
 
@@ -97,21 +97,63 @@ namespace CovertActionTools.Core.Importing.Importers
                 .Select(x => int.Parse(x.Replace($"{key}_", "").Replace("_VGA", "")))
                 .ToList();
         }
-
-        private AnimationModel Import(string path, string key)
+        
+        private SharedMetadata ReadMetadata(string path, string key)
         {
-            var filePath = System.IO.Path.Combine(path, $"{key}_animation.json");
+            var filePath = System.IO.Path.Combine(path, $"{key}_metadata.json");
             if (!File.Exists(filePath))
             {
                 throw new Exception($"Missing JSON file: {key}");
             }
 
             var rawData = File.ReadAllText(filePath);
+            
+            return JsonSerializer.Deserialize<SharedMetadata>(rawData, JsonOptions) ?? throw new Exception("Invalid animation model"); 
+        }
+
+        private AnimationModel.GlobalData ReadGlobalData(string path, string key)
+        {
+            var filePath = System.IO.Path.Combine(path, $"{key}_global.json");
+            if (!File.Exists(filePath))
+            {
+                throw new Exception($"Missing JSON file: {key}");
+            }
+
+            var rawData = File.ReadAllText(filePath);
+            
+            return JsonSerializer.Deserialize<AnimationModel.GlobalData>(rawData, JsonOptions) ?? throw new Exception("Invalid animation model"); 
+        }
+        
+        private AnimationModel.ControlData ReadControlData(string path, string key)
+        {
+            var instructionFilePath = System.IO.Path.Combine(path, $"{key}_instructions.txt");
+            if (!File.Exists(instructionFilePath))
+            {
+                throw new Exception($"Missing Instructions file: {key}");
+            }
+            var rawInstructionData = File.ReadAllText(instructionFilePath);
+            
+            var stepFilePath = System.IO.Path.Combine(path, $"{key}_steps.txt");
+            if (!File.Exists(stepFilePath))
+            {
+                throw new Exception($"Missing Steps file: {key}");
+            }
+            var rawStepData = File.ReadAllText(stepFilePath);
+
+            var data = new AnimationModel.ControlData();
+            data.ParseInstructionsAndSteps(rawInstructionData, rawStepData);
+            return data;
+        }
+
+        private AnimationModel Import(string path, string key)
+        {
             var model = new AnimationModel()
             {
                 Key = key
             };
-            model.Data = JsonSerializer.Deserialize<AnimationModel.GlobalData>(rawData, JsonOptions) ?? throw new Exception("Invalid animation model");
+            model.Metadata = ReadMetadata(path, key);
+            model.Data = ReadGlobalData(path, key);
+            model.Control = ReadControlData(path, key);
             
             var images = GetImages(path, key);
             foreach (var image in images)
@@ -126,7 +168,7 @@ namespace CovertActionTools.Core.Importing.Importers
         {
             var model = new SimpleImageModel();
             model.Key = filename;
-            model.ExtraData = _imageImporter.ReadMetadata(path, filename, "animation_img");
+            model.ExtraData = _imageImporter.ReadMetadata(path, filename, "VGA_metadata");
             (model.RawVgaImageData, model.VgaImageData) = _imageImporter.ReadVgaImageData(path, filename, model.ExtraData.LegacyWidth, model.ExtraData.LegacyHeight);
             model.CgaImageData = Array.Empty<byte>();
             if (model.ExtraData.LegacyColorMappings != null)
@@ -136,7 +178,6 @@ namespace CovertActionTools.Core.Importing.Importers
                 var textureBytes = skBitmap.Bytes.ToArray();
                 model.CgaImageData = textureBytes;
             }
-            //model.ModernImageData = _imageImporter.ReadModernImageData(path, filename, model.ExtraData.Width, model.ExtraData.Height);
             return model;
         }
 

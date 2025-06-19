@@ -95,13 +95,15 @@ namespace CovertActionTools.Core.Exporting.Exporters
         {
             var dict = new Dictionary<string, byte[]>()
             {
-                [$"{animation.Key}_animation.json"] = GetMetadata(animation),
+                [$"{animation.Key}_metadata.json"] = GetMetadata(animation),
+                [$"{animation.Key}_global.json"] = GetGlobalData(animation),
+                [$"{animation.Key}_instructions.txt"] = GetInstructionData(animation),
+                [$"{animation.Key}_steps.txt"] = GetStepData(animation),
             };
             foreach (var key in animation.Images.Keys)
             {
                 var image = animation.Images[key];
-                dict.Add($"{animation.Key}_{key}_animation_img.json", _imageExporter.GetMetadata(image));
-                //dict.Add($"{animation.Key}_{key}_modern.png", _imageExporter.GetModernImageData(image));
+                dict.Add($"{animation.Key}_{key}_VGA_metadata.json", _imageExporter.GetMetadata(image));
                 dict.Add($"{animation.Key}_{key}_VGA.png", _imageExporter.GetVgaImageData(image));
             }
             return dict;
@@ -109,8 +111,29 @@ namespace CovertActionTools.Core.Exporting.Exporters
         
         private byte[] GetMetadata(AnimationModel animation)
         {
-            var serialisedMetadata = JsonSerializer.Serialize(animation.Data, JsonOptions);
-            var bytes = Encoding.UTF8.GetBytes(serialisedMetadata);
+            var data = JsonSerializer.Serialize(animation.Metadata, JsonOptions);
+            var bytes = Encoding.UTF8.GetBytes(data);
+            return bytes;
+        }
+        
+        private byte[] GetGlobalData(AnimationModel animation)
+        {
+            var data = JsonSerializer.Serialize(animation.Data, JsonOptions);
+            var bytes = Encoding.UTF8.GetBytes(data);
+            return bytes;
+        }
+        
+        private byte[] GetInstructionData(AnimationModel animation)
+        {
+            var data = animation.Control.GetSerialisedInstructions();
+            var bytes = Encoding.UTF8.GetBytes(data);
+            return bytes;
+        }
+        
+        private byte[] GetStepData(AnimationModel animation)
+        {
+            var data = animation.Control.GetSerialisedSteps();
+            var bytes = Encoding.UTF8.GetBytes(data);
             return bytes;
         }
         
