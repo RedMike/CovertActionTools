@@ -1,4 +1,5 @@
 ﻿using System.Numerics;
+using CovertActionTools.App.ViewModels;
 using CovertActionTools.Core.Models;
 using ImGuiNET;
 
@@ -8,7 +9,7 @@ public abstract class BaseWindow
 {
     public abstract void Draw();
 
-    protected void DrawSharedMetadataEditor(SharedMetadata metadata)
+    protected void DrawSharedMetadataEditor(SharedMetadata metadata, Action? onChange = null)
     {
         var contentSize = ImGui.GetContentRegionAvail();
         ImGui.SetNextItemWidth(contentSize.X);
@@ -16,6 +17,10 @@ public abstract class BaseWindow
         if (newName != null)
         {
             metadata.Name = newName;
+            if (onChange != null)
+            {
+                onChange();
+            }
         }
 
         var comment = metadata.Comment;
@@ -23,6 +28,10 @@ public abstract class BaseWindow
         if (comment != metadata.Comment)
         {
             metadata.Comment = comment;
+            if (onChange != null)
+            {
+                onChange();
+            }
         }
     }
 }

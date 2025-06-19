@@ -27,11 +27,11 @@ namespace CovertActionTools.Core.Importing.Shared
             _logger = logger;
         }
 
-        public SimpleImageModel Import(string path, string filename, SimpleImageModel.Metadata metadata)
+        public SimpleImageModel Import(string path, string filename, SimpleImageModel.ImageData imageData)
         {
             var model = new SimpleImageModel();
             model.Key = filename;
-            model.ExtraData = metadata;
+            model.ExtraData = imageData;
             (model.RawVgaImageData, model.VgaImageData) = ReadVgaImageData(path, filename, model.ExtraData.LegacyWidth, model.ExtraData.LegacyHeight);
             model.CgaImageData = Array.Empty<byte>();
             if (model.ExtraData.LegacyColorMappings != null)
@@ -75,7 +75,7 @@ namespace CovertActionTools.Core.Importing.Shared
             return imageBytes;
         }
         
-        public SimpleImageModel.Metadata ReadMetadata(string path, string key, string suffix)
+        public SharedMetadata ReadMetadata(string path, string key, string suffix)
         {
             var filePath = System.IO.Path.Combine(path, $"{key}_{suffix}.json");
             if (!File.Exists(filePath))
@@ -84,7 +84,24 @@ namespace CovertActionTools.Core.Importing.Shared
             }
 
             var json = File.ReadAllText(filePath);
-            var metadata = JsonSerializer.Deserialize<SimpleImageModel.Metadata>(json);
+            var metadata = JsonSerializer.Deserialize<SharedMetadata>(json);
+            if (metadata == null)
+            {
+                throw new Exception($"Unparseable JSON file: {key}");
+            }
+            return metadata;
+        }
+        
+        public SimpleImageModel.ImageData ReadImageData(string path, string key, string suffix)
+        {
+            var filePath = System.IO.Path.Combine(path, $"{key}_{suffix}.json");
+            if (!File.Exists(filePath))
+            {
+                throw new Exception($"Missing JSON file: {key}");
+            }
+
+            var json = File.ReadAllText(filePath);
+            var metadata = JsonSerializer.Deserialize<SimpleImageModel.ImageData>(json);
             if (metadata == null)
             {
                 throw new Exception($"Unparseable JSON file: {key}");

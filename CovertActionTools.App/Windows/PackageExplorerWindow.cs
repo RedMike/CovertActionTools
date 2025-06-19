@@ -97,9 +97,9 @@ public class PackageExplorerWindow : BaseWindow
                 }
 
                 var name = $"{image.Key}";
-                if (image.Value.ExtraData.Name != image.Key)
+                if (image.Value.Metadata.Name != image.Key)
                 {
-                    name += $" ({image.Value.ExtraData.Name})";
+                    name += $" ({image.Value.Metadata.Name})";
                 }
 
                 if (ImGui.TreeNodeEx(name, nodeFlags))
@@ -336,9 +336,9 @@ public class PackageExplorerWindow : BaseWindow
                         }
 
                         var name = $"{entryKey}";
-                        if (!string.IsNullOrEmpty(entry.ExtraData.Name) && entry.ExtraData.Name != entryKey)
+                        if (!string.IsNullOrEmpty(entry.Metadata.Name) && entry.Metadata.Name != entryKey)
                         {
-                            name += $" ({entry.ExtraData.Name})";
+                            name += $" ({entry.Metadata.Name})";
                         }
 
                         if (ImGui.TreeNodeEx(name, nodeFlags))

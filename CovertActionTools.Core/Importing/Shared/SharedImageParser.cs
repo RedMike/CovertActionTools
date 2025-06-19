@@ -71,7 +71,7 @@ namespace CovertActionTools.Core.Importing.Shared
                 }
             }
 
-            _logger.LogInformation($"Read image '{key}': {width}x{height}, Legacy Color Mapping = {legacyColorMappings != null}");
+            _logger.LogDebug($"Read image '{key}': {width}x{height}, Legacy Color Mapping = {legacyColorMappings != null}");
             byte[] cgaImageData = Array.Empty<byte>();
             if (legacyColorMappings != null)
             {
@@ -85,16 +85,19 @@ namespace CovertActionTools.Core.Importing.Shared
                 VgaImageData = ImageConversion.VgaToTexture(width, height, imageUncompressedData),
                 CgaImageData = cgaImageData,
                 ModernImageData = imageModernData,
-                ExtraData = new SimpleImageModel.Metadata()
+                Metadata = new SharedMetadata()
+                {
+                    Name = key,
+                    Comment = "Legacy import",
+                },
+                ExtraData = new SimpleImageModel.ImageData()
                 {
                     //for legacy images, we populate data from the legacy info
                     Type = Constants.GetLikelyImageType(key),
-                    Name = key,
                     Width = width,
                     Height = height,
                     LegacyWidth = width,
                     LegacyHeight = height,
-                    Comment = "Legacy import",
                     LegacyColorMappings = legacyColorMappings,
                     CompressionDictionaryWidth = lzwMaxWordWidth
                 }

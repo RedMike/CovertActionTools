@@ -59,7 +59,7 @@ public class SelectedPackageWindow : BaseWindow
 
     private void DrawPackageWindow(PackageModel model)
     {
-        DrawSharedMetadataEditor(model.Index.Metadata);
+        DrawSharedMetadataEditor(model.Index.Metadata, () => { _mainEditorState.RecordChange(); });
 
         var contentSize = ImGui.GetContentRegionAvail();
         

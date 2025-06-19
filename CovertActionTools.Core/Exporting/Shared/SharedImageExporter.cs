@@ -81,10 +81,17 @@ namespace CovertActionTools.Core.Exporting.Shared
             return memStream.ToArray();
         }
         
+        public byte[] GetImageData(SimpleImageModel image)
+        {
+            var data = JsonSerializer.Serialize(image.ExtraData, JsonOptions);
+            var bytes = Encoding.UTF8.GetBytes(data);
+            return bytes;
+        }
+        
         public byte[] GetMetadata(SimpleImageModel image)
         {
-            var serialisedMetadata = JsonSerializer.Serialize(image.ExtraData, JsonOptions);
-            var bytes = Encoding.UTF8.GetBytes(serialisedMetadata);
+            var data = JsonSerializer.Serialize(image.Metadata, JsonOptions);
+            var bytes = Encoding.UTF8.GetBytes(data);
             return bytes;
         }
     }

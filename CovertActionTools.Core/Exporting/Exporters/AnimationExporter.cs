@@ -103,7 +103,7 @@ namespace CovertActionTools.Core.Exporting.Exporters
             foreach (var key in animation.Images.Keys)
             {
                 var image = animation.Images[key];
-                dict.Add($"{animation.Key}_{key}_VGA_metadata.json", _imageExporter.GetMetadata(image));
+                dict.Add($"{animation.Key}_{key}_VGA_metadata.json", _imageExporter.GetImageData(image));
                 dict.Add($"{animation.Key}_{key}_VGA.png", _imageExporter.GetVgaImageData(image));
                 //TODO: export game-specific color mapping for CGA
             }

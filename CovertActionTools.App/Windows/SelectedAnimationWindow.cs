@@ -92,7 +92,7 @@ public class SelectedAnimationWindow : SharedImageWindow
         
         _animationEditorState.Update(animation);
 
-        DrawSharedMetadataEditor(animation.Metadata);
+        DrawSharedMetadataEditor(animation.Metadata, () => { _pendingState.RecordChange(); });
         
         ImGui.BeginTabBar("AnimationTabs", ImGuiTabBarFlags.NoCloseWithMiddleMouseButton);
         
@@ -489,7 +489,7 @@ public class SelectedAnimationWindow : SharedImageWindow
                 var name = $"{i} - Index {targetIndex}";
                 if (animation.Images.TryGetValue(targetIndex, out var targetImage))
                 {
-                    name += $" - {targetImage.ExtraData.Name} ({targetImage.ExtraData.LegacyWidth}x{targetImage.ExtraData.LegacyHeight})";
+                    name += $" - {targetImage.Metadata.Name} ({targetImage.ExtraData.LegacyWidth}x{targetImage.ExtraData.LegacyHeight})";
                 }
                 imageIds.Add(i);
                 imageIdNames.Add(name);

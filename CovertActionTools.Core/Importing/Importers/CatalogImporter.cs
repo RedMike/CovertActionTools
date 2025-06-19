@@ -111,7 +111,7 @@ namespace CovertActionTools.Core.Importing.Importers
         {
             var model = new SimpleImageModel();
             model.Key = filename;
-            model.ExtraData = _imageImporter.ReadMetadata(path, filename, "catalog_img");
+            model.ExtraData = _imageImporter.ReadImageData(path, filename, "catalog_img");
             (model.RawVgaImageData, model.VgaImageData) = _imageImporter.ReadVgaImageData(path, filename, model.ExtraData.LegacyWidth, model.ExtraData.LegacyHeight);
             model.CgaImageData = Array.Empty<byte>();
             if (model.ExtraData.LegacyColorMappings != null)

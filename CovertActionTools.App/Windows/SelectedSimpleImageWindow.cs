@@ -127,22 +127,7 @@ public class SelectedSimpleImageWindow : SharedImageWindow
             ImGui.EndTable();
         }
 
-        var newName = ImGuiExtensions.Input("Name", image.ExtraData.Name, 128);
-        if (newName != null)
-        {
-            image.ExtraData.Name = newName;
-            _pendingState.RecordChange();
-        }
-
-        var windowSize = ImGui.GetContentRegionAvail();
-        var origComment = image.ExtraData.Comment;
-        var comment = origComment;
-        ImGui.InputTextMultiline("Comment", ref comment, 2048, new Vector2(windowSize.X, 50.0f));
-        if (comment != origComment)
-        {
-            image.ExtraData.Comment = comment;
-            _pendingState.RecordChange();
-        }
+        DrawSharedMetadataEditor(image.Metadata, () => { _pendingState.RecordChange(); });
 
         ImGui.Text("");
         ImGui.Separator();

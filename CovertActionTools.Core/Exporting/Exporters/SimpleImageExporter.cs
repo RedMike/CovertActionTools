@@ -89,7 +89,8 @@ namespace CovertActionTools.Core.Exporting.Exporters
         {
             var dict = new Dictionary<string, byte[]>
             {
-                [$"{image.Key}_image.json"] = _imageExporter.GetMetadata(image),
+                [$"{image.Key}_image.json"] = _imageExporter.GetImageData(image),
+                [$"{image.Key}_metadata.json"] = _imageExporter.GetMetadata(image),
                 [$"{image.Key}_modern.png"] = _imageExporter.GetModernImageData(image),
                 [$"{image.Key}_VGA.png"] = _imageExporter.GetVgaImageData(image) 
             };

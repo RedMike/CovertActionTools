@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text.Json;
+using System.Linq;
 
 namespace CovertActionTools.Core.Models
 {
@@ -31,13 +31,8 @@ namespace CovertActionTools.Core.Models
             TrainingScreen = 20, //menu top
         }
         
-        public class Metadata
+        public class ImageData
         {
-            /// <summary>
-            /// Actual name separate from key/filename, for development
-            /// </summary>
-            public string Name { get; set; } = string.Empty;
-
             /// <summary>
             /// Type of image, mainly to correctly highlight areas on the editor
             /// </summary>
@@ -60,10 +55,6 @@ namespace CovertActionTools.Core.Models
             /// Usually 200
             /// </summary>
             public int LegacyHeight { get; set; }
-            /// <summary>
-            /// Arbitrary comment, for development
-            /// </summary>
-            public string Comment { get; set; } = string.Empty;
             
             /// <summary>
             /// Byte-byte mapping of VGA -> CGA colours
@@ -74,6 +65,20 @@ namespace CovertActionTools.Core.Models
             /// Legacy: only 11
             /// </summary>
             public byte CompressionDictionaryWidth { get; set; }
+
+            public ImageData Clone()
+            {
+                return new ImageData()
+                {
+                    Type = Type,
+                    Width = Width,
+                    Height = Height,
+                    LegacyWidth = LegacyWidth,
+                    LegacyHeight = LegacyHeight,
+                    LegacyColorMappings = LegacyColorMappings?.ToDictionary(x => x.Key, x => x.Value),
+                    CompressionDictionaryWidth = CompressionDictionaryWidth
+                };
+            }
         }
         
         /// <summary>
@@ -99,12 +104,22 @@ namespace CovertActionTools.Core.Models
         /// </summary>
         public byte[] ModernImageData { get; set; } = Array.Empty<byte>();
 
-        public Metadata ExtraData { get; set; } = null!;
+        public SharedMetadata Metadata { get; set; } = new();
+
+        public ImageData ExtraData { get; set; } = null!;
 
         public SimpleImageModel Clone()
         {
-            //TODO: avoid JSON here
-            return JsonSerializer.Deserialize<SimpleImageModel>(JsonSerializer.Serialize(this))!;
+            return new SimpleImageModel()
+            {
+                Key = Key,
+                Metadata = Metadata.Clone(),
+                ExtraData = ExtraData.Clone(),
+                CgaImageData = CgaImageData.ToArray(),
+                RawVgaImageData = RawVgaImageData.ToArray(),
+                VgaImageData = VgaImageData.ToArray(),
+                ModernImageData = ModernImageData.ToArray()
+            };
         }
     }
 }

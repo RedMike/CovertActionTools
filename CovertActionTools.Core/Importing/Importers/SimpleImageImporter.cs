@@ -71,9 +71,9 @@ namespace CovertActionTools.Core.Importing.Importers
 
         private List<string> GetKeys(string path)
         {
-            return Directory.GetFiles(path, "*_image.json")
+            return Directory.GetFiles(path, "*_VGA.png")
                 .Select(System.IO.Path.GetFileNameWithoutExtension)
-                .Select(x => x.Replace("_image", ""))
+                .Select(x => x.Replace("_VGA", ""))
                 .ToList();
         }
 
@@ -81,7 +81,8 @@ namespace CovertActionTools.Core.Importing.Importers
         {
             var model = new SimpleImageModel();
             model.Key = filename;
-            model.ExtraData = _imageImporter.ReadMetadata(path, filename, "image");
+            model.Metadata = _imageImporter.ReadMetadata(path, filename, "metadata");
+            model.ExtraData = _imageImporter.ReadImageData(path, filename, "image");
             (model.RawVgaImageData, model.VgaImageData) = _imageImporter.ReadVgaImageData(path, filename, model.ExtraData.LegacyWidth, model.ExtraData.LegacyHeight);
             model.CgaImageData = Array.Empty<byte>();
             if (model.ExtraData.LegacyColorMappings != null)
