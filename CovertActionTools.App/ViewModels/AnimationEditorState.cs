@@ -42,10 +42,10 @@ public class AnimationEditorState : IViewModel
             return;
         }
         
-        _originalInstructions = animation.Data.GetSerialisedInstructions();
+        _originalInstructions = animation.Control.GetSerialisedInstructions();
         SerialisedInstructions = _originalInstructions;
 
-        _originalSteps = animation.Data.GetSerialisedSteps();
+        _originalSteps = animation.Control.GetSerialisedSteps();
         SerialisedSteps = _originalSteps;
 
         _loaded = true;

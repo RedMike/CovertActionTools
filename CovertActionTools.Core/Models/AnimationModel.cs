@@ -44,6 +44,7 @@ namespace CovertActionTools.Core.Models
                 RawShort = -9, //fake instruction, allows piping 2 raw bytes into a file
                 RawLabel = -8, //fake instruction, allows piping a calculated label straight into a file
                 RawDataLabel = -7, //fake instruction, allows piping a calculated label straight into a file
+                Comment = -2, //used for lines that have only comment
                 Unknown = -1,
                 SetupSprite = 0, //00, loads 7 * 2 stack (pointer, index, follow, x, y, frame skip, flags), add active sprite
                 RemoveSprite = 1, //01, loads 2 stack, stops/removes target sprite
@@ -87,9 +88,22 @@ namespace CovertActionTools.Core.Models
             /// <summary>
             /// Populated for SetupSprite instructions, points into data sub-section
             /// </summary>
-            public string DataLabel { get; set; } = string.Empty;
+            public string StepLabel { get; set; } = string.Empty;
 
             public string Comment { get; set; } = string.Empty;
+
+            public AnimationInstruction Clone()
+            {
+                return new AnimationInstruction()
+                {
+                    Opcode = Opcode,
+                    Data = Data.ToArray(),
+                    Label = Label,
+                    StackParameters = StackParameters.ToArray(),
+                    StepLabel = StepLabel,
+                    Comment = Comment
+                };
+            }
         }
 
         public class AnimationStep
@@ -99,6 +113,8 @@ namespace CovertActionTools.Core.Models
                 RawByte = -10, //fake instruction, allows piping raw byte into a file
                 RawShort = -9, //fake instruction, allows piping 2 raw bytes into a file
                 RawLabel = -8, //fake instruction, allows piping a calculated label straight into a file
+                
+                Comment = -2, //used for lines that have no instruction
                 Unknown = -1,
                 /// <summary>
                 /// Draw frame with current image, -1 for waiting a frame without drawing
@@ -154,12 +170,23 @@ namespace CovertActionTools.Core.Models
             /// <summary>
             /// Only populated for jump instructions
             /// </summary>
-            public string Label { get; set; } = string.Empty;
+            public string StepLabel { get; set; } = string.Empty;
 
             public string Comment { get; set; } = string.Empty;
+
+            public AnimationStep Clone()
+            {
+                return new AnimationStep()
+                {
+                    Type = Type,
+                    Data = Data.ToArray(),
+                    Comment = Comment,
+                    StepLabel = StepLabel
+                };
+            }
         }
 
-        public class ImageData
+        public class GlobalData
         {
             /// <summary>
             /// Width - 1
@@ -218,9 +245,31 @@ namespace CovertActionTools.Core.Models
             /// Important: the background image is not part of the IDs
             /// </summary>
             public Dictionary<int, int> ImageIndexToUnknownData { get; set; } = new();
-            
+
+            public GlobalData Clone()
+            {
+                return new GlobalData()
+                {
+                    BoundingWidth = BoundingWidth,
+                    BoundingHeight = BoundingHeight,
+                    GlobalFrameSkip = GlobalFrameSkip,
+                    BackgroundType = BackgroundType,
+                    ColorMapping = ColorMapping.ToDictionary(x => x.Key, x => x.Value),
+                    ClearColor = ClearColor,
+                    Unknown2 = Unknown2,
+                    ImageIdToIndex = ImageIdToIndex.ToDictionary(x => x.Key, x => x.Value),
+                    ImageIndexToUnknownData = ImageIndexToUnknownData.ToDictionary(x => x.Key, x => x.Value)
+                };
+            }
+        }
+
+        public class ControlData
+        {
             public List<AnimationInstruction> Instructions { get; set; } = new();
             public Dictionary<string, int> InstructionLabels { get; set; } = new();
+
+            public List<AnimationStep> Steps { get; set; } = new();
+            public Dictionary<string, int> StepLabels { get; set; } = new();
             
             public string GetSerialisedInstructions()
             {
@@ -239,9 +288,9 @@ namespace CovertActionTools.Core.Models
                     {
                         instructionString += $" {instruction.Label}";
                     }
-                    if (!string.IsNullOrEmpty(instruction.DataLabel))
+                    if (!string.IsNullOrEmpty(instruction.StepLabel))
                     {
-                        instructionString += $" {instruction.DataLabel}";
+                        instructionString += $" {instruction.StepLabel}";
                     }
                     if (instruction.Data.Length > 0)
                     {
@@ -270,15 +319,12 @@ namespace CovertActionTools.Core.Models
                 return string.Join("\n", lines);
             }
 
-            public List<AnimationStep> Steps { get; set; } = new();
-            public Dictionary<string, int> DataLabels { get; set; } = new();
-            
             public string GetSerialisedSteps()
             {
                 var lines = new List<string>();
                 for (var i = 0; i < Steps.Count; i++)
                 {
-                    var dataLabelsOnLine = DataLabels
+                    var dataLabelsOnLine = StepLabels
                         .Where(x => x.Value == i)
                         .Select(x => x.Key)
                         .ToList();
@@ -289,9 +335,9 @@ namespace CovertActionTools.Core.Models
 
                     var step = Steps[i];
                     var stepString = $"{step.Type}";
-                    if (!string.IsNullOrEmpty(step.Label))
+                    if (!string.IsNullOrEmpty(step.StepLabel))
                     {
-                        stepString += $" {step.Label}";
+                        stepString += $" {step.StepLabel}";
                     }
 
                     if (step.Data.Length > 0)
@@ -448,7 +494,7 @@ namespace CovertActionTools.Core.Models
                             StackParameters = stackParameters.ToArray(),
                             Data = data.ToArray(),
                             Label = label,
-                            DataLabel = dataLabel,
+                            StepLabel = dataLabel,
                             Comment = comment
                         });
 
@@ -555,7 +601,7 @@ namespace CovertActionTools.Core.Models
                             Type = type,
                             Comment = comment,
                             Data = data.ToArray(),
-                            Label = label,
+                            StepLabel = label,
                         });
 
                         //if there are any labels queued up, they take effect on the first instruction after
@@ -574,7 +620,7 @@ namespace CovertActionTools.Core.Models
                     InstructionLabels = instructionLabels;
 
                     Steps = steps;
-                    DataLabels = stepLabels;
+                    StepLabels = stepLabels;
 
                 }
                 catch (Exception e)
@@ -582,40 +628,15 @@ namespace CovertActionTools.Core.Models
                     Console.WriteLine(e);
                 }
             }
-
-            public ImageData Clone()
+            
+            public ControlData Clone()
             {
-                return new ImageData()
+                return new ControlData()
                 {
-                    BoundingWidth = BoundingWidth,
-                    BoundingHeight = BoundingHeight,
-                    GlobalFrameSkip = GlobalFrameSkip,
-                    BackgroundType = BackgroundType,
-                    ColorMapping = ColorMapping.ToDictionary(x => x.Key, x => x.Value),
-                    ClearColor = ClearColor,
-                    Unknown2 = Unknown2,
-                    ImageIdToIndex = ImageIdToIndex.ToDictionary(x => x.Key, x => x.Value),
-                    ImageIndexToUnknownData = ImageIndexToUnknownData.ToDictionary(x => x.Key, x => x.Value),
-                    Instructions = Instructions
-                        .Select(x => new AnimationInstruction()
-                        {
-                            Opcode = x.Opcode,
-                            Comment = x.Comment,
-                            Data = x.Data.ToArray(),
-                            DataLabel = x.DataLabel,
-                            Label = x.Label,
-                            StackParameters = x.StackParameters.ToArray()
-                        }).ToList(),
+                    Instructions = Instructions.Select(x => x.Clone()).ToList(),
                     InstructionLabels = InstructionLabels.ToDictionary(x => x.Key, x => x.Value),
-                    Steps = Steps
-                        .Select(x => new AnimationStep()
-                        {
-                            Type = x.Type,
-                            Data = x.Data.ToArray(),
-                            Comment = x.Comment,
-                            Label = x.Label
-                        }).ToList(),
-                    DataLabels = DataLabels.ToDictionary(x => x.Key, x => x.Value)
+                    Steps = Steps.Select(x => x.Clone()).ToList(),
+                    StepLabels = StepLabels.ToDictionary(x => x.Key, x => x.Value)
                 };
             }
         }
@@ -626,7 +647,8 @@ namespace CovertActionTools.Core.Models
         public string Key { get; set; } = string.Empty;
 
         public Dictionary<int, SimpleImageModel> Images { get; set; } = new();
-        public ImageData Data { get; set; } = new();
+        public GlobalData Data { get; set; } = new();
+        public ControlData Control { get; set; } = new();
         public SharedMetadata Metadata { get; set; } = new();
 
         public AnimationModel Clone()
@@ -636,6 +658,7 @@ namespace CovertActionTools.Core.Models
                 Key = Key,
                 Metadata = Metadata.Clone(),
                 Data = Data.Clone(),
+                Control = Control.Clone(),
                 Images = Images.ToDictionary(x => x.Key,
                     x => x.Value.Clone())
             };

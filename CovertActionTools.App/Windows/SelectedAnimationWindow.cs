@@ -128,7 +128,7 @@ public class SelectedAnimationWindow : SharedImageWindow
             _animationPreviewState.SelectedFrameId = newFrameId.Value;
         }
         
-        var inputRegisters = animation.Data.Instructions
+        var inputRegisters = animation.Control.Instructions
             .Where(x => x.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.PushRegisterToStack)
             .Select(x => x.Data[0])
             .Distinct()
@@ -178,7 +178,7 @@ public class SelectedAnimationWindow : SharedImageWindow
         {
             //only animations with EndImmediate can be used as backgrounds, otherwise it'd never end in the first place
             var eligiblePreviousAnimations = model.Animations
-                .Where(x => x.Value.Data.Instructions
+                .Where(x => x.Value.Control.Instructions
                                 .Any(i => i.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.EndImmediate)
                             && x.Value.Key != animation.Key
                 )
@@ -362,14 +362,14 @@ public class SelectedAnimationWindow : SharedImageWindow
             {
                 foreach (var instructionIndex in state.LastFrameInstructionIndices)
                 {
-                    var instruction = animation.Data.Instructions[instructionIndex];
+                    var instruction = animation.Control.Instructions[instructionIndex];
                     ImGui.Text(GetInstructionText(instructionIndex, instruction));
                 }
             }
 
             ImGui.Text("");
 
-            var spriteIndexes = animation.Data.Instructions
+            var spriteIndexes = animation.Control.Instructions
                 .Where(x => x.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.SetupSprite)
                 .Select(x => (int)x.StackParameters[0])
                 .Distinct()
@@ -426,7 +426,7 @@ public class SelectedAnimationWindow : SharedImageWindow
                 {
                     foreach (var stepIndex in sprite.LastFrameStepIndices)
                     {
-                        ImGui.Text(GetStepText(stepIndex, animation.Data.Steps[stepIndex]));
+                        ImGui.Text(GetStepText(stepIndex, animation.Control.Steps[stepIndex]));
                     }
                 }
             }
@@ -441,7 +441,7 @@ public class SelectedAnimationWindow : SharedImageWindow
         {
             if (ImGui.Button("Save"))
             {
-                animation.Data.ParseInstructionsAndSteps(_animationEditorState.SerialisedInstructions, _animationEditorState.SerialisedSteps);
+                animation.Control.ParseInstructionsAndSteps(_animationEditorState.SerialisedInstructions, _animationEditorState.SerialisedSteps);
 
                 //mark it for reset so that the model gets updated
                 _animationEditorState.Reset("");
@@ -542,7 +542,7 @@ public class SelectedAnimationWindow : SharedImageWindow
         }
         else if (instruction.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.SetupSprite)
         {
-            name += $" {instruction.DataLabel}";
+            name += $" {instruction.StepLabel}";
         }
         else
         {
@@ -565,7 +565,7 @@ public class SelectedAnimationWindow : SharedImageWindow
         var name = $"{index} - {step.Type}";
         if (step.Type == AnimationModel.AnimationStep.StepType.JumpIfCounter)
         {
-            name += $" {step.Label}";
+            name += $" {step.StepLabel}";
         }
         else
         {

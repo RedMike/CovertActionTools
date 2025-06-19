@@ -462,7 +462,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                         Data = data,
                         Label = label,
                         StackParameters = stackParameters.ToArray(),
-                        DataLabel = dataLabel,
+                        StepLabel = dataLabel,
                         Comment = comment
                     });
                     stack.Clear();
@@ -566,7 +566,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                     
                     var spritesStartOnLine = instructions.Values
                         .Where(x => x.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.SetupSprite &&
-                                    dataLabels.First(y => y.Value == x.DataLabel).Key == offset)
+                                    dataLabels.First(y => y.Value == x.StepLabel).Key == offset)
                         .Select(x => x.StackParameters[0])
                         .Distinct()
                         .OrderBy(x => x)
@@ -592,7 +592,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                     {
                         Type = type,
                         Data = data,
-                        Label = dataLabel,
+                        StepLabel = dataLabel,
                         Comment = comment
                     });
                 }
@@ -643,7 +643,7 @@ namespace CovertActionTools.Core.Importing.Parsers
             {
                 Key = key,
                 Images = images,
-                Data = new AnimationModel.ImageData()
+                Data = new AnimationModel.GlobalData()
                 {
                     GlobalFrameSkip = frameSkip,
                     BackgroundType = backgroundType,
@@ -654,10 +654,13 @@ namespace CovertActionTools.Core.Importing.Parsers
                     Unknown2 = unknown2,
                     ImageIdToIndex = imageIdToIndex,
                     ImageIndexToUnknownData = imageIndexToUnknownData,
-                    Instructions = listInstructions,
+                },
+                Control = new AnimationModel.ControlData()
+                {
+                    Instructions  = listInstructions,
                     InstructionLabels = listLabels,
                     Steps = listSteps,
-                    DataLabels = listDataLabels
+                    StepLabels = listDataLabels
                 },
                 Metadata = new SharedMetadata()
                 {

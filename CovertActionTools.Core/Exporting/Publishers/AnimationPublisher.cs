@@ -191,9 +191,9 @@ namespace CovertActionTools.Core.Exporting.Publishers
                 var instructionIndexToOffset = new Dictionary<int, long>();
                 var stepIndexToOffset = new Dictionary<int, long>();
                 var offset = 0;
-                for (var i = 0; i < animation.Data.Instructions.Count; i++)
+                for (var i = 0; i < animation.Control.Instructions.Count; i++)
                 {
-                    var instruction = animation.Data.Instructions[i];
+                    var instruction = animation.Control.Instructions[i];
                     instructionIndexToOffset[i] = offset;
                     switch (instruction.Opcode)
                     {
@@ -243,9 +243,9 @@ namespace CovertActionTools.Core.Exporting.Publishers
                     }
                 }
 
-                for (var i = 0; i < animation.Data.Steps.Count; i++)
+                for (var i = 0; i < animation.Control.Steps.Count; i++)
                 {
-                    var step = animation.Data.Steps[i];
+                    var step = animation.Control.Steps[i];
                     stepIndexToOffset[i] = offset;
                     switch (step.Type)
                     {
@@ -274,9 +274,9 @@ namespace CovertActionTools.Core.Exporting.Publishers
                 }
                 
                 //now we know the offsets for each instruction/step, so we can write the actual data out
-                for (var i = 0; i < animation.Data.Instructions.Count; i++)
+                for (var i = 0; i < animation.Control.Instructions.Count; i++)
                 {
-                    var instruction = animation.Data.Instructions[i];
+                    var instruction = animation.Control.Instructions[i];
                     switch (instruction.Opcode)
                     {
                         case AnimationModel.AnimationInstruction.AnimationOpcode.RawByte:
@@ -288,13 +288,13 @@ namespace CovertActionTools.Core.Exporting.Publishers
                             break;
                         case AnimationModel.AnimationInstruction.AnimationOpcode.RawLabel:
                             var rawTargetLabel = instruction.Label;
-                            var rawTargetIndex = animation.Data.InstructionLabels[rawTargetLabel];
+                            var rawTargetIndex = animation.Control.InstructionLabels[rawTargetLabel];
                             var rawTargetOffset = instructionIndexToOffset[rawTargetIndex];
                             dataSectionWriter.Write(new [] { (byte)(rawTargetOffset & 0xFF), (byte)((rawTargetOffset & 0xFF00) >> 8)} );
                             break;
                         case AnimationModel.AnimationInstruction.AnimationOpcode.RawDataLabel:
-                            var rawTargetDataLabel = instruction.DataLabel;
-                            var rawTargetDataIndex = animation.Data.DataLabels[rawTargetDataLabel];
+                            var rawTargetDataLabel = instruction.StepLabel;
+                            var rawTargetDataIndex = animation.Control.StepLabels[rawTargetDataLabel];
                             var rawTargetDataOffset = stepIndexToOffset[rawTargetDataIndex];
                             dataSectionWriter.Write(new [] { (byte)(rawTargetDataOffset & 0xFF), (byte)((rawTargetDataOffset & 0xFF00) >> 8)} );
                             break;
@@ -311,7 +311,7 @@ namespace CovertActionTools.Core.Exporting.Publishers
                         case AnimationModel.AnimationInstruction.AnimationOpcode.ConditionalJump:
                             dataSectionWriter.Write((byte)instruction.Opcode);
                             var targetLabel = instruction.Label;
-                            var targetIndex = animation.Data.InstructionLabels[targetLabel];
+                            var targetIndex = animation.Control.InstructionLabels[targetLabel];
                             var targetOffset = instructionIndexToOffset[targetIndex];
                             dataSectionWriter.Write(new [] { (byte)(targetOffset & 0xFF), (byte)((targetOffset & 0xFF00) >> 8)} );
                             break;
@@ -341,8 +341,8 @@ namespace CovertActionTools.Core.Exporting.Publishers
                             dataSectionWriter.Write((byte)instruction.Opcode);
                             break;
                         case AnimationModel.AnimationInstruction.AnimationOpcode.SetupSprite:
-                            var targetDataLabel = instruction.DataLabel;
-                            var targetDataIndex = animation.Data.DataLabels[targetDataLabel];
+                            var targetDataLabel = instruction.StepLabel;
+                            var targetDataIndex = animation.Control.StepLabels[targetDataLabel];
                             var targetDataOffset = stepIndexToOffset[targetDataIndex];
                             dataSectionWriter.Write(new [] { (byte)0x05, (byte)0x00, 
                                 (byte)(targetDataOffset & 0xFF), 
@@ -372,9 +372,9 @@ namespace CovertActionTools.Core.Exporting.Publishers
                     }
                 }
 
-                for (var i = 0; i < animation.Data.Steps.Count; i++)
+                for (var i = 0; i < animation.Control.Steps.Count; i++)
                 {
-                    var step = animation.Data.Steps[i];
+                    var step = animation.Control.Steps[i];
                     dataSectionWriter.Write((byte)step.Type);
                     switch (step.Type)
                     {
@@ -392,8 +392,8 @@ namespace CovertActionTools.Core.Exporting.Publishers
                             dataSectionWriter.Write(new[] {step.Data[0], step.Data[1]});
                             break;
                         case AnimationModel.AnimationStep.StepType.JumpIfCounter:
-                            var targetDataLabel = step.Label;
-                            if (!animation.Data.DataLabels.TryGetValue(targetDataLabel, out var targetDataIndex))
+                            var targetDataLabel = step.StepLabel;
+                            if (!animation.Control.StepLabels.TryGetValue(targetDataLabel, out var targetDataIndex))
                             {
                                 throw new Exception($"Missing data label {targetDataLabel} when processing {animation.Key}");
                             }
