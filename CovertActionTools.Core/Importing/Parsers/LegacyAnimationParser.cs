@@ -643,10 +643,8 @@ namespace CovertActionTools.Core.Importing.Parsers
             {
                 Key = key,
                 Images = images,
-                ExtraData = new AnimationModel.Metadata()
+                Data = new AnimationModel.ImageData()
                 {
-                    Name = key,
-                    Comment = "Legacy import",
                     GlobalFrameSkip = frameSkip,
                     BackgroundType = backgroundType,
                     BoundingWidth = aWidth,
@@ -660,6 +658,11 @@ namespace CovertActionTools.Core.Importing.Parsers
                     InstructionLabels = listLabels,
                     Steps = listSteps,
                     DataLabels = listDataLabels
+                },
+                Metadata = new SharedMetadata()
+                {
+                    Name = key,
+                    Comment = "Legacy import"
                 }
             };
             return model;

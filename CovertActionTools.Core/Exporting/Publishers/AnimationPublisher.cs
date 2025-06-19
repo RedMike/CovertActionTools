@@ -99,7 +99,7 @@ namespace CovertActionTools.Core.Exporting.Publishers
             //colour mapping (1-15)
             for (byte i = 1; i < 16; i++)
             {
-                if (!animation.ExtraData.ColorMapping.TryGetValue(i, out var col))
+                if (!animation.Data.ColorMapping.TryGetValue(i, out var col))
                 {
                     col = i;
                     if (i == 5)
@@ -114,13 +114,13 @@ namespace CovertActionTools.Core.Exporting.Publishers
             writer.Write(new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00 });
             
             //initial data
-            writer.Write((ushort)animation.ExtraData.BoundingWidth);
-            writer.Write((ushort)animation.ExtraData.BoundingHeight);
-            writer.Write((ushort)animation.ExtraData.GlobalFrameSkip);
-            writer.Write((byte)animation.ExtraData.BackgroundType);
+            writer.Write((ushort)animation.Data.BoundingWidth);
+            writer.Write((ushort)animation.Data.BoundingHeight);
+            writer.Write((ushort)animation.Data.GlobalFrameSkip);
+            writer.Write((byte)animation.Data.BackgroundType);
             
             //for ClearToImage, the background image is encoded before the indexing data
-            if (animation.ExtraData.BackgroundType == AnimationModel.BackgroundType.ClearToImage)
+            if (animation.Data.BackgroundType == AnimationModel.BackgroundType.ClearToImage)
             {
                 var background = animation.Images[-1];
                 var backgroundData = _imageExporter.GetLegacyFileData(background);
@@ -133,10 +133,10 @@ namespace CovertActionTools.Core.Exporting.Publishers
             }
 
             //for ClearToColor, right before indexing data there's two bytes
-            if (animation.ExtraData.BackgroundType == AnimationModel.BackgroundType.ClearToColor)
+            if (animation.Data.BackgroundType == AnimationModel.BackgroundType.ClearToColor)
             {
-                writer.Write((byte)animation.ExtraData.ClearColor);
-                writer.Write((byte)animation.ExtraData.Unknown2);
+                writer.Write((byte)animation.Data.ClearColor);
+                writer.Write((byte)animation.Data.Unknown2);
             }
             
             //indexing data is 250 pairs of bytes, each pair corresponds to either an image or a gap
@@ -144,14 +144,14 @@ namespace CovertActionTools.Core.Exporting.Publishers
             //the actual value of the bytes is unknown but likely authoring data
             for (var i = 0; i < 250; i++)
             {
-                if (!animation.ExtraData.ImageIdToIndex.TryGetValue(i, out var index))
+                if (!animation.Data.ImageIdToIndex.TryGetValue(i, out var index))
                 {
                     //it's a gap
                     writer.Write((ushort)0);
                     continue;
                 }
 
-                if (!animation.ExtraData.ImageIndexToUnknownData.TryGetValue(index, out var unknownData))
+                if (!animation.Data.ImageIndexToUnknownData.TryGetValue(index, out var unknownData))
                 {
                     unknownData = 1000 + i; //the data is unknown and not used
                 }
@@ -191,9 +191,9 @@ namespace CovertActionTools.Core.Exporting.Publishers
                 var instructionIndexToOffset = new Dictionary<int, long>();
                 var stepIndexToOffset = new Dictionary<int, long>();
                 var offset = 0;
-                for (var i = 0; i < animation.ExtraData.Instructions.Count; i++)
+                for (var i = 0; i < animation.Data.Instructions.Count; i++)
                 {
-                    var instruction = animation.ExtraData.Instructions[i];
+                    var instruction = animation.Data.Instructions[i];
                     instructionIndexToOffset[i] = offset;
                     switch (instruction.Opcode)
                     {
@@ -243,9 +243,9 @@ namespace CovertActionTools.Core.Exporting.Publishers
                     }
                 }
 
-                for (var i = 0; i < animation.ExtraData.Steps.Count; i++)
+                for (var i = 0; i < animation.Data.Steps.Count; i++)
                 {
-                    var step = animation.ExtraData.Steps[i];
+                    var step = animation.Data.Steps[i];
                     stepIndexToOffset[i] = offset;
                     switch (step.Type)
                     {
@@ -274,9 +274,9 @@ namespace CovertActionTools.Core.Exporting.Publishers
                 }
                 
                 //now we know the offsets for each instruction/step, so we can write the actual data out
-                for (var i = 0; i < animation.ExtraData.Instructions.Count; i++)
+                for (var i = 0; i < animation.Data.Instructions.Count; i++)
                 {
-                    var instruction = animation.ExtraData.Instructions[i];
+                    var instruction = animation.Data.Instructions[i];
                     switch (instruction.Opcode)
                     {
                         case AnimationModel.AnimationInstruction.AnimationOpcode.RawByte:
@@ -288,13 +288,13 @@ namespace CovertActionTools.Core.Exporting.Publishers
                             break;
                         case AnimationModel.AnimationInstruction.AnimationOpcode.RawLabel:
                             var rawTargetLabel = instruction.Label;
-                            var rawTargetIndex = animation.ExtraData.InstructionLabels[rawTargetLabel];
+                            var rawTargetIndex = animation.Data.InstructionLabels[rawTargetLabel];
                             var rawTargetOffset = instructionIndexToOffset[rawTargetIndex];
                             dataSectionWriter.Write(new [] { (byte)(rawTargetOffset & 0xFF), (byte)((rawTargetOffset & 0xFF00) >> 8)} );
                             break;
                         case AnimationModel.AnimationInstruction.AnimationOpcode.RawDataLabel:
                             var rawTargetDataLabel = instruction.DataLabel;
-                            var rawTargetDataIndex = animation.ExtraData.DataLabels[rawTargetDataLabel];
+                            var rawTargetDataIndex = animation.Data.DataLabels[rawTargetDataLabel];
                             var rawTargetDataOffset = stepIndexToOffset[rawTargetDataIndex];
                             dataSectionWriter.Write(new [] { (byte)(rawTargetDataOffset & 0xFF), (byte)((rawTargetDataOffset & 0xFF00) >> 8)} );
                             break;
@@ -311,7 +311,7 @@ namespace CovertActionTools.Core.Exporting.Publishers
                         case AnimationModel.AnimationInstruction.AnimationOpcode.ConditionalJump:
                             dataSectionWriter.Write((byte)instruction.Opcode);
                             var targetLabel = instruction.Label;
-                            var targetIndex = animation.ExtraData.InstructionLabels[targetLabel];
+                            var targetIndex = animation.Data.InstructionLabels[targetLabel];
                             var targetOffset = instructionIndexToOffset[targetIndex];
                             dataSectionWriter.Write(new [] { (byte)(targetOffset & 0xFF), (byte)((targetOffset & 0xFF00) >> 8)} );
                             break;
@@ -342,7 +342,7 @@ namespace CovertActionTools.Core.Exporting.Publishers
                             break;
                         case AnimationModel.AnimationInstruction.AnimationOpcode.SetupSprite:
                             var targetDataLabel = instruction.DataLabel;
-                            var targetDataIndex = animation.ExtraData.DataLabels[targetDataLabel];
+                            var targetDataIndex = animation.Data.DataLabels[targetDataLabel];
                             var targetDataOffset = stepIndexToOffset[targetDataIndex];
                             dataSectionWriter.Write(new [] { (byte)0x05, (byte)0x00, 
                                 (byte)(targetDataOffset & 0xFF), 
@@ -372,9 +372,9 @@ namespace CovertActionTools.Core.Exporting.Publishers
                     }
                 }
 
-                for (var i = 0; i < animation.ExtraData.Steps.Count; i++)
+                for (var i = 0; i < animation.Data.Steps.Count; i++)
                 {
-                    var step = animation.ExtraData.Steps[i];
+                    var step = animation.Data.Steps[i];
                     dataSectionWriter.Write((byte)step.Type);
                     switch (step.Type)
                     {
@@ -393,7 +393,7 @@ namespace CovertActionTools.Core.Exporting.Publishers
                             break;
                         case AnimationModel.AnimationStep.StepType.JumpIfCounter:
                             var targetDataLabel = step.Label;
-                            if (!animation.ExtraData.DataLabels.TryGetValue(targetDataLabel, out var targetDataIndex))
+                            if (!animation.Data.DataLabels.TryGetValue(targetDataLabel, out var targetDataIndex))
                             {
                                 throw new Exception($"Missing data label {targetDataLabel} when processing {animation.Key}");
                             }

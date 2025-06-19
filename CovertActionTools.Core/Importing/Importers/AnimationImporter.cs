@@ -111,7 +111,7 @@ namespace CovertActionTools.Core.Importing.Importers
             {
                 Key = key
             };
-            model.ExtraData = JsonSerializer.Deserialize<AnimationModel.Metadata>(rawData, JsonOptions) ?? throw new Exception("Invalid animation model");
+            model.Data = JsonSerializer.Deserialize<AnimationModel.ImageData>(rawData, JsonOptions) ?? throw new Exception("Invalid animation model");
             
             var images = GetImages(path, key);
             foreach (var image in images)

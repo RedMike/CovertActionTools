@@ -109,7 +109,7 @@ namespace CovertActionTools.Core.Exporting.Exporters
         
         private byte[] GetMetadata(AnimationModel animation)
         {
-            var serialisedMetadata = JsonSerializer.Serialize(animation.ExtraData, JsonOptions);
+            var serialisedMetadata = JsonSerializer.Serialize(animation.Data, JsonOptions);
             var bytes = Encoding.UTF8.GetBytes(serialisedMetadata);
             return bytes;
         }

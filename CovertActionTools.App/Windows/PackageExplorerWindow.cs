@@ -369,9 +369,9 @@ public class PackageExplorerWindow : BaseWindow
             {
                 var animation = model.Animations[animationKey];
                 var animationName = $"{animationKey}";
-                if (!string.IsNullOrEmpty(animation.ExtraData.Name) && animationKey != animation.ExtraData.Name)
+                if (!string.IsNullOrEmpty(animation.Metadata.Name) && animationKey != animation.Metadata.Name)
                 {
-                    animationName += $" ({animation.ExtraData.Name})";
+                    animationName += $" ({animation.Metadata.Name})";
                 }
 
                 var nodeFlags = ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.SpanAvailWidth;

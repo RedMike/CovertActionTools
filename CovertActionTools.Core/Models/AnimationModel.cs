@@ -159,17 +159,8 @@ namespace CovertActionTools.Core.Models
             public string Comment { get; set; } = string.Empty;
         }
 
-        public class Metadata
+        public class ImageData
         {
-            /// <summary>
-            /// Actual name separate from key/filename, for development
-            /// </summary>
-            public string Name { get; set; } = string.Empty;
-            /// <summary>
-            /// Arbitrary comment, for development
-            /// </summary>
-            public string Comment { get; set; } = string.Empty;
-            
             /// <summary>
             /// Width - 1
             /// </summary>
@@ -592,12 +583,10 @@ namespace CovertActionTools.Core.Models
                 }
             }
 
-            public Metadata Clone()
+            public ImageData Clone()
             {
-                return new Metadata()
+                return new ImageData()
                 {
-                    Name = Name,
-                    Comment = Comment,
                     BoundingWidth = BoundingWidth,
                     BoundingHeight = BoundingHeight,
                     GlobalFrameSkip = GlobalFrameSkip,
@@ -637,14 +626,16 @@ namespace CovertActionTools.Core.Models
         public string Key { get; set; } = string.Empty;
 
         public Dictionary<int, SimpleImageModel> Images { get; set; } = new();
-        public Metadata ExtraData { get; set; } = new();
+        public ImageData Data { get; set; } = new();
+        public SharedMetadata Metadata { get; set; } = new();
 
         public AnimationModel Clone()
         {
             return new AnimationModel()
             {
                 Key = Key,
-                ExtraData = ExtraData.Clone(),
+                Metadata = Metadata.Clone(),
+                Data = Data.Clone(),
                 Images = Images.ToDictionary(x => x.Key,
                     x => x.Value.Clone())
             };

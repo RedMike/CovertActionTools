@@ -91,6 +91,8 @@ public class SelectedAnimationWindow : SharedImageWindow
             });
         
         _animationEditorState.Update(animation);
+
+        DrawSharedMetadataEditor(animation.Metadata);
         
         ImGui.BeginTabBar("AnimationTabs", ImGuiTabBarFlags.NoCloseWithMiddleMouseButton);
         
@@ -126,7 +128,7 @@ public class SelectedAnimationWindow : SharedImageWindow
             _animationPreviewState.SelectedFrameId = newFrameId.Value;
         }
         
-        var inputRegisters = animation.ExtraData.Instructions
+        var inputRegisters = animation.Data.Instructions
             .Where(x => x.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.PushRegisterToStack)
             .Select(x => x.Data[0])
             .Distinct()
@@ -153,13 +155,13 @@ public class SelectedAnimationWindow : SharedImageWindow
             ImGui.Text("");
         }
 
-        var newBackgroundType = ImGuiExtensions.InputEnum("Background Type", animation.ExtraData.BackgroundType, false);
+        var newBackgroundType = ImGuiExtensions.InputEnum("Background Type", animation.Data.BackgroundType, false);
         if (newBackgroundType != null)
         {
-            animation.ExtraData.BackgroundType = newBackgroundType.Value;
+            animation.Data.BackgroundType = newBackgroundType.Value;
         }
 
-        if (animation.ExtraData.BackgroundType == AnimationModel.BackgroundType.ClearToColor)
+        if (animation.Data.BackgroundType == AnimationModel.BackgroundType.ClearToColor)
         {
             var validColours = new List<int>()
             {
@@ -167,16 +169,16 @@ public class SelectedAnimationWindow : SharedImageWindow
                 6, 7, 8, 9, 10, 
                 11, 12, 13, 14, 15
             };
-            var newBackgroundClearColour = ImGuiExtensions.Input("Clear Color", animation.ExtraData.ClearColor, validColours);
+            var newBackgroundClearColour = ImGuiExtensions.Input("Clear Color", animation.Data.ClearColor, validColours);
             if (newBackgroundClearColour != null)
             {
-                animation.ExtraData.ClearColor = (byte)newBackgroundClearColour.Value;
+                animation.Data.ClearColor = (byte)newBackgroundClearColour.Value;
             }
-        } else if (animation.ExtraData.BackgroundType == AnimationModel.BackgroundType.PreviousAnimation)
+        } else if (animation.Data.BackgroundType == AnimationModel.BackgroundType.PreviousAnimation)
         {
             //only animations with EndImmediate can be used as backgrounds, otherwise it'd never end in the first place
             var eligiblePreviousAnimations = model.Animations
-                .Where(x => x.Value.ExtraData.Instructions
+                .Where(x => x.Value.Data.Instructions
                                 .Any(i => i.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.EndImmediate)
                             && x.Value.Key != animation.Key
                 )
@@ -184,7 +186,7 @@ public class SelectedAnimationWindow : SharedImageWindow
                 .ToList();
 
             var animationKeys = eligiblePreviousAnimations.Select(x => x.Key).ToList();
-            var animationNames = eligiblePreviousAnimations.Select(x => x.Value.ExtraData.Name).ToList();
+            var animationNames = eligiblePreviousAnimations.Select(x => x.Value.Metadata.Name).ToList();
             var newSelectedPreviousAnimation = ImGuiExtensions.Input("Previous Animation",
                 _animationPreviewState.PreviousAnimationId, animationKeys, animationNames);
             if (!string.IsNullOrEmpty(newSelectedPreviousAnimation))
@@ -193,8 +195,8 @@ public class SelectedAnimationWindow : SharedImageWindow
             }
         }
         
-        var width = animation.ExtraData.BoundingWidth + 1;
-        var height = animation.ExtraData.BoundingHeight + 1;
+        var width = animation.Data.BoundingWidth + 1;
+        var height = animation.Data.BoundingHeight + 1;
         var offsetX = 100;
         var offsetY = 100;
         var fullWidth = width + 2 * offsetX;
@@ -228,24 +230,24 @@ public class SelectedAnimationWindow : SharedImageWindow
 
             //now draw background
             ImGui.SetCursorPos(pos + new Vector2(offsetX, offsetY));
-            if (animation.ExtraData.BackgroundType == AnimationModel.BackgroundType.ClearToColor)
+            if (animation.Data.BackgroundType == AnimationModel.BackgroundType.ClearToColor)
             {
                 var backgroundTexture = RenderWindow.RenderCheckerboardRectangle(100, width, height,
-                    Core.Constants.VgaColorMapping[animation.ExtraData.ClearColor],
-                    Core.Constants.VgaColorMapping[animation.ExtraData.ClearColor]);
+                    Core.Constants.VgaColorMapping[animation.Data.ClearColor],
+                    Core.Constants.VgaColorMapping[animation.Data.ClearColor]);
                 ImGui.Image(backgroundTexture, new Vector2(width, height));
             }
-            else if (animation.ExtraData.BackgroundType == AnimationModel.BackgroundType.PreviousAnimation)
+            else if (animation.Data.BackgroundType == AnimationModel.BackgroundType.PreviousAnimation)
             {
                 //TODO: render previous animation at its final state
                 if (previousAnimation != null && previousAnimationState != null)
                 {
                     //render background
-                    if (previousAnimation.ExtraData.BackgroundType == AnimationModel.BackgroundType.PreviousAnimation)
+                    if (previousAnimation.Data.BackgroundType == AnimationModel.BackgroundType.PreviousAnimation)
                     {
                         throw new Exception("PreviousAnimation chaining not supported");
                     }
-                    if (previousAnimation.ExtraData.BackgroundType == AnimationModel.BackgroundType.ClearToImage)
+                    if (previousAnimation.Data.BackgroundType == AnimationModel.BackgroundType.ClearToImage)
                     {
                         var backgroundImage = previousAnimation.Images.OrderBy(x => x.Key).First().Value;
                         var id = $"image_{previousAnimation.Key}_frame";
@@ -259,8 +261,8 @@ public class SelectedAnimationWindow : SharedImageWindow
                     else
                     {
                         var backgroundTexture = RenderWindow.RenderCheckerboardRectangle(100, width, height,
-                            Core.Constants.VgaColorMapping[previousAnimation.ExtraData.ClearColor],
-                            Core.Constants.VgaColorMapping[previousAnimation.ExtraData.ClearColor]);
+                            Core.Constants.VgaColorMapping[previousAnimation.Data.ClearColor],
+                            Core.Constants.VgaColorMapping[previousAnimation.Data.ClearColor]);
                         ImGui.Image(backgroundTexture, new Vector2(width, height));
                     }
                     
@@ -269,7 +271,7 @@ public class SelectedAnimationWindow : SharedImageWindow
                     {
                         ImGui.SetCursorPos(pos + new Vector2(offsetX + drawnImage.PositionX, offsetY + drawnImage.PositionY));
 
-                        var drawnImageIndex = previousAnimation.ExtraData.ImageIdToIndex[drawnImage.ImageId];
+                        var drawnImageIndex = previousAnimation.Data.ImageIdToIndex[drawnImage.ImageId];
                         var drawnImageImg = previousAnimation.Images[drawnImageIndex];
                         var id = $"image_{previousAnimation.Key}_{drawnImageIndex}";
                         //TODO: cache?
@@ -297,7 +299,7 @@ public class SelectedAnimationWindow : SharedImageWindow
             {
                 ImGui.SetCursorPos(pos + new Vector2(offsetX + drawnImage.PositionX, offsetY + drawnImage.PositionY));
 
-                var drawnImageIndex = animation.ExtraData.ImageIdToIndex[drawnImage.ImageId];
+                var drawnImageIndex = animation.Data.ImageIdToIndex[drawnImage.ImageId];
                 var drawnImageImg = animation.Images[drawnImageIndex];
                 var id = $"image_{animation.Key}_{drawnImageIndex}";
                 //TODO: cache?
@@ -322,7 +324,7 @@ public class SelectedAnimationWindow : SharedImageWindow
                 var w = 5;
                 var h = 5;
                 if (selectedSprite.ImageId >= 0 &&
-                    animation.ExtraData.ImageIdToIndex.TryGetValue(selectedSprite.ImageId, out var imageIndex) &&
+                    animation.Data.ImageIdToIndex.TryGetValue(selectedSprite.ImageId, out var imageIndex) &&
                     animation.Images.TryGetValue(imageIndex, out var image))
                 {
                     w = image.ExtraData.LegacyWidth;
@@ -360,14 +362,14 @@ public class SelectedAnimationWindow : SharedImageWindow
             {
                 foreach (var instructionIndex in state.LastFrameInstructionIndices)
                 {
-                    var instruction = animation.ExtraData.Instructions[instructionIndex];
+                    var instruction = animation.Data.Instructions[instructionIndex];
                     ImGui.Text(GetInstructionText(instructionIndex, instruction));
                 }
             }
 
             ImGui.Text("");
 
-            var spriteIndexes = animation.ExtraData.Instructions
+            var spriteIndexes = animation.Data.Instructions
                 .Where(x => x.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.SetupSprite)
                 .Select(x => (int)x.StackParameters[0])
                 .Distinct()
@@ -389,7 +391,7 @@ public class SelectedAnimationWindow : SharedImageWindow
             {
                 if (sprite.ImageId >= 0)
                 {
-                    if (animation.ExtraData.ImageIdToIndex.TryGetValue(sprite.ImageId, out var imageIndex))
+                    if (animation.Data.ImageIdToIndex.TryGetValue(sprite.ImageId, out var imageIndex))
                     {
                         ImGui.Text($"Image: {sprite.ImageId} ({imageIndex})");
                     }
@@ -424,7 +426,7 @@ public class SelectedAnimationWindow : SharedImageWindow
                 {
                     foreach (var stepIndex in sprite.LastFrameStepIndices)
                     {
-                        ImGui.Text(GetStepText(stepIndex, animation.ExtraData.Steps[stepIndex]));
+                        ImGui.Text(GetStepText(stepIndex, animation.Data.Steps[stepIndex]));
                     }
                 }
             }
@@ -439,7 +441,7 @@ public class SelectedAnimationWindow : SharedImageWindow
         {
             if (ImGui.Button("Save"))
             {
-                animation.ExtraData.ParseInstructionsAndSteps(_animationEditorState.SerialisedInstructions, _animationEditorState.SerialisedSteps);
+                animation.Data.ParseInstructionsAndSteps(_animationEditorState.SerialisedInstructions, _animationEditorState.SerialisedSteps);
 
                 //mark it for reset so that the model gets updated
                 _animationEditorState.Reset("");
@@ -462,14 +464,14 @@ public class SelectedAnimationWindow : SharedImageWindow
 
     private void DrawAnimationImageWindow(PackageModel model, AnimationModel animation)
     {
-        if (!animation.ExtraData.ImageIdToIndex.TryGetValue(_selectedImage, out var index))
+        if (!animation.Data.ImageIdToIndex.TryGetValue(_selectedImage, out var index))
         {
             index = -2;
         }
         
         var imageIds = new List<int>();
         var imageIdNames = new List<string>();
-        if (animation.ExtraData.BackgroundType == AnimationModel.BackgroundType.ClearToImage)
+        if (animation.Data.BackgroundType == AnimationModel.BackgroundType.ClearToImage)
         {
             imageIds.Add(-1);
             imageIdNames.Add("Background");
@@ -482,7 +484,7 @@ public class SelectedAnimationWindow : SharedImageWindow
         }
         for (var i = 0; i < 250; i++)
         {
-            if (animation.ExtraData.ImageIdToIndex.TryGetValue(i, out var targetIndex))
+            if (animation.Data.ImageIdToIndex.TryGetValue(i, out var targetIndex))
             {
                 var name = $"{i} - Index {targetIndex}";
                 if (animation.Images.TryGetValue(targetIndex, out var targetImage))

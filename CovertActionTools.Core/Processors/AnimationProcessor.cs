@@ -149,7 +149,7 @@ namespace CovertActionTools.Core.Processors
                         while (!frameDone)
                         {
                             sprite.LastFrameStepIndices.Add(sprite.StepIndex);
-                            var step = animation.ExtraData.Steps[sprite.StepIndex];
+                            var step = animation.Data.Steps[sprite.StepIndex];
                             if (step.Type == AnimationModel.AnimationStep.StepType.Stop)
                             {
                                 sprite.Active = false;
@@ -186,7 +186,7 @@ namespace CovertActionTools.Core.Processors
                                         sprite.Counter--;
                                         if (sprite.Counter > 0)
                                         {
-                                            nextIndex = animation.ExtraData.DataLabels[step.Label];
+                                            nextIndex = animation.Data.DataLabels[step.Label];
                                         }
                                         if (sprite.Counter == 0 && sprite.CounterStack.Count > 0)
                                         {
@@ -294,7 +294,7 @@ namespace CovertActionTools.Core.Processors
                     state.InstructionIndex--;
                 }
 
-                var currentInstruction = animation.ExtraData.Instructions[state.InstructionIndex];
+                var currentInstruction = animation.Data.Instructions[state.InstructionIndex];
                 var stackParameters = new Stack<short>();
                 foreach (var param in currentInstruction.StackParameters)
                 {
@@ -326,13 +326,13 @@ namespace CovertActionTools.Core.Processors
                         state.Stack.Push(ReadDataAsShort(0));
                         break;
                     case AnimationModel.AnimationInstruction.AnimationOpcode.Jump:
-                        nextInstructionIndex = animation.ExtraData.InstructionLabels[currentInstruction.Label];
+                        nextInstructionIndex = animation.Data.InstructionLabels[currentInstruction.Label];
                         break;
                     case AnimationModel.AnimationInstruction.AnimationOpcode.ConditionalJump:
                         short compareFlag = PopStack();
                         if (compareFlag != 0)
                         {
-                            nextInstructionIndex = animation.ExtraData.InstructionLabels[currentInstruction.Label];
+                            nextInstructionIndex = animation.Data.InstructionLabels[currentInstruction.Label];
                         }
                         break;
                     case AnimationModel.AnimationInstruction.AnimationOpcode.SetupSprite:
@@ -342,7 +342,7 @@ namespace CovertActionTools.Core.Processors
                         var posX = PopStack();
                         var followIndex = PopStack();
                         var spriteIndex = PopStack();
-                        var stepIndex = animation.ExtraData.DataLabels[currentInstruction.DataLabel];
+                        var stepIndex = animation.Data.DataLabels[currentInstruction.DataLabel];
 
                         var existingSprite = state.Sprites.FirstOrDefault(x => x.Index == spriteIndex);
                         if (existingSprite != null)

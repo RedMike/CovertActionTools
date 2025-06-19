@@ -10,5 +10,14 @@
         /// Used to display in-editor only
         /// </summary>
         public string Comment { get; set; } = string.Empty;
+
+        public SharedMetadata Clone()
+        {
+            return new SharedMetadata()
+            {
+                Name = Name,
+                Comment = Comment
+            };
+        }
     }
 }
