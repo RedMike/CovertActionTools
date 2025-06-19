@@ -447,8 +447,8 @@ namespace CovertActionTools.Core.Importing.Parsers
                         if (!dataLabels.TryGetValue(stackParameters[0], out dataLabel))
                         {
                             dataLabel = $"START_{dataLabelId++}";
-                            dataLabels[stackParameters[0]] = dataLabel;
                         }
+                        dataLabels[stackParameters[0]] = dataLabel;
                         
                         stackParameters.RemoveAt(0);
                     }
@@ -617,7 +617,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                 .ToList();
             if (missingDataLabels.Count != 0)
             {
-                _logger.LogError($"Missing data labels ({missingDataLabels.Count}/{dataLabels.Count}):");
+                _logger.LogError($"Missing data labels on {key} ({missingDataLabels.Count}/{dataLabels.Count}):");
                 foreach (var missingLabel in missingDataLabels)
                 {
                     _logger.LogError($"Missing data label: {missingLabel.Value} {missingLabel.Key}");

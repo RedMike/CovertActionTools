@@ -66,7 +66,8 @@ namespace CovertActionTools.Core.Importing.Importers
         {
             var nextKey = _keys[_index];
 
-            _result[nextKey] = Import(GetPath(Path), nextKey);
+            var animationPath = System.IO.Path.Combine(GetPath(Path), nextKey);
+            _result[nextKey] = Import(animationPath, nextKey);
 
             return _index++;
         }
@@ -84,9 +85,8 @@ namespace CovertActionTools.Core.Importing.Importers
         
         private List<string> GetKeys(string path)
         {
-            return Directory.GetFiles(path, "*_global.json")
-                .Select(System.IO.Path.GetFileNameWithoutExtension)
-                .Select(x => x.Replace("_global", ""))
+            return Directory.GetDirectories(path, "*", SearchOption.TopDirectoryOnly)
+                .Select(System.IO.Path.GetFileName)
                 .ToList();
         }
 
@@ -151,14 +151,16 @@ namespace CovertActionTools.Core.Importing.Importers
             {
                 Key = key
             };
+            
             model.Metadata = ReadMetadata(path, key);
             model.Data = ReadGlobalData(path, key);
             model.Control = ReadControlData(path, key);
-            
-            var images = GetImages(path, key);
+
+            var imagePath = System.IO.Path.Combine(path, "images");
+            var images = GetImages(imagePath, key);
             foreach (var image in images)
             {
-                model.Images[image] = ImportImage(path, $"{key}_{image}");
+                model.Images[image] = ImportImage(imagePath, $"{key}_{image}");
             }
 
             return model;

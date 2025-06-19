@@ -72,9 +72,22 @@ namespace CovertActionTools.Core.Exporting.Exporters
             {
                 Directory.CreateDirectory(path);
             }
+
+            var animationPath = System.IO.Path.Combine(path, nextKey);
+            if (!Directory.Exists(animationPath))
+            {
+                Directory.CreateDirectory(animationPath);
+            }
+            
+            var imagesPath = System.IO.Path.Combine(animationPath, "images");
+            if (!Directory.Exists(imagesPath))
+            {
+                Directory.CreateDirectory(imagesPath);
+            }
+            
             foreach (var pair in files)
             {
-                File.WriteAllBytes(System.IO.Path.Combine(path, pair.Key), pair.Value);
+                File.WriteAllBytes(System.IO.Path.Combine(animationPath, pair.Key), pair.Value);
             }
 
             return _index++;
@@ -103,8 +116,8 @@ namespace CovertActionTools.Core.Exporting.Exporters
             foreach (var key in animation.Images.Keys)
             {
                 var image = animation.Images[key];
-                dict.Add($"{animation.Key}_{key}_VGA_metadata.json", _imageExporter.GetImageData(image));
-                dict.Add($"{animation.Key}_{key}_VGA.png", _imageExporter.GetVgaImageData(image));
+                dict.Add(System.IO.Path.Combine("images", $"{animation.Key}_{key}_VGA_metadata.json"), _imageExporter.GetImageData(image));
+                dict.Add(System.IO.Path.Combine("images", $"{animation.Key}_{key}_VGA.png"), _imageExporter.GetVgaImageData(image));
                 //TODO: export game-specific color mapping for CGA
             }
             return dict;

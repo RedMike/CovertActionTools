@@ -403,6 +403,17 @@ namespace CovertActionTools.Core.Models
                             continue;
                         }
 
+                        if (string.IsNullOrWhiteSpace(lineText))
+                        {
+                            //it's a pure comment
+                            instructions.Add(new AnimationInstruction()
+                            {
+                                Opcode = AnimationInstruction.AnimationOpcode.Comment,
+                                Comment = comment
+                            });
+                            continue;
+                        }
+
                         var opcodeEndIndex = lineText.IndexOf(' ');
                         if (opcodeEndIndex == -1)
                         {
@@ -535,6 +546,17 @@ namespace CovertActionTools.Core.Models
                         {
                             //it's a label
                             dataLabelStack.Add(lineText.Replace("@", "").Replace(":", ""));
+                            continue;
+                        }
+
+                        if (string.IsNullOrWhiteSpace(lineText))
+                        {
+                            //it's a pure comment
+                            steps.Add(new AnimationStep()
+                            {
+                                Type = AnimationStep.StepType.Comment,
+                                Comment = comment
+                            });
                             continue;
                         }
 
