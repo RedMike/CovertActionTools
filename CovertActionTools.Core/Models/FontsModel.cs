@@ -24,12 +24,12 @@ namespace CovertActionTools.Core.Models
             public Dictionary<char, int> CharacterWidths { get; set; } = new();
         }
         
-        public class Metadata
+        public class FontData
         {
             public Dictionary<int, FontMetadata> Fonts { get; set; } = new();
         }
         
-        public Metadata ExtraData { get; set; } = new();
+        public FontData Data { get; set; } = new();
 
         public List<Font> Fonts { get; set; } = new();
 
@@ -37,9 +37,9 @@ namespace CovertActionTools.Core.Models
         {
             return new FontsModel()
             {
-                ExtraData = new Metadata()
+                Data = new FontData()
                 {
-                    Fonts = ExtraData.Fonts.ToDictionary(x => x.Key,
+                    Fonts = Data.Fonts.ToDictionary(x => x.Key,
                         x => new FontMetadata()
                         {
                             Comment = x.Value.Comment,

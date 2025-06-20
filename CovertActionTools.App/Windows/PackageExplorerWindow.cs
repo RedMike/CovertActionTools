@@ -397,7 +397,7 @@ public class PackageExplorerWindow : BaseWindow
     {
         if (ImGui.TreeNodeEx("Fonts", ImGuiTreeNodeFlags.SpanAvailWidth))
         {
-            foreach (var fontId in model.Fonts.ExtraData.Fonts.Keys.OrderBy(x => x))
+            foreach (var fontId in model.Fonts.Data.Fonts.Keys.OrderBy(x => x))
             {
                 var nodeFlags = ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.SpanAvailWidth;
                 if (_mainEditorState.SelectedItem != null &&

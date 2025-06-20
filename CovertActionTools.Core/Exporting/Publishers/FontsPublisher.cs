@@ -87,7 +87,7 @@ namespace CovertActionTools.Core.Exporting.Publishers
             //now for each font we compose the data
             for (var fontId = 0; fontId < fonts.Fonts.Count; fontId++)
             {
-                var fontMetadata = fonts.ExtraData.Fonts[fontId];
+                var fontMetadata = fonts.Data.Fonts[fontId];
                 //first we convert the images back into useful data
                 var fontStrings = new Dictionary<char, List<string>>();
                 foreach (var c in fonts.Fonts[fontId].CharacterImages.Keys)

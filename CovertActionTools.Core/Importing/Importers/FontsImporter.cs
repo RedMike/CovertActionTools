@@ -72,7 +72,7 @@ namespace CovertActionTools.Core.Importing.Importers
             }
 
             var rawData = File.ReadAllText(filePath);
-            var metadata = JsonSerializer.Deserialize<FontsModel.Metadata>(rawData);
+            var metadata = JsonSerializer.Deserialize<FontsModel.FontData>(rawData);
             if (metadata == null)
             {
                 throw new Exception($"Unable to parse JSON");
@@ -80,12 +80,12 @@ namespace CovertActionTools.Core.Importing.Importers
 
             var model = new FontsModel()
             {
-                ExtraData = metadata
+                Data = metadata
             };
 
-            foreach (var fontId in model.ExtraData.Fonts.Keys)
+            foreach (var fontId in model.Data.Fonts.Keys)
             {
-                var fontMetadata = model.ExtraData.Fonts[fontId];
+                var fontMetadata = model.Data.Fonts[fontId];
                 var firstAsciiCode = fontMetadata.FirstAsciiValue;
                 var lastAsciiCode = fontMetadata.LastAsciiValue;
                 var fontImages = new Dictionary<char, byte[]>(); 

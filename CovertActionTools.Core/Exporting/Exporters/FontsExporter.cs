@@ -99,7 +99,7 @@ namespace CovertActionTools.Core.Exporting.Exporters
         
         private byte[] GetFontsMetadata(FontsModel fonts)
         {
-            var json = JsonSerializer.Serialize(fonts.ExtraData, JsonOptions);
+            var json = JsonSerializer.Serialize(fonts.Data, JsonOptions);
             return Encoding.UTF8.GetBytes(json);
         }
         

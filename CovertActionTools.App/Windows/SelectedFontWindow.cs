@@ -87,7 +87,7 @@ public class SelectedFontWindow : BaseWindow
         }
         
         var font = fonts.Fonts[fontId];
-        var fontMetadata = fonts.ExtraData.Fonts[fontId];
+        var fontMetadata = fonts.Data.Fonts[fontId];
 
         DrawFontSample(_fontPreviewState.SampleString, font, fontMetadata, fontId);
         

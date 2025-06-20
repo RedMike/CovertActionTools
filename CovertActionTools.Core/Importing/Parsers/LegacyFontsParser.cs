@@ -174,7 +174,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                     charImageData[c] = texture;
                 }
 
-                fonts.ExtraData.Fonts[f] = new FontsModel.FontMetadata()
+                fonts.Data.Fonts[f] = new FontsModel.FontMetadata()
                 {
                     Comment = "Legacy import",
                     FirstAsciiValue = firstAsciiValue,
