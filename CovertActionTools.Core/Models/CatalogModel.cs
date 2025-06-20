@@ -5,22 +5,20 @@ namespace CovertActionTools.Core.Models
 {
     public class CatalogModel
     {
-        public class Metadata
+        public class CatalogData
         {
-            /// <summary>
-            /// Actual name separate from key/filename, for development
-            /// </summary>
-            public string Name { get; set; } = string.Empty;
-            
-            /// <summary>
-            /// Arbitrary comment, for development
-            /// </summary>
-            public string Comment { get; set; } = string.Empty;
-
             /// <summary>
             /// List of keys included in the catalog
             /// </summary>
             public List<string> Keys { get; set; } = new();
+
+            public CatalogData Clone()
+            {
+                return new CatalogData()
+                {
+                    Keys = Keys.ToList()
+                };
+            }
         }
 
         public string Key { get; set; } = string.Empty;
@@ -28,19 +26,16 @@ namespace CovertActionTools.Core.Models
         /// Entries in file, legacy only has image entries.
         /// </summary>
         public Dictionary<string, SimpleImageModel> Entries { get; set; } = new();
-        public Metadata ExtraData { get; set; } = new();
+        public CatalogData Data { get; set; } = new();
+        public SharedMetadata Metadata { get; set; } = new();
 
         public CatalogModel Clone()
         {
             return new CatalogModel()
             {
                 Key = Key,
-                ExtraData = new Metadata()
-                {
-                    Name = ExtraData.Name,
-                    Comment = ExtraData.Comment,
-                    Keys = ExtraData.Keys.ToList()
-                },
+                Data = Data.Clone(),
+                Metadata = Metadata.Clone(),
                 Entries = Entries.ToDictionary(x => x.Key,
                     x => x.Value.Clone())
             };

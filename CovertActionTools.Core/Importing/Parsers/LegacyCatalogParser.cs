@@ -121,10 +121,13 @@ namespace CovertActionTools.Core.Importing.Parsers
             {
                 Key = key,
                 Entries = entries,
-                ExtraData = new CatalogModel.Metadata()
+                Metadata = new SharedMetadata()
                 {
                     Name = key,
-                    Comment = "Legacy import",
+                    Comment = "Legacy import"
+                },
+                Data = new CatalogModel.CatalogData()
+                {
                     Keys = entries.Keys.ToList()
                 }
             };

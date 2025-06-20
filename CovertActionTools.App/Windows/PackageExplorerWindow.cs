@@ -317,14 +317,14 @@ public class PackageExplorerWindow : BaseWindow
             {
                 var catalog = model.Catalogs[catalogKey];
                 var catalogName = $"{catalogKey}";
-                if (!string.IsNullOrEmpty(catalog.ExtraData.Name) && catalogKey != catalog.ExtraData.Name)
+                if (!string.IsNullOrEmpty(catalog.Metadata.Name) && catalogKey != catalog.Metadata.Name)
                 {
-                    catalogName += $" ({catalog.ExtraData.Name})";
+                    catalogName += $" ({catalog.Metadata.Name})";
                 }
 
                 if (ImGui.TreeNodeEx(catalogName, ImGuiTreeNodeFlags.SpanAvailWidth))
                 {
-                    foreach (var entryKey in catalog.ExtraData.Keys)
+                    foreach (var entryKey in catalog.Data.Keys)
                     {
                         var entry = catalog.Entries[entryKey];
                         var nodeFlags = ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.SpanAvailWidth;

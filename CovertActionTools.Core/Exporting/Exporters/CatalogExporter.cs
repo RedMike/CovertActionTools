@@ -65,9 +65,22 @@ namespace CovertActionTools.Core.Exporting.Exporters
             {
                 Directory.CreateDirectory(path);
             }
+
+            var catalogPath = System.IO.Path.Combine(path, nextKey);
+            if (!Directory.Exists(catalogPath))
+            {
+                Directory.CreateDirectory(catalogPath);
+            }
+            
+            var imagesPath = System.IO.Path.Combine(catalogPath, "images");
+            if (!Directory.Exists(imagesPath))
+            {
+                Directory.CreateDirectory(imagesPath);
+            }
+            
             foreach (var pair in files)
             {
-                File.WriteAllBytes(System.IO.Path.Combine(path, pair.Key), pair.Value);
+                File.WriteAllBytes(System.IO.Path.Combine(catalogPath, pair.Key), pair.Value);
             }
 
             return _index++;
@@ -88,22 +101,29 @@ namespace CovertActionTools.Core.Exporting.Exporters
         {
             var dict = new Dictionary<string, byte[]>
             {
-                [$"{catalog.Key}_catalog.json"] = GetMetadata(catalog),
+                [$"{catalog.Key}_metadata.json"] = GetMetadata(catalog),
+                [$"{catalog.Key}_catalog.json"] = GetCatalogData(catalog),
             };
-            foreach (var entry in catalog.ExtraData.Keys)
+            foreach (var entry in catalog.Data.Keys)
             {
                 var image = catalog.Entries[entry];
-                dict.Add($"{image.Key}_catalog_img.json", _imageExporter.GetImageData(image));
-                dict.Add($"{image.Key}_modern.png", _imageExporter.GetModernImageData(image));
-                dict.Add($"{image.Key}_VGA.png", _imageExporter.GetVgaImageData(image));
+                dict.Add(System.IO.Path.Combine("images", $"{image.Key}_VGA_metadata.json"), _imageExporter.GetImageData(image));
+                dict.Add(System.IO.Path.Combine("images", $"{image.Key}_VGA.png"), _imageExporter.GetVgaImageData(image));
             }
             return dict;
         }
         
         private byte[] GetMetadata(CatalogModel catalog)
         {
-            var serialisedMetadata = JsonSerializer.Serialize(catalog.ExtraData, JsonOptions);
-            var bytes = Encoding.UTF8.GetBytes(serialisedMetadata);
+            var data = JsonSerializer.Serialize(catalog.Metadata, JsonOptions);
+            var bytes = Encoding.UTF8.GetBytes(data);
+            return bytes;
+        }
+        
+        private byte[] GetCatalogData(CatalogModel catalog)
+        {
+            var data = JsonSerializer.Serialize(catalog.Data, JsonOptions);
+            var bytes = Encoding.UTF8.GetBytes(data);
             return bytes;
         }
         

@@ -86,22 +86,7 @@ public class SelectedCatalogImageWindow : SharedImageWindow
         }
         
         //first draw the catalog-specific info
-        var newName = ImGuiExtensions.Input("Catalog Name", catalog.ExtraData.Name, 128);
-        if (newName != null)
-        {
-            catalog.ExtraData.Name = newName;
-            _pendingState.RecordChange();
-        }
-
-        var windowSize = ImGui.GetContentRegionAvail();
-        var oldComment = catalog.ExtraData.Comment;
-        var comment = catalog.ExtraData.Comment;
-        ImGui.InputTextMultiline("Comment", ref comment, 2048, new Vector2(windowSize.X, 50.0f));
-        if (comment != oldComment)
-        {
-            catalog.ExtraData.Comment = comment;
-            _pendingState.RecordChange();
-        }
+        DrawSharedMetadataEditor(catalog.Metadata, () => { _pendingState.RecordChange(); });
         
         ImGui.Text("");
         ImGui.Separator();
@@ -166,8 +151,6 @@ public class SelectedCatalogImageWindow : SharedImageWindow
             
             ImGui.EndTable();
         }
-
-        DrawSharedMetadataEditor(image.Metadata, () => { _pendingState.RecordChange(); });
 
         ImGui.Text("");
         ImGui.Separator();

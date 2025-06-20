@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using CovertActionTools.Core.Conversion;
 using CovertActionTools.Core.Importing.Shared;
 using CovertActionTools.Core.Models;
@@ -13,6 +14,18 @@ namespace CovertActionTools.Core.Importing.Importers
 {
     internal class CatalogImporter : BaseImporter<Dictionary<string, CatalogModel>>
     {
+#if DEBUG
+        private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions()
+        {
+            WriteIndented = true,
+            Converters = { 
+                new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
+            }
+        };
+#else
+        private static readonly JsonSerializerOptions JsonOptions = JsonSerializerOptions.Default;
+#endif
+        
         private readonly ILogger<CatalogImporter> _logger;
         private readonly SharedImageImporter _imageImporter;
 
@@ -53,7 +66,8 @@ namespace CovertActionTools.Core.Importing.Importers
         {
             var nextKey = _keys[_index];
 
-            _result[nextKey] = Import(GetPath(Path), nextKey);
+            var catalogPath = System.IO.Path.Combine(GetPath(Path), nextKey);
+            _result[nextKey] = Import(catalogPath, nextKey);
 
             return _index++;
         }
@@ -72,35 +86,50 @@ namespace CovertActionTools.Core.Importing.Importers
         
         private List<string> GetKeys(string path)
         {
-            return Directory.GetFiles(path, "*_catalog.json")
-                .Select(System.IO.Path.GetFileNameWithoutExtension)
-                .Select(x => x.Replace("_catalog", ""))
+            return Directory.GetDirectories(path, "*", SearchOption.TopDirectoryOnly)
+                .Select(System.IO.Path.GetFileName)
                 .ToList();
+        }
+        
+        private SharedMetadata ReadMetadata(string path, string key)
+        {
+            var filePath = System.IO.Path.Combine(path, $"{key}_metadata.json");
+            if (!File.Exists(filePath))
+            {
+                throw new Exception($"Missing JSON file: {key}");
+            }
+
+            var rawData = File.ReadAllText(filePath);
+            
+            return JsonSerializer.Deserialize<SharedMetadata>(rawData, JsonOptions) ?? throw new Exception("Invalid animation model"); 
+        }
+        
+        private CatalogModel.CatalogData ReadCatalogData(string path, string key)
+        {
+            var filePath = System.IO.Path.Combine(path, $"{key}_catalog.json");
+            if (!File.Exists(filePath))
+            {
+                throw new Exception($"Missing JSON file: {key}");
+            }
+
+            var rawData = File.ReadAllText(filePath);
+            
+            return JsonSerializer.Deserialize<CatalogModel.CatalogData>(rawData, JsonOptions) ?? throw new Exception("Invalid animation model"); 
         }
         
         private CatalogModel Import(string path, string filename)
         {
-            var filePath = System.IO.Path.Combine(path, $"{filename}_catalog.json");
-            if (!File.Exists(filePath))
-            {
-                throw new Exception($"Missing JSON file: {filename}");
-            }
-
-            var rawData = File.ReadAllText(filePath);
-            var extraData = JsonSerializer.Deserialize<CatalogModel.Metadata>(rawData);
-            if (extraData == null)
-            {
-                throw new Exception($"Unable to parse JSON file: {filename}");
-            }
-
             var model = new CatalogModel()
             {
                 Key = filename,
-                ExtraData = extraData
+                Data = ReadCatalogData(path, filename),
+                Metadata = ReadMetadata(path, filename)
             };
-            foreach (var entry in extraData.Keys)
+            
+            var imagePath = System.IO.Path.Combine(path, "images");
+            foreach (var entry in model.Data.Keys)
             {
-                var image = ImportImage(path, entry);
+                var image = ImportImage(imagePath, entry);
                 model.Entries[entry] = image;
             }
 
@@ -111,7 +140,7 @@ namespace CovertActionTools.Core.Importing.Importers
         {
             var model = new SimpleImageModel();
             model.Key = filename;
-            model.ExtraData = _imageImporter.ReadImageData(path, filename, "catalog_img");
+            model.ExtraData = _imageImporter.ReadImageData(path, filename, "VGA_metadata");
             (model.RawVgaImageData, model.VgaImageData) = _imageImporter.ReadVgaImageData(path, filename, model.ExtraData.LegacyWidth, model.ExtraData.LegacyHeight);
             model.CgaImageData = Array.Empty<byte>();
             if (model.ExtraData.LegacyColorMappings != null)
@@ -121,7 +150,6 @@ namespace CovertActionTools.Core.Importing.Importers
                 var textureBytes = skBitmap.Bytes.ToArray();
                 model.CgaImageData = textureBytes;
             }
-            model.ModernImageData = _imageImporter.ReadModernImageData(path, filename, model.ExtraData.Width, model.ExtraData.Height);
             return model;
         }
         

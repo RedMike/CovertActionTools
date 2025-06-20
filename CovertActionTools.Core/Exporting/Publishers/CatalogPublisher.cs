@@ -87,13 +87,13 @@ namespace CovertActionTools.Core.Exporting.Publishers
             using var memStream = new MemoryStream();
             using var writer = new BinaryWriter(memStream);
 
-            writer.Write((ushort)catalog.ExtraData.Keys.Count);
+            writer.Write((ushort)catalog.Data.Keys.Count);
             var dataSegmentStart = 2 + //ushort
-                                   (12 + 4 + 4 + 4) * catalog.ExtraData.Keys.Count + //list of entries
+                                   (12 + 4 + 4 + 4) * catalog.Data.Keys.Count + //list of entries
                                    2; //filler
             var currentPointerOffset = 2;
             var currentDataOffset = dataSegmentStart;
-            foreach (var key in catalog.ExtraData.Keys)
+            foreach (var key in catalog.Data.Keys)
             {
                 var entry = catalog.Entries[key];
                 var rawData = _imageExporter.GetLegacyFileData(entry);
