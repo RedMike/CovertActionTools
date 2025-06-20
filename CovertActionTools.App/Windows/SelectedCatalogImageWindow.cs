@@ -62,12 +62,6 @@ public class SelectedCatalogImageWindow : SharedImageWindow
 
     private void DrawCatalogWindow(PackageModel model, string catalogKey, string imageId)
     {
-        if (!model.Catalogs.TryGetValue(catalogKey, out var existingCatalog))
-        {
-            ImGui.Text("Something went wrong, missing catalog");
-            return;
-        }
-        
         var catalog = ImGuiExtensions.PendingSaveChanges(_pendingState, catalogKey,
             () => model.Catalogs[catalogKey].Clone(),
             (data) =>
