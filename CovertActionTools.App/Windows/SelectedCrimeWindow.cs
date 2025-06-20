@@ -110,6 +110,8 @@ public class SelectedCrimeWindow : BaseWindow
             ImGui.TextColored(new Vector4(1.0f, 0.0f, 0.0f, 1.0f), _idError);
         }
         
+        DrawSharedMetadataEditor(crime.Metadata, () => { _pendingState.RecordChange(); });
+        
         if (ImGui.CollapsingHeader("Participants"))
         {
             if (ImGui.Button("Add Participant"))

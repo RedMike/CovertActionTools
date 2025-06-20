@@ -184,7 +184,7 @@ namespace CovertActionTools.Core.Exporting.Publishers
             {
                 Id = crime.Id,
                 Objects = crime.Objects,
-                ExtraData = crime.ExtraData,
+                Metadata = crime.Metadata,
             };
             
             //participants are a simple 1-to-1

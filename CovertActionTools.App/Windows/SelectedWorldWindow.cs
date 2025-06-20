@@ -100,28 +100,10 @@ public class SelectedWorldWindow : BaseWindow
                 //TODO: change ID?    
             }
         }
-
-        var origName = world.Metadata.Name;
-        var name = origName;
-        ImGui.SameLine();
-        ImGui.SetNextItemWidth(200.0f);
-        ImGui.InputText("Name", ref name, 64);
-        if (name != origName)
-        {
-            world.Metadata.Name = name;
-            _pendingState.RecordChange();
-        }
         
-        var windowSize = ImGui.GetContentRegionAvail();
-        var origComment = world.Metadata.Comment;
-        var comment = origComment;
-        ImGui.InputTextMultiline("Comment", ref comment, 2048, new Vector2(windowSize.X, 50.0f));
-        if (comment != origComment)
-        {
-            world.Metadata.Comment = comment;
-            _pendingState.RecordChange();
-        }
+        DrawSharedMetadataEditor(world.Metadata, () => { _pendingState.RecordChange(); });
 
+        var windowSize = ImGui.GetContentRegionAvail();
         var cursorPos = ImGui.GetCursorPos();
 
         ImGui.BeginChild("Editor Fields", new Vector2(windowSize.X / 2.0f, windowSize.Y - cursorPos.Y));

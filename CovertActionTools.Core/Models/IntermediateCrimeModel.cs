@@ -14,19 +14,6 @@ namespace CovertActionTools.Core.Models
             Meeting = 3
         }
         
-        public class Metadata
-        {
-            /// <summary>
-            /// Actual name separate from key/filename, for development
-            /// </summary>
-            public string Name { get; set; } = string.Empty;
-            
-            /// <summary>
-            /// Arbitrary comment, for development
-            /// </summary>
-            public string Comment { get; set; } = string.Empty;
-        }
-        
         public class Participant
         {
             /// <summary>
@@ -245,17 +232,13 @@ namespace CovertActionTools.Core.Models
         public List<Participant> Participants { get; set; } = new();
         public List<Event> Events { get; set; } = new();
         public List<Object> Objects { get; set; } = new();
-        public Metadata ExtraData { get; set; } = new();
+        public SharedMetadata Metadata { get; set; } = new();
 
         public CrimeModel Clone()
         {
             return new CrimeModel()
             {
-                ExtraData = new Metadata()
-                {
-                    Name = ExtraData.Name,
-                    Comment = ExtraData.Comment
-                },
+                Metadata = Metadata.Clone(),
                 Id = Id,
                 Events = Events
                     .Select(x => new Event()
@@ -429,6 +412,6 @@ namespace CovertActionTools.Core.Models
         public List<Participant> Participants { get; set; } = new();
         public List<Event> Events { get; set; } = new();
         public List<CrimeModel.Object> Objects { get; set; } = new();
-        public CrimeModel.Metadata ExtraData { get; set; } = new();
+        public SharedMetadata Metadata { get; set; } = new();
     }
 }

@@ -98,7 +98,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                 Participants = participants,
                 Events = events,
                 Objects = objects,
-                ExtraData = new CrimeModel.Metadata()
+                Metadata = new SharedMetadata()
                 {
                     Name = $"CRIME{key}",
                     Comment = "Legacy import"
@@ -114,7 +114,7 @@ namespace CovertActionTools.Core.Importing.Parsers
             {
                 Id = intermediate.Id,
                 Objects = intermediate.Objects,
-                ExtraData = intermediate.ExtraData
+                Metadata = intermediate.Metadata
             };
 
             //participants are a simple 1-to-1
