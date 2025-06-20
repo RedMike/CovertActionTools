@@ -27,24 +27,22 @@ namespace CovertActionTools.Core.Importing.Shared
             _logger = logger;
         }
 
-        public SimpleImageModel Import(string path, string filename, SimpleImageModel.ImageData imageData)
+        public SharedImageModel ReadImage(string path, string filename, string suffix)
         {
-            var model = new SimpleImageModel();
-            model.Key = filename;
-            model.ExtraData = imageData;
-            (model.RawVgaImageData, model.VgaImageData) = ReadVgaImageData(path, filename, model.ExtraData.LegacyWidth, model.ExtraData.LegacyHeight);
+            var model = new SharedImageModel();
+            model.Data = ReadImageData(path, filename, suffix);
+            (model.RawVgaImageData, model.VgaImageData) = ReadVgaImageData(path, filename, model.Data.Width, model.Data.Height);
             model.CgaImageData = Array.Empty<byte>();
-            if (model.ExtraData.LegacyColorMappings != null)
+            if (model.Data.LegacyColorMappings != null)
             {
-                var rawCgaImageData = ImageConversion.VgaToCgaTexture(model.ExtraData.LegacyWidth, model.ExtraData.LegacyHeight, model.RawVgaImageData, model.ExtraData.LegacyColorMappings);
-                using var skBitmap = SKBitmap.Decode(rawCgaImageData, new SKImageInfo(model.ExtraData.LegacyWidth, model.ExtraData.LegacyHeight, SKColorType.Rgba8888, SKAlphaType.Premul));
+                var rawCgaImageData = ImageConversion.VgaToCgaTexture(model.Data.Width, model.Data.Height, model.RawVgaImageData, model.Data.LegacyColorMappings);
+                using var skBitmap = SKBitmap.Decode(rawCgaImageData, new SKImageInfo(model.Data.Width, model.Data.Height, SKColorType.Rgba8888, SKAlphaType.Premul));
                 var textureBytes = skBitmap.Bytes.ToArray();
                 model.CgaImageData = textureBytes;
             }
-            model.ModernImageData = ReadModernImageData(path, filename, model.ExtraData.Width, model.ExtraData.Height);
             return model;
         }
-        
+
         public (byte[] raw, byte[] texture) ReadVgaImageData(string path, string filename, int width, int height)
         {
             var filePath = Path.Combine(path, $"{filename}_VGA.png");
@@ -59,20 +57,6 @@ namespace CovertActionTools.Core.Importing.Shared
             var rawBytes = ImageConversion.TextureToVga(width, height, textureBytes);
 
             return (rawBytes, textureBytes);
-        }
-
-        public byte[] ReadModernImageData(string path, string filename, int width, int height)
-        {
-            var filePath = Path.Combine(path, $"{filename}_modern.png");
-            if (!File.Exists(filePath))
-            {
-                throw new Exception($"Missing PNG file: {filename}");
-            }
-
-            var bytes = File.ReadAllBytes(filePath);
-            using var skBitmap = SKBitmap.Decode(bytes, new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul));
-            var imageBytes = skBitmap.Bytes.ToArray();
-            return imageBytes;
         }
         
         public SharedMetadata ReadMetadata(string path, string key, string suffix)
@@ -92,7 +76,7 @@ namespace CovertActionTools.Core.Importing.Shared
             return metadata;
         }
         
-        public SimpleImageModel.ImageData ReadImageData(string path, string key, string suffix)
+        public SharedImageModel.ImageData ReadImageData(string path, string key, string suffix)
         {
             var filePath = System.IO.Path.Combine(path, $"{key}_{suffix}.json");
             if (!File.Exists(filePath))
@@ -101,7 +85,7 @@ namespace CovertActionTools.Core.Importing.Shared
             }
 
             var json = File.ReadAllText(filePath);
-            var metadata = JsonSerializer.Deserialize<SimpleImageModel.ImageData>(json);
+            var metadata = JsonSerializer.Deserialize<SharedImageModel.ImageData>(json);
             if (metadata == null)
             {
                 throw new Exception($"Unparseable JSON file: {key}");

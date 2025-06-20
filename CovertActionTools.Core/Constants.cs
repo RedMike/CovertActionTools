@@ -81,106 +81,106 @@ namespace CovertActionTools.Core
         #endregion
         
         #region Filenames
-        public static SimpleImageModel.ImageType GetLikelyImageType(string fileName)
+        public static SharedImageModel.ImageType GetLikelyImageType(string fileName)
         {
             if (fileName.StartsWith("AD"))
             {
-                return SimpleImageModel.ImageType.QuitScreen;
+                return SharedImageModel.ImageType.QuitScreen;
             }
 
             if (fileName.StartsWith("EUROPE"))
             {
-                return SimpleImageModel.ImageType.EuropeMap;
+                return SharedImageModel.ImageType.EuropeMap;
             }
             if (fileName.StartsWith("AFRICA"))
             {
-                return SimpleImageModel.ImageType.AfricaMap;
+                return SharedImageModel.ImageType.AfricaMap;
             }
             if (fileName.StartsWith("CENTRAL"))
             {
-                return SimpleImageModel.ImageType.AmericaMap;
+                return SharedImageModel.ImageType.AmericaMap;
             }
 
             if (fileName.StartsWith("BOARD"))
             {
-                return SimpleImageModel.ImageType.WireTapBoard;
+                return SharedImageModel.ImageType.WireTapBoard;
             }
 
             if (fileName.StartsWith("BUGS"))
             {
-                return SimpleImageModel.ImageType.WireTapSprites;
+                return SharedImageModel.ImageType.WireTapSprites;
             }
 
             if (fileName.StartsWith("CARS"))
             {
-                return SimpleImageModel.ImageType.CarScreen;
+                return SharedImageModel.ImageType.CarScreen;
             }
             if (fileName.StartsWith("CHASE"))
             {
-                return SimpleImageModel.ImageType.CarSprites;
+                return SharedImageModel.ImageType.CarSprites;
             }
 
             if (fileName.StartsWith("EQUIP1"))
             {
-                return SimpleImageModel.ImageType.EquipScreenBase;
+                return SharedImageModel.ImageType.EquipScreenBase;
             }
 
             if (fileName.StartsWith("EQUIP2"))
             {
-                return SimpleImageModel.ImageType.EquipScreenSprites;
+                return SharedImageModel.ImageType.EquipScreenSprites;
             }
 
             if (fileName.StartsWith("FACES"))
             {
-                return SimpleImageModel.ImageType.FaceSprites;
+                return SharedImageModel.ImageType.FaceSprites;
             }
 
             if (fileName.StartsWith("GENDER"))
             {
-                return SimpleImageModel.ImageType.GenderSelect;
+                return SharedImageModel.ImageType.GenderSelect;
             }
 
             if (fileName.StartsWith("GUYS2"))
             {
-                return SimpleImageModel.ImageType.OutdoorTerrain;
+                return SharedImageModel.ImageType.OutdoorTerrain;
             }
 
             if (fileName.StartsWith("GUYS3"))
             {
-                return SimpleImageModel.ImageType.IndoorTerrain;
+                return SharedImageModel.ImageType.IndoorTerrain;
             }
 
             if (fileName.StartsWith("HOTEL"))
             {
-                return SimpleImageModel.ImageType.Hotel;
+                return SharedImageModel.ImageType.Hotel;
             }
 
             if (fileName.StartsWith("ICONS"))
             {
-                return SimpleImageModel.ImageType.Icons;
+                return SharedImageModel.ImageType.Icons;
             }
 
             if (fileName.StartsWith("LABS") || fileName.StartsWith("SNEAKIN") || fileName.StartsWith("WIRETAP"))
             {
-                return SimpleImageModel.ImageType.TransitionScreen;
+                return SharedImageModel.ImageType.TransitionScreen;
             }
 
             if (fileName.StartsWith("SPRITES"))
             {
-                return SimpleImageModel.ImageType.CombatSprites;
+                return SharedImageModel.ImageType.CombatSprites;
             }
 
             if (fileName.StartsWith("STREET"))
             {
-                return SimpleImageModel.ImageType.CarViewScreen;
+                return SharedImageModel.ImageType.CarViewScreen;
             }
 
             if (fileName.StartsWith("TRAINING"))
             {
-                return SimpleImageModel.ImageType.TrainingScreen;
+                return SharedImageModel.ImageType.TrainingScreen;
             }
 
-            return SimpleImageModel.ImageType.Unknown;
+            return SharedImageModel.ImageType.Unknown;
         }
         #endregion
     }

@@ -668,7 +668,7 @@ namespace CovertActionTools.Core.Models
         /// </summary>
         public string Key { get; set; } = string.Empty;
 
-        public Dictionary<int, SimpleImageModel> Images { get; set; } = new();
+        public Dictionary<int, SharedImageModel> Images { get; set; } = new();
         public GlobalData Data { get; set; } = new();
         public ControlData Control { get; set; } = new();
         public SharedMetadata Metadata { get; set; } = new();

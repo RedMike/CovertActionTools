@@ -122,7 +122,7 @@ namespace CovertActionTools.Core.Importing.Parsers
             var backgroundType = (AnimationModel.BackgroundType)reader.ReadByte();
             
             //for ClearToImage, there is an image before the header, otherwise it's straight to the header
-            var images = new Dictionary<int, SimpleImageModel>();
+            var images = new Dictionary<int, SharedImageModel>();
             if (backgroundType == AnimationModel.BackgroundType.ClearToImage)
             {
                 //there is one image before the header
@@ -671,11 +671,11 @@ namespace CovertActionTools.Core.Importing.Parsers
             return model;
         }
 
-        private SimpleImageModel? ReadImage(BinaryReader reader, MemoryStream memStream, string key, int img)
+        private SharedImageModel? ReadImage(BinaryReader reader, MemoryStream memStream, string key, int img)
         {
             //because we don't do piece-meal parsing, we have to read a ton of extra bytes and pass them over first
             //but parsing the image will return the actual offset
-            SimpleImageModel? model = null;
+            SharedImageModel? model = null;
             try
             {
                 var startOffset = memStream.Position;

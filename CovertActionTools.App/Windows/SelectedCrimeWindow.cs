@@ -648,10 +648,10 @@ public class SelectedCrimeWindow : BaseWindow
             {
                 for (var x = 0; x < 16; x++)
                 {
-                    iconBytes.Add(iconImage.VgaImageData[(y * iconImage.ExtraData.LegacyWidth + ox + x) * 4 + 0]);
-                    iconBytes.Add(iconImage.VgaImageData[(y * iconImage.ExtraData.LegacyWidth + ox + x) * 4 + 1]);
-                    iconBytes.Add(iconImage.VgaImageData[(y * iconImage.ExtraData.LegacyWidth + ox + x) * 4 + 2]);
-                    iconBytes.Add(iconImage.VgaImageData[(y * iconImage.ExtraData.LegacyWidth + ox + x) * 4 + 3]);
+                    iconBytes.Add(iconImage.Image.VgaImageData[(y * iconImage.Image.Data.Width + ox + x) * 4 + 0]);
+                    iconBytes.Add(iconImage.Image.VgaImageData[(y * iconImage.Image.Data.Width + ox + x) * 4 + 1]);
+                    iconBytes.Add(iconImage.Image.VgaImageData[(y * iconImage.Image.Data.Width + ox + x) * 4 + 2]);
+                    iconBytes.Add(iconImage.Image.VgaImageData[(y * iconImage.Image.Data.Width + ox + x) * 4 + 3]);
                 }
             }
 

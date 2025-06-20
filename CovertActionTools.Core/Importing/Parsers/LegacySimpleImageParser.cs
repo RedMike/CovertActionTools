@@ -89,7 +89,16 @@ namespace CovertActionTools.Core.Importing.Parsers
             {
                 _logger.LogWarning($"Loading image {key} data ended at offset {memStream.Position:X} but length was {rawData.Length:X}");
             }
-            return image;
+            return new SimpleImageModel()
+            {
+                Key = key,
+                Image = image,
+                Metadata = new SharedMetadata()
+                {
+                    Name = key,
+                    Comment = "Legacy importer"
+                }
+            };
         }
     }
 }

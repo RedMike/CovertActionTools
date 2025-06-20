@@ -24,7 +24,7 @@ public abstract class BaseWindow
         }
 
         var comment = metadata.Comment;
-        ImGui.InputTextMultiline("Comment", ref comment, 4096, new Vector2(contentSize.X, 150.0f));
+        ImGui.InputTextMultiline("Comment", ref comment, 4096, new Vector2(contentSize.X, 100.0f));
         if (comment != metadata.Comment)
         {
             metadata.Comment = comment;

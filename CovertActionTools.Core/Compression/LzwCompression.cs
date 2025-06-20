@@ -8,16 +8,6 @@ namespace CovertActionTools.Core.Compression
 {
     public class LzwCompression
     {
-        private const bool PrintDebugRawData = false;
-        private const bool PrintDebugMergedPixels = false;
-        private const bool PrintDebugRle = false;
-        private const bool PrintDebugLzw = false;
-
-        private const bool LogDebugLzwFirstDict = false;
-        
-        private static readonly string PrintDebugFolder = @"";
-        private static readonly HashSet<string> PrintDebugKeys = new HashSet<string>() { };
-        
         private readonly ILogger _logger;
         private readonly int _maxWordWidth;
         private readonly byte[] _data;
@@ -31,16 +21,11 @@ namespace CovertActionTools.Core.Compression
         private int _wordMask;
         private List<byte> _currentWord = new();
 
-        private readonly string _key;
-
-        private List<byte> _lzwBytes = new();
-
-        public LzwCompression(ILogger logger, int maxWordWidth, byte[] data, string key)
+        public LzwCompression(ILogger logger, int maxWordWidth, byte[] data)
         {
             _logger = logger;
             _maxWordWidth = maxWordWidth;
             _data = data;
-            _key = key;
             _logger.LogInformation($"Starting compression from {data.Length} bytes, max word width {maxWordWidth}");
 
             _partial = 0;
@@ -52,11 +37,6 @@ namespace CovertActionTools.Core.Compression
         
         private void WriteBytes(byte[] bytes, int data, byte bitsToWrite)
         {
-            if (PrintDebugLzw)
-            {
-                _lzwBytes.Add((byte)((data >> 8) & 0xFF));
-                _lzwBytes.Add((byte)(data & 0xFF));
-            }
             _partial |= data << _bitOffset;
             _bitOffset += bitsToWrite;
             while (_bitOffset >= 8)
@@ -240,12 +220,6 @@ namespace CovertActionTools.Core.Compression
                     var id = GetDictNextId();
                     var tempBytes = new List<byte>() { 0, next };
                     SetDict(tempBytes, id);
-                    if (LogDebugLzwFirstDict && _logger.IsEnabled(LogLevel.Debug))
-                    {
-                        var reversedWord = tempBytes;
-                        reversedWord.Reverse();
-                        _logger.LogDebug($"Dict word {id:X4} at offset {_byteOffset} {_bitOffset}: {string.Join("", reversedWord.Select(x => $"{x:X2}"))}");
-                    }
                     first = false;
                 }
                 
@@ -273,15 +247,6 @@ namespace CovertActionTools.Core.Compression
                     
                     WriteBytes(bytes, lastIndex.Value, _wordWidth);
                     
-                    if (LogDebugLzwFirstDict && nextId < 0x105)
-                    {
-                        if (_logger.IsEnabled(LogLevel.Debug))
-                        {
-                            var reversedWord = potentialNextWord.ToList();
-                            reversedWord.Reverse();
-                            _logger.LogDebug($"Dict word {nextId:X4} at offset {_byteOffset} {_bitOffset}: {string.Join("", reversedWord.Select(x => $"{x:X2}"))}");
-                        }
-                    }
                     
                     _currentWord = new List<byte>() { next };
                     if (nextId > _wordMask)
@@ -317,26 +282,6 @@ namespace CovertActionTools.Core.Compression
             }
             
             var compressedBytes = bytes.Take(_byteOffset + (_bitOffset > 0 ? 1 : 0)).ToArray();
-            
-            if (PrintDebugKeys.Contains(_key))
-            {
-                if (PrintDebugRawData)
-                {
-                    File.WriteAllBytes(Path.Combine(PrintDebugFolder, $"{_key}_compress_raw.bin"), _data.ToArray());    
-                }
-                if (PrintDebugMergedPixels)
-                {
-                    File.WriteAllBytes(Path.Combine(PrintDebugFolder, $"{_key}_compress_merged.bin"), duplicatedBytes.ToArray());    
-                }
-                if (PrintDebugRle)
-                {
-                    File.WriteAllBytes(Path.Combine(PrintDebugFolder, $"{_key}_compress_RLE.bin"), encodingMemStream.ToArray());    
-                }
-                if (PrintDebugLzw)
-                {
-                    File.WriteAllBytes(Path.Combine(PrintDebugFolder, $"{_key}_compress_LZW.bin"), _lzwBytes.ToArray());    
-                }
-            }
 
             _logger.LogDebug($"Compressed from {_data.Length} bytes to {compressedBytes.Length}");
             return compressedBytes;

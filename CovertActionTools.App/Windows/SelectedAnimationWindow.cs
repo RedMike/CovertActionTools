@@ -253,10 +253,10 @@ public class SelectedAnimationWindow : SharedImageWindow
                         var id = $"image_{previousAnimation.Key}_frame";
                         //TODO: cache?
                         var texture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, id,
-                            backgroundImage.ExtraData.LegacyWidth, backgroundImage.ExtraData.LegacyHeight,
+                            backgroundImage.Data.Width, backgroundImage.Data.Height,
                             backgroundImage.VgaImageData);
                         ImGui.Image(texture,
-                            new Vector2(backgroundImage.ExtraData.LegacyWidth, backgroundImage.ExtraData.LegacyHeight));
+                            new Vector2(backgroundImage.Data.Width, backgroundImage.Data.Height));
                     }
                     else
                     {
@@ -276,10 +276,10 @@ public class SelectedAnimationWindow : SharedImageWindow
                         var id = $"image_{previousAnimation.Key}_{drawnImageIndex}";
                         //TODO: cache?
                         var texture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, id,
-                            drawnImageImg.ExtraData.LegacyWidth, drawnImageImg.ExtraData.LegacyHeight,
+                            drawnImageImg.Data.Width, drawnImageImg.Data.Height,
                             drawnImageImg.VgaImageData);
                         ImGui.Image(texture,
-                            new Vector2(drawnImageImg.ExtraData.LegacyWidth, drawnImageImg.ExtraData.LegacyHeight));
+                            new Vector2(drawnImageImg.Data.Width, drawnImageImg.Data.Height));
                     }
                 }
             }
@@ -289,10 +289,10 @@ public class SelectedAnimationWindow : SharedImageWindow
                 var id = $"image_{animation.Key}_frame";
                 //TODO: cache?
                 var texture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, id,
-                    backgroundImage.ExtraData.LegacyWidth, backgroundImage.ExtraData.LegacyHeight,
+                    backgroundImage.Data.Width, backgroundImage.Data.Height,
                     backgroundImage.VgaImageData);
                 ImGui.Image(texture,
-                    new Vector2(backgroundImage.ExtraData.LegacyWidth, backgroundImage.ExtraData.LegacyHeight));
+                    new Vector2(backgroundImage.Data.Width, backgroundImage.Data.Height));
             }
 
             foreach (var drawnImage in state.DrawnImages.OrderBy(x => x.SpriteIndex))
@@ -304,10 +304,10 @@ public class SelectedAnimationWindow : SharedImageWindow
                 var id = $"image_{animation.Key}_{drawnImageIndex}";
                 //TODO: cache?
                 var texture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, id,
-                    drawnImageImg.ExtraData.LegacyWidth, drawnImageImg.ExtraData.LegacyHeight,
+                    drawnImageImg.Data.Width, drawnImageImg.Data.Height,
                     drawnImageImg.VgaImageData);
                 ImGui.Image(texture,
-                    new Vector2(drawnImageImg.ExtraData.LegacyWidth, drawnImageImg.ExtraData.LegacyHeight));
+                    new Vector2(drawnImageImg.Data.Width, drawnImageImg.Data.Height));
             }
             
             if (_animationPreviewState.LimitToGameWindow)
@@ -327,8 +327,8 @@ public class SelectedAnimationWindow : SharedImageWindow
                     animation.Data.ImageIdToIndex.TryGetValue(selectedSprite.ImageId, out var imageIndex) &&
                     animation.Images.TryGetValue(imageIndex, out var image))
                 {
-                    w = image.ExtraData.LegacyWidth;
-                    h = image.ExtraData.LegacyHeight;
+                    w = image.Data.Width;
+                    h = image.Data.Height;
                 }
 
                 //draw an overlay
@@ -489,7 +489,7 @@ public class SelectedAnimationWindow : SharedImageWindow
                 var name = $"{i} - Index {targetIndex}";
                 if (animation.Images.TryGetValue(targetIndex, out var targetImage))
                 {
-                    name += $" - {targetImage.Metadata.Name} ({targetImage.ExtraData.LegacyWidth}x{targetImage.ExtraData.LegacyHeight})";
+                    name += $" - ({targetImage.Data.Width}x{targetImage.Data.Height})";
                 }
                 imageIds.Add(i);
                 imageIdNames.Add(name);
@@ -529,7 +529,7 @@ public class SelectedAnimationWindow : SharedImageWindow
             return;
         }
 
-        DrawImageTabs(image, () => { });
+        DrawImageTabs($"{animation.Key}_{selectedIndex}", image, () => { });
     }
     
     private string GetInstructionText(int index, AnimationModel.AnimationInstruction instruction)

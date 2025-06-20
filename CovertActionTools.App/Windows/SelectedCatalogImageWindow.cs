@@ -87,75 +87,14 @@ public class SelectedCatalogImageWindow : SharedImageWindow
         
         //first draw the catalog-specific info
         DrawSharedMetadataEditor(catalog.Metadata, () => { _pendingState.RecordChange(); });
-        
-        ImGui.Text("");
-        ImGui.Separator();
-        ImGui.Text("");
 
         ImGui.PushID("image");
-        DrawImageWindow(model, catalog, image);
+        DrawImageWindow(model, catalog, imageId, image);
         ImGui.PopID();
     }
 
-    private void DrawImageWindow(PackageModel model, CatalogModel catalog, SimpleImageModel image)
+    private void DrawImageWindow(PackageModel model, CatalogModel catalog, string imageId, SharedImageModel image)
     {
-        var windowSize = ImGui.GetContentRegionAvail();
-        if (ImGui.BeginTable("i_1", 4))
-        {
-            ImGui.TableNextRow();
-            ImGui.TableNextColumn();
-            var newType = ImGuiExtensions.InputEnum("Type", image.ExtraData.Type, true, SimpleImageModel.ImageType.Unknown);
-            if (newType != null)
-            {
-                image.ExtraData.Type = newType.Value;
-                _pendingState.RecordChange();
-            }
-
-            ImGui.TableNextColumn();
-            var newKey = ImGuiExtensions.Input("Key", image.Key, 128, readOnly: true);
-            if (newKey != null)
-            {
-                //not currently handled
-                // newKey = newKey.ToUpperInvariant();
-                // if (catalog.Entries.ContainsKey(newKey))
-                // {
-                //     //TODO: error
-                // }
-                // else
-                // {
-                //     catalog.Entries.Remove(image.Key);
-                //     catalog.ExtraData.Keys.Remove(image.Key);
-                //     image.Key = newKey;
-                //     catalog.Entries[newKey] = image;
-                //     catalog.ExtraData.Keys.Add(newKey);
-                //     //we also have the change the "selected" item
-                //     _mainEditorState.SelectedItem = (MainEditorState.ItemType.CatalogImage, $"{catalog.Key}:{newKey}");
-                // }
-            }
-
-            ImGui.TableNextColumn();
-            var newWidth = ImGuiExtensions.Input("Legacy Width", image.ExtraData.LegacyWidth);
-            if (newWidth != null)
-            {
-                //TODO: resize? confirmation dialog?
-                _pendingState.RecordChange();
-            }
-
-            ImGui.TableNextColumn();
-            var newHeight = ImGuiExtensions.Input("Legacy Height", image.ExtraData.LegacyHeight);
-            if (newHeight != null)
-            {
-                //TODO: resize? confirmation dialog?
-                _pendingState.RecordChange();
-            }
-            
-            ImGui.EndTable();
-        }
-
-        ImGui.Text("");
-        ImGui.Separator();
-        ImGui.Text("");
-
-        DrawImageTabs(image, () => { _pendingState.RecordChange(); });
+        DrawImageTabs($"{catalog.Key}_{imageId}", image, () => { _pendingState.RecordChange(); });
     }
 }

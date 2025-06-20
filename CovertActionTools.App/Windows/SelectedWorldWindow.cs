@@ -367,11 +367,11 @@ public class SelectedWorldWindow : BaseWindow
 
         if (model.SimpleImages.TryGetValue(imageKey, out var image))
         {
-            var imageId = $"image_preview_{imageKey}";
+            var imageId = $"world_preview_{imageKey}";
             //TODO: cache?
-            var texture = _renderWindow.RenderImage(RenderWindow.RenderType.Image, imageId, image.ExtraData.LegacyWidth, image.ExtraData.LegacyHeight,
-                image.VgaImageData);
-            ImGui.Image(texture, new Vector2(image.ExtraData.LegacyWidth, image.ExtraData.LegacyHeight));
+            var texture = _renderWindow.RenderImage(RenderWindow.RenderType.Image, imageId, image.Image.Data.Width, image.Image.Data.Height,
+                image.Image.VgaImageData);
+            ImGui.Image(texture, new Vector2(image.Image.Data.Width, image.Image.Data.Height));
         }
         else
         {

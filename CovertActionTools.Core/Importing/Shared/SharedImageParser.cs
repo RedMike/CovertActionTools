@@ -19,7 +19,7 @@ namespace CovertActionTools.Core.Importing.Shared
             _decompression = decompression;
         }
 
-        public SimpleImageModel Parse(string key, BinaryReader reader)
+        public SharedImageModel Parse(string key, BinaryReader reader)
         {
             //basic data
             var formatFlag = reader.ReadUInt16();
@@ -51,25 +51,6 @@ namespace CovertActionTools.Core.Importing.Shared
             
             //data compressed in LZW+RLE
             var imageUncompressedData = _decompression.Decompress(width, height, lzwMaxWordWidth, reader);
-            
-            //the data is currently in VGA format, so convert to modern format
-            var imageModernData = new byte[width * height * 4];
-            for (var j = 0; j < height; j++)
-            {
-                for (var i = 0; i < width; i++)
-                {
-                    var pixel = imageUncompressedData[j * width + i];
-                    if (!Constants.VgaColorMapping.TryGetValue(pixel, out var col))
-                    {
-                        throw new Exception($"Invalid pixel value: {pixel}");
-                    }
-                    var (r, g, b, a) = col;
-                    imageModernData[(j * width + i) * 4 + 0] = r;
-                    imageModernData[(j * width + i) * 4 + 1] = g;
-                    imageModernData[(j * width + i) * 4 + 2] = b;
-                    imageModernData[(j * width + i) * 4 + 3] = a;
-                }
-            }
 
             _logger.LogDebug($"Read image '{key}': {width}x{height}, Legacy Color Mapping = {legacyColorMappings != null}");
             byte[] cgaImageData = Array.Empty<byte>();
@@ -78,30 +59,21 @@ namespace CovertActionTools.Core.Importing.Shared
                 cgaImageData = ImageConversion.VgaToCgaTexture(width, height, imageUncompressedData, legacyColorMappings);
             }
 
-            return new SimpleImageModel()
-            {
-                Key = key,
-                RawVgaImageData = imageUncompressedData,
-                VgaImageData = ImageConversion.VgaToTexture(width, height, imageUncompressedData),
-                CgaImageData = cgaImageData,
-                ModernImageData = imageModernData,
-                Metadata = new SharedMetadata()
+            return new SharedImageModel()
                 {
-                    Name = key,
-                    Comment = "Legacy import",
-                },
-                ExtraData = new SimpleImageModel.ImageData()
-                {
-                    //for legacy images, we populate data from the legacy info
-                    Type = Constants.GetLikelyImageType(key),
-                    Width = width,
-                    Height = height,
-                    LegacyWidth = width,
-                    LegacyHeight = height,
-                    LegacyColorMappings = legacyColorMappings,
-                    CompressionDictionaryWidth = lzwMaxWordWidth
-                }
-            };
+                    RawVgaImageData = imageUncompressedData,
+                    VgaImageData = ImageConversion.VgaToTexture(width, height, imageUncompressedData),
+                    CgaImageData = cgaImageData,
+                    Data = new SharedImageModel.ImageData()
+                    {
+                        //for legacy images, we populate data from the legacy info
+                        Type = Constants.GetLikelyImageType(key),
+                        Width = width,
+                        Height = height,
+                        LegacyColorMappings = legacyColorMappings,
+                        CompressionDictionaryWidth = lzwMaxWordWidth
+                    }
+                };
         }
     }
 }

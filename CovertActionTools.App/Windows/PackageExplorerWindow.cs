@@ -336,10 +336,6 @@ public class PackageExplorerWindow : BaseWindow
                         }
 
                         var name = $"{entryKey}";
-                        if (!string.IsNullOrEmpty(entry.Metadata.Name) && entry.Metadata.Name != entryKey)
-                        {
-                            name += $" ({entry.Metadata.Name})";
-                        }
 
                         if (ImGui.TreeNodeEx(name, nodeFlags))
                         {

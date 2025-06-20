@@ -29,68 +29,52 @@ namespace CovertActionTools.Core.Exporting.Shared
             _loggerFactory = loggerFactory;
         }
         
-        public byte[] GetVgaImageData(SimpleImageModel image)
+        public byte[] GetVgaImageData(SharedImageModel image)
         {
             var imageData = image.RawVgaImageData;
-            var width = image.ExtraData.LegacyWidth;
-            var height = image.ExtraData.LegacyHeight;
+            var width = image.Data.Width;
+            var height = image.Data.Height;
 
             return ImageConversion.VgaToTexture(width, height, imageData);
         }
 
-        public byte[] GetModernImageData(SimpleImageModel image)
-        {
-            var imageData = image.ModernImageData;
-            var width = image.ExtraData.LegacyWidth;
-            var height = image.ExtraData.LegacyHeight;
-
-            return ImageConversion.RgbaToTexture(width, height, imageData);
-        }
-
-        public byte[] GetLegacyFileData(SimpleImageModel image)
+        public byte[] GetLegacyFileData(SharedImageModel image)
         {
             var imageData = image.RawVgaImageData;
             
             var compression = new LzwCompression(_loggerFactory.CreateLogger(typeof(LzwCompression)),
-                image.ExtraData.CompressionDictionaryWidth, imageData, image.Key);
-            var imageBytes = compression.Compress(image.ExtraData.LegacyWidth, image.ExtraData.LegacyHeight);
+                image.Data.CompressionDictionaryWidth, imageData);
+            var imageBytes = compression.Compress(image.Data.Width, image.Data.Height);
 
             using var memStream = new MemoryStream();
             using var writer = new BinaryWriter(memStream);
 
             ushort formatFlag = 0x07;
-            if (image.ExtraData.LegacyColorMappings != null)
+            if (image.Data.LegacyColorMappings != null)
             {
                 formatFlag = 0x0F;
             }
 
             writer.Write(formatFlag);
-            writer.Write((ushort)image.ExtraData.LegacyWidth);
-            writer.Write((ushort)image.ExtraData.LegacyHeight);
-            if (image.ExtraData.LegacyColorMappings != null)
+            writer.Write((ushort)image.Data.Width);
+            writer.Write((ushort)image.Data.Height);
+            if (image.Data.LegacyColorMappings != null)
             {
-                var mappingBytes = image.ExtraData.LegacyColorMappings
+                var mappingBytes = image.Data.LegacyColorMappings
                     .OrderBy(x => x.Key)
                     .Select(x => x.Value)
                     .ToArray();
                 writer.Write(mappingBytes);
             }
-            writer.Write(image.ExtraData.CompressionDictionaryWidth);
+            writer.Write(image.Data.CompressionDictionaryWidth);
             writer.Write(imageBytes);
             
             return memStream.ToArray();
         }
         
-        public byte[] GetImageData(SimpleImageModel image)
+        public byte[] GetImageData(SharedImageModel image)
         {
-            var data = JsonSerializer.Serialize(image.ExtraData, JsonOptions);
-            var bytes = Encoding.UTF8.GetBytes(data);
-            return bytes;
-        }
-        
-        public byte[] GetMetadata(SimpleImageModel image)
-        {
-            var data = JsonSerializer.Serialize(image.Metadata, JsonOptions);
+            var data = JsonSerializer.Serialize(image.Data, JsonOptions);
             var bytes = Encoding.UTF8.GetBytes(data);
             return bytes;
         }

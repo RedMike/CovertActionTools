@@ -25,7 +25,7 @@ namespace CovertActionTools.Core.Models
         /// <summary>
         /// Entries in file, legacy only has image entries.
         /// </summary>
-        public Dictionary<string, SimpleImageModel> Entries { get; set; } = new();
+        public Dictionary<string, SharedImageModel> Entries { get; set; } = new();
         public CatalogData Data { get; set; } = new();
         public SharedMetadata Metadata { get; set; } = new();
 

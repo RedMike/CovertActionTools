@@ -166,21 +166,9 @@ namespace CovertActionTools.Core.Importing.Importers
             return model;
         }
         
-        private SimpleImageModel ImportImage(string path, string filename)
+        private SharedImageModel ImportImage(string path, string filename)
         {
-            var model = new SimpleImageModel();
-            model.Key = filename;
-            model.ExtraData = _imageImporter.ReadImageData(path, filename, "VGA_metadata");
-            (model.RawVgaImageData, model.VgaImageData) = _imageImporter.ReadVgaImageData(path, filename, model.ExtraData.LegacyWidth, model.ExtraData.LegacyHeight);
-            model.CgaImageData = Array.Empty<byte>();
-            if (model.ExtraData.LegacyColorMappings != null)
-            {
-                var rawCgaImageData = ImageConversion.VgaToCgaTexture(model.ExtraData.LegacyWidth, model.ExtraData.LegacyHeight, model.RawVgaImageData, model.ExtraData.LegacyColorMappings);
-                using var skBitmap = SKBitmap.Decode(rawCgaImageData, new SKImageInfo(model.ExtraData.LegacyWidth, model.ExtraData.LegacyHeight, SKColorType.Rgba8888, SKAlphaType.Premul));
-                var textureBytes = skBitmap.Bytes.ToArray();
-                model.CgaImageData = textureBytes;
-            }
-            return model;
+            return _imageImporter.ReadImage(path, filename, "VGA_metadata");
         }
 
         private string GetPath(string path)

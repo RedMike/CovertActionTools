@@ -13,30 +13,27 @@ public abstract class SharedImageWindow : BaseWindow
         RenderWindow = renderWindow;
     }
 
-    protected void DrawImageTabs(SimpleImageModel image, Action recordChange)
+    protected void DrawImageTabs(string key, SharedImageModel image, Action recordChange)
     {
         ImGui.BeginTabBar("ImageTabs", ImGuiTabBarFlags.NoCloseWithMiddleMouseButton);
 
-        if (image.ModernImageData != null && image.ModernImageData.Length > 0)
+        if (ImGui.BeginTabItem("VGA"))
         {
-            if (ImGui.BeginTabItem("Modern"))
-            {
-                DrawModernImageTab(image, recordChange);
-
-                ImGui.EndTabItem();
-            }
-        }
-
-        if (ImGui.BeginTabItem("Legacy VGA"))
-        {
-            DrawVgaImageTab(image, recordChange);
+            DrawVgaImageTab(key, image, recordChange);
             
             ImGui.EndTabItem();
         }
         
-        if (ImGui.BeginTabItem("Legacy CGA"))
+        if (ImGui.BeginTabItem("Data"))
         {
-            DrawCgaImageTab(image, recordChange);
+            DrawDataTab(key, image, recordChange);
+            
+            ImGui.EndTabItem();
+        }
+        
+        if (ImGui.BeginTabItem("CGA"))
+        {
+            DrawCgaImageTab(key, image, recordChange);
             
             ImGui.EndTabItem();
         }
@@ -44,10 +41,43 @@ public abstract class SharedImageWindow : BaseWindow
         ImGui.EndTabBar();
     }
 
-    private void DrawVgaImageTab(SimpleImageModel image, Action recordChange)
+    private void DrawDataTab(string key, SharedImageModel image, Action recordChange)
     {
-        var width = image.ExtraData.LegacyWidth;
-        var height = image.ExtraData.LegacyHeight;
+        if (ImGui.BeginTable("data", 3))
+        {
+            ImGui.TableNextRow();
+            ImGui.TableNextColumn();
+            var newType = ImGuiExtensions.InputEnum("Type", image.Data.Type, true, SharedImageModel.ImageType.Unknown);
+            if (newType != null)
+            {
+                image.Data.Type = newType.Value;
+                recordChange();
+            }
+            
+            ImGui.TableNextColumn();
+            var newWidth = ImGuiExtensions.Input("Width", image.Data.Width);
+            if (newWidth != null)
+            {
+                //TODO: resize? confirmation dialog?
+                recordChange();
+            }
+
+            ImGui.TableNextColumn();
+            var newHeight = ImGuiExtensions.Input("Height", image.Data.Height);
+            if (newHeight != null)
+            {
+                //TODO: resize? confirmation dialog?
+                recordChange();
+            }
+            
+            ImGui.EndTable();
+        }
+    }
+
+    private void DrawVgaImageTab(string key, SharedImageModel image, Action recordChange)
+    {
+        var width = image.Data.Width;
+        var height = image.Data.Height;
         var rawPixels = image.VgaImageData;
 
         var pos = ImGui.GetCursorPos();
@@ -56,23 +86,23 @@ public abstract class SharedImageWindow : BaseWindow
         ImGui.Image(bgTexture, new Vector2(width, height));
 
         ImGui.SetCursorPos(pos);
-        var id = $"image_vga_{image.Key}";
+        var id = $"image_vga_{key}";
         //TODO: cache?
         var texture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, id, width, height, rawPixels);
         
         ImGui.Image(texture, new Vector2(width, height));
     }
     
-    private void DrawCgaImageTab(SimpleImageModel image, Action recordChange)
+    private void DrawCgaImageTab(string key, SharedImageModel image, Action recordChange)
     {
-        if (image.ExtraData.LegacyColorMappings == null)
+        if (image.Data.LegacyColorMappings == null)
         {
             ImGui.Text("No CGA mapping, TODO");
             return;
         }
         
-        var width = image.ExtraData.LegacyWidth;
-        var height = image.ExtraData.LegacyHeight;
+        var width = image.Data.Width;
+        var height = image.Data.Height;
         var rawPixels = image.CgaImageData;
 
         var pos = ImGui.GetCursorPos();
@@ -81,7 +111,7 @@ public abstract class SharedImageWindow : BaseWindow
         ImGui.Image(bgTexture, new Vector2(width, height));
 
         ImGui.SetCursorPos(pos);
-        var id = $"image_cga_{image.Key}";
+        var id = $"image_cga_{key}";
         //TODO: cache?
         var texture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, id, width, height, rawPixels);
         
@@ -91,66 +121,16 @@ public abstract class SharedImageWindow : BaseWindow
         //TODO: split CGA mapping into separate colour choices for each pixel
         for (byte i = 0; i < 8; i++)
         {
-            var m = (int)image.ExtraData.LegacyColorMappings[i];
+            var m = (int)image.Data.LegacyColorMappings[i];
             ImGui.SetNextItemWidth(100.0f);
             ImGui.InputInt($"Color {i:00}", ref m);
 
             ImGui.SameLine();
             
             var j = (byte)(i + 8);
-            var m2 = (int)image.ExtraData.LegacyColorMappings[j];
+            var m2 = (int)image.Data.LegacyColorMappings[j];
             ImGui.SetNextItemWidth(100.0f);
             ImGui.InputInt($"Color {j:00}", ref m2);
         }
-    }
-    
-    private void DrawModernImageTab(SimpleImageModel image, Action recordChange)
-    {
-        ImGui.Text("Note: this image will not be shown in the original game engine.");
-        var width = image.ExtraData.Width;
-        var origWidth = width;
-        ImGui.SetNextItemWidth(100.0f);
-        ImGui.InputInt("Width", ref width);
-        if (width != origWidth)
-        {
-            //TODO: resize? confirmation dialog?
-        }
-        
-        ImGui.SameLine();
-        
-        var height = image.ExtraData.Height;
-        var origHeight = height;
-        ImGui.SetNextItemWidth(100.0f);
-        ImGui.InputInt("Height", ref height);
-        if (height != origHeight)
-        {
-            //TODO: resize? confirmation dialog?
-        }
-
-        ImGui.Text("");
-
-        DrawModernImage(image, recordChange);
-        
-        //TODO: 'generate VGA from this' button?
-    }
-
-    private void DrawModernImage(SimpleImageModel image, Action recordChange)
-    {
-        var width = image.ExtraData.Width;
-        var height = image.ExtraData.Height;
-        
-        var pos = ImGui.GetCursorPos();
-        var bgTexture = RenderWindow.RenderCheckerboardRectangle(25, width, height,
-            (40, 30, 40, 255), (50, 40, 50, 255));
-        ImGui.Image(bgTexture, new Vector2(width, height));
-
-        ImGui.SetCursorPos(pos);
-        
-        var id = $"image_{image.Key}";
-        var rawPixels = image.ModernImageData;
-        //TODO: cache?
-        var texture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, id, width, height, rawPixels);
-        
-        ImGui.Image(texture, new Vector2(width, height));
     }
 }

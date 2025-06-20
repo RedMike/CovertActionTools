@@ -76,63 +76,9 @@ public class SelectedSimpleImageWindow : SharedImageWindow
                     model.Index.SimpleImageIncluded.Add(key);
                 }
             });
-        if (ImGui.BeginTable("i_1", 4))
-        {
-            ImGui.TableNextRow();
-            ImGui.TableNextColumn();
-            var newType = ImGuiExtensions.InputEnum("Type", image.ExtraData.Type, true, SimpleImageModel.ImageType.Unknown);
-            if (newType != null)
-            {
-                image.ExtraData.Type = newType.Value;
-                _pendingState.RecordChange();
-            }
-
-            ImGui.TableNextColumn();
-            var newKey = ImGuiExtensions.Input("Key", image.Key, 128, readOnly: true);
-            if (newKey != null)
-            {
-                //not currently handled
-                // newKey = newKey.ToUpperInvariant();
-                // if (model.SimpleImages.ContainsKey(newKey))
-                // {
-                //     //TODO: error
-                // }
-                // else
-                // {
-                //     model.SimpleImages.Remove(image.Key);
-                //     image.Key = newKey;
-                //     model.SimpleImages[newKey] = image;
-                //     //we also have the change the "selected" item
-                //     _mainEditorState.SelectedItem = (MainEditorState.ItemType.SimpleImage, newKey);
-                //     _pendingState.RecordChange();
-                // }
-            }
-
-            ImGui.TableNextColumn();
-            var newWidth = ImGuiExtensions.Input("Legacy Width", image.ExtraData.LegacyWidth);
-            if (newWidth != null)
-            {
-                //TODO: resize? confirmation dialog?
-                _pendingState.RecordChange();
-            }
-
-            ImGui.TableNextColumn();
-            var newHeight = ImGuiExtensions.Input("Legacy Height", image.ExtraData.LegacyHeight);
-            if (newHeight != null)
-            {
-                //TODO: resize? confirmation dialog?
-                _pendingState.RecordChange();
-            }
-            
-            ImGui.EndTable();
-        }
-
+        
         DrawSharedMetadataEditor(image.Metadata, () => { _pendingState.RecordChange(); });
-
-        ImGui.Text("");
-        ImGui.Separator();
-        ImGui.Text("");
-
-        DrawImageTabs(image, () => { _pendingState.RecordChange(); });
+        
+        DrawImageTabs(key, image.Image, () => { _pendingState.RecordChange(); });
     }
 }

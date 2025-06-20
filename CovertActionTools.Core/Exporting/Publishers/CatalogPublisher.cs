@@ -100,7 +100,7 @@ namespace CovertActionTools.Core.Exporting.Publishers
                 
                 //first write the pointer info
                 memStream.Seek(currentPointerOffset, SeekOrigin.Begin);
-                var filename = entry.Key.Trim().Trim('\0');
+                var filename = key.Trim().Trim('\0');
                 if (filename.Length > 8)
                 {
                     _logger.LogWarning($"Filename larger than 12 chars, truncating: {filename}.PIC");

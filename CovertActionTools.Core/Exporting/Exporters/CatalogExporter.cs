@@ -107,8 +107,8 @@ namespace CovertActionTools.Core.Exporting.Exporters
             foreach (var entry in catalog.Data.Keys)
             {
                 var image = catalog.Entries[entry];
-                dict.Add(System.IO.Path.Combine("images", $"{image.Key}_VGA_metadata.json"), _imageExporter.GetImageData(image));
-                dict.Add(System.IO.Path.Combine("images", $"{image.Key}_VGA.png"), _imageExporter.GetVgaImageData(image));
+                dict.Add(System.IO.Path.Combine("images", $"{entry}_VGA_metadata.json"), _imageExporter.GetImageData(image));
+                dict.Add(System.IO.Path.Combine("images", $"{entry}_VGA.png"), _imageExporter.GetVgaImageData(image));
             }
             return dict;
         }

@@ -78,7 +78,7 @@ namespace CovertActionTools.Core.Exporting.Publishers
         {
             var dict = new Dictionary<string, byte[]>
             {
-                [$"{image.Key}.PIC"] = _imageExporter.GetLegacyFileData(image) 
+                [$"{image.Key}.PIC"] = _imageExporter.GetLegacyFileData(image.Image)
             };
             return dict;
         }

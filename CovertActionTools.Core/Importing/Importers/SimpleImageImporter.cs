@@ -82,17 +82,7 @@ namespace CovertActionTools.Core.Importing.Importers
             var model = new SimpleImageModel();
             model.Key = filename;
             model.Metadata = _imageImporter.ReadMetadata(path, filename, "metadata");
-            model.ExtraData = _imageImporter.ReadImageData(path, filename, "image");
-            (model.RawVgaImageData, model.VgaImageData) = _imageImporter.ReadVgaImageData(path, filename, model.ExtraData.LegacyWidth, model.ExtraData.LegacyHeight);
-            model.CgaImageData = Array.Empty<byte>();
-            if (model.ExtraData.LegacyColorMappings != null)
-            {
-                var rawCgaImageData = ImageConversion.VgaToCgaTexture(model.ExtraData.LegacyWidth, model.ExtraData.LegacyHeight, model.RawVgaImageData, model.ExtraData.LegacyColorMappings);
-                using var skBitmap = SKBitmap.Decode(rawCgaImageData, new SKImageInfo(model.ExtraData.LegacyWidth, model.ExtraData.LegacyHeight, SKColorType.Rgba8888, SKAlphaType.Premul));
-                var textureBytes = skBitmap.Bytes.ToArray();
-                model.CgaImageData = textureBytes;
-            }
-            model.ModernImageData = _imageImporter.ReadModernImageData(path, filename, model.ExtraData.Width, model.ExtraData.Height);
+            model.Image = _imageImporter.ReadImage(path, filename, "image");
             return model;
         }
         

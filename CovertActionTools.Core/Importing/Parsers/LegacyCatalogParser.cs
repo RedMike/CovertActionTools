@@ -105,7 +105,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                 offsetsAndLengths[entryName] = (offset, length);
             }
             
-            var entries = new Dictionary<string, SimpleImageModel>();
+            var entries = new Dictionary<string, SharedImageModel>();
             foreach (var pair in offsetsAndLengths)
             {
                 memStream.Position = pair.Value.offset;
