@@ -101,24 +101,24 @@ public class SelectedWorldWindow : BaseWindow
             }
         }
 
-        var origName = world.ExtraData.Name;
+        var origName = world.Metadata.Name;
         var name = origName;
         ImGui.SameLine();
         ImGui.SetNextItemWidth(200.0f);
         ImGui.InputText("Name", ref name, 64);
         if (name != origName)
         {
-            world.ExtraData.Name = name;
+            world.Metadata.Name = name;
             _pendingState.RecordChange();
         }
         
         var windowSize = ImGui.GetContentRegionAvail();
-        var origComment = world.ExtraData.Comment;
+        var origComment = world.Metadata.Comment;
         var comment = origComment;
         ImGui.InputTextMultiline("Comment", ref comment, 2048, new Vector2(windowSize.X, 50.0f));
         if (comment != origComment)
         {
-            world.ExtraData.Comment = comment;
+            world.Metadata.Comment = comment;
             _pendingState.RecordChange();
         }
 

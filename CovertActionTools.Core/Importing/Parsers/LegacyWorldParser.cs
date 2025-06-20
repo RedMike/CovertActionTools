@@ -177,7 +177,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                 Id = key,
                 Cities = cities,
                 Organisations = orgs,
-                ExtraData = new WorldModel.Metadata()
+                Metadata = new SharedMetadata()
                 {
                     Name = $"WORLD{key}",
                     Comment = "Legacy import"

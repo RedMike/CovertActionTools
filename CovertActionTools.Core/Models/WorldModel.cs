@@ -5,19 +5,6 @@ namespace CovertActionTools.Core.Models
 {
     public class WorldModel
     {
-        public class Metadata
-        {
-            /// <summary>
-            /// Actual name separate from key/filename, for development
-            /// </summary>
-            public string Name { get; set; } = string.Empty;
-            
-            /// <summary>
-            /// Arbitrary comment, for development
-            /// </summary>
-            public string Comment { get; set; } = string.Empty;
-        }
-
         public class City
         {
             /// <summary>
@@ -96,7 +83,7 @@ namespace CovertActionTools.Core.Models
         public int Id { get; set; }
         public List<City> Cities { get; set; } = new();
         public List<Organisation> Organisations { get; set; } = new();
-        public Metadata ExtraData { get; set; } = new();
+        public SharedMetadata Metadata { get; set; } = new();
 
         public WorldModel Clone()
         {
@@ -122,11 +109,7 @@ namespace CovertActionTools.Core.Models
                     Unknown3 = x.Unknown3,
                     Unknown4 = x.Unknown4
                 }).ToList(),
-                ExtraData = new Metadata()
-                {
-                    Name = ExtraData.Name,
-                    Comment = ExtraData.Comment
-                }
+                Metadata = Metadata.Clone()
             };
         }
     }
