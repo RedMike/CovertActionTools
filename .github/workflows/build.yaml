@@ -42,5 +42,5 @@ jobs:
           commit: ${{ github.ref_name }}
           tag: ${{ env.RELEASE_VERSION }}
           removeArtifacts: true
-          artifacts: "*"
+          artifacts: "dist/*"
           token: ${{ secrets.GITHUB_TOKEN }}
