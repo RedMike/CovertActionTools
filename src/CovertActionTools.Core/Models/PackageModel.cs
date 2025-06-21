@@ -19,23 +19,7 @@ namespace CovertActionTools.Core.Models
         public Dictionary<string, AnimationModel> Animations { get; set; } = new();
         public FontsModel Fonts { get; set; } = new();
         public Dictionary<string, ProseModel> Prose { get; set; } = new();
-
-        public bool IsModified(PackageModel other)
-        {
-            return true;
-            //TODO: this is too slow to run regularly
-            //return GetHash() != other.GetHash();
-        }
         
-        private string GetHash()
-        {
-            //not very efficient but good enough
-            var s = JsonSerializer.Serialize(this);
-            using var sha1 = SHA1.Create();
-            var hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(s));
-            return string.Join("", hash.Select(x => $"{x:X2}"));
-        }
-
         public PackageModel Clone()
         {
             return JsonSerializer.Deserialize<PackageModel>(JsonSerializer.Serialize(this))!;
