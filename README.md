@@ -1,5 +1,7 @@
 # CovertActionTools
 
+Ever wanted to mod the classic Sid Meier's Covert Action? Of course not, but here you go just in case.
+
 Tools for inspecting/modifying game files for the 1990 MicroProse video game Sid Meier's Covert Action. Repository 
 does not include any game assets or functionality from the game itself, you must provide a valid game install to 
 load the game data files.
@@ -21,6 +23,11 @@ load the game data files.
 (see [issue #7](https://github.com/RedMike/CovertActionTools/issues/7))
 - [ ] Modify sounds (will likely never be done, very complicated)
 - [ ] Modify almost all game logic (would require a complete rebuild of the game)
+
+## Screenshots
+
+![Sample image 1](https://raw.githubusercontent.com/RedMike/CovertActionTools/refs/heads/main/assets/readme-1.png)
+![Sample image 2](https://raw.githubusercontent.com/RedMike/CovertActionTools/refs/heads/main/assets/readme-2.png)
 
 ## Obtaining the game
 
