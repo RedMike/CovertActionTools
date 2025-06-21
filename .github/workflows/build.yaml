@@ -18,5 +18,9 @@ jobs:
         run: dotnet publish -c Release -r win-x64 --artifacts-path "../publish"
         working-directory: ./src
       - name: Upload
-        run: ls -la
+        uses: actions/upload-artifact@v4
         working-directory: ./publish/publish/CovertActionTools.App/release_win-x64
+        with:
+          name: Windows
+          path: *
+          if-no-files-found: error
