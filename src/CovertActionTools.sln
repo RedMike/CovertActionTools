@@ -11,6 +11,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_", "_", "{809B1D12-0C62-41
 		..\LICENSE = ..\LICENSE
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_docs", "_docs", "{BA260D64-263A-4F06-A800-8C4D53FD594F}"
+	ProjectSection(SolutionItems) = preProject
+		..\docs\crime-file-format.md = ..\docs\crime-file-format.md
+		..\docs\exe-embedded-data.md = ..\docs\exe-embedded-data.md
+		..\docs\pan-file-format.md = ..\docs\pan-file-format.md
+		..\docs\text-based-file-formats.md = ..\docs\text-based-file-formats.md
+		..\docs\game-quirks.md = ..\docs\game-quirks.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
