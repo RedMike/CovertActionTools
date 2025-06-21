@@ -26,8 +26,8 @@ load the game data files.
 
 ## Screenshots
 
-![Sample image 1](https://raw.githubusercontent.com/RedMike/CovertActionTools/refs/heads/main/assets/readme-1.png)
-![Sample image 2](https://raw.githubusercontent.com/RedMike/CovertActionTools/refs/heads/main/assets/readme-2.png)
+![Sample image 1](assets/readme-1.png)
+![Sample image 2](assets/readme-2.png)
 
 ## Obtaining the game
 
