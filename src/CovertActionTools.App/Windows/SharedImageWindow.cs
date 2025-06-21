@@ -87,7 +87,6 @@ public abstract class SharedImageWindow : BaseWindow
 
         ImGui.SetCursorPos(pos);
         var id = $"image_vga_{key}";
-        //TODO: cache?
         var texture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, id, width, height, rawPixels);
         
         ImGui.Image(texture, new Vector2(width, height));
@@ -112,7 +111,6 @@ public abstract class SharedImageWindow : BaseWindow
 
         ImGui.SetCursorPos(pos);
         var id = $"image_cga_{key}";
-        //TODO: cache?
         var texture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, id, width, height, rawPixels);
         
         ImGui.Image(texture, new Vector2(width, height));

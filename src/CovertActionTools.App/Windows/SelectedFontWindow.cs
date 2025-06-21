@@ -101,7 +101,6 @@ public class SelectedFontWindow : BaseWindow
         var pos = ImGui.GetCursorPos();
         var x = 0;
         var y = 0;
-        //TODO: newlines?
         foreach (var c in text)
         {
             var charToUse = c;
@@ -121,7 +120,6 @@ public class SelectedFontWindow : BaseWindow
             
             ImGui.SetCursorPos(pos + new Vector2(ox, oy));
             var id = $"font_{fontId}_{(byte)charToUse}";
-            //TODO: cache?
             var texture = _renderWindow.RenderImage(RenderWindow.RenderType.Image, id, width, height, image);
             ImGui.Image(texture, new Vector2(width, height));
 
@@ -148,7 +146,6 @@ public class SelectedFontWindow : BaseWindow
             
             ImGui.SetCursorPos(pos + new Vector2(ox, oy));
             var id = $"font_{fontId}_{code}";
-            //TODO: cache?
             var texture = _renderWindow.RenderImage(RenderWindow.RenderType.Image, id, width, height, image);
             ImGui.Image(texture, new Vector2(width, height));
 

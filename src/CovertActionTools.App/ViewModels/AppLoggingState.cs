@@ -30,7 +30,6 @@ public class AppLoggingState : IViewModel
         }
 
         Logs.Push(message);
-        //TODO: TryPopRange?
         while (Logs.Count > MaxLogCount)
         {
             Logs.TryPop(out _);

@@ -239,7 +239,6 @@ public class SelectedAnimationWindow : SharedImageWindow
             }
             else if (animation.Data.BackgroundType == AnimationModel.BackgroundType.PreviousAnimation)
             {
-                //TODO: render previous animation at its final state
                 if (previousAnimation != null && previousAnimationState != null)
                 {
                     //render background
@@ -251,7 +250,6 @@ public class SelectedAnimationWindow : SharedImageWindow
                     {
                         var backgroundImage = previousAnimation.Images.OrderBy(x => x.Key).First().Value;
                         var id = $"image_{previousAnimation.Key}_frame";
-                        //TODO: cache?
                         var texture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, id,
                             backgroundImage.Data.Width, backgroundImage.Data.Height,
                             backgroundImage.VgaImageData);
@@ -274,7 +272,6 @@ public class SelectedAnimationWindow : SharedImageWindow
                         var drawnImageIndex = previousAnimation.Data.ImageIdToIndex[drawnImage.ImageId];
                         var drawnImageImg = previousAnimation.Images[drawnImageIndex];
                         var id = $"image_{previousAnimation.Key}_{drawnImageIndex}";
-                        //TODO: cache?
                         var texture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, id,
                             drawnImageImg.Data.Width, drawnImageImg.Data.Height,
                             drawnImageImg.VgaImageData);
@@ -287,7 +284,6 @@ public class SelectedAnimationWindow : SharedImageWindow
             {
                 var backgroundImage = animation.Images.OrderBy(x => x.Key).First().Value;
                 var id = $"image_{animation.Key}_frame";
-                //TODO: cache?
                 var texture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, id,
                     backgroundImage.Data.Width, backgroundImage.Data.Height,
                     backgroundImage.VgaImageData);
@@ -302,7 +298,6 @@ public class SelectedAnimationWindow : SharedImageWindow
                 var drawnImageIndex = animation.Data.ImageIdToIndex[drawnImage.ImageId];
                 var drawnImageImg = animation.Images[drawnImageIndex];
                 var id = $"image_{animation.Key}_{drawnImageIndex}";
-                //TODO: cache?
                 var texture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, id,
                     drawnImageImg.Data.Width, drawnImageImg.Data.Height,
                     drawnImageImg.VgaImageData);
