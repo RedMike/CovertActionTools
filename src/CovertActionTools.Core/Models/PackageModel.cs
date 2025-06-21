@@ -1,12 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
+using CovertActionTools.Core.Utilities;
 
 namespace CovertActionTools.Core.Models
 {
-    public class PackageModel
+    public class PackageModel : ICloneable<PackageModel>
     {
         public PackageIndex Index { get; set; } = new();
         public Dictionary<string, SimpleImageModel> SimpleImages { get; set; } = new();
@@ -22,7 +20,20 @@ namespace CovertActionTools.Core.Models
         
         public PackageModel Clone()
         {
-            return JsonSerializer.Deserialize<PackageModel>(JsonSerializer.Serialize(this))!;
+            return new PackageModel()
+            {
+                Index = Index.Clone(),
+                SimpleImages = SimpleImages.ToDictionary(x => x.Key, x => x.Value.Clone()),
+                Crimes = Crimes.ToDictionary(x => x.Key, x => x.Value.Clone()),
+                Texts = Texts.ToDictionary(x => x.Key, x => x.Value.Clone()),
+                Clues = Clues.ToDictionary(x => x.Key, x => x.Value.Clone()),
+                Plots = Plots.ToDictionary(x => x.Key, x => x.Value.Clone()),
+                Worlds = Worlds.ToDictionary(x => x.Key, x => x.Value.Clone()),
+                Catalogs = Catalogs.ToDictionary(x => x.Key, x => x.Value.Clone()),
+                Animations = Animations.ToDictionary(x => x.Key, x => x.Value.Clone()),
+                Prose = Prose.ToDictionary(x => x.Key, x => x.Value.Clone()),
+                Fonts = Fonts.Clone()
+            };
         }
     }
 }

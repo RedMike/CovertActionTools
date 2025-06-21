@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using CovertActionTools.Core.Utilities;
 
 namespace CovertActionTools.Core.Models
 {
-    public class PackageIndex
+    public class PackageIndex : ICloneable<PackageIndex>
     {
         /// <summary>
         /// Serialisation version.
@@ -41,5 +42,35 @@ namespace CovertActionTools.Core.Models
         public bool FontIncluded { get; set; }
         public bool ProseIncluded { get; set; }
         #endregion
+
+        public PackageIndex Clone()
+        {
+            return new PackageIndex()
+            {
+                FormatVersion = FormatVersion,
+                PackageVersion = PackageVersion,
+                Metadata = Metadata.Clone(),
+                SimpleImageChanges = new HashSet<string>(SimpleImageChanges),
+                SimpleImageIncluded = new HashSet<string>(SimpleImageIncluded),
+                CrimeChanges = new HashSet<int>(CrimeChanges),
+                CrimeIncluded = new HashSet<int>(CrimeIncluded),
+                TextChanges = TextChanges,
+                TextIncluded = TextIncluded,
+                ClueChanges = ClueChanges,
+                ClueIncluded = ClueIncluded,
+                PlotChanges = PlotChanges,
+                PlotIncluded = PlotIncluded,
+                WorldChanges = new HashSet<int>(WorldChanges),
+                WorldIncluded = new HashSet<int>(WorldIncluded),
+                AnimationChanges = new HashSet<string>(AnimationChanges),
+                AnimationIncluded = new HashSet<string>(AnimationIncluded),
+                CatalogChanges = new HashSet<string>(CatalogChanges),
+                CatalogIncluded = new HashSet<string>(CatalogIncluded),
+                FontChanges = FontChanges,
+                FontIncluded = FontIncluded,
+                ProseChanges = ProseChanges,
+                ProseIncluded = ProseIncluded
+            };
+        }
     }
 }
