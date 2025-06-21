@@ -19,9 +19,8 @@ jobs:
         working-directory: ./src
       - name: Upload
         uses: actions/upload-artifact@v4
-        working-directory: ./publish/publish/CovertActionTools.App/release_win-x64
         with:
           name: Windows
           path: |
-            *
+            /home/runner/work/CovertActionTools/CovertActionRooms/publish/publish/CovertActionTools.App/release_win-x64
           if-no-files-found: error
