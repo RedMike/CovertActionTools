@@ -10,6 +10,8 @@ jobs:
   check-tag:
     runs-on: ubuntu-latest
     name: Check for tag
+    outputs:
+      tagExists: ${{ steps.init.outputs.tagExists }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -19,13 +21,14 @@ jobs:
       - name: Check for Tag
         run: |
           if git show-ref --tags --verify --quiet "refs/tags/${RELEASE_VERSION}"; then
-            echo TAG_EXISTS=true >> $GITHUB_ENV
+            echo tagExists=true >> $GITHUB_OUTPUT
           else
-            echo TAG_EXISTS=false >> $GITHUB_ENV
+            echo tagExists=false >> $GITHUB_OUTPUT
           fi
       
   build:
-    if: ${{ env.TAG_EXISTS == 'false' }}
+    needs: check-tag
+    if: needs.build.outputs.tagExists == 'false'
     strategy:
       matrix:
         rid: 
@@ -68,7 +71,6 @@ jobs:
             /home/runner/work/CovertActionTools/CovertActionTools/dist
           if-no-files-found: error
   release:
-    if: ${{ env.TAG_EXISTS == 'false' }}
     needs: build
     runs-on: ubuntu-latest
     name: Create Release
