@@ -64,6 +64,7 @@ jobs:
         with:
           pattern: binaries-*
           path: binaries/
+          merge-multiple: true
       - name: Make a release
         uses: ncipollo/release-action@v1
         with:
