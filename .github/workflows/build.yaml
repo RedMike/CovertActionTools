@@ -19,4 +19,4 @@ jobs:
         working-directory: ./src
       - name: Upload
         run: ls -la
-        working-directory: ../publish/publish/CovertActionTools.App/release_win-x64
+        working-directory: ./publish/publish/CovertActionTools.App/release_win-x64
