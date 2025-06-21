@@ -7,7 +7,25 @@ on:
       - main
 
 jobs:
+  check-tag:
+    runs-on: ubuntu-latest
+    name: Check for tag
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Load Version
+        run: |
+          echo RELEASE_VERSION=$(cat ./version.txt) >> $GITHUB_ENV
+      - name: Check for Tag
+        run: |
+          if git show-ref --tags --verify --quiet "refs/tags/${RELEASE_VERSION}"; then
+            echo TAG_EXISTS=true >> $GITHUB_ENV
+          else
+            echo TAG_EXISTS=false >> $GITHUB_ENV
+          fi
+      
   build:
+    if: ${{ env.TAG_EXISTS == 'false' }}
     strategy:
       matrix:
         rid: 
@@ -50,6 +68,7 @@ jobs:
             /home/runner/work/CovertActionTools/CovertActionTools/dist
           if-no-files-found: error
   release:
+    if: ${{ env.TAG_EXISTS == 'false' }}
     needs: build
     runs-on: ubuntu-latest
     name: Create Release
