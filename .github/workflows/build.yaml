@@ -22,5 +22,5 @@ jobs:
         with:
           name: Windows
           path: |
-            /home/runner/work/CovertActionTools/CovertActionRooms/publish/publish/CovertActionTools.App/release_win-x64
+            /home/runner/work/CovertActionTools/CovertActionTools/publish/publish/CovertActionTools.App/release_win-x64
           if-no-files-found: error
