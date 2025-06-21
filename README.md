@@ -40,7 +40,7 @@ a binary patch instead of directly uploading the files** (an internal implementa
 
 To use the editor:
 
-1. Download the latest release and run `CovertActionTools.App.exe`
+1. Download [the latest release](https://github.com/RedMike/CovertActionTools/releases) and run `CovertActionTools.App.exe`
 2. Click `File` > `Parse Game Install` and select the game install `MPS` folder as the Source Path, 
 and an empty folder as the Destination Path, then click Load; once the load finishes successfully, click Save
 3. Click `File` > `Open Package` and select the folder you used as the Destination Path, then click Load
@@ -49,6 +49,15 @@ and `File` > `Publish Package` to export any changed files to a new folder for d
 
 Important to note: published packages will only contain files that have been changed in the package, you can see
 this list by clicking the top-level element in Package Explorer.
+
+## Building/Downloading
+
+To build the project yourself, download the project and run `dotnet build`, or open the `.sln` file with any 
+relevant IDE (Visual Studio Community, Jetbrains Rider). The built project will be in the `bin` folder. Dependencies 
+will be automatically downloaded, which is managed by NuGet.
+
+To get the pre-built binaries, [use the releases page](https://github.com/RedMike/CovertActionTools/releases).
+A Github pipeline will automatically publish new versions when changes are made.
 
 ## Documentation
 
