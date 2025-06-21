@@ -22,5 +22,6 @@ jobs:
         working-directory: ./publish/publish/CovertActionTools.App/release_win-x64
         with:
           name: Windows
-          path: *
+          path: |
+            *
           if-no-files-found: error
