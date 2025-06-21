@@ -40,6 +40,7 @@ jobs:
           name: 'v${{ env.RELEASE_VERSION }}'
           body: 'Compiled binaries'
           commit: ${{ github.ref_name }}
+          tag: ${{ env.RELEASE_VERSION }}
           removeArtifacts: true
           artifacts: "*"
           token: ${{ secrets.GITHUB_TOKEN }}
