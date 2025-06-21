@@ -63,6 +63,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: binaries-*
+          path: ./
       - name: Make a release
         uses: ncipollo/release-action@v1
         with:
@@ -71,5 +72,5 @@ jobs:
           commit: ${{ github.ref_name }}
           tag: ${{ env.RELEASE_VERSION }}
           removeArtifacts: true
-          artifacts: "dist/*"
+          artifacts: "./*"
           token: ${{ secrets.GITHUB_TOKEN }}
