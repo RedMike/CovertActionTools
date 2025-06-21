@@ -20,6 +20,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_docs", "_docs", "{BA260D64
 		..\docs\game-quirks.md = ..\docs\game-quirks.md
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_workflows", "_workflows", "{3172018A-D251-4D2B-8CC2-34334D73D8D1}"
+	ProjectSection(SolutionItems) = preProject
+		..\.github\workflows\build.yaml = ..\.github\workflows\build.yaml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
