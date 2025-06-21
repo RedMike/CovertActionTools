@@ -23,6 +23,7 @@ load the game data files.
 (see [issue #7](https://github.com/RedMike/CovertActionTools/issues/7))
 - [ ] Modify sounds (will likely never be done, very complicated)
 - [ ] Modify almost all game logic (would require a complete rebuild of the game)
+- [ ] Modify some game data including room layouts in combat mode (would require a complete rebuild of the game)
 
 ## Screenshots
 
