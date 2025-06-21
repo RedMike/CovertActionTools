@@ -27,6 +27,9 @@ jobs:
           mkdir win-x64
           cd win-x64
           cp -R /home/runner/work/CovertActionTools/CovertActionTools/publish/publish/CovertActionTools.App/release_win-x64/* .
+          cd ..
+          7z a CovertActionTools-win-x64.zip win-x64/*
+          rm -R win-x64
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
