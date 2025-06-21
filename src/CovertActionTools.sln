@@ -9,6 +9,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_", "_", "{809B1D12-0C62-41
 		..\.gitignore = ..\.gitignore
 		..\README.md = ..\README.md
 		..\LICENSE = ..\LICENSE
+		..\version.txt = ..\version.txt
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_docs", "_docs", "{BA260D64-263A-4F06-A800-8C4D53FD594F}"

@@ -8,6 +8,9 @@ jobs:
     runs-on: ubuntu-latest
     name: Build for Windows
     steps:
+      - name: Load Version
+        run: |
+          echo RELEASE_VERSION=$(cat ./src/version.txt) >> $GITHUB_ENV
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup .NET Core SDK
@@ -17,10 +20,27 @@ jobs:
       - name: publish
         run: dotnet publish -c Release -r win-x64 --artifacts-path "../publish"
         working-directory: ./src
+      - name: Package Windows binaries
+        run: |
+          mkdir dist
+          cd dist
+          mkdir win-x64
+          cd win-x64
+          cp -R /home/runner/work/CovertActionTools/CovertActionTools/publish/publish/CovertActionTools.App/release_win-x64/* .
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: Windows
+          name: binaries
           path: |
-            /home/runner/work/CovertActionTools/CovertActionTools/publish/publish/CovertActionTools.App/release_win-x64
+            /home/runner/work/CovertActionTools/CovertActionTools/dist
           if-no-files-found: error
+      - name: Make a release
+        uses: ncipollo/release-action@v1
+        with:
+          name: 'v${{ env.RELEASE_VERSION }}'
+          body: 'Compiled binaries'
+          commit: ${{ github.ref_name }}
+          tag: ${{ env.RELEASE_VERSION }}
+          removeArtifacts: true
+          artifacts: "*"
+          token: ${{ secrets.GITHUB_TOKEN }}
