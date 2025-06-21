@@ -2,11 +2,23 @@ name: Build Application
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
-  windows:
+  build:
+    strategy:
+      matrix:
+        rid: 
+          - win-x64
+          - win-arm64
+          - linux-x64
+          - linux-arm64
+          - osx-x64
+          - osx-arm64
     runs-on: ubuntu-latest
-    name: Build for Windows
+    name: Build ${{ matrix.rid }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -18,25 +30,35 @@ jobs:
         with:
           dotnet-version: '8.0.x'
       - name: publish
-        run: dotnet publish -c Release -r win-x64 --artifacts-path "../publish"
+        run: dotnet publish -c Release -r ${{ matrix.rid }} --artifacts-path "../publish"
         working-directory: ./src
       - name: Package Windows binaries
         run: |
           mkdir dist
           cd dist
-          mkdir win-x64
-          cd win-x64
-          cp -R /home/runner/work/CovertActionTools/CovertActionTools/publish/publish/CovertActionTools.App/release_win-x64/* .
+          mkdir CovertActionTools
+          cd CovertActionTools
+          cp -R /home/runner/work/CovertActionTools/CovertActionTools/publish/publish/CovertActionTools.App/release_${{ matrix.rid }}/* .
           cd ..
-          7z a CovertActionTools-win-x64.zip win-x64/*
-          rm -R win-x64
+          7z a CovertActionTools-${{ matrix.rid }}.zip CovertActionTools/*
+          rm -R CovertActionTools
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: binaries
+          name: binaries-${{ matrix.rid }}
           path: |
             /home/runner/work/CovertActionTools/CovertActionTools/dist
           if-no-files-found: error
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    name: Create Release
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Load Version
+        run: |
+          echo RELEASE_VERSION=$(cat ./version.txt) >> $GITHUB_ENV
       - name: Make a release
         uses: ncipollo/release-action@v1
         with:
