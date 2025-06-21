@@ -10,7 +10,7 @@ jobs:
     steps:
       - name: Load Version
         run: |
-          echo RELEASE_VERSION=$(cat ./src/version.txt) >> $GITHUB_ENV
+          echo RELEASE_VERSION=$(cat ./version.txt) >> $GITHUB_ENV
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup .NET Core SDK
