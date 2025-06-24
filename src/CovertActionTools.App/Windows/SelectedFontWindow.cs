@@ -111,16 +111,15 @@ public class SelectedFontWindow : BaseWindow
             
             var ox = x + fontMetadata.HorizontalPadding;
             var oy = y + fontMetadata.VerticalPadding;
-            var imageBytes = font.CharacterImages[charToUse];
+            var image = font.CharacterImages[charToUse];
             var width = fontMetadata.CharacterWidths[charToUse];
             var height = fontMetadata.CharHeight;
-            
-            using var skBitmap = SKBitmap.Decode(imageBytes, new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul));
-            var image = skBitmap.Bytes.ToArray();
+
+            var imageBytes = image.VgaImageData;
             
             ImGui.SetCursorPos(pos + new Vector2(ox, oy));
             var id = $"font_{fontId}_{(byte)charToUse}";
-            var texture = _renderWindow.RenderImage(RenderWindow.RenderType.Image, id, width, height, image);
+            var texture = _renderWindow.RenderImage(RenderWindow.RenderType.Image, id, width, height, imageBytes);
             ImGui.Image(texture, new Vector2(width, height));
 
             x += width + fontMetadata.HorizontalPadding;
@@ -137,16 +136,15 @@ public class SelectedFontWindow : BaseWindow
         {
             var ox = x + fontMetadata.HorizontalPadding;
             var oy = y + fontMetadata.VerticalPadding;
-            var imageBytes = font.CharacterImages[(char)code];
+            var image = font.CharacterImages[(char)code];
             var width = fontMetadata.CharacterWidths[(char)code];
             var height = fontMetadata.CharHeight;
 
-            using var skBitmap = SKBitmap.Decode(imageBytes, new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul));
-            var image = skBitmap.Bytes.ToArray();
+            var imageBytes = image.VgaImageData;
             
             ImGui.SetCursorPos(pos + new Vector2(ox, oy));
             var id = $"font_{fontId}_{code}";
-            var texture = _renderWindow.RenderImage(RenderWindow.RenderType.Image, id, width, height, image);
+            var texture = _renderWindow.RenderImage(RenderWindow.RenderType.Image, id, width, height, imageBytes);
             ImGui.Image(texture, new Vector2(width, height));
 
             i++;

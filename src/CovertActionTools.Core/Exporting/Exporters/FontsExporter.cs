@@ -2,6 +2,7 @@
 using System.IO;
 using System.Text;
 using System.Text.Json;
+using CovertActionTools.Core.Exporting.Shared;
 using CovertActionTools.Core.Importing;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -25,12 +26,14 @@ namespace CovertActionTools.Core.Exporting.Exporters
 #endif
         
         private readonly ILogger<FontsExporter> _logger;
+        private readonly SharedImageExporter _imageExporter;
         
         private bool _done = false;
 
-        public FontsExporter(ILogger<FontsExporter> logger)
+        public FontsExporter(ILogger<FontsExporter> logger, SharedImageExporter imageExporter)
         {
             _logger = logger;
+            _imageExporter = imageExporter;
         }
 
         protected override string Message => "Processing fonts..";
@@ -90,7 +93,8 @@ namespace CovertActionTools.Core.Exporting.Exporters
                 foreach (var c in font.CharacterImages.Keys)
                 {
                     var code = (byte)c;
-                    dict[$"FONTS_{f}_{code}.png"] = font.CharacterImages[c];
+                    dict[$"FONTS_{f}_{code}_VGA_metadata.json"] = _imageExporter.GetImageData(font.CharacterImages[c]);
+                    dict[$"FONTS_{f}_{code}_VGA.png"] = _imageExporter.GetVgaImageData(font.CharacterImages[c]);
                 }
             }
 
