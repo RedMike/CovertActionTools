@@ -1585,8 +1585,2277 @@ namespace CovertActionTools.Core.Importing.Parsers
             //"GUYS2",
             //"GUYS3",
             //"ICONS",
-            //"SPRITES",
-            //"SPRITESF",
+            {"SPRITES", new SimpleImageModel.SpriteSheetData()
+            {
+                Sprites = new()
+                    {
+                        {"frame_idle", new SimpleImageModel.Sprite()
+                            {
+                                X = 217, Y = 161,
+                                Width = 23, Height = 38
+                            }
+                        },
+                        {"frame_walk_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 1, Y = 161,
+                                Width = 23, Height = 38
+                            }
+                        },
+                        {"frame_walk_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 25, Y = 161,
+                                Width = 23, Height = 38
+                            }
+                        },
+                        {"frame_walk_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 49, Y = 161,
+                                Width = 23, Height = 38
+                            }
+                        },
+                        {"frame_walk_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 73, Y = 161,
+                                Width = 23, Height = 38
+                            }
+                        },
+                        {"frame_use", new SimpleImageModel.Sprite()
+                            {
+                                X = 145, Y = 161,
+                                Width = 23, Height = 38
+                            }
+                        },
+                        {"frame_crouch_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 169, Y = 161,
+                                Width = 23, Height = 38
+                            }
+                        },
+                        {"frame_crouch_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 193, Y = 161,
+                                Width = 23, Height = 38
+                            }
+                        },
+                        {"frame_fire_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 97, Y = 161,
+                                Width = 23, Height = 38
+                            }
+                        },
+                        {"frame_fire_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 121, Y = 161,
+                                Width = 23, Height = 38
+                            }
+                        },
+                        {"frame_grenade_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 241, Y = 161,
+                                Width = 23, Height = 38
+                            }
+                        },
+                        {"frame_grenade_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 265, Y = 161,
+                                Width = 23, Height = 38
+                            }
+                        },
+                        {"frame_grenade_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 289, Y = 161,
+                                Width = 23, Height = 38
+                            }
+                        },
+                        {"walk_n_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 1, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_n_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 17, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_n_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 33, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_n_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 49, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_n_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 65, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_n_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 81, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"use_n", new SimpleImageModel.Sprite()
+                            {
+                                X = 97, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_n_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 113, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_n_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 257, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_n_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 273, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_n_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 289, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_n_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 305, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_n_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 129, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_n_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 145, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_n_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 161, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_n_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 177, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_n_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 193, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_n_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 209, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_crouch_n", new SimpleImageModel.Sprite()
+                            {
+                                X = 241, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"fire_n", new SimpleImageModel.Sprite()
+                            {
+                                X = 225, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_ne_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 1, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_ne_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 17, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_ne_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 33, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_ne_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 49, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_ne_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 65, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_ne_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 81, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"use_ne", new SimpleImageModel.Sprite()
+                            {
+                                X = 97, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_ne_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 113, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_ne_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 257, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_ne_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 273, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_ne_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 289, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_ne_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 305, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_ne_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 129, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_ne_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 145, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_ne_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 161, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_ne_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 177, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_ne_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 193, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_ne_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 209, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_crouch_ne", new SimpleImageModel.Sprite()
+                            {
+                                X = 241, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"fire_ne", new SimpleImageModel.Sprite()
+                            {
+                                X = 225, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_e_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 1, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_e_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 17, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_e_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 33, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_e_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 49, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_e_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 65, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_e_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 81, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"use_e", new SimpleImageModel.Sprite()
+                            {
+                                X = 97, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_e_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 113, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_e_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 257, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_e_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 273, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_e_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 289, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_e_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 305, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_e_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 129, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_e_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 145, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_e_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 161, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_e_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 177, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_e_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 193, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_e_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 209, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_crouch_e", new SimpleImageModel.Sprite()
+                            {
+                                X = 241, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"fire_e", new SimpleImageModel.Sprite()
+                            {
+                                X = 225, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_se_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 1, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_se_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 17, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_se_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 33, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_se_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 49, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_se_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 65, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_se_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 81, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"use_se", new SimpleImageModel.Sprite()
+                            {
+                                X = 97, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_se_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 113, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_se_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 257, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_se_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 273, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_se_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 289, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_se_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 305, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_se_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 129, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_se_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 145, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_se_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 161, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_se_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 177, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_se_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 193, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_se_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 209, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_crouch_se", new SimpleImageModel.Sprite()
+                            {
+                                X = 241, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"fire_se", new SimpleImageModel.Sprite()
+                            {
+                                X = 225, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_s_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 1, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_s_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 17, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_s_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 33, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_s_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 49, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_s_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 65, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_s_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 81, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"use_s", new SimpleImageModel.Sprite()
+                            {
+                                X = 97, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_s_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 113, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_s_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 257, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_s_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 273, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_s_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 289, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_s_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 305, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_s_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 129, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_s_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 145, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_s_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 161, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_s_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 177, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_s_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 193, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_s_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 209, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_crouch_s", new SimpleImageModel.Sprite()
+                            {
+                                X = 241, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"fire_s", new SimpleImageModel.Sprite()
+                            {
+                                X = 225, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_sw_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 1, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_sw_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 17, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_sw_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 33, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_sw_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 49, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_sw_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 65, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_sw_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 81, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"use_sw", new SimpleImageModel.Sprite()
+                            {
+                                X = 97, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_sw_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 113, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_sw_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 257, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_sw_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 273, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_sw_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 289, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_sw_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 305, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_sw_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 129, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_sw_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 145, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_sw_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 161, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_sw_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 177, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_sw_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 193, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_sw_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 209, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_crouch_sw", new SimpleImageModel.Sprite()
+                            {
+                                X = 241, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"fire_sw", new SimpleImageModel.Sprite()
+                            {
+                                X = 225, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_w_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 1, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_w_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 17, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_w_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 33, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_w_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 49, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_w_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 65, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_w_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 81, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"use_w", new SimpleImageModel.Sprite()
+                            {
+                                X = 97, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_w_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 113, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_w_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 257, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_w_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 273, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_w_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 289, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_w_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 305, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_w_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 129, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_w_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 145, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_w_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 161, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_w_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 177, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_w_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 193, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_w_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 209, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_crouch_w", new SimpleImageModel.Sprite()
+                            {
+                                X = 241, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"fire_w", new SimpleImageModel.Sprite()
+                            {
+                                X = 225, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_nw_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 1, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_nw_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 17, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_nw_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 33, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_nw_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 49, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_nw_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 65, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_nw_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 81, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"use_nw", new SimpleImageModel.Sprite()
+                            {
+                                X = 97, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_nw_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 113, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_nw_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 257, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_nw_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 273, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_nw_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 289, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_nw_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 305, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_nw_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 129, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_nw_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 145, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_nw_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 161, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_nw_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 177, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_nw_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 193, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_nw_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 209, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_crouch_nw", new SimpleImageModel.Sprite()
+                            {
+                                X = 241, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"fire_nw", new SimpleImageModel.Sprite()
+                            {
+                                X = 225, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"circle_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 3, Y = 130,
+                                Width = 12, Height = 12
+                            }
+                        },
+                        {"circle_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 19, Y = 130,
+                                Width = 12, Height = 12
+                            }
+                        },
+                        {"circle_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 35, Y = 130,
+                                Width = 12, Height = 12
+                            }
+                        },
+                        {"circle_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 51, Y = 130,
+                                Width = 12, Height = 12
+                            }
+                        },
+                        {"enemy_down_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 65, Y = 129,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_down_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 81, Y = 129,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"down_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 97, Y = 129,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"explosion_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 1, Y = 145,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"explosion_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 17, Y = 145,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"explosion_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 33, Y = 145,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"explosion_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 49, Y = 145,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"explosion_5", new SimpleImageModel.Sprite()
+                            {
+                                X = 65, Y = 145,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"explosion_6", new SimpleImageModel.Sprite()
+                            {
+                                X = 81, Y = 145,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"explosion_7", new SimpleImageModel.Sprite()
+                            {
+                                X = 97, Y = 145,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"explosion_8", new SimpleImageModel.Sprite()
+                            {
+                                X = 113, Y = 145,
+                                Width = 15, Height = 15
+                            }
+                        },
+                    }
+                }
+            },
+            
+            {"SPRITESF", new SimpleImageModel.SpriteSheetData()
+            {
+                Sprites = new()
+                    {
+                        {"frame_idle", new SimpleImageModel.Sprite()
+                            {
+                                X = 217, Y = 161,
+                                Width = 23, Height = 38
+                            }
+                        },
+                        {"frame_walk_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 1, Y = 161,
+                                Width = 23, Height = 38
+                            }
+                        },
+                        {"frame_walk_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 25, Y = 161,
+                                Width = 23, Height = 38
+                            }
+                        },
+                        {"frame_walk_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 49, Y = 161,
+                                Width = 23, Height = 38
+                            }
+                        },
+                        {"frame_walk_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 73, Y = 161,
+                                Width = 23, Height = 38
+                            }
+                        },
+                        {"frame_use", new SimpleImageModel.Sprite()
+                            {
+                                X = 145, Y = 161,
+                                Width = 23, Height = 38
+                            }
+                        },
+                        {"frame_crouch_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 169, Y = 161,
+                                Width = 23, Height = 38
+                            }
+                        },
+                        {"frame_crouch_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 193, Y = 161,
+                                Width = 23, Height = 38
+                            }
+                        },
+                        {"frame_fire_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 97, Y = 161,
+                                Width = 23, Height = 38
+                            }
+                        },
+                        {"frame_fire_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 121, Y = 161,
+                                Width = 23, Height = 38
+                            }
+                        },
+                        {"frame_grenade_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 241, Y = 161,
+                                Width = 23, Height = 38
+                            }
+                        },
+                        {"frame_grenade_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 265, Y = 161,
+                                Width = 23, Height = 38
+                            }
+                        },
+                        {"frame_grenade_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 289, Y = 161,
+                                Width = 23, Height = 38
+                            }
+                        },
+                        {"walk_n_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 1, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_n_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 17, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_n_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 33, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_n_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 49, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_n_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 65, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_n_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 81, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"use_n", new SimpleImageModel.Sprite()
+                            {
+                                X = 97, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_n_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 113, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_n_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 257, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_n_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 273, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_n_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 289, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_n_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 305, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_n_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 129, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_n_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 145, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_n_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 161, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_n_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 177, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_n_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 193, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_n_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 209, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_crouch_n", new SimpleImageModel.Sprite()
+                            {
+                                X = 241, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"fire_n", new SimpleImageModel.Sprite()
+                            {
+                                X = 225, Y = 1,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_ne_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 1, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_ne_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 17, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_ne_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 33, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_ne_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 49, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_ne_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 65, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_ne_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 81, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"use_ne", new SimpleImageModel.Sprite()
+                            {
+                                X = 97, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_ne_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 113, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_ne_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 257, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_ne_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 273, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_ne_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 289, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_ne_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 305, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_ne_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 129, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_ne_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 145, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_ne_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 161, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_ne_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 177, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_ne_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 193, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_ne_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 209, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_crouch_ne", new SimpleImageModel.Sprite()
+                            {
+                                X = 241, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"fire_ne", new SimpleImageModel.Sprite()
+                            {
+                                X = 225, Y = 17,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_e_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 1, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_e_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 17, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_e_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 33, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_e_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 49, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_e_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 65, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_e_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 81, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"use_e", new SimpleImageModel.Sprite()
+                            {
+                                X = 97, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_e_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 113, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_e_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 257, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_e_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 273, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_e_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 289, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_e_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 305, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_e_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 129, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_e_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 145, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_e_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 161, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_e_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 177, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_e_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 193, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_e_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 209, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_crouch_e", new SimpleImageModel.Sprite()
+                            {
+                                X = 241, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"fire_e", new SimpleImageModel.Sprite()
+                            {
+                                X = 225, Y = 33,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_se_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 1, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_se_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 17, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_se_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 33, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_se_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 49, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_se_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 65, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_se_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 81, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"use_se", new SimpleImageModel.Sprite()
+                            {
+                                X = 97, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_se_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 113, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_se_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 257, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_se_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 273, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_se_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 289, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_se_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 305, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_se_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 129, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_se_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 145, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_se_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 161, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_se_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 177, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_se_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 193, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_se_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 209, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_crouch_se", new SimpleImageModel.Sprite()
+                            {
+                                X = 241, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"fire_se", new SimpleImageModel.Sprite()
+                            {
+                                X = 225, Y = 49,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_s_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 1, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_s_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 17, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_s_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 33, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_s_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 49, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_s_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 65, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_s_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 81, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"use_s", new SimpleImageModel.Sprite()
+                            {
+                                X = 97, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_s_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 113, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_s_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 257, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_s_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 273, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_s_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 289, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_s_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 305, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_s_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 129, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_s_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 145, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_s_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 161, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_s_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 177, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_s_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 193, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_s_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 209, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_crouch_s", new SimpleImageModel.Sprite()
+                            {
+                                X = 241, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"fire_s", new SimpleImageModel.Sprite()
+                            {
+                                X = 225, Y = 65,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_sw_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 1, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_sw_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 17, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_sw_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 33, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_sw_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 49, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_sw_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 65, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_sw_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 81, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"use_sw", new SimpleImageModel.Sprite()
+                            {
+                                X = 97, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_sw_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 113, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_sw_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 257, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_sw_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 273, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_sw_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 289, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_sw_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 305, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_sw_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 129, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_sw_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 145, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_sw_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 161, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_sw_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 177, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_sw_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 193, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_sw_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 209, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_crouch_sw", new SimpleImageModel.Sprite()
+                            {
+                                X = 241, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"fire_sw", new SimpleImageModel.Sprite()
+                            {
+                                X = 225, Y = 81,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_w_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 1, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_w_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 17, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_w_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 33, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_w_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 49, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_w_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 65, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_w_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 81, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"use_w", new SimpleImageModel.Sprite()
+                            {
+                                X = 97, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_w_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 113, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_w_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 257, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_w_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 273, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_w_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 289, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_w_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 305, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_w_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 129, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_w_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 145, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_w_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 161, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_w_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 177, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_w_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 193, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_w_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 209, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_crouch_w", new SimpleImageModel.Sprite()
+                            {
+                                X = 241, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"fire_w", new SimpleImageModel.Sprite()
+                            {
+                                X = 225, Y = 97,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_nw_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 1, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_nw_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 17, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_nw_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 33, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"walk_nw_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 49, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_nw_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 65, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"shoot_nw_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 81, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"use_nw", new SimpleImageModel.Sprite()
+                            {
+                                X = 97, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_nw_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 113, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"crouch_nw_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 257, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_nw_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 273, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_nw_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 289, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"grenade_nw_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 305, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_nw_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 129, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_nw_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 145, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_nw_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 161, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_walk_nw_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 177, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_nw_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 193, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_shoot_nw_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 209, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_crouch_nw", new SimpleImageModel.Sprite()
+                            {
+                                X = 241, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"fire_nw", new SimpleImageModel.Sprite()
+                            {
+                                X = 225, Y = 113,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"circle_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 3, Y = 130,
+                                Width = 12, Height = 12
+                            }
+                        },
+                        {"circle_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 19, Y = 130,
+                                Width = 12, Height = 12
+                            }
+                        },
+                        {"circle_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 35, Y = 130,
+                                Width = 12, Height = 12
+                            }
+                        },
+                        {"circle_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 51, Y = 130,
+                                Width = 12, Height = 12
+                            }
+                        },
+                        {"enemy_down_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 65, Y = 129,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"enemy_down_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 81, Y = 129,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"down_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 97, Y = 129,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"explosion_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 1, Y = 145,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"explosion_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 17, Y = 145,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"explosion_3", new SimpleImageModel.Sprite()
+                            {
+                                X = 33, Y = 145,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"explosion_4", new SimpleImageModel.Sprite()
+                            {
+                                X = 49, Y = 145,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"explosion_5", new SimpleImageModel.Sprite()
+                            {
+                                X = 65, Y = 145,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"explosion_6", new SimpleImageModel.Sprite()
+                            {
+                                X = 81, Y = 145,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"explosion_7", new SimpleImageModel.Sprite()
+                            {
+                                X = 97, Y = 145,
+                                Width = 15, Height = 15
+                            }
+                        },
+                        {"explosion_8", new SimpleImageModel.Sprite()
+                            {
+                                X = 113, Y = 145,
+                                Width = 15, Height = 15
+                            }
+                        },
+                    }
+                }
+            }
             //"STREET"
         };
         #endregion
