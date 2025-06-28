@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Check for tag
     outputs:
-      tagExists: ${{ steps.init.outputs.tagExists }}
+      tagExists: ${{ steps.tag.outputs.tagExists }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -19,6 +19,7 @@ jobs:
         run: |
           echo RELEASE_VERSION=$(cat ./version.txt) >> $GITHUB_ENV
       - name: Check for Tag
+        id: tag
         run: |
           if git show-ref --tags --verify --quiet "refs/tags/${RELEASE_VERSION}"; then
             echo tagExists=true >> $GITHUB_OUTPUT
@@ -28,7 +29,7 @@ jobs:
       
   build:
     needs: check-tag
-    if: needs.build.outputs.tagExists == 'false'
+    if: needs.check-tag.outputs.tagExists == 'false'
     strategy:
       matrix:
         rid: 
