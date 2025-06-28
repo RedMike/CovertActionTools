@@ -12,7 +12,7 @@ public class SelectedCatalogImageWindow : SharedImageWindow
     private readonly MainEditorState _mainEditorState;
     private readonly PendingEditorCatalogState _pendingState;
 
-    public SelectedCatalogImageWindow(ILogger<SelectedCatalogImageWindow> logger, MainEditorState mainEditorState, RenderWindow renderWindow, PendingEditorCatalogState pendingState) : base(renderWindow)
+    public SelectedCatalogImageWindow(ILogger<SelectedCatalogImageWindow> logger, MainEditorState mainEditorState, RenderWindow renderWindow, PendingEditorCatalogState pendingState, ImageEditorState editorState) : base(renderWindow, editorState)
     {
         _logger = logger;
         _mainEditorState = mainEditorState;
@@ -89,6 +89,6 @@ public class SelectedCatalogImageWindow : SharedImageWindow
 
     private void DrawImageWindow(PackageModel model, CatalogModel catalog, string imageId, SharedImageModel image)
     {
-        DrawImageTabs($"{catalog.Key}_{imageId}", image, () => { _pendingState.RecordChange(); });
+        DrawImageTabs($"{catalog.Key}_{imageId}", image, () => { _pendingState.RecordChange(); }, null);
     }
 }

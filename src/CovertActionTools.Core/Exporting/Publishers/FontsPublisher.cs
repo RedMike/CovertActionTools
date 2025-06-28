@@ -92,19 +92,17 @@ namespace CovertActionTools.Core.Exporting.Publishers
                 var fontStrings = new Dictionary<char, List<string>>();
                 foreach (var c in fonts.Fonts[fontId].CharacterImages.Keys)
                 {
-                    var imageData = fonts.Fonts[fontId].CharacterImages[c];
+                    var image = fonts.Fonts[fontId].CharacterImages[c];
                     var width = fontMetadata.CharacterWidths[c];
                     var height = fontMetadata.CharHeight;
-                    using var skBitmap = SKBitmap.Decode(imageData, new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul));
+                    var bytes = image.RawVgaImageData;
                     var lines = new List<string>();
                     for (var i = 0; i < height; i++)
                     {
                         var s = "";
                         for (var j = 0; j < width; j++)
                         {
-                            var col = skBitmap.GetPixel(j, i);
-                            var transparent = !((col.Red > 0 || col.Green > 0 || col.Blue > 0) && col.Alpha > 0);
-                            if (transparent)
+                            if (bytes[i*width + j] == 0)
                             {
                                 s += " ";
                             }
