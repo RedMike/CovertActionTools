@@ -9,7 +9,7 @@ on:
 jobs:
   check-tag:
     runs-on: ubuntu-latest
-    name: Check for tag
+    name: Check for tag 
     outputs:
       tagExists: ${{ steps.tag.outputs.tagExists }}
     steps:
