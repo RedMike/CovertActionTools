@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using CovertActionTools.Core.Conversion;
 using CovertActionTools.Core.Importing.Shared;
 using CovertActionTools.Core.Models;
@@ -83,7 +84,28 @@ namespace CovertActionTools.Core.Importing.Importers
             model.Key = filename;
             model.Metadata = _imageImporter.ReadMetadata(path, filename, "metadata");
             model.Image = _imageImporter.ReadImage(path, filename, "image");
+            if (File.Exists(System.IO.Path.Combine(path, $"{filename}_sprites.json")))
+            {
+                model.SpriteSheet = ReadSpriteSheet(path, filename);
+            }
             return model;
+        }
+        
+        private SimpleImageModel.SpriteSheetData ReadSpriteSheet(string path, string key)
+        {
+            var filePath = System.IO.Path.Combine(path, $"{key}_sprites.json");
+            if (!File.Exists(filePath))
+            {
+                throw new Exception($"Missing JSON file: {key}");
+            }
+
+            var json = File.ReadAllText(filePath);
+            var data = JsonSerializer.Deserialize<SimpleImageModel.SpriteSheetData>(json);
+            if (data == null)
+            {
+                throw new Exception($"Unparseable JSON file: {key}");
+            }
+            return data;
         }
         
         private string GetPath(string path)

@@ -94,12 +94,23 @@ namespace CovertActionTools.Core.Exporting.Exporters
                 [$"{image.Key}_metadata.json"] = GetMetadata(image),
                 [$"{image.Key}_VGA.png"] = _imageExporter.GetVgaImageData(image.Image) 
             };
+            if (image.SpriteSheet != null && image.SpriteSheet.Sprites.Count > 0)
+            {
+                dict[$"{image.Key}_sprites.json"] = GetSpriteSheet(image);
+            }
             return dict;
         }
         
         private byte[] GetMetadata(SimpleImageModel image)
         {
             var data = JsonSerializer.Serialize(image.Metadata, JsonOptions);
+            var bytes = Encoding.UTF8.GetBytes(data);
+            return bytes;
+        }
+        
+        private byte[] GetSpriteSheet(SimpleImageModel image)
+        {
+            var data = JsonSerializer.Serialize(image.SpriteSheet, JsonOptions);
             var bytes = Encoding.UTF8.GetBytes(data);
             return bytes;
         }
