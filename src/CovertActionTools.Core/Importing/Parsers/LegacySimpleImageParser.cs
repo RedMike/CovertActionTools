@@ -123,20 +123,20 @@ namespace CovertActionTools.Core.Importing.Parsers
                         },
                         { "grenade_frag", new SimpleImageModel.Sprite()
                             {
-                                X = 175, Y = 0,
-                                Width = 9, Height = 13
+                                X = 175, Y = 1,
+                                Width = 6, Height = 13
                             }
                         },
                         { "grenade_gas", new SimpleImageModel.Sprite()
                             {
-                                X = 175, Y = 15,
-                                Width = 9, Height = 13
+                                X = 175, Y = 16,
+                                Width = 6, Height = 13
                             }
                         },
                         { "grenade_flash", new SimpleImageModel.Sprite()
                             {
-                                X = 175, Y = 30,
-                                Width = 9, Height = 13
+                                X = 175, Y = 31,
+                                Width = 6, Height = 13
                             }
                         },
                         { "gas_mask", new SimpleImageModel.Sprite()
@@ -166,7 +166,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                         { "bullet", new SimpleImageModel.Sprite()
                             {
                                 X = 180, Y = 72,
-                                Width = 3, Height = 7
+                                Width = 5, Height = 7
                             }
                         },
                         { "magazine", new SimpleImageModel.Sprite()
@@ -174,7 +174,19 @@ namespace CovertActionTools.Core.Importing.Parsers
                                 X = 180, Y = 82,
                                 Width = 11, Height = 15
                             }
-                        }
+                        },
+                        { "proceed", new SimpleImageModel.Sprite()
+                            {
+                                X = 69, Y = 183,
+                                Width = 89, Height = 15
+                            }
+                        },
+                        { "count", new SimpleImageModel.Sprite()
+                            {
+                                X = 2, Y = 190,
+                                Width = 61, Height = 9
+                            }
+                        },
                     }
                 }
             },
@@ -279,20 +291,20 @@ namespace CovertActionTools.Core.Importing.Parsers
                         },
                         { "grenade_frag", new SimpleImageModel.Sprite()
                             {
-                                X = 175, Y = 0,
-                                Width = 9, Height = 13
+                                X = 175, Y = 1,
+                                Width = 6, Height = 13
                             }
                         },
                         { "grenade_gas", new SimpleImageModel.Sprite()
                             {
-                                X = 175, Y = 15,
-                                Width = 9, Height = 13
+                                X = 175, Y = 16,
+                                Width = 6, Height = 13
                             }
                         },
                         { "grenade_flash", new SimpleImageModel.Sprite()
                             {
-                                X = 175, Y = 30,
-                                Width = 9, Height = 13
+                                X = 175, Y = 31,
+                                Width = 6, Height = 13
                             }
                         },
                         { "gas_mask", new SimpleImageModel.Sprite()
@@ -322,7 +334,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                         { "bullet", new SimpleImageModel.Sprite()
                             {
                                 X = 180, Y = 72,
-                                Width = 3, Height = 7
+                                Width = 5, Height = 7
                             }
                         },
                         { "magazine", new SimpleImageModel.Sprite()
@@ -330,7 +342,19 @@ namespace CovertActionTools.Core.Importing.Parsers
                                 X = 180, Y = 82,
                                 Width = 11, Height = 15
                             }
-                        }
+                        },
+                        { "proceed", new SimpleImageModel.Sprite()
+                            {
+                                X = 69, Y = 183,
+                                Width = 89, Height = 15
+                            }
+                        },
+                        { "count", new SimpleImageModel.Sprite()
+                            {
+                                X = 2, Y = 190,
+                                Width = 61, Height = 9
+                            }
+                        },
                     }
                 }
             },
