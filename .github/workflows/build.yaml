@@ -22,10 +22,11 @@ jobs:
         id: tag
         run: |
           TAG_REF=refs/tags/${RELEASE_VERSION}
-          echo "${TAG_REF}"
           if git show-ref --tags --verify --quiet ${TAG_REF}; then
+            echo "Tag '${TAG_REF}' (${RELEASE_VERSION}) exists"
             echo tagExists=true >> $GITHUB_OUTPUT
           else
+            echo "Tag '${TAG_REF}' (${RELEASE_VERSION}) does not exist"
             echo tagExists=false >> $GITHUB_OUTPUT
           fi
       
