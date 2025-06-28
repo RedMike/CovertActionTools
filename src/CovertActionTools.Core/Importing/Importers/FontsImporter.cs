@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using CovertActionTools.Core.Importing.Shared;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging;
 
@@ -10,13 +11,15 @@ namespace CovertActionTools.Core.Importing.Importers
     internal class FontsImporter : BaseImporter<FontsModel>
     {
         private readonly ILogger<SimpleImageImporter> _logger;
+        private readonly SharedImageImporter _imageImporter;
         
         private FontsModel _result = new FontsModel();
         private bool _done = false;
 
-        public FontsImporter(ILogger<SimpleImageImporter> logger)
+        public FontsImporter(ILogger<SimpleImageImporter> logger, SharedImageImporter imageImporter)
         {
             _logger = logger;
+            _imageImporter = imageImporter;
         }
 
         protected override string Message => "Processing fonts..";
@@ -88,18 +91,13 @@ namespace CovertActionTools.Core.Importing.Importers
                 var fontMetadata = model.Data.Fonts[fontId];
                 var firstAsciiCode = fontMetadata.FirstAsciiValue;
                 var lastAsciiCode = fontMetadata.LastAsciiValue;
-                var fontImages = new Dictionary<char, byte[]>(); 
+                var fontImages = new Dictionary<char, SharedImageModel>(); 
                 for (var b = firstAsciiCode; b <= lastAsciiCode; b++)
                 {
-                    var fontImagePath = System.IO.Path.Combine(path, $"FONTS_{fontId}_{b}.png");
-                    if (!File.Exists(fontImagePath))
-                    {
-                        throw new Exception($"Missing PNG file: FONTS_{fontId}_{b}.png");
-                    }
+                    var filename = $"FONTS_{fontId}_{b}";
+                    var fontImage = _imageImporter.ReadImage(path, filename, "VGA_metadata");
 
-                    var fontBytes = File.ReadAllBytes(fontImagePath);
-
-                    fontImages[(char)b] = fontBytes;
+                    fontImages[(char)b] = fontImage;
                 }
                 
                 model.Fonts.Add(new FontsModel.Font()

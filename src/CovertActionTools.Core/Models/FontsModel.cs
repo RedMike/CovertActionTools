@@ -7,7 +7,7 @@ namespace CovertActionTools.Core.Models
     {
         public class Font
         {
-            public Dictionary<char, byte[]> CharacterImages { get; set; } = new();
+            public Dictionary<char, SharedImageModel> CharacterImages { get; set; } = new();
         }
 
         public class FontMetadata
@@ -53,7 +53,7 @@ namespace CovertActionTools.Core.Models
                 },
                 Fonts = Fonts.Select(x => new Font()
                 {
-                    CharacterImages = x.CharacterImages.ToDictionary(x => x.Key, x => x.Value.ToArray())
+                    CharacterImages = x.CharacterImages.ToDictionary(y => y.Key, y => y.Value.Clone())
                 }).ToList()
             };
         }

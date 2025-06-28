@@ -150,10 +150,10 @@ namespace CovertActionTools.Core.Importing.Parsers
                     }
                 }
 
-                var charImageData = new Dictionary<char, byte[]>();
+                var charImageData = new Dictionary<char, SharedImageModel>();
                 foreach (var c in charFontData.Keys)
                 {
-                    var imageData = new byte[charWidths[c] * charHeight * 4];
+                    var imageData = new byte[charWidths[c] * charHeight];
                     var fontData = charFontData[c];
                     var q = 0;
                     
@@ -163,15 +163,20 @@ namespace CovertActionTools.Core.Importing.Parsers
                         for (var j = 0; j < line.Length; j++)
                         {
                             var transparent = line[j] == ' ';
-                            imageData[q++] = (byte)(transparent ? 0 : 255);
-                            imageData[q++] = (byte)(transparent ? 0 : 255);
-                            imageData[q++] = (byte)(transparent ? 0 : 255);
-                            imageData[q++] = (byte)(transparent ? 0 : 255);
+                            imageData[q++] = (byte)(transparent ? 0 : 15);
                         }
                     }
 
-                    var texture = ImageConversion.RgbaToTexture(charWidths[c], charHeight, imageData);
-                    charImageData[c] = texture;
+                    charImageData[c] = new SharedImageModel()
+                    {
+                        Data = new SharedImageModel.ImageData()
+                        {
+                            Width = charWidths[c],
+                            Height = charHeight,
+                        },
+                        RawVgaImageData = imageData,
+                        VgaImageData = ImageConversion.VgaToTexture(charWidths[c], charHeight, imageData)
+                    };
                 }
 
                 fonts.Data.Fonts[f] = new FontsModel.FontMetadata()
