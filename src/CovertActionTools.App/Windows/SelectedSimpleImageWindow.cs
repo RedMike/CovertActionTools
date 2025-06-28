@@ -12,7 +12,7 @@ public class SelectedSimpleImageWindow : SharedImageWindow
     private readonly MainEditorState _mainEditorState;
     private readonly PendingEditorSimpleImageState _pendingState;
 
-    public SelectedSimpleImageWindow(ILogger<SelectedSimpleImageWindow> logger, MainEditorState mainEditorState, RenderWindow renderWindow, PendingEditorSimpleImageState pendingState) : base(renderWindow)
+    public SelectedSimpleImageWindow(ILogger<SelectedSimpleImageWindow> logger, MainEditorState mainEditorState, RenderWindow renderWindow, PendingEditorSimpleImageState pendingState, ImageEditorState editorState) : base(renderWindow, editorState)
     {
         _logger = logger;
         _mainEditorState = mainEditorState;
@@ -79,6 +79,21 @@ public class SelectedSimpleImageWindow : SharedImageWindow
         
         DrawSharedMetadataEditor(image.Metadata, () => { _pendingState.RecordChange(); });
         
-        DrawImageTabs(key, image.Image, () => { _pendingState.RecordChange(); });
+        DrawImageTabs(key, image.Image, () => { _pendingState.RecordChange(); }, (enabled) =>
+        {
+            if (enabled)
+            {
+                image.SpriteSheet = new SimpleImageModel.SpriteSheetData()
+                {
+                    Sprites = new Dictionary<string, SimpleImageModel.Sprite>()
+                };
+            }
+            else
+            {
+                image.SpriteSheet = null;
+            }
+
+            _pendingState.RecordChange();
+        }, spriteSheet: image.SpriteSheet);
     }
 }

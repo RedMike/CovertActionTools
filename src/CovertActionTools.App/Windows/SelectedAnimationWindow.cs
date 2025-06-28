@@ -19,7 +19,7 @@ public class SelectedAnimationWindow : SharedImageWindow
     private int _selectedImage = 0;
     private int _selectedSprite = 0;
 
-    public SelectedAnimationWindow(RenderWindow renderWindow, ILogger<SelectedAnimationWindow> logger, MainEditorState mainEditorState, IAnimationProcessor animationProcessor, AnimationPreviewState animationPreviewState, AnimationEditorState animationEditorState, PendingEditorAnimationState pendingState) : base(renderWindow)
+    public SelectedAnimationWindow(RenderWindow renderWindow, ILogger<SelectedAnimationWindow> logger, MainEditorState mainEditorState, IAnimationProcessor animationProcessor, AnimationPreviewState animationPreviewState, AnimationEditorState animationEditorState, PendingEditorAnimationState pendingState, ImageEditorState editorState) : base(renderWindow, editorState)
     {
         _logger = logger;
         _mainEditorState = mainEditorState;
@@ -524,7 +524,7 @@ public class SelectedAnimationWindow : SharedImageWindow
             return;
         }
 
-        DrawImageTabs($"{animation.Key}_{selectedIndex}", image, () => { });
+        DrawImageTabs($"{animation.Key}_{selectedIndex}", image, () => { }, null);
     }
     
     private string GetInstructionText(int index, AnimationModel.AnimationInstruction instruction)
