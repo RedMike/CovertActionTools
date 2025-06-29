@@ -206,6 +206,54 @@ namespace CovertActionTools.Core.Importing.Parsers
                                 Width = 61, Height = 9
                             }
                         },
+                        { "map_bg", new SimpleImageModel.Sprite()
+                            {
+                                X = 0, Y = 0,
+                                Width = 172, Height = 200
+                            }
+                        },
+                        { "map_main", new SimpleImageModel.Sprite()
+                            {
+                                X = 0, Y = 40,
+                                Width = 172, Height = 160
+                            }
+                        },
+                        { "map_mini", new SimpleImageModel.Sprite()
+                            {
+                                X = 181, Y = 100,
+                                Width = 120, Height = 97
+                            }
+                        },
+                        { "frame", new SimpleImageModel.Sprite()
+                            {
+                                X = 0, Y = 0,
+                                Width = 25, Height = 40
+                            }
+                        },
+                        { "header", new SimpleImageModel.Sprite()
+                            {
+                                X = 26, Y = 0,
+                                Width = 143, Height = 20
+                            }
+                        },
+                        { "header_room", new SimpleImageModel.Sprite()
+                            {
+                                X = 30, Y = 2,
+                                Width = 70, Height = 10
+                            }
+                        },
+                        { "header_timer", new SimpleImageModel.Sprite()
+                            {
+                                X = 120, Y = 2,
+                                Width = 20, Height = 10
+                            }
+                        },
+                        { "header_status", new SimpleImageModel.Sprite()
+                            {
+                                X = 30, Y = 12,
+                                Width = 140, Height = 10
+                            }
+                        },
                     }
                 }
             },
@@ -372,6 +420,54 @@ namespace CovertActionTools.Core.Importing.Parsers
                             {
                                 X = 2, Y = 190,
                                 Width = 61, Height = 9
+                            }
+                        },
+                        { "map_bg", new SimpleImageModel.Sprite()
+                            {
+                                X = 0, Y = 0,
+                                Width = 172, Height = 200
+                            }
+                        },
+                        { "map_main", new SimpleImageModel.Sprite()
+                            {
+                                X = 0, Y = 40,
+                                Width = 172, Height = 160
+                            }
+                        },
+                        { "map_mini", new SimpleImageModel.Sprite()
+                            {
+                                X = 181, Y = 100,
+                                Width = 120, Height = 97
+                            }
+                        },
+                        { "frame", new SimpleImageModel.Sprite()
+                            {
+                                X = 0, Y = 0,
+                                Width = 25, Height = 40
+                            }
+                        },
+                        { "header", new SimpleImageModel.Sprite()
+                            {
+                                X = 26, Y = 0,
+                                Width = 143, Height = 20
+                            }
+                        },
+                        { "header_room", new SimpleImageModel.Sprite()
+                            {
+                                X = 30, Y = 2,
+                                Width = 70, Height = 10
+                            }
+                        },
+                        { "header_timer", new SimpleImageModel.Sprite()
+                            {
+                                X = 120, Y = 2,
+                                Width = 20, Height = 10
+                            }
+                        },
+                        { "header_status", new SimpleImageModel.Sprite()
+                            {
+                                X = 30, Y = 12,
+                                Width = 140, Height = 10
                             }
                         },
                     }
@@ -1584,6 +1680,122 @@ namespace CovertActionTools.Core.Importing.Parsers
             },
             //"GUYS2",
             //"GUYS3",
+            {
+                "GUYS3", new SimpleImageModel.SpriteSheetData()
+                {
+                    Sprites = new()
+                    {
+                        { "wall_n", new SimpleImageModel.Sprite()
+                            {
+                                X = 0, Y = 0,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "wall_e", new SimpleImageModel.Sprite()
+                            {
+                                X = 16, Y = 0,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "wall_s", new SimpleImageModel.Sprite()
+                            {
+                                X = 32, Y = 0,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "wall_w", new SimpleImageModel.Sprite()
+                            {
+                                X = 48, Y = 0,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "wall_ne", new SimpleImageModel.Sprite()
+                            {
+                                X = 64, Y = 0,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "wall_se", new SimpleImageModel.Sprite()
+                            {
+                                X = 80, Y = 0,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "wall_sw", new SimpleImageModel.Sprite()
+                            {
+                                X = 96, Y = 0,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "wall_nw", new SimpleImageModel.Sprite()
+                            {
+                                X = 112, Y = 0,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "floor_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 0, Y = 112,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "floor_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 16, Y = 112,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "door_closed_n", new SimpleImageModel.Sprite()
+                            {
+                                X = 64, Y = 16,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "door_closed_e", new SimpleImageModel.Sprite()
+                            {
+                                X = 80, Y = 16,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "door_closed_s", new SimpleImageModel.Sprite()
+                            {
+                                X = 96, Y = 16,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "door_closed_w", new SimpleImageModel.Sprite()
+                            {
+                                X = 112, Y = 16,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "door_open_n", new SimpleImageModel.Sprite()
+                            {
+                                X = 64, Y = 32,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "door_open_e", new SimpleImageModel.Sprite()
+                            {
+                                X = 80, Y = 32,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "door_open_s", new SimpleImageModel.Sprite()
+                            {
+                                X = 96, Y = 32,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "door_open_w", new SimpleImageModel.Sprite()
+                            {
+                                X = 112, Y = 32,
+                                Width = 16, Height = 16
+                            }
+                        },
+                    }
+                }
+            },
             //"ICONS",
             {"SPRITES", new SimpleImageModel.SpriteSheetData()
             {
