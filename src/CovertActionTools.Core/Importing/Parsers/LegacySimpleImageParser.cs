@@ -1679,7 +1679,6 @@ namespace CovertActionTools.Core.Importing.Parsers
                 }
             },
             //"GUYS2",
-            //"GUYS3",
             {
                 "GUYS3", new SimpleImageModel.SpriteSheetData()
                 {
@@ -1790,6 +1789,276 @@ namespace CovertActionTools.Core.Importing.Parsers
                         { "door_open_w", new SimpleImageModel.Sprite()
                             {
                                 X = 112, Y = 32,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "chair_s", new SimpleImageModel.Sprite()
+                            {
+                                X = 128, Y = 0,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "chair_w", new SimpleImageModel.Sprite()
+                            {
+                                X = 144, Y = 0,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "chair_n", new SimpleImageModel.Sprite()
+                            {
+                                X = 160, Y = 0,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "chair_e", new SimpleImageModel.Sprite()
+                            {
+                                X = 176, Y = 0,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "computer_n", new SimpleImageModel.Sprite()
+                            {
+                                X = 192, Y = 0,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "computer_s", new SimpleImageModel.Sprite()
+                            {
+                                X = 224, Y = 0,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "printer_w", new SimpleImageModel.Sprite()
+                            {
+                                X = 208, Y = 0,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "printer_e", new SimpleImageModel.Sprite()
+                            {
+                                X = 242, Y = 0,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "wall_cabinet_closed_s", new SimpleImageModel.Sprite()
+                            {
+                                X = 128, Y = 16,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "wall_cabinet_closed_w", new SimpleImageModel.Sprite()
+                            {
+                                X = 144, Y = 16,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "wall_cabinet_closed_n", new SimpleImageModel.Sprite()
+                            {
+                                X = 160, Y = 16,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "wall_cabinet_closed_e", new SimpleImageModel.Sprite()
+                            {
+                                X = 176, Y = 16,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "wall_cabinet_open_s", new SimpleImageModel.Sprite()
+                            {
+                                X = 128, Y = 32,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "wall_cabinet_open_w", new SimpleImageModel.Sprite()
+                            {
+                                X = 144, Y = 32,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "wall_cabinet_open_n", new SimpleImageModel.Sprite()
+                            {
+                                X = 160, Y = 32,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "wall_cabinet_open_e", new SimpleImageModel.Sprite()
+                            {
+                                X = 176, Y = 32,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "wall_floor_safe_closed_s", new SimpleImageModel.Sprite()
+                            {
+                                X = 192, Y = 16,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "wall_floor_safe_open_s", new SimpleImageModel.Sprite()
+                            {
+                                X = 192, Y = 32,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "wall_safe_closed_w", new SimpleImageModel.Sprite()
+                            {
+                                X = 108, Y = 16,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "wall_safe_closed_e", new SimpleImageModel.Sprite()
+                            {
+                                X = 240, Y = 16,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "wall_safe_open_w", new SimpleImageModel.Sprite()
+                            {
+                                X = 108, Y = 32,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "wall_safe_open_e", new SimpleImageModel.Sprite()
+                            {
+                                X = 240, Y = 32,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "wall_picture_closed_n", new SimpleImageModel.Sprite()
+                            {
+                                X = 224, Y = 16,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "wall_picture_open_n", new SimpleImageModel.Sprite()
+                            {
+                                X = 224, Y = 32,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "desk_closed_s_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 0, Y = 16,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "desk_closed_s_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 16, Y = 16,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "desk_open_s_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 0, Y = 32,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "desk_open_s_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 16, Y = 32,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "desk_closed_n_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 32, Y = 16,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "desk_closed_n_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 48, Y = 16,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "desk_open_n_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 32, Y = 32,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "desk_open_n_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 48, Y = 32,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "server_s", new SimpleImageModel.Sprite()
+                            {
+                                X = 0, Y = 48,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "server_w", new SimpleImageModel.Sprite()
+                            {
+                                X = 16, Y = 48,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "server_n", new SimpleImageModel.Sprite()
+                            {
+                                X = 32, Y = 48,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "server_e", new SimpleImageModel.Sprite()
+                            {
+                                X = 48, Y = 48,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "table_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 80, Y = 48,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "sofa_n_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 96, Y = 48,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "sofa_n_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 112, Y = 48,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "sofa_s_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 128, Y = 48,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "sofa_s_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 144, Y = 48,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "wall_record_s", new SimpleImageModel.Sprite()
+                            {
+                                X = 224, Y = 48,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "wall_aquarium_n", new SimpleImageModel.Sprite()
+                            {
+                                X = 256, Y = 48,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "plant_1", new SimpleImageModel.Sprite()
+                            {
+                                X = 272, Y = 0,
+                                Width = 16, Height = 16
+                            }
+                        },
+                        { "plant_2", new SimpleImageModel.Sprite()
+                            {
+                                X = 304, Y = 0,
                                 Width = 16, Height = 16
                             }
                         },
