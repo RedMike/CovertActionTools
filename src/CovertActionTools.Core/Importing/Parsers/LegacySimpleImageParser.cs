@@ -1902,7 +1902,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                         },
                         { "wall_safe_closed_w", new SimpleImageModel.Sprite()
                             {
-                                X = 108, Y = 16,
+                                X = 208, Y = 16,
                                 Width = 16, Height = 16
                             }
                         },
