@@ -224,6 +224,18 @@ namespace CovertActionTools.Core.Importing.Parsers
                                 Width = 120, Height = 97
                             }
                         },
+                        { "password_hint", new SimpleImageModel.Sprite()
+                            {
+                                X = 250, Y = 85,
+                                Width = 60, Height = 12
+                            }
+                        },
+                        { "password_prompt", new SimpleImageModel.Sprite()
+                            {
+                                X = 100, Y = 65,
+                                Width = 120, Height = 60
+                            }
+                        },
                         { "frame", new SimpleImageModel.Sprite()
                             {
                                 X = 0, Y = 0,
@@ -438,6 +450,18 @@ namespace CovertActionTools.Core.Importing.Parsers
                             {
                                 X = 181, Y = 100,
                                 Width = 120, Height = 97
+                            }
+                        },
+                        { "password_hint", new SimpleImageModel.Sprite()
+                            {
+                                X = 250, Y = 85,
+                                Width = 60, Height = 12
+                            }
+                        },
+                        { "password_prompt", new SimpleImageModel.Sprite()
+                            {
+                                X = 100, Y = 65,
+                                Width = 120, Height = 60
                             }
                         },
                         { "frame", new SimpleImageModel.Sprite()
