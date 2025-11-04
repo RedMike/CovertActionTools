@@ -22,6 +22,7 @@ namespace CovertActionTools.Core.Models
                 .Values.SelectMany(x =>
                     InvalidCharRegex.Replace(x.Message, " ")
                         .Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries)
+                        .Select(x => x.ToLowerInvariant())
                         .Distinct()
                         .Where(word => word.Length >= minCharCount && word.Length <= maxCharCount)
                 )
