@@ -232,8 +232,44 @@ namespace CovertActionTools.Core.Importing.Parsers
                         },
                         { "password_prompt", new SimpleImageModel.Sprite()
                             {
-                                X = 100, Y = 65,
-                                Width = 120, Height = 60
+                                X = 100, Y = 75,
+                                Width = 120, Height = 30
+                            }
+                        },
+                        { "info_search_prompt", new SimpleImageModel.Sprite()
+                            {
+                                X = 100, Y = 75,
+                                Width = 120, Height = 30
+                            }
+                        },
+                        { "clue_location_window", new SimpleImageModel.Sprite()
+                            {
+                                X = 50, Y = 45,
+                                Width = 146, Height = 101
+                            }
+                        },
+                        { "clue_location_map", new SimpleImageModel.Sprite()
+                            {
+                                X = 106, Y = 53,
+                                Width = 72, Height = 60
+                            }
+                        },
+                        { "clue_location_text", new SimpleImageModel.Sprite()
+                            {
+                                X = 68, Y = 113,
+                                Width = 95, Height = 40
+                            }
+                        },
+                        { "clue_person_frame", new SimpleImageModel.Sprite()
+                            {
+                                X = 114, Y = 67,
+                                Width = 54, Height = 56
+                            }
+                        },
+                        { "clue_person_border", new SimpleImageModel.Sprite()
+                            {
+                                X = 118, Y = 71,
+                                Width = 46, Height = 46
                             }
                         },
                         { "frame", new SimpleImageModel.Sprite()
@@ -460,8 +496,44 @@ namespace CovertActionTools.Core.Importing.Parsers
                         },
                         { "password_prompt", new SimpleImageModel.Sprite()
                             {
-                                X = 100, Y = 65,
-                                Width = 120, Height = 60
+                                X = 100, Y = 75,
+                                Width = 120, Height = 30
+                            }
+                        },
+                        { "info_search_prompt", new SimpleImageModel.Sprite()
+                            {
+                                X = 100, Y = 75,
+                                Width = 120, Height = 30
+                            }
+                        },
+                        { "clue_location_window", new SimpleImageModel.Sprite()
+                            {
+                                X = 50, Y = 45,
+                                Width = 146, Height = 101
+                            }
+                        },
+                        { "clue_location_map", new SimpleImageModel.Sprite()
+                            {
+                                X = 106, Y = 53,
+                                Width = 72, Height = 60
+                            }
+                        },
+                        { "clue_location_text", new SimpleImageModel.Sprite()
+                            {
+                                X = 68, Y = 113,
+                                Width = 95, Height = 40
+                            }
+                        },
+                        { "clue_person_frame", new SimpleImageModel.Sprite()
+                            {
+                                X = 114, Y = 67,
+                                Width = 54, Height = 56
+                            }
+                        },
+                        { "clue_person_border", new SimpleImageModel.Sprite()
+                            {
+                                X = 118, Y = 71,
+                                Width = 46, Height = 46
                             }
                         },
                         { "frame", new SimpleImageModel.Sprite()
