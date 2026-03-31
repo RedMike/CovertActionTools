@@ -87,6 +87,7 @@ There are a number of documentation files available that explain some of the fil
 * [CRIME File Format](https://github.com/RedMike/CovertActionTools/blob/develop/docs/crime-file-format.md)
 * [PAN File Format](https://github.com/RedMike/CovertActionTools/blob/develop/docs/pan-file-format.md)
 * [Text-Based File Formats](https://github.com/RedMike/CovertActionTools/blob/develop/docs/text-based-file-formats.md) (TEXT.DTA, PLOT.TXT, PROSE.DTA, CLUES.TXT)
+* [Game Quirks](https://github.com/RedMike/CovertActionTools/blob/develop/docs/game-quirks.md)
 
 ## AI-Assisted Development
 
