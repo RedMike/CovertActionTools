@@ -21,12 +21,12 @@ namespace CovertActionTools.Core.Exporting.Shared
 #endif
         
         private readonly ILogger<SharedImageExporter> _logger;
-        private readonly ILoggerFactory _loggerFactory;
+        private readonly ILzwCompression _compression;
 
-        public SharedImageExporter(ILogger<SharedImageExporter> logger, ILoggerFactory loggerFactory)
+        public SharedImageExporter(ILogger<SharedImageExporter> logger, ILzwCompression compression)
         {
             _logger = logger;
-            _loggerFactory = loggerFactory;
+            _compression = compression;
         }
         
         public byte[] GetVgaImageData(SharedImageModel image)
@@ -42,9 +42,19 @@ namespace CovertActionTools.Core.Exporting.Shared
         {
             var imageData = image.RawVgaImageData;
             
-            var compression = new LzwCompression(_loggerFactory.CreateLogger(typeof(LzwCompression)),
-                image.Data.CompressionDictionaryWidth, imageData);
-            var imageBytes = compression.Compress(image.Data.Width, image.Data.Height);
+            var collectMetrics = _logger.IsEnabled(LogLevel.Debug);
+            var result = _compression.Compress(image.Data.Width, image.Data.Height,
+                image.Data.CompressionDictionaryWidth, imageData, collectMetrics);
+            var imageBytes = result.Data;
+
+            if (result.Stages != null)
+            {
+                _logger.LogDebug(
+                    "Compression stages: {RawPixels} raw -> {PackedBytes} packed -> {RleBytes} RLE -> {LzwBytes} LZW ({Ratio:P1})",
+                    result.Stages.RawPixels, result.Stages.PackedBytes,
+                    result.Stages.RleBytes, result.Stages.LzwBytes,
+                    result.CompressionRatio);
+            }
 
             using var memStream = new MemoryStream();
             using var writer = new BinaryWriter(memStream);
