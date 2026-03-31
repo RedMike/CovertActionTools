@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace CovertActionTools.Core.Importing.Shared
 {
-    public class SharedImageParser
+    internal class SharedImageParser
     {
         private readonly ILogger<SharedImageParser> _logger;
         private readonly ILzwDecompression _decompression;

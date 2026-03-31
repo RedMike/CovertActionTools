@@ -1,10 +1,10 @@
-namespace CovertActionTools.UnitTests.Core.Helpers;
+namespace CovertActionTools.UnitTests.Core.Compression;
 
 /// <summary>
 /// Base64-encoded compressed data captured from the current (known-correct) LZW implementation.
 /// Used by snapshot tests to detect regressions.
 /// </summary>
-public static class SnapshotData
+public static class LzwSnapshotData
 {
     public const string Compressed_4x4_Uniform =
         "VSAhAA=="

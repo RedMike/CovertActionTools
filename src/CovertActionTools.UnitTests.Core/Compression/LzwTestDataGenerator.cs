@@ -1,8 +1,8 @@
 using System;
 
-namespace CovertActionTools.UnitTests.Core.Helpers;
+namespace CovertActionTools.UnitTests.Core.Compression;
 
-public static class TestDataGenerator
+public static class LzwTestDataGenerator
 {
     public static byte[] GenerateUniformPixels(int width, int height, byte value = 5)
     {
