@@ -6,9 +6,9 @@ namespace CovertActionTools.Core.Compression
         public int OriginalSize { get; }
         public int CompressedSize { get; }
         public double CompressionRatio => OriginalSize > 0 ? (double)CompressedSize / OriginalSize : 0;
-        public CompressionStageMetrics Stages { get; }
+        public CompressionStageMetrics? Stages { get; }
 
-        public CompressionResult(byte[] data, int originalSize, CompressionStageMetrics stages = null)
+        public CompressionResult(byte[] data, int originalSize, CompressionStageMetrics? stages = null)
         {
             Data = data;
             OriginalSize = originalSize;
@@ -38,9 +38,9 @@ namespace CovertActionTools.Core.Compression
         public byte[] Data { get; }
         public int CompressedSize { get; }
         public int DecompressedSize { get; }
-        public DecompressionStageMetrics Stages { get; }
+        public DecompressionStageMetrics? Stages { get; }
 
-        public DecompressionResult(byte[] data, int compressedSize, DecompressionStageMetrics stages = null)
+        public DecompressionResult(byte[] data, int compressedSize, DecompressionStageMetrics? stages = null)
         {
             Data = data;
             CompressedSize = compressedSize;

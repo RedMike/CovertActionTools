@@ -20,40 +20,33 @@ namespace CovertActionTools.Core.Compression
 
         public DecompressionResult Decompress(int width, int height, int maxWordWidth, BinaryReader reader, bool collectMetrics = false)
         {
+            _logger.LogDebug("Starting decompression for {Width}x{Height} image, max word width {MaxWordWidth}",
+                width, height, maxWordWidth);
+
             var pixelCount = width * height;
             var pixels = new byte[pixelCount];
 
-            int compressedSize;
-            DecompressionStageMetrics stages = null;
+            using var countLzw = new CountingStream(reader.BaseStream);
+            using var lzwStream = new LzwDecompressingStream(countLzw, maxWordWidth);
+            using var countRle = new CountingStream(lzwStream);
+            using var rleStream = new RleDecodingStream(countRle);
+            using var countPacked = new CountingStream(rleStream);
+            using var unpackStream = new PixelUnpackingStream(countPacked, width, height);
 
-            if (collectMetrics)
-            {
-                var countLzw = new CountingStream(reader.BaseStream);
-                var lzwStream = new LzwDecompressingStream(countLzw, maxWordWidth);
-                var countRle = new CountingStream(lzwStream);
-                var rleStream = new RleDecodingStream(countRle);
-                var countPacked = new CountingStream(rleStream);
-                var unpackStream = new PixelUnpackingStream(countPacked, width, height);
+            ReadFully(unpackStream, pixels, pixelCount);
 
-                ReadFully(unpackStream, pixels, pixelCount);
-                compressedSize = (int)countLzw.BytesRead;
+            var compressedSize = (int)countLzw.BytesRead;
 
-                stages = new DecompressionStageMetrics(
-                    lzwBytes: (int)countLzw.BytesRead,
+            var stages = collectMetrics
+                ? new DecompressionStageMetrics(
+                    lzwBytes: compressedSize,
                     rleBytes: (int)countRle.BytesRead,
                     packedBytes: (int)countPacked.BytesRead,
-                    rawPixels: pixelCount
-                );
-            }
-            else
-            {
-                var lzwStream = new LzwDecompressingStream(reader.BaseStream, maxWordWidth);
-                var rleStream = new RleDecodingStream(lzwStream);
-                var unpackStream = new PixelUnpackingStream(rleStream, width, height);
+                    rawPixels: pixelCount)
+                : null;
 
-                ReadFully(unpackStream, pixels, pixelCount);
-                compressedSize = (int)reader.BaseStream.Position;
-            }
+            _logger.LogDebug("Decompressed from {CompressedSize} bytes to {PixelCount} pixels",
+                compressedSize, pixelCount);
 
             return new DecompressionResult(pixels, compressedSize, stages);
         }
