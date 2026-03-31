@@ -20,7 +20,7 @@ namespace CovertActionTools.Core.Compression
 
         public CompressionResult Compress(int width, int height, int maxWordWidth, byte[] data, bool collectMetrics = false)
         {
-            _logger.LogInformation("Starting compression from {DataLength} bytes, max word width {MaxWordWidth}",
+            _logger.LogDebug("Starting compression from {DataLength} bytes, max word width {MaxWordWidth}",
                 data.Length, maxWordWidth);
 
             var packedByteCount = CalculatePackedByteCount(width, height);
