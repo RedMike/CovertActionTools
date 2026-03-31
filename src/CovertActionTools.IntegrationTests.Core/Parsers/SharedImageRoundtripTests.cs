@@ -4,6 +4,7 @@ using CovertActionTools.Core.Exporting.Shared;
 using CovertActionTools.Core.Importing.Shared;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging.Abstractions;
+using Xunit;
 
 namespace CovertActionTools.IntegrationTests.Core.Parsers;
 
@@ -22,7 +23,7 @@ public class SharedImageRoundtripTests
         _parser = new SharedImageParser(NullLogger<SharedImageParser>.Instance, decompression);
     }
 
-    // --- Format 0x07 roundtrips ---
+    #region Format 0x07 roundtrips
 
     [Fact]
     public void Roundtrip_Format0x07_4x4_Uniform()
@@ -86,7 +87,9 @@ public class SharedImageRoundtripTests
         Assert.Equal(pixels, model.RawVgaImageData);
     }
 
-    // --- Format 0x0F roundtrips ---
+    #endregion
+
+    #region Format 0x0F roundtrips
 
     [Fact]
     public void Roundtrip_Format0x0F_4x4_IdentityMappings()
@@ -125,6 +128,8 @@ public class SharedImageRoundtripTests
 
         Assert.NotEmpty(model.CgaImageData);
     }
+
+    #endregion
 
     private SharedImageModel ExportThenParse(byte[] pixels, int width, int height,
         int dictionaryWidth = DefaultDictionaryWidth,

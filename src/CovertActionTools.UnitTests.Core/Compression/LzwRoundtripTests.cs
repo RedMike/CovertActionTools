@@ -1,6 +1,7 @@
 using System.IO;
 using CovertActionTools.Core.Compression;
 using Microsoft.Extensions.Logging.Abstractions;
+using Xunit;
 
 namespace CovertActionTools.UnitTests.Core.Compression;
 
@@ -19,7 +20,7 @@ public class LzwRoundtripTests
         return decompression.Decompress(width, height, maxWordWidth, reader).Data;
     }
 
-    // --- Basic roundtrip (varied pixel data) ---
+    #region Basic roundtrip (varied pixel data)
 
     [Fact]
     public void Roundtrip_4x4_VariedPixels()
@@ -61,7 +62,9 @@ public class LzwRoundtripTests
         Assert.Equal(pixels, result);
     }
 
-    // --- Uniform color / RLE run lengths ---
+    #endregion
+
+    #region Uniform color / RLE run lengths
 
     [Fact]
     public void Roundtrip_UniformColor_ShortRun()
@@ -116,7 +119,9 @@ public class LzwRoundtripTests
         Assert.Equal(pixels, result);
     }
 
-    // --- 0x90 escape handling ---
+    #endregion
+
+    #region 0x90 escape handling
 
     [Fact]
     public void Roundtrip_PixelsThatPackTo0x90_Small()
@@ -135,7 +140,9 @@ public class LzwRoundtripTests
         Assert.Equal(pixels, result);
     }
 
-    // --- Dictionary reset ---
+    #endregion
+
+    #region Dictionary reset
 
     [Fact]
     public void Roundtrip_DictionaryReset_MaxWordWidth11()
@@ -153,4 +160,6 @@ public class LzwRoundtripTests
         var result = CompressThenDecompress(pixels, 512, 32, maxWordWidth: 10);
         Assert.Equal(pixels, result);
     }
+
+    #endregion
 }

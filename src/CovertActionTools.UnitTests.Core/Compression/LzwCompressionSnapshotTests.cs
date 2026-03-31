@@ -1,6 +1,7 @@
 using System;
 using CovertActionTools.Core.Compression;
 using Microsoft.Extensions.Logging.Abstractions;
+using Xunit;
 
 namespace CovertActionTools.UnitTests.Core.Compression;
 

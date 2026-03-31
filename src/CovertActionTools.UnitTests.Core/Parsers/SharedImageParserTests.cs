@@ -5,6 +5,7 @@ using CovertActionTools.Core.Compression;
 using CovertActionTools.Core.Importing.Shared;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging.Abstractions;
+using Xunit;
 
 namespace CovertActionTools.UnitTests.Core.Parsers;
 
@@ -19,7 +20,7 @@ public class SharedImageParserTests
         _parser = new SharedImageParser(NullLogger<SharedImageParser>.Instance, _stubDecompression);
     }
 
-    // --- Format 0x07 (no CGA mappings) ---
+    #region Format 0x07 (no CGA mappings)
 
     [Fact]
     public void Parse_Format0x07_SetsWidthAndHeight()
@@ -94,7 +95,9 @@ public class SharedImageParserTests
         Assert.NotEmpty(model.VgaImageData);
     }
 
-    // --- Format 0x0F (with CGA mappings) ---
+    #endregion
+
+    #region Format 0x0F (with CGA mappings)
 
     [Fact]
     public void Parse_Format0x0F_HasCgaColorMappings()
@@ -141,7 +144,9 @@ public class SharedImageParserTests
         Assert.NotEmpty(model.CgaImageData);
     }
 
-    // --- ImageType from key ---
+    #endregion
+
+    #region ImageType from key
 
     [Fact]
     public void Parse_KeyStartingWithEUROPE_SetsEuropeMapType()
@@ -167,7 +172,9 @@ public class SharedImageParserTests
         Assert.Equal(SharedImageModel.ImageType.Unknown, model.Data.Type);
     }
 
-    // --- Edge cases ---
+    #endregion
+
+    #region Edge cases
 
     [Fact]
     public void Parse_MinimumDimensions_1x1()
@@ -210,6 +217,8 @@ public class SharedImageParserTests
         Assert.Equal(8, _stubDecompression.LastHeight);
         Assert.Equal(10, _stubDecompression.LastMaxWordWidth);
     }
+
+    #endregion
 
     private SharedImageModel ParseFromBytes(byte[] data, string key = "test")
     {

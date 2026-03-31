@@ -34,3 +34,5 @@
   - *Snapshot*: capture known-good outputs as base64 constants in a helper class, assert against them for regression detection
 - Both test projects access Core internals via `InternalsVisibleTo` — keep Core .csproj updated when adding new test projects
 - Prefer making classes `internal` unless they are consumed outside Core. Test projects get access via `InternalsVisibleTo`
+- Use `#region Name` / `#endregion` to group related tests — not `// --- Name ---` comments
+- Do not use `<Using>` in .csproj files — add `using` directives explicitly in each source file

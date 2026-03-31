@@ -6,6 +6,7 @@ using CovertActionTools.Core.Exporting.Shared;
 using CovertActionTools.Core.Importing.Shared;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging.Abstractions;
+using Xunit;
 
 namespace CovertActionTools.IntegrationTests.Core.Parsers;
 
@@ -22,7 +23,7 @@ public class SharedImageSnapshotTests
         _parser = new SharedImageParser(NullLogger<SharedImageParser>.Instance, decompression);
     }
 
-    // --- Export snapshot tests (binary format stability) ---
+    #region Export snapshot tests (binary format stability)
 
     [Fact]
     public void ExportSnapshot_4x4_Uniform_Format0x07()
@@ -66,7 +67,9 @@ public class SharedImageSnapshotTests
         Assert.Equal(SharedImageSnapshotData.Exported_512x2_Varied_Format0x07, exported);
     }
 
-    // --- Parse snapshot tests (parsed model properties from known binary) ---
+    #endregion
+
+    #region Parse snapshot tests (parsed model properties from known binary)
 
     [Fact]
     public void ParseSnapshot_512x2_Varied_Format0x07_HasCorrectPixels()
@@ -130,6 +133,8 @@ public class SharedImageSnapshotTests
             Assert.Equal(expected, model.Data.LegacyColorMappings[i]);
         }
     }
+
+    #endregion
 
     private string ExportToBase64(byte[] pixels, int width, int height,
         int dictionaryWidth = 11, Dictionary<byte, byte>? colorMappings = null)
