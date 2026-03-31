@@ -14,11 +14,18 @@ namespace CovertActionTools.UnitTests.Core.Parsers;
 
 public class AnimationImporterTests : IDisposable
 {
+#if DEBUG
     private static readonly JsonSerializerOptions JsonEnumOptions = new JsonSerializerOptions
     {
         WriteIndented = true,
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
     };
+#else
+    private static readonly JsonSerializerOptions JsonEnumOptions = new JsonSerializerOptions
+    {
+        WriteIndented = true
+    };
+#endif
 
     private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions
     {
