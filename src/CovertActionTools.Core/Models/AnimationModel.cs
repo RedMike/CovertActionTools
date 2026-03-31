@@ -6,10 +6,10 @@ using System.Linq;
 namespace CovertActionTools.Core.Models
 {
     /// <summary>
-    /// The format for PAN files is not fully understood, so this model is a best-guess attempt at parsing.
-    /// Some of the information in the file is understood and seems to correlate to behaviour, but even minor
-    /// changes end up breaking the animation loading in-game because of the use of pointers and unknown correlated
-    /// values. Therefore this data is considered read-only until the format is fully understood.
+    /// Represents a PAN file animation, which combines a set of images with a two-level control system:
+    /// a stack-based instruction VM that orchestrates sprites, and per-sprite step sequences that drive movement and drawing.
+    /// The format is now fully understood and supports round-trip parsing and publishing. Some values and instructions
+    /// that have never been used in real game files remain with best-guess interpretations.
     /// </summary>
     public class AnimationModel
     {
