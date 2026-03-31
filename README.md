@@ -84,9 +84,9 @@ a binary patch instead of directly uploading the files** (an internal implementa
 
 There are a number of documentation files available that explain some of the file layouts/game quirks/formats:
 
-* [CRIME File Format](https://github.com/RedMike/CovertActionTools/blob/main/docs/crime-file-format.md)
-* [PAN File Format](https://github.com/RedMike/CovertActionTools/blob/main/docs/pan-file-format.md)
-* [Text-Based File Formats](https://github.com/RedMike/CovertActionTools/blob/main/docs/text-based-file-formats.md) (TEXT.DTA, PLOT.TXT, PROSE.DTA, CLUES.TXT)
+* [CRIME File Format](https://github.com/RedMike/CovertActionTools/blob/develop/docs/crime-file-format.md)
+* [PAN File Format](https://github.com/RedMike/CovertActionTools/blob/develop/docs/pan-file-format.md)
+* [Text-Based File Formats](https://github.com/RedMike/CovertActionTools/blob/develop/docs/text-based-file-formats.md) (TEXT.DTA, PLOT.TXT, PROSE.DTA, CLUES.TXT)
 
 ## AI-Assisted Development
 
