@@ -5,10 +5,24 @@ using System.Linq;
 
 namespace CovertActionTools.Core.Compression.Streams
 {
-    internal class LzwDecompressingStream : ReadOnlyStream
+    internal class LzwDecompressingStream : Stream
     {
         private readonly int _maxWordWidth;
         private readonly BitReader _bitReader;
+
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+        public override void Flush() { }
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
 
         private readonly Dictionary<ushort, List<byte>> _dict = new Dictionary<ushort, List<byte>>();
         private readonly Stack<byte> _stack = new Stack<byte>();
