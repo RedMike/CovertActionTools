@@ -9,8 +9,8 @@ public class LzwCompressionSnapshotTests
 {
     private static byte[] Compress(byte[] pixels, int width, int height, int maxWordWidth = 11)
     {
-        var compressor = new LzwCompression(NullLogger.Instance, maxWordWidth, pixels);
-        return compressor.Compress(width, height);
+        var compression = new LzwCompression(NullLogger<LzwCompression>.Instance);
+        return compression.Compress(width, height, maxWordWidth, pixels).Data;
     }
 
     [Fact]

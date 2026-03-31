@@ -11,15 +11,13 @@ public class LzwRoundtripTests
 
     private static byte[] CompressThenDecompress(byte[] pixels, int width, int height, int maxWordWidth = DefaultMaxWordWidth)
     {
-        var logger = NullLogger.Instance;
+        var compression = new LzwCompression(NullLogger<LzwCompression>.Instance);
+        var compressResult = compression.Compress(width, height, maxWordWidth, pixels);
 
-        var compressor = new LzwCompression(logger, maxWordWidth, pixels);
-        var compressed = compressor.Compress(width, height);
-
-        using var ms = new MemoryStream(compressed);
+        using var ms = new MemoryStream(compressResult.Data);
         using var reader = new BinaryReader(ms);
         var decompression = new LzwDecompression(NullLogger<LzwDecompression>.Instance);
-        return decompression.Decompress(width, height, maxWordWidth, reader);
+        return decompression.Decompress(width, height, maxWordWidth, reader).Data;
     }
 
     // --- Basic roundtrip (varied pixel data) ---

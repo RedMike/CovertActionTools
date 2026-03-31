@@ -50,7 +50,8 @@ namespace CovertActionTools.Core.Importing.Shared
             var lzwMaxWordWidth = reader.ReadByte();
             
             //data compressed in LZW+RLE
-            var imageUncompressedData = _decompression.Decompress(width, height, lzwMaxWordWidth, reader);
+            var decompressionResult = _decompression.Decompress(width, height, lzwMaxWordWidth, reader);
+            var imageUncompressedData = decompressionResult.Data;
 
             _logger.LogDebug($"Read image '{key}': {width}x{height}, Legacy Color Mapping = {legacyColorMappings != null}");
             byte[] cgaImageData = Array.Empty<byte>();

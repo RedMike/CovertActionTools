@@ -14,7 +14,7 @@ public class LzwDecompressionSnapshotTests
         using var ms = new MemoryStream(compressed);
         using var reader = new BinaryReader(ms);
         var decompression = new LzwDecompression(NullLogger<LzwDecompression>.Instance);
-        return decompression.Decompress(width, height, maxWordWidth, reader);
+        return decompression.Decompress(width, height, maxWordWidth, reader).Data;
     }
 
     [Fact]

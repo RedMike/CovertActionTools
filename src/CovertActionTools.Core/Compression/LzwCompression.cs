@@ -4,34 +4,62 @@ using Microsoft.Extensions.Logging;
 
 namespace CovertActionTools.Core.Compression
 {
-    public class LzwCompression
+    public interface ILzwCompression
+    {
+        CompressionResult Compress(int width, int height, int maxWordWidth, byte[] data, bool collectMetrics = false);
+    }
+
+    internal class LzwCompression : ILzwCompression
     {
         private readonly ILogger _logger;
-        private readonly int _maxWordWidth;
-        private readonly byte[] _data;
 
-        public LzwCompression(ILogger logger, int maxWordWidth, byte[] data)
+        public LzwCompression(ILogger<LzwCompression> logger)
         {
             _logger = logger;
-            _maxWordWidth = maxWordWidth;
-            _data = data;
-            _logger.LogInformation($"Starting compression from {data.Length} bytes, max word width {maxWordWidth}");
         }
 
-        public byte[] Compress(int width, int height)
+        public CompressionResult Compress(int width, int height, int maxWordWidth, byte[] data, bool collectMetrics = false)
         {
-            // Stream pipeline: raw pixels → pack → RLE encode → LZW compress
-            using var pixelStream = new MemoryStream(_data);
+            _logger.LogInformation($"Starting compression from {data.Length} bytes, max word width {maxWordWidth}");
+
+            var packedByteCount = CalculatePackedByteCount(width, height);
+
+            using var pixelStream = new MemoryStream(data);
             using var packStream = new PixelPackingStream(pixelStream, width, height);
-            using var rleStream = new RleEncodingStream(packStream, CalculatePackedByteCount(width, height));
-            using var lzwStream = new LzwCompressingStream(rleStream, _maxWordWidth);
 
-            using var outputStream = new MemoryStream();
-            lzwStream.CopyTo(outputStream);
+            byte[] compressedBytes;
+            CompressionStageMetrics stages = null;
 
-            var compressedBytes = outputStream.ToArray();
-            _logger.LogDebug($"Compressed from {_data.Length} bytes to {compressedBytes.Length}");
-            return compressedBytes;
+            if (collectMetrics)
+            {
+                var countPacked = new CountingStream(packStream);
+                var rleStream = new RleEncodingStream(countPacked, packedByteCount);
+                var countRle = new CountingStream(rleStream);
+                var lzwStream = new LzwCompressingStream(countRle, maxWordWidth);
+
+                using var outputStream = new MemoryStream();
+                lzwStream.CopyTo(outputStream);
+                compressedBytes = outputStream.ToArray();
+
+                stages = new CompressionStageMetrics(
+                    rawPixels: data.Length,
+                    packedBytes: (int)countPacked.BytesRead,
+                    rleBytes: (int)countRle.BytesRead,
+                    lzwBytes: compressedBytes.Length
+                );
+            }
+            else
+            {
+                var rleStream = new RleEncodingStream(packStream, packedByteCount);
+                var lzwStream = new LzwCompressingStream(rleStream, maxWordWidth);
+
+                using var outputStream = new MemoryStream();
+                lzwStream.CopyTo(outputStream);
+                compressedBytes = outputStream.ToArray();
+            }
+
+            _logger.LogDebug($"Compressed from {data.Length} bytes to {compressedBytes.Length}");
+            return new CompressionResult(compressedBytes, data.Length, stages);
         }
 
         private static int CalculatePackedByteCount(int width, int height)

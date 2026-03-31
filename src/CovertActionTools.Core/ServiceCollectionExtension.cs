@@ -18,6 +18,7 @@ namespace CovertActionTools.Core
     {
         public static void AddCovertActionsTools(this IServiceCollection services)
         {
+            services.AddSingleton<ILzwCompression, LzwCompression>();
             services.AddSingleton<ILzwDecompression, LzwDecompression>();
             
             services.AddSingleton<SharedImageParser>();
