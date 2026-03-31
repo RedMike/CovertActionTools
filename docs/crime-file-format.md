@@ -126,6 +126,116 @@ instead of running an event they can go into hiding
 * If the participant has the 'Can go into hiding at will' flag set, then they continue being eligible to run events
 and can 'come out of hiding' to run events
 
+## Binary file format
 
+Crime files are named `CRIME{id}.DTA` where `{id}` is the numeric crime identifier. The file contains a
+header, a list of participants, a list of events (terminated by a marker), and exactly 4 object slots.
 
+### Header
+
+| Offset | Size | Description |
+|--------|------|-------------|
+| 0x00 | 2 | Participant count (u16) |
+| 0x02 | 2 | Event count + 1 (u16). The stored value includes the end-of-events marker entry. |
+
+### Participants
+
+Each participant is 46 bytes, repeated for each entry:
+
+| Offset | Size | Description |
+|--------|------|-------------|
+| 0x00 | 2 | Marker: always 0xFFFF |
+| 0x02 | 2 | Exposure (u16). Relative value determining how likely clues are to appear for this participant. |
+| 0x04 | 32 | Role (null-terminated string, padded to 32 bytes). Arbitrary display text. |
+| 0x24 | 2 | Unknown1 (u16). Likely a legacy field; always 1 in crimes after the 3rd. Early crimes have values like 3, 9, 13, or 65535. |
+| 0x26 | 1 | Location/organisation mapping flags (u8). A bitmask controlling how participants are grouped by location and organisation. Lowest bit (0x01) marks inside contacts (allied organisations only). Always 0 for the mastermind. **Note: the exact mapping of bit combinations to grouping behaviour is not fully understood.** |
+| 0x27 | 1 | Participant type (u8). A bitmask: bit 0 (0x01) = mastermind, bit 1 (0x02) = force female ("widow"), bit 6 (0x40) = can come out of hiding ("assassin"). |
+| 0x28 | 2 | Unknown3 (u16). Always 0 in all observed game files. |
+| 0x2A | 1 | Clue type (u8). Determines the exclusive type of clue this participant can receive. See clue type values below. |
+| 0x2B | 2 | Rank (u16). Used only for scoring and display. |
+| 0x2D | 2 | Unknown4 (u16). Likely a legacy field; always 0x0600 in crimes after the 3rd. Early crimes have values from 0x0000 to 0x0700. |
+| 0x2F | 1 | Unknown5 (u8). Always 0 in all observed game files. |
+
+### Clue types
+
+| Value | Type |
+|-------|------|
+| 0 | Vehicle |
+| 1 | Weapon |
+| 2 | Address |
+| 3 | Airline Ticket |
+| 4 | Telegram |
+| 5 | Money (Hundreds) |
+| 6 | Money (Thousands) |
+| 7 | Identity Document |
+
+### Events
+
+Each event is 44 bytes, repeated for each entry. The last entry in the file is an end-of-events marker
+(source participant ID = 0xFF, remaining 43 bytes = 0x00) which is counted in the header's event count.
+
+In the binary format, paired events (messages, packages, meetings) are stored as two separate entries
+that share the same message ID: one for the sender and one for the receiver. The event type byte
+distinguishes them.
+
+| Offset | Size | Description |
+|--------|------|-------------|
+| 0x00 | 2 | Source participant ID (u16). The participant this event entry is primarily about. 0xFF marks the end-of-events terminator. |
+| 0x02 | 2 | Padding: always 0x0000 |
+| 0x04 | 2 | Message ID (u16). Reference into text data, prefixed by the crime ID. For paired events, both entries share this value. |
+| 0x06 | 32 | Description (null-terminated string, padded to 32 bytes). Display text for this event entry. |
+| 0x26 | 1 | Target participant ID (u8). For paired events, the other participant involved. 0 for individual events. |
+| 0x27 | 1 | Event type (u8). A bitmask with the following bits: |
+
+**Event type bitmask:**
+
+| Bit | Value | Meaning |
+|-----|-------|---------|
+| 0 | 0x01 | Is receive side (set on the receiving entry of a paired event) |
+| 1 | 0x02 | Is message (wire-tappable, produces message traffic) |
+| 2 | 0x04 | Is package (item transfer) |
+| 3 | 0x08 | Is meeting (physical meeting, produces airport surveillance, buggable) |
+| 4 | 0x10 | Unknown1. Set on some receive-side message events. **Note: exact effect is unclear.** |
+| 5 | 0x20 | Is bulletin (shown directly to the player; if score is set, counts as a "crime") |
+
+When bits 1-3 are all clear, the event is an individual event (single participant, no pairing).
+Paired events always have exactly one of bits 1-3 set, and appear as two entries: one with bit 0
+clear (send side) and one with bit 0 set (receive side).
+
+| Offset | Size | Description |
+|--------|------|-------------|
+| 0x28 | 1 | Received objects bitmask (u8). Each bit corresponds to an object ID (0-7). Objects received by the source participant as a result of this event. For paired events, acts as a requirement that the secondary participant owns these objects (unless the objects don't exist yet, in which case they are created). |
+| 0x29 | 1 | Destroyed objects bitmask (u8). Each bit corresponds to an object ID (0-7). Objects destroyed as a result of this event. Always requires the source participant to currently own them. |
+| 0x2A | 2 | Score (u16). Points lost if the event runs. Only meaningful on bulletin events. |
+
+### Event end marker
+
+After the last real event entry, there is a 44-byte terminator:
+
+| Offset | Size | Description |
+|--------|------|-------------|
+| 0x00 | 1 | 0xFF (marks end of events) |
+| 0x01 | 43 | All zeros |
+
+### Objects
+
+Exactly 4 object slots follow, each 18 bytes. Unused slots have a null name and picture ID of 0xFF.
+
+| Offset | Size | Description |
+|--------|------|-------------|
+| 0x00 | 16 | Object name (null-terminated string, padded to 16 bytes). Empty/null for unused slots. |
+| 0x10 | 1 | Picture ID (u8). Index into the ICONS sprite image. 0xFF for unused/blank slots. |
+| 0x11 | 1 | Marker: always 0xFF |
+
+### Notes on paired event encoding
+
+The binary format stores paired events as two separate entries that are matched during import by their
+shared message ID and complementary send/receive bits. Some known quirks in the original game data:
+
+* Some paired events have duplicate receive-side entries instead of a proper send/receive pair. The
+  parser handles this by falling back to matching on participant IDs.
+* Item ownership between paired event entries is not always consistent -- items can appear to
+  "teleport" between participants. This is a known issue in the original data, not a parsing error.
+* Some events described in the game data files have requirements that can never be fulfilled, meaning
+  they will never actually run. These are likely bugs in the original data.
 
