@@ -1,0 +1,45 @@
+name: PR Check
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    name: Build & Test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build
+        run: dotnet build -c Release
+        working-directory: ./src
+
+      - name: Test
+        id: test
+        continue-on-error: true
+        run: |
+          dotnet test -c Release --no-build \
+            --logger "trx;LogFileName=results.trx" \
+            --results-directory ../test-results
+        working-directory: ./src
+
+      - name: Process Test Results
+        if: always() && steps.test.outcome != 'skipped'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          TEST_OUTCOME: ${{ steps.test.outcome }}
+        run: python3 .github/scripts/process-test-results.py
+
+      - name: Fail if tests failed
+        if: steps.test.outcome == 'failure'
+        run: exit 1

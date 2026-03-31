@@ -7,9 +7,15 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="CovertActionTools.UnitTests.Core" />
+        <InternalsVisibleTo Include="CovertActionTools.IntegrationTests.Core" />
+    </ItemGroup>
+
+    <ItemGroup>
       <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.3" />
       <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.3" />
       <PackageReference Include="SkiaSharp" Version="3.116.1" />
+      <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.116.1" />
       <PackageReference Include="System.Text.Json" Version="9.0.3" />
     </ItemGroup>
 

@@ -53,6 +53,11 @@ and `File` > `Publish Package` to export any changed files to a new folder for d
 Important to note: published packages will only contain files that have been changed in the package, you can see
 this list by clicking the top-level element in Package Explorer.
 
+## Branches
+
+- `main` - latest released version
+- `develop` - next version in progress; feature branches merge here
+
 ## Building/Downloading
 
 To build the project yourself, download the project and run `dotnet build`, or open the `.sln` file with any 
@@ -82,6 +87,11 @@ There are a number of documentation files available that explain some of the fil
 * [CRIME File Format](https://github.com/RedMike/CovertActionTools/blob/main/docs/crime-file-format.md)
 * [PAN File Format](https://github.com/RedMike/CovertActionTools/blob/main/docs/pan-file-format.md)
 * [Text-Based File Formats](https://github.com/RedMike/CovertActionTools/blob/main/docs/text-based-file-formats.md) (TEXT.DTA, PLOT.TXT, PROSE.DTA, CLUES.TXT)
+
+## AI-Assisted Development
+
+AI coding tools such as Claude Code and GitHub Copilot may be used to develop, refactor, and improve some of
+the functionality in this project. The original implementation and reverse engineering work was done manually.
 
 ## Acknowledgements
 
