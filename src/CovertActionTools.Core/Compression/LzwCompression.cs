@@ -25,12 +25,21 @@ namespace CovertActionTools.Core.Compression
 
             var packedByteCount = CalculatePackedByteCount(width, height);
 
+            CountingStream? countPacked = null;
+            CountingStream? countRle = null;
+
             using var pixelStream = new MemoryStream(data);
             using var packStream = new PixelPackingStream(pixelStream, width, height);
-            using var countPacked = new CountingStream(packStream);
-            using var rleStream = new RleEncodingStream(countPacked, packedByteCount);
-            using var countRle = new CountingStream(rleStream);
-            using var lzwStream = new LzwCompressingStream(countRle, maxWordWidth);
+
+            Stream afterPack = packStream;
+            if (collectMetrics) { countPacked = new CountingStream(afterPack); afterPack = countPacked; }
+
+            using var rleStream = new RleEncodingStream(afterPack, packedByteCount);
+
+            Stream afterRle = rleStream;
+            if (collectMetrics) { countRle = new CountingStream(afterRle); afterRle = countRle; }
+
+            using var lzwStream = new LzwCompressingStream(afterRle, maxWordWidth);
 
             using var outputStream = new MemoryStream();
             lzwStream.CopyTo(outputStream);
@@ -39,8 +48,8 @@ namespace CovertActionTools.Core.Compression
             var stages = collectMetrics
                 ? new CompressionStageMetrics(
                     rawPixels: data.Length,
-                    packedBytes: (int)countPacked.BytesRead,
-                    rleBytes: (int)countRle.BytesRead,
+                    packedBytes: (int)countPacked!.BytesRead,
+                    rleBytes: (int)countRle!.BytesRead,
                     lzwBytes: compressedBytes.Length)
                 : null;
 

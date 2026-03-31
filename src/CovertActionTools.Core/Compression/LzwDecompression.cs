@@ -26,22 +26,36 @@ namespace CovertActionTools.Core.Compression
             var pixelCount = width * height;
             var pixels = new byte[pixelCount];
 
-            using var countLzw = new CountingStream(reader.BaseStream);
-            using var lzwStream = new LzwDecompressingStream(countLzw, maxWordWidth);
-            using var countRle = new CountingStream(lzwStream);
-            using var rleStream = new RleDecodingStream(countRle);
-            using var countPacked = new CountingStream(rleStream);
-            using var unpackStream = new PixelUnpackingStream(countPacked, width, height);
+            CountingStream? countLzw = null;
+            CountingStream? countRle = null;
+            CountingStream? countPacked = null;
+
+            Stream lzwInput = reader.BaseStream;
+            if (collectMetrics) { countLzw = new CountingStream(lzwInput); lzwInput = countLzw; }
+
+            using var lzwStream = new LzwDecompressingStream(lzwInput, maxWordWidth);
+
+            Stream rleInput = lzwStream;
+            if (collectMetrics) { countRle = new CountingStream(rleInput); rleInput = countRle; }
+
+            using var rleStream = new RleDecodingStream(rleInput);
+
+            Stream unpackInput = rleStream;
+            if (collectMetrics) { countPacked = new CountingStream(unpackInput); unpackInput = countPacked; }
+
+            using var unpackStream = new PixelUnpackingStream(unpackInput, width, height);
 
             ReadFully(unpackStream, pixels, pixelCount);
 
-            var compressedSize = (int)countLzw.BytesRead;
+            var compressedSize = countLzw != null
+                ? (int)countLzw.BytesRead
+                : (int)reader.BaseStream.Position;
 
             var stages = collectMetrics
                 ? new DecompressionStageMetrics(
-                    lzwBytes: compressedSize,
-                    rleBytes: (int)countRle.BytesRead,
-                    packedBytes: (int)countPacked.BytesRead,
+                    lzwBytes: (int)countLzw!.BytesRead,
+                    rleBytes: (int)countRle!.BytesRead,
+                    packedBytes: (int)countPacked!.BytesRead,
                     rawPixels: pixelCount)
                 : null;
 
