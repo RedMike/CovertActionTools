@@ -3,12 +3,16 @@
 - Ask clarifying questions BEFORE making a plan
 - ALWAYS make a plan before starting work, and wait for explicit user confirmation
 
+# Branches
+- `main` — latest released version
+- `develop` — next version in progress; feature branches merge here
+
 # Build
 - Solution file: `src/CovertActionTools.sln`
 - Build: `dotnet build` or `dotnet publish` from `src/`
 - Core targets netstandard2.0 — do not use C# features unavailable in netstandard2.0 when editing Core
 - App targets net8.0
-- Test projects are TODO. Do not attempt to find or run tests unless explicitly asked
+- Tests: `dotnet test` from `src/` runs `CovertActionTools.UnitTests.Core` (xUnit, targets net8.0)
 
 # Architecture
 - Two projects: `CovertActionTools.Core` (library, all data/parsing logic, no GUI dependency) and `CovertActionTools.App` (ImGui + Veldrid desktop GUI, depends on Core)
