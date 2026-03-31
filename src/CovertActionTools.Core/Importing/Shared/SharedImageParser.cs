@@ -60,7 +60,7 @@ namespace CovertActionTools.Core.Importing.Shared
             if (decompressionResult.Stages != null)
             {
                 _logger.LogDebug(
-                    "Decompression stages: {LzwBytes} LZW → {RleBytes} RLE → {PackedBytes} packed → {RawPixels} raw",
+                    "Decompression stages: {LzwBytes} LZW -> {RleBytes} RLE -> {PackedBytes} packed -> {RawPixels} raw",
                     decompressionResult.Stages.LzwBytes, decompressionResult.Stages.RleBytes,
                     decompressionResult.Stages.PackedBytes, decompressionResult.Stages.RawPixels);
             }

@@ -50,7 +50,7 @@ namespace CovertActionTools.Core.Exporting.Shared
             if (result.Stages != null)
             {
                 _logger.LogDebug(
-                    "Compression stages: {RawPixels} raw → {PackedBytes} packed → {RleBytes} RLE → {LzwBytes} LZW ({Ratio:P1})",
+                    "Compression stages: {RawPixels} raw -> {PackedBytes} packed -> {RleBytes} RLE -> {LzwBytes} LZW ({Ratio:P1})",
                     result.Stages.RawPixels, result.Stages.PackedBytes,
                     result.Stages.RleBytes, result.Stages.LzwBytes,
                     result.CompressionRatio);
