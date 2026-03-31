@@ -20,38 +20,24 @@ namespace CovertActionTools.Core.Compression
 
         public byte[] Decompress(int width, int height, int maxWordWidth, BinaryReader reader)
         {
-            // Stream pipeline: compressed bytes → LZW decompress → RLE decode
+            // Stream pipeline: compressed bytes → LZW decompress → RLE decode → unpack pixels
             using var lzwStream = new LzwDecompressingStream(reader.BaseStream, maxWordWidth);
             using var rleStream = new RleDecodingStream(lzwStream);
+            using var unpackStream = new PixelUnpackingStream(rleStream, width, height);
 
-            // Read exactly the number of packed bytes we expect
-            var packedByteCount = CalculatePackedByteCount(width, height);
-            var packedBytes = new byte[packedByteCount];
+            // Read all decompressed pixels
+            var pixelCount = width * height;
+            var pixels = new byte[pixelCount];
             var totalRead = 0;
-            while (totalRead < packedByteCount)
+            while (totalRead < pixelCount)
             {
-                var read = rleStream.Read(packedBytes, totalRead, packedByteCount - totalRead);
+                var read = unpackStream.Read(pixels, totalRead, pixelCount - totalRead);
                 if (read == 0)
                     break;
                 totalRead += read;
             }
 
-            // Unpack pixels: each packed byte → two 4-bit pixels
-            return PixelPackingUtility.UnpackPixels(width, height, packedBytes);
-        }
-
-        private static int CalculatePackedByteCount(int width, int height)
-        {
-            var total = 0;
-            for (var y = 0; y < height; y++)
-            {
-                var stride = width;
-                if (y < height - 1 && width % 2 == 1)
-                    stride = width + 1;
-                // Each packed byte holds 2 pixel positions; stride is always even here
-                total += (stride + 1) / 2;
-            }
-            return total;
+            return pixels;
         }
     }
 }

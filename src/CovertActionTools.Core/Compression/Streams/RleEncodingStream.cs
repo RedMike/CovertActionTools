@@ -42,6 +42,11 @@ namespace CovertActionTools.Core.Compression.Streams
 
         public override int Read(byte[] buffer, int offset, int count)
         {
+            if (buffer == null) throw new ArgumentNullException(nameof(buffer));
+            if (offset < 0) throw new ArgumentOutOfRangeException(nameof(offset));
+            if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
+            if (offset + count > buffer.Length) throw new ArgumentException("offset + count exceeds buffer length");
+
             var bytesWritten = 0;
 
             while (bytesWritten < count)

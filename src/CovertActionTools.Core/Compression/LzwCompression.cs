@@ -20,12 +20,10 @@ namespace CovertActionTools.Core.Compression
 
         public byte[] Compress(int width, int height)
         {
-            // Pack every two pixels into a single byte
-            var packedBytes = PixelPackingUtility.PackPixels(width, height, _data);
-
-            // Stream pipeline: packed pixels → RLE encode → LZW compress
-            using var packedStream = new MemoryStream(packedBytes);
-            using var rleStream = new RleEncodingStream(packedStream, packedBytes.Length);
+            // Stream pipeline: raw pixels → pack → RLE encode → LZW compress
+            using var pixelStream = new MemoryStream(_data);
+            using var packStream = new PixelPackingStream(pixelStream, width, height);
+            using var rleStream = new RleEncodingStream(packStream, CalculatePackedByteCount(width, height));
             using var lzwStream = new LzwCompressingStream(rleStream, _maxWordWidth);
 
             using var outputStream = new MemoryStream();
@@ -34,6 +32,19 @@ namespace CovertActionTools.Core.Compression
             var compressedBytes = outputStream.ToArray();
             _logger.LogDebug($"Compressed from {_data.Length} bytes to {compressedBytes.Length}");
             return compressedBytes;
+        }
+
+        private static int CalculatePackedByteCount(int width, int height)
+        {
+            var total = 0;
+            for (var y = 0; y < height; y++)
+            {
+                var stride = width;
+                if (y < height - 1 && width % 2 == 1)
+                    stride = width + 1;
+                total += (stride + 1) / 2;
+            }
+            return total;
         }
     }
 }
