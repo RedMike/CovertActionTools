@@ -28,6 +28,8 @@
 # Testing Principles
 - Organise tests by domain area in folders (e.g. `Compression/`, `Parsers/`), with each area having its own test data generator helper
 - Each test data generator should be named for its area (e.g. `LzwTestDataGenerator`, `SharedImageTestDataGenerator`) — no generic `TestDataGenerator`
+- Test data generators, snapshot data, and snapshot generators live in a `Data/` subfolder within each area (e.g. `Parsers/Data/`, `Compression/Data/`)
+- Test stubs and mocks live in a `Stubs/` subfolder within each area (e.g. `Parsers/Stubs/`)
 - **Unit tests** (`UnitTests.Core`): mock dependencies (e.g. `ILzwDecompression`), use hand-crafted byte arrays for inputs, test the class in isolation
 - **Integration tests** (`IntegrationTests.Core`): use real dependencies, no mocks. Two styles:
   - *Roundtrip*: use the Exporter to generate binary data, then parse it back with the Parser and verify the output matches the original input

@@ -8,6 +8,9 @@ using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
+using CovertActionTools.UnitTests.Core.Parsers.Data;
+using CovertActionTools.UnitTests.Core.Parsers.Stubs;
+
 namespace CovertActionTools.UnitTests.Core.Parsers;
 
 public class FontsExporterTests : IDisposable

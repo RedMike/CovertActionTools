@@ -5,6 +5,8 @@ using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
+using CovertActionTools.UnitTests.Core.Parsers.Data;
+
 namespace CovertActionTools.UnitTests.Core.Parsers;
 
 public class LegacyWorldParserTests : IDisposable
