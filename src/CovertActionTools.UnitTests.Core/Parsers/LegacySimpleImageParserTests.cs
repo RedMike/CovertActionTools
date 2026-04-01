@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using CovertActionTools.Core.Importing.Parsers;
 using CovertActionTools.Core.Importing.Shared;
@@ -21,7 +22,15 @@ public class LegacySimpleImageParserTests : IDisposable
     {
         _stubDecompression = new StubLzwDecompression();
         var imageParser = new SharedImageParser(NullLogger<SharedImageParser>.Instance, _stubDecompression);
-        _parser = new LegacySimpleImageParser(NullLogger<LegacySimpleImageParser>.Instance, imageParser);
+        var stubContainer = new StubLegacySpriteSheetContainer();
+        stubContainer.Set("CAMERA", new SimpleImageModel.SpriteSheetData()
+        {
+            Sprites = new Dictionary<string, SimpleImageModel.Sprite>()
+            {
+                { "screen", new SimpleImageModel.Sprite() { X = 0, Y = 0, Width = 146, Height = 101 } },
+            }
+        });
+        _parser = new LegacySimpleImageParser(NullLogger<LegacySimpleImageParser>.Instance, imageParser, stubContainer);
         _tempDir = Path.Combine(Path.GetTempPath(), $"LegacySimpleImageParserTests_{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempDir);
     }

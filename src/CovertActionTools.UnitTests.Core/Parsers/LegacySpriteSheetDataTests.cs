@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using CovertActionTools.Core.Importing.Parsers;
+using CovertActionTools.Core.Importing.Parsers.SpriteSheets;
 using CovertActionTools.Core.Importing.Shared;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -23,7 +25,12 @@ public class LegacySpriteSheetDataTests : IDisposable
     {
         _stubDecompression = new StubLzwDecompression();
         var imageParser = new SharedImageParser(NullLogger<SharedImageParser>.Instance, _stubDecompression);
-        _parser = new LegacySimpleImageParser(NullLogger<LegacySimpleImageParser>.Instance, imageParser);
+        var spriteSheetDataProviders = typeof(BaseLegacySpriteSheetData).Assembly
+            .GetTypes()
+            .Where(t => !t.IsAbstract && t.IsSubclassOf(typeof(BaseLegacySpriteSheetData)))
+            .Select(t => (BaseLegacySpriteSheetData)Activator.CreateInstance(t));
+        var spriteSheetContainer = new LegacySpriteSheetContainer(spriteSheetDataProviders);
+        _parser = new LegacySimpleImageParser(NullLogger<LegacySimpleImageParser>.Instance, imageParser, spriteSheetContainer);
         _tempDir = Path.Combine(Path.GetTempPath(), $"LegacySpriteSheetDataTests_{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempDir);
     }

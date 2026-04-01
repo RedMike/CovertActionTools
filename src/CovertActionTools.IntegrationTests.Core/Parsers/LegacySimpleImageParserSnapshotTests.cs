@@ -1,7 +1,9 @@
 using System;
 using System.IO;
+using System.Linq;
 using CovertActionTools.Core.Compression;
 using CovertActionTools.Core.Importing.Parsers;
+using CovertActionTools.Core.Importing.Parsers.SpriteSheets;
 using CovertActionTools.Core.Importing.Shared;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -20,7 +22,12 @@ public class LegacySimpleImageParserSnapshotTests : IDisposable
     {
         var decompression = new LzwDecompression(NullLogger<LzwDecompression>.Instance);
         var imageParser = new SharedImageParser(NullLogger<SharedImageParser>.Instance, decompression);
-        _parser = new LegacySimpleImageParser(NullLogger<LegacySimpleImageParser>.Instance, imageParser);
+        var spriteSheetDataProviders = typeof(BaseLegacySpriteSheetData).Assembly
+            .GetTypes()
+            .Where(t => !t.IsAbstract && t.IsSubclassOf(typeof(BaseLegacySpriteSheetData)))
+            .Select(t => (BaseLegacySpriteSheetData)Activator.CreateInstance(t));
+        var spriteSheetContainer = new LegacySpriteSheetContainer(spriteSheetDataProviders);
+        _parser = new LegacySimpleImageParser(NullLogger<LegacySimpleImageParser>.Instance, imageParser, spriteSheetContainer);
         _tempDir = Path.Combine(Path.GetTempPath(), $"LegacySimpleImageSnapshotTests_{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempDir);
     }
