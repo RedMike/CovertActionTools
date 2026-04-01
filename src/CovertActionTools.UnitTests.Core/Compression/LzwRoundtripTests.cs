@@ -3,6 +3,8 @@ using CovertActionTools.Core.Compression;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
+using CovertActionTools.UnitTests.Core.Compression.Data;
+
 namespace CovertActionTools.UnitTests.Core.Compression;
 
 public class LzwRoundtripTests

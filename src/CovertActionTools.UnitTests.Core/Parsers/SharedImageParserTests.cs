@@ -7,6 +7,9 @@ using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
+using CovertActionTools.UnitTests.Core.Parsers.Data;
+using CovertActionTools.UnitTests.Core.Parsers.Stubs;
+
 namespace CovertActionTools.UnitTests.Core.Parsers;
 
 public class SharedImageParserTests
@@ -225,28 +228,5 @@ public class SharedImageParserTests
         using var ms = new MemoryStream(data);
         using var reader = new BinaryReader(ms);
         return _parser.Parse(key, reader);
-    }
-
-    private class StubLzwDecompression : ILzwDecompression
-    {
-        private byte[] _result = Array.Empty<byte>();
-
-        public int LastWidth { get; private set; }
-        public int LastHeight { get; private set; }
-        public int LastMaxWordWidth { get; private set; }
-
-        public void SetResult(byte[] data)
-        {
-            _result = data;
-        }
-
-        public DecompressionResult Decompress(int width, int height, int maxWordWidth, BinaryReader reader,
-            bool collectMetrics = false)
-        {
-            LastWidth = width;
-            LastHeight = height;
-            LastMaxWordWidth = maxWordWidth;
-            return new DecompressionResult(_result, 0);
-        }
     }
 }

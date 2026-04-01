@@ -136,7 +136,7 @@ namespace CovertActionTools.Core.Importing.Parsers
                         },
                         { "bugs", new SimpleImageModel.Sprite()
                             {
-                                X = 291, Y = 2,
+                                X = 291, Y = 4,
                                 Width = 16, Height = 33
                             }
                         },

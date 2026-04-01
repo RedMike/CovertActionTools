@@ -6,6 +6,8 @@ using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
+using CovertActionTools.IntegrationTests.Core.Parsers.Data;
+
 namespace CovertActionTools.IntegrationTests.Core.Parsers;
 
 /// <summary>
