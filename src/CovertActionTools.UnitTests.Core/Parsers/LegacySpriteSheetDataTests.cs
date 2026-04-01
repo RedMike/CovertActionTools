@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using CovertActionTools.Core.Compression;
 using CovertActionTools.Core.Importing.Parsers;
 using CovertActionTools.Core.Importing.Shared;
 using CovertActionTools.Core.Models;
@@ -10,6 +9,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 using CovertActionTools.UnitTests.Core.Parsers.Data;
+using CovertActionTools.UnitTests.Core.Parsers.Stubs;
 
 namespace CovertActionTools.UnitTests.Core.Parsers;
 
@@ -90,20 +90,4 @@ public class LegacySpriteSheetDataTests : IDisposable
     }
 
     #endregion
-
-    private class StubLzwDecompression : ILzwDecompression
-    {
-        private byte[] _result = Array.Empty<byte>();
-
-        public void SetResult(byte[] data)
-        {
-            _result = data;
-        }
-
-        public DecompressionResult Decompress(int width, int height, int maxWordWidth, BinaryReader reader,
-            bool collectMetrics = false)
-        {
-            return new DecompressionResult(_result, 0);
-        }
-    }
 }
