@@ -27,7 +27,7 @@ public class LegacySimpleImageParserSnapshotTests : IDisposable
             new LegacyEquip1SpriteSheetData(),
             new LegacyEquip2SpriteSheetData(),
             new LegacyFacesSpriteSheetData(),
-            new LegacyGuys3SpriteSheetData(),
+            new LegacyMapTilesSpriteSheetData(),
             new LegacySpritesSpriteSheetData(),
         });
         _parser = new LegacySimpleImageParser(NullLogger<LegacySimpleImageParser>.Instance, imageParser, spriteSheetContainer);

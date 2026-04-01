@@ -3,7 +3,7 @@ using CovertActionTools.Core.Models;
 
 namespace CovertActionTools.Core.Importing.Parsers.SpriteSheets
 {
-    internal class LegacyGuys3SpriteSheetData : BaseLegacySpriteSheetData
+    internal class LegacyMapTilesSpriteSheetData : BaseLegacySpriteSheetData
     {
         public override string[] Keys => new[] { "GUYS3" };
 
