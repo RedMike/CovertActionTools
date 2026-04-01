@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using CovertActionTools.Core.Compression;
 using CovertActionTools.Core.Exporting;
@@ -8,6 +9,7 @@ using CovertActionTools.Core.Exporting.Shared;
 using CovertActionTools.Core.Importing;
 using CovertActionTools.Core.Importing.Importers;
 using CovertActionTools.Core.Importing.Parsers;
+using CovertActionTools.Core.Importing.Parsers.SpriteSheets;
 using CovertActionTools.Core.Importing.Shared;
 using CovertActionTools.Core.Processors;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +23,15 @@ namespace CovertActionTools.Core
             services.AddSingleton<ILzwCompression, LzwCompression>();
             services.AddSingleton<ILzwDecompression, LzwDecompression>();
             
+            var spriteSheetDataTypes = typeof(ServiceCollectionExtension).Assembly
+                .GetTypes()
+                .Where(t => !t.IsAbstract && t.IsSubclassOf(typeof(BaseLegacySpriteSheetData)));
+            foreach (var type in spriteSheetDataTypes)
+            {
+                services.AddSingleton(typeof(BaseLegacySpriteSheetData), type);
+            }
+            services.AddSingleton<ILegacySpriteSheetContainer, LegacySpriteSheetContainer>();
+
             services.AddSingleton<SharedImageParser>();
             services.AddSingleton<ILegacyParser, LegacyIndexParser>();
             services.AddSingleton<ILegacyParser, LegacySimpleImageParser>();
