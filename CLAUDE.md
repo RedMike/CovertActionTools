@@ -36,6 +36,10 @@
   - *Snapshot*: capture known-good outputs as base64 constants in a helper class, assert against them for regression detection
 - Both test projects access Core internals via `InternalsVisibleTo` — keep Core .csproj updated when adding new test projects
 
+# Scratch Folder
+- Keep all temporary and transient files (e.g. TASKS.md, investigation notes, scratch scripts) in the `scratch/` subfolder at the repo root
+- The `scratch/` folder is gitignored (except `.gitkeep`) — nothing in it will be committed
+
 # Code Style
 - Prefer making classes `internal` unless they are consumed outside Core. Test projects get access via `InternalsVisibleTo`
 - Use `#region Name` / `#endregion` to group related code sections — not `// --- Name ---` comments
