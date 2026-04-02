@@ -17,6 +17,7 @@ namespace CovertActionTools.Core.Models
         public Dictionary<string, AnimationModel> Animations { get; set; } = new();
         public FontsModel Fonts { get; set; } = new();
         public Dictionary<string, ProseModel> Prose { get; set; } = new();
+        public Dictionary<string, ExecutableModel> Executables { get; set; } = new();
         
         public PackageModel Clone()
         {
@@ -32,7 +33,8 @@ namespace CovertActionTools.Core.Models
                 Catalogs = Catalogs.ToDictionary(x => x.Key, x => x.Value.Clone()),
                 Animations = Animations.ToDictionary(x => x.Key, x => x.Value.Clone()),
                 Prose = Prose.ToDictionary(x => x.Key, x => x.Value.Clone()),
-                Fonts = Fonts.Clone()
+                Fonts = Fonts.Clone(),
+                Executables = Executables.ToDictionary(x => x.Key, x => x.Value.Clone())
             };
         }
     }
