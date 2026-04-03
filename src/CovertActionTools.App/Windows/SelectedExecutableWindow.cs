@@ -178,7 +178,10 @@ public class SelectedExecutableWindow : BaseWindow
             }
         }
 
-        DrawReadOnlyInfo("Equipment Name Pointers", $"{tac.EquipmentNamePointers.Length} entries (read-only, pointers)");
+        if (ImGui.CollapsingHeader("Equipment Names"))
+        {
+            DrawStringArray(tac.EquipmentNames, "EquipName");
+        }
 
         if (ImGui.CollapsingHeader("Unknown Equip Table"))
         {
@@ -186,7 +189,7 @@ public class SelectedExecutableWindow : BaseWindow
         }
 
         // Resolve equipment names from the pointer table for labelling ragdoll items
-        var equipNames = ResolveEquipmentNames(tac);
+        var equipNames = tac.EquipmentNames;
         // 13 dest points (entries 0-12), 15 src rect pairs (entries 13-42), entry 43 is (0,0) terminator (hidden)
         var destCount = 13;
         var srcCount = 15;
@@ -341,7 +344,8 @@ public class SelectedExecutableWindow : BaseWindow
         {
             ("PreRoomData", tac.PreRoomData.Length),
             ("Unknown1", tac.Unknown1.Length),
-            ("MidSection", tac.MidSection.Length),
+            ("MidSectionPreEquipNames", tac.MidSectionPreEquipNames.Length),
+            ("MidSectionPostEquipNames", tac.MidSectionPostEquipNames.Length),
             ("Unknown3", tac.Unknown3.Length),
             ("TrailingData", tac.TrailingData.Length)
         });
@@ -449,24 +453,6 @@ public class SelectedExecutableWindow : BaseWindow
         return $"Item {index}";
     }
 
-    private static string[] ResolveEquipmentNames(TacDataSegment tac)
-    {
-        var dataSegment = tac.ToBytes();
-        var names = new List<string>();
-        foreach (var ptr in tac.EquipmentNamePointers)
-        {
-            if (ptr == 0 || ptr >= dataSegment.Length)
-            {
-                names.Add("");
-                continue;
-            }
-            var end = ptr;
-            while (end < dataSegment.Length && dataSegment[end] != 0) end++;
-            var name = Encoding.ASCII.GetString(dataSegment, ptr, end - ptr);
-            names.Add(name);
-        }
-        return names.ToArray();
-    }
 
     #endregion
 
@@ -725,11 +711,10 @@ public class SelectedExecutableWindow : BaseWindow
     {
         if (ImGui.CollapsingHeader("Graphics Library Docs"))
         {
-            DrawStringArray(code.GraphicsLibraryDocs, "Doc", code.GraphicsLibraryDocsByteSizes);
+            DrawStringArray(code.GraphicsLibraryDocs, "Doc");
         }
 
         DrawReadOnlyInfo("Nibble Sprite Data", $"{code.NibbleSpriteData.Length} bytes (read-only)");
-        DrawReadOnlyInfo("Graphics Doc Pointers", $"{code.GraphicsDocPointers.Length} entries (read-only, pointers)");
         DrawReadOnlyInfo("Crypto Screen Params", $"{code.CryptoScreenParams.Length} bytes (read-only)");
 
         // TODO: Crypto alphabet data appears wrong/weird when parsed as strings — investigate

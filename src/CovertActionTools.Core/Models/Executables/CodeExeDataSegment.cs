@@ -13,7 +13,7 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>DS paragraph value for CODE.EXE.</summary>
         public const int DsParagraph = 0x036D;
 
-        #region Layout Constants (DS-relative offsets)
+        #region Layout Constants (DS-relative offsets, used for parsing only)
         // DS*16 = 0x036D0
         private const int GraphicsDocsOffset = 0x006C;      // 0x00373C - 0x036D0
         private const int GraphicsDocsSize = 3716;           // 56 strings
@@ -37,17 +37,13 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>56 embedded graphics library documentation strings.</summary>
         public string[] GraphicsLibraryDocs { get; set; } = Array.Empty<string>();
 
-        /// <summary>Original per-string byte sizes for graphics docs (prevents pointer drift).</summary>
-        public int[] GraphicsLibraryDocsByteSizes { get; set; } = Array.Empty<int>();
-
         /// <summary>Gap between docs and nibble sprite data.</summary>
         public byte[] Unknown1 { get; set; } = Array.Empty<byte>();
 
         /// <summary>226 bytes of 2bpp nibble sprite/pixel data (values 0x00-0x33).</summary>
         public byte[] NibbleSpriteData { get; set; } = Array.Empty<byte>();
 
-        /// <summary>56 DS-relative pointers into the graphics documentation strings.</summary>
-        public ushort[] GraphicsDocPointers { get; set; } = Array.Empty<ushort>();
+        // GraphicsDocPointers are computed at serialization time from GraphicsLibraryDocs positions.
 
         /// <summary>22-byte crypto screen parameter record (319x199, mode, plane count, code pointer).</summary>
         public byte[] CryptoScreenParams { get; set; } = Array.Empty<byte>();
@@ -75,16 +71,18 @@ namespace CovertActionTools.Core.Models.Executables
 
             segment.PreDocData = DataSegmentHelper.Slice(dataSegment, 0, GraphicsDocsOffset);
 
-            var (docStrings, docSizes) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(dataSegment, GraphicsDocsOffset, GraphicsDocsSize);
-            segment.GraphicsLibraryDocs = docStrings;
-            segment.GraphicsLibraryDocsByteSizes = docSizes;
+            segment.GraphicsLibraryDocs = DataSegmentHelper.NullTerminatedStringsFromBytes(dataSegment, GraphicsDocsOffset, GraphicsDocPtrCount);
 
             var docsEnd = GraphicsDocsOffset + GraphicsDocsSize;
-            segment.Unknown1 = DataSegmentHelper.Slice(dataSegment, docsEnd, NibbleSpriteOffset - docsEnd);
+            var unknown1Length = NibbleSpriteOffset - docsEnd;
+            segment.Unknown1 = unknown1Length > 0
+                ? DataSegmentHelper.Slice(dataSegment, docsEnd, unknown1Length)
+                : Array.Empty<byte>();
 
             segment.NibbleSpriteData = DataSegmentHelper.Slice(dataSegment, NibbleSpriteOffset, NibbleSpriteSize);
 
-            segment.GraphicsDocPointers = DataSegmentHelper.BytesToUInt16Array(dataSegment, GraphicsDocPtrsOffset, GraphicsDocPtrCount);
+            // GraphicsDocPointers are no longer stored — they are computed in ToBytes().
+            // We still skip past them when parsing to find the next section.
 
             segment.CryptoScreenParams = DataSegmentHelper.Slice(dataSegment, CryptoParamsOffset, CryptoParamsSize);
 
@@ -104,14 +102,28 @@ namespace CovertActionTools.Core.Models.Executables
 
         public byte[] ToBytes()
         {
+            // Serialize sections and compute pointer offsets.
+            // The last string's null terminator overlaps with the first byte of NibbleSpriteData
+            // (which is 0x00) in the original binary, so we trim the docs to GraphicsDocsSize
+            // when at or below original size. When strings are added, the section grows naturally.
+            var rawDocsBytes = DataSegmentHelper.NullTerminatedStringsToBytes(GraphicsLibraryDocs);
+            var docsBytes = rawDocsBytes.Length <= GraphicsDocsSize + 1
+                ? DataSegmentHelper.PadToSize(rawDocsBytes, GraphicsDocsSize)
+                : rawDocsBytes;
+            var unknown1Bytes = Unknown1;
+            var nibbleBytes = NibbleSpriteData;
+
+            // Compute graphics doc pointer values: each points to a string in the docs section
+            var docsBaseOffset = PreDocData.Length;
+            var docPointers = DataSegmentHelper.ComputeStringPointers(GraphicsLibraryDocs, docsBaseOffset);
+            var docPointerBytes = DataSegmentHelper.UInt16ArrayToBytes(docPointers);
+
             return DataSegmentHelper.Concatenate(
                 PreDocData,
-                DataSegmentHelper.PadToSize(
-                    DataSegmentHelper.NullTerminatedStringsToFixedBytes(GraphicsLibraryDocs, GraphicsLibraryDocsByteSizes),
-                    GraphicsDocsSize),
-                Unknown1,
-                NibbleSpriteData,
-                DataSegmentHelper.UInt16ArrayToBytes(GraphicsDocPointers),
+                docsBytes,
+                unknown1Bytes,
+                nibbleBytes,
+                docPointerBytes,
                 CryptoScreenParams,
                 DataSegmentHelper.PadToSize(
                     DataSegmentHelper.NullTerminatedStringsToFixedBytes(CryptoAlphabetData, CryptoAlphabetByteSizes),
@@ -129,10 +141,8 @@ namespace CovertActionTools.Core.Models.Executables
             {
                 PreDocData = PreDocData.ToArray(),
                 GraphicsLibraryDocs = GraphicsLibraryDocs.Select(s => s).ToArray(),
-                GraphicsLibraryDocsByteSizes = GraphicsLibraryDocsByteSizes.ToArray(),
                 Unknown1 = Unknown1.ToArray(),
                 NibbleSpriteData = NibbleSpriteData.ToArray(),
-                GraphicsDocPointers = GraphicsDocPointers.ToArray(),
                 CryptoScreenParams = CryptoScreenParams.ToArray(),
                 CryptoAlphabetData = CryptoAlphabetData.Select(s => s).ToArray(),
                 CryptoAlphabetByteSizes = CryptoAlphabetByteSizes.ToArray(),

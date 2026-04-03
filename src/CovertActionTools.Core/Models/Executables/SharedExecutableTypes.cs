@@ -170,6 +170,69 @@ namespace CovertActionTools.Core.Models.Executables
             }
             return result;
         }
+
+        /// <summary>
+        /// Computes DS-relative pointer values for null-terminated strings starting at baseOffset.
+        /// Returns one pointer per string, each pointing to the start of that string.
+        /// </summary>
+        public static ushort[] ComputeStringPointers(string[] strings, int baseOffset)
+        {
+            var pointers = new ushort[strings.Length];
+            var pos = baseOffset;
+            for (var i = 0; i < strings.Length; i++)
+            {
+                pointers[i] = (ushort)pos;
+                pos += Encoding.ASCII.GetByteCount(strings[i]) + 1; // string + null terminator
+            }
+            return pointers;
+        }
+
+        /// <summary>
+        /// Given DS-relative pointer values and the full data segment bytes, finds the byte range
+        /// [start, end) of the contiguous string block that the pointers reference.
+        /// Skips zero-valued pointers (empty/padding entries).
+        /// </summary>
+        public static (int start, int end) FindStringBlockBounds(ushort[] pointers, byte[] dataSegment)
+        {
+            var validPointers = new List<int>();
+            foreach (var p in pointers)
+            {
+                if (p > 0 && p < dataSegment.Length) validPointers.Add(p);
+            }
+            if (validPointers.Count == 0) return (0, 0);
+
+            var start = validPointers.Min();
+
+            // Find the end of the last string (scan past the highest pointer to the null terminator)
+            var maxPtr = validPointers.Max();
+            var end = maxPtr;
+            while (end < dataSegment.Length && dataSegment[end] != 0) end++;
+            end++; // include null terminator
+
+            return (start, end);
+        }
+
+        /// <summary>
+        /// Extracts null-terminated strings from the data segment at the positions indicated by
+        /// DS-relative pointer values. Skips zero-valued pointers (returns empty string for those).
+        /// </summary>
+        public static string[] ExtractStringsFromPointers(ushort[] pointers, byte[] dataSegment)
+        {
+            var result = new string[pointers.Length];
+            for (var i = 0; i < pointers.Length; i++)
+            {
+                var ptr = pointers[i];
+                if (ptr == 0 || ptr >= dataSegment.Length)
+                {
+                    result[i] = string.Empty;
+                    continue;
+                }
+                var end = (int)ptr;
+                while (end < dataSegment.Length && dataSegment[end] != 0) end++;
+                result[i] = Encoding.ASCII.GetString(dataSegment, ptr, end - ptr);
+            }
+            return result;
+        }
     }
 
     /// <summary>
