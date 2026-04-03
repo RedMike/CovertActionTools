@@ -34,8 +34,11 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>Data before graphics library docs: MSC runtime.</summary>
         public byte[] PreDocData { get; set; } = Array.Empty<byte>();
 
-        /// <summary>56 embedded graphics library documentation strings (~3,716 bytes).</summary>
-        public byte[] GraphicsLibraryDocs { get; set; } = Array.Empty<byte>();
+        /// <summary>56 embedded graphics library documentation strings.</summary>
+        public string[] GraphicsLibraryDocs { get; set; } = Array.Empty<string>();
+
+        /// <summary>Original per-string byte sizes for graphics docs (prevents pointer drift).</summary>
+        public int[] GraphicsLibraryDocsByteSizes { get; set; } = Array.Empty<int>();
 
         /// <summary>Gap between docs and nibble sprite data.</summary>
         public byte[] Unknown1 { get; set; } = Array.Empty<byte>();
@@ -49,11 +52,17 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>22-byte crypto screen parameter record (319x199, mode, plane count, code pointer).</summary>
         public byte[] CryptoScreenParams { get; set; } = Array.Empty<byte>();
 
-        /// <summary>91 bytes: two copies of crypto alphabet (A-Z plus [,\\) + space buffer.</summary>
-        public byte[] CryptoAlphabetData { get; set; } = Array.Empty<byte>();
+        /// <summary>Crypto alphabet strings: two copies of A-Z plus [,\\ and a space buffer.</summary>
+        public string[] CryptoAlphabetData { get; set; } = Array.Empty<string>();
 
-        /// <summary>Crypto UI strings: "CRYPTO WORKSTATION", "MESSAGE DECODED", timer display (~181 bytes).</summary>
-        public byte[] CryptoUiStrings { get; set; } = Array.Empty<byte>();
+        /// <summary>Original per-string byte sizes for crypto alphabet (prevents pointer drift).</summary>
+        public int[] CryptoAlphabetByteSizes { get; set; } = Array.Empty<int>();
+
+        /// <summary>Crypto UI strings: "CRYPTO WORKSTATION", "MESSAGE DECODED", timer display, etc.</summary>
+        public string[] CryptoUiStrings { get; set; } = Array.Empty<string>();
+
+        /// <summary>Original per-string byte sizes for crypto UI strings (prevents pointer drift).</summary>
+        public int[] CryptoUiStringsByteSizes { get; set; } = Array.Empty<int>();
 
         /// <summary>Everything after: infrastructure, palette remap, file management, overlay, C runtime.</summary>
         public byte[] TrailingData { get; set; } = Array.Empty<byte>();
@@ -66,7 +75,9 @@ namespace CovertActionTools.Core.Models.Executables
 
             segment.PreDocData = DataSegmentHelper.Slice(dataSegment, 0, GraphicsDocsOffset);
 
-            segment.GraphicsLibraryDocs = DataSegmentHelper.Slice(dataSegment, GraphicsDocsOffset, GraphicsDocsSize);
+            var (docStrings, docSizes) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(dataSegment, GraphicsDocsOffset, GraphicsDocsSize);
+            segment.GraphicsLibraryDocs = docStrings;
+            segment.GraphicsLibraryDocsByteSizes = docSizes;
 
             var docsEnd = GraphicsDocsOffset + GraphicsDocsSize;
             segment.Unknown1 = DataSegmentHelper.Slice(dataSegment, docsEnd, NibbleSpriteOffset - docsEnd);
@@ -77,9 +88,13 @@ namespace CovertActionTools.Core.Models.Executables
 
             segment.CryptoScreenParams = DataSegmentHelper.Slice(dataSegment, CryptoParamsOffset, CryptoParamsSize);
 
-            segment.CryptoAlphabetData = DataSegmentHelper.Slice(dataSegment, CryptoAlphabetOffset, CryptoAlphabetSize);
+            var (alphaStrings, alphaSizes) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(dataSegment, CryptoAlphabetOffset, CryptoAlphabetSize);
+            segment.CryptoAlphabetData = alphaStrings;
+            segment.CryptoAlphabetByteSizes = alphaSizes;
 
-            segment.CryptoUiStrings = DataSegmentHelper.Slice(dataSegment, CryptoUiStringsOffset, CryptoUiStringsSize);
+            var (uiStrings, uiSizes) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(dataSegment, CryptoUiStringsOffset, CryptoUiStringsSize);
+            segment.CryptoUiStrings = uiStrings;
+            segment.CryptoUiStringsByteSizes = uiSizes;
 
             var uiStringsEnd = CryptoUiStringsOffset + CryptoUiStringsSize;
             segment.TrailingData = DataSegmentHelper.Slice(dataSegment, uiStringsEnd, dataSegment.Length - uiStringsEnd);
@@ -91,13 +106,19 @@ namespace CovertActionTools.Core.Models.Executables
         {
             return DataSegmentHelper.Concatenate(
                 PreDocData,
-                GraphicsLibraryDocs,
+                DataSegmentHelper.PadToSize(
+                    DataSegmentHelper.NullTerminatedStringsToFixedBytes(GraphicsLibraryDocs, GraphicsLibraryDocsByteSizes),
+                    GraphicsDocsSize),
                 Unknown1,
                 NibbleSpriteData,
                 DataSegmentHelper.UInt16ArrayToBytes(GraphicsDocPointers),
                 CryptoScreenParams,
-                CryptoAlphabetData,
-                CryptoUiStrings,
+                DataSegmentHelper.PadToSize(
+                    DataSegmentHelper.NullTerminatedStringsToFixedBytes(CryptoAlphabetData, CryptoAlphabetByteSizes),
+                    CryptoAlphabetSize),
+                DataSegmentHelper.PadToSize(
+                    DataSegmentHelper.NullTerminatedStringsToFixedBytes(CryptoUiStrings, CryptoUiStringsByteSizes),
+                    CryptoUiStringsSize),
                 TrailingData
             );
         }
@@ -107,13 +128,16 @@ namespace CovertActionTools.Core.Models.Executables
             return new CodeExeDataSegment
             {
                 PreDocData = PreDocData.ToArray(),
-                GraphicsLibraryDocs = GraphicsLibraryDocs.ToArray(),
+                GraphicsLibraryDocs = GraphicsLibraryDocs.Select(s => s).ToArray(),
+                GraphicsLibraryDocsByteSizes = GraphicsLibraryDocsByteSizes.ToArray(),
                 Unknown1 = Unknown1.ToArray(),
                 NibbleSpriteData = NibbleSpriteData.ToArray(),
                 GraphicsDocPointers = GraphicsDocPointers.ToArray(),
                 CryptoScreenParams = CryptoScreenParams.ToArray(),
-                CryptoAlphabetData = CryptoAlphabetData.ToArray(),
-                CryptoUiStrings = CryptoUiStrings.ToArray(),
+                CryptoAlphabetData = CryptoAlphabetData.Select(s => s).ToArray(),
+                CryptoAlphabetByteSizes = CryptoAlphabetByteSizes.ToArray(),
+                CryptoUiStrings = CryptoUiStrings.Select(s => s).ToArray(),
+                CryptoUiStringsByteSizes = CryptoUiStringsByteSizes.ToArray(),
                 TrailingData = TrailingData.ToArray()
             };
         }

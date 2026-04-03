@@ -20,7 +20,8 @@ public class MainEditorState : IViewModel
         Animation = 7,
         Font = 8,
         Prose = 9,
-        
+        Executable = 10,
+
         Package = 100,
     }
     public string? LoadedPackagePath { get; private set; }

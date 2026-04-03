@@ -11,46 +11,84 @@ namespace CovertActionTools.Core.Models.Executables
     public class FinalMissionSetRecord
     {
         public const int RecordSize = 74;
+        public const int NameLength = 25;
+        public const int CrimeSlotCount = 3;
+        public const int UnusedSlotCount = 8;
+        public const int StringPointerCount = 16;
 
-        /// <summary>
-        /// The full 74-byte record data. Name is embedded at the start (null-terminated).
-        /// Further field decomposition will be done in a future update.
-        /// </summary>
-        public byte[] RecordData { get; set; } = Array.Empty<byte>();
+        /// <summary>Mission set name, null-padded to 25 bytes.</summary>
+        public string Name { get; set; } = string.Empty;
 
-        /// <summary>
-        /// Convenience property: extracts the null-terminated name from RecordData.
-        /// </summary>
-        public string Name
-        {
-            get
-            {
-                if (RecordData == null || RecordData.Length == 0) return string.Empty;
-                var end = Array.IndexOf(RecordData, (byte)0);
-                if (end < 0) end = Math.Min(RecordData.Length, 20);
-                return Encoding.ASCII.GetString(RecordData, 0, end);
-            }
-        }
+        /// <summary>Unknown bitfield at offset 0x19. Possibly encodes world area eligibility.</summary>
+        public byte Unknown1 { get; set; }
+
+        /// <summary>First crime type ID (index into crime type names).</summary>
+        public ushort Crime1Id { get; set; }
+
+        /// <summary>Second crime type ID.</summary>
+        public ushort Crime2Id { get; set; }
+
+        /// <summary>Third crime type ID.</summary>
+        public ushort Crime3Id { get; set; }
+
+        /// <summary>Unused crime slots (8 bytes, always 0xFF). Reserved for additional crimes.</summary>
+        public byte[] UnusedCrimeSlots { get; set; } = Array.Empty<byte>();
+
+        /// <summary>Flag word: 0x0001 for records 0-8, 0xFFFF for records 9-14. Purpose unknown.</summary>
+        public ushort FlagWord { get; set; }
+
+        /// <summary>16 DS-relative string pointer pairs into victim/item string table. Not editable (pointers).</summary>
+        public ushort[] StringPointers { get; set; } = Array.Empty<ushort>();
 
         public FinalMissionSetRecord Clone()
         {
             return new FinalMissionSetRecord
             {
-                RecordData = RecordData.ToArray()
+                Name = Name,
+                Unknown1 = Unknown1,
+                Crime1Id = Crime1Id,
+                Crime2Id = Crime2Id,
+                Crime3Id = Crime3Id,
+                UnusedCrimeSlots = UnusedCrimeSlots.ToArray(),
+                FlagWord = FlagWord,
+                StringPointers = StringPointers.ToArray()
             };
         }
 
         public static FinalMissionSetRecord FromBytes(byte[] data, int offset)
         {
-            var record = new byte[RecordSize];
-            Array.Copy(data, offset, record, 0, RecordSize);
-            return new FinalMissionSetRecord { RecordData = record };
+            var nameBytes = new byte[NameLength];
+            Array.Copy(data, offset, nameBytes, 0, NameLength);
+            var nameEnd = Array.IndexOf(nameBytes, (byte)0);
+            if (nameEnd < 0) nameEnd = NameLength;
+            var name = Encoding.ASCII.GetString(nameBytes, 0, nameEnd);
+
+            return new FinalMissionSetRecord
+            {
+                Name = name,
+                Unknown1 = data[offset + 0x19],
+                Crime1Id = BitConverter.ToUInt16(data, offset + 0x1A),
+                Crime2Id = BitConverter.ToUInt16(data, offset + 0x1C),
+                Crime3Id = BitConverter.ToUInt16(data, offset + 0x1E),
+                UnusedCrimeSlots = DataSegmentHelper.Slice(data, offset + 0x20, UnusedSlotCount),
+                FlagWord = BitConverter.ToUInt16(data, offset + 0x28),
+                StringPointers = DataSegmentHelper.BytesToUInt16Array(data, offset + 0x2A, StringPointerCount)
+            };
         }
 
         public byte[] ToBytes()
         {
             var result = new byte[RecordSize];
-            Array.Copy(RecordData, 0, result, 0, Math.Min(RecordData.Length, RecordSize));
+            var nameBytes = Encoding.ASCII.GetBytes(Name);
+            Array.Copy(nameBytes, 0, result, 0, Math.Min(nameBytes.Length, NameLength));
+            result[0x19] = Unknown1;
+            result[0x1A] = (byte)(Crime1Id & 0xFF); result[0x1B] = (byte)((Crime1Id >> 8) & 0xFF);
+            result[0x1C] = (byte)(Crime2Id & 0xFF); result[0x1D] = (byte)((Crime2Id >> 8) & 0xFF);
+            result[0x1E] = (byte)(Crime3Id & 0xFF); result[0x1F] = (byte)((Crime3Id >> 8) & 0xFF);
+            Array.Copy(UnusedCrimeSlots, 0, result, 0x20, Math.Min(UnusedCrimeSlots.Length, UnusedSlotCount));
+            result[0x28] = (byte)(FlagWord & 0xFF); result[0x29] = (byte)((FlagWord >> 8) & 0xFF);
+            var ptrBytes = DataSegmentHelper.UInt16ArrayToBytes(StringPointers);
+            Array.Copy(ptrBytes, 0, result, 0x2A, Math.Min(ptrBytes.Length, StringPointerCount * 2));
             return result;
         }
     }
@@ -98,14 +136,20 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>Data between mission sets and crime types: plot/briefing strings, skill names, case text.</summary>
         public byte[] PostMissionPreCrimeData { get; set; } = Array.Empty<byte>();
 
-        /// <summary>13 crime type name strings (null-terminated, variable length).</summary>
-        public byte[] CrimeTypeNames { get; set; } = Array.Empty<byte>();
+        /// <summary>13 crime type name strings.</summary>
+        public string[] CrimeTypeNames { get; set; } = Array.Empty<string>();
+
+        /// <summary>Original per-string byte sizes for CrimeTypeNames (prevents pointer drift).</summary>
+        public int[] CrimeTypeNameByteSizes { get; set; } = Array.Empty<int>();
 
         /// <summary>Data between crime type names end and organisation names start.</summary>
         public byte[] Unknown2 { get; set; } = Array.Empty<byte>();
 
-        /// <summary>24 organisation name strings (null-terminated, variable length).</summary>
-        public byte[] OrganisationNames { get; set; } = Array.Empty<byte>();
+        /// <summary>24 organisation name strings.</summary>
+        public string[] OrganisationNames { get; set; } = Array.Empty<string>();
+
+        /// <summary>Original per-string byte sizes for OrganisationNames (prevents pointer drift).</summary>
+        public int[] OrganisationNameByteSizes { get; set; } = Array.Empty<int>();
 
         /// <summary>Data between org names and character name pointers: career text, briefing, clue phrases, char names, item tables.</summary>
         public byte[] PostOrgPreCharPtrData { get; set; } = Array.Empty<byte>();
@@ -140,13 +184,17 @@ namespace CovertActionTools.Core.Models.Executables
 
             // Crime type names: 13 null-terminated strings
             var crimeEnd = FindNthNullTerminator(dataSegment, CrimeTypesOffset, CrimeTypeCount);
-            segment.CrimeTypeNames = DataSegmentHelper.Slice(dataSegment, CrimeTypesOffset, crimeEnd - CrimeTypesOffset);
+            var (crimeNames, crimeSizes) = DataSegmentHelper.NullTerminatedStringsWithSizesFromBytes(dataSegment, CrimeTypesOffset, CrimeTypeCount);
+            segment.CrimeTypeNames = crimeNames;
+            segment.CrimeTypeNameByteSizes = crimeSizes;
 
             segment.Unknown2 = DataSegmentHelper.Slice(dataSegment, crimeEnd, OrgsOffset - crimeEnd);
 
             // Organisation names: 24 null-terminated strings
             var orgEnd = FindNthNullTerminator(dataSegment, OrgsOffset, OrgCount);
-            segment.OrganisationNames = DataSegmentHelper.Slice(dataSegment, OrgsOffset, orgEnd - OrgsOffset);
+            var (orgNames, orgSizes) = DataSegmentHelper.NullTerminatedStringsWithSizesFromBytes(dataSegment, OrgsOffset, OrgCount);
+            segment.OrganisationNames = orgNames;
+            segment.OrganisationNameByteSizes = orgSizes;
 
             segment.PostOrgPreCharPtrData = DataSegmentHelper.Slice(dataSegment, orgEnd, CharNamePointersOffset - orgEnd);
 
@@ -172,9 +220,9 @@ namespace CovertActionTools.Core.Models.Executables
                 Unknown1,
                 missionSetBytes,
                 PostMissionPreCrimeData,
-                CrimeTypeNames,
+                DataSegmentHelper.NullTerminatedStringsToFixedBytes(CrimeTypeNames, CrimeTypeNameByteSizes),
                 Unknown2,
-                OrganisationNames,
+                DataSegmentHelper.NullTerminatedStringsToFixedBytes(OrganisationNames, OrganisationNameByteSizes),
                 PostOrgPreCharPtrData,
                 DataSegmentHelper.UInt16ArrayToBytes(CharacterNamePointers),
                 TrailingData
@@ -190,9 +238,11 @@ namespace CovertActionTools.Core.Models.Executables
                 Unknown1 = Unknown1.ToArray(),
                 MissionSets = MissionSets.Select(m => m.Clone()).ToArray(),
                 PostMissionPreCrimeData = PostMissionPreCrimeData.ToArray(),
-                CrimeTypeNames = CrimeTypeNames.ToArray(),
+                CrimeTypeNames = CrimeTypeNames.Select(s => s).ToArray(),
+                CrimeTypeNameByteSizes = CrimeTypeNameByteSizes.ToArray(),
                 Unknown2 = Unknown2.ToArray(),
-                OrganisationNames = OrganisationNames.ToArray(),
+                OrganisationNames = OrganisationNames.Select(s => s).ToArray(),
+                OrganisationNameByteSizes = OrganisationNameByteSizes.ToArray(),
                 PostOrgPreCharPtrData = PostOrgPreCharPtrData.ToArray(),
                 CharacterNamePointers = CharacterNamePointers.ToArray(),
                 TrailingData = TrailingData.ToArray()

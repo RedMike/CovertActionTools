@@ -18,8 +18,8 @@ namespace CovertActionTools.Core.Models.Executables
         private const int ClueRelPtrCount = 40;
         private const int CharNamePointersOffset = 0x296C; // 0x00CF9C - 0x0A630
         private const int CharNamePointerCount = 191;
-        private const int UnknownStructOffset = 0x2B62;    // 0x00D192 - 0x0A630
-        private const int UnknownStructSize = 588;
+        private const int RectDrawRecordsOffset = 0x2B62;   // 0x00D192 - 0x0A630
+        private const int RectDrawRecordCount = 49;
         #endregion
 
         #region Fields (in binary order)
@@ -39,8 +39,11 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>Data between char name pointers and unknown structured block: status labels.</summary>
         public byte[] PostCharNamePtrData { get; set; } = Array.Empty<byte>();
 
-        /// <summary>588-byte structured block of 12-byte records (flag + coordinates + colour), undecoded.</summary>
-        public byte[] UnknownStructuredBlock { get; set; } = Array.Empty<byte>();
+        /// <summary>49 rectangle drawing records (12 bytes each): flag + coordinates + colour for screen layout.</summary>
+        public RectDrawRecord[] RectDrawRecords { get; set; } = Array.Empty<RectDrawRecord>();
+
+        /// <summary>Trailer after rect draw records: FF FF sentinel + 8 zero bytes.</summary>
+        public byte[] RectDrawTrailer { get; set; } = Array.Empty<byte>();
 
         /// <summary>Everything after: loading text, infrastructure, overlay, C runtime, BSS.</summary>
         public byte[] TrailingData { get; set; } = Array.Empty<byte>();
@@ -61,11 +64,20 @@ namespace CovertActionTools.Core.Models.Executables
             segment.CharacterNamePointers = DataSegmentHelper.BytesToUInt16Array(dataSegment, CharNamePointersOffset, CharNamePointerCount);
 
             var charPtrsEnd = CharNamePointersOffset + CharNamePointerCount * 2;
-            segment.PostCharNamePtrData = DataSegmentHelper.Slice(dataSegment, charPtrsEnd, UnknownStructOffset - charPtrsEnd);
+            segment.PostCharNamePtrData = DataSegmentHelper.Slice(dataSegment, charPtrsEnd, RectDrawRecordsOffset - charPtrsEnd);
 
-            segment.UnknownStructuredBlock = DataSegmentHelper.Slice(dataSegment, UnknownStructOffset, UnknownStructSize);
+            segment.RectDrawRecords = new RectDrawRecord[RectDrawRecordCount];
+            for (var i = 0; i < RectDrawRecordCount; i++)
+            {
+                segment.RectDrawRecords[i] = RectDrawRecord.FromBytes(dataSegment, RectDrawRecordsOffset + i * RectDrawRecord.RecordSize);
+            }
 
-            var structEnd = UnknownStructOffset + UnknownStructSize;
+            var rectEnd = RectDrawRecordsOffset + RectDrawRecordCount * RectDrawRecord.RecordSize;
+            // Trailer: FF FF sentinel + 8 zero bytes = 10 bytes
+            var trailerSize = 10;
+            segment.RectDrawTrailer = DataSegmentHelper.Slice(dataSegment, rectEnd, trailerSize);
+
+            var structEnd = rectEnd + trailerSize;
             segment.TrailingData = DataSegmentHelper.Slice(dataSegment, structEnd, dataSegment.Length - structEnd);
 
             return segment;
@@ -73,13 +85,20 @@ namespace CovertActionTools.Core.Models.Executables
 
         public byte[] ToBytes()
         {
+            var rectBytes = new byte[RectDrawRecordCount * RectDrawRecord.RecordSize];
+            for (var i = 0; i < RectDrawRecords.Length; i++)
+            {
+                Array.Copy(RectDrawRecords[i].ToBytes(), 0, rectBytes, i * RectDrawRecord.RecordSize, RectDrawRecord.RecordSize);
+            }
+
             return DataSegmentHelper.Concatenate(
                 PreClueRelPtrData,
                 DataSegmentHelper.UInt16ArrayToBytes(ClueRelationshipPointers),
                 MidSection,
                 DataSegmentHelper.UInt16ArrayToBytes(CharacterNamePointers),
                 PostCharNamePtrData,
-                UnknownStructuredBlock,
+                rectBytes,
+                RectDrawTrailer,
                 TrailingData
             );
         }
@@ -93,7 +112,8 @@ namespace CovertActionTools.Core.Models.Executables
                 MidSection = MidSection.ToArray(),
                 CharacterNamePointers = CharacterNamePointers.ToArray(),
                 PostCharNamePtrData = PostCharNamePtrData.ToArray(),
-                UnknownStructuredBlock = UnknownStructuredBlock.ToArray(),
+                RectDrawRecords = RectDrawRecords.Select(r => r.Clone()).ToArray(),
+                RectDrawTrailer = RectDrawTrailer.ToArray(),
                 TrailingData = TrailingData.ToArray()
             };
         }

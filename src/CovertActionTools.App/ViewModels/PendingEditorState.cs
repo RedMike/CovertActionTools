@@ -34,3 +34,4 @@ public class PendingEditorProseState : PendingEditorState<Dictionary<string, Pro
 public class PendingEditorTextState : PendingEditorState<Dictionary<string, TextModel>> { }
 public class PendingEditorWorldState : PendingEditorState<WorldModel> { }
 public class PendingEditorCrimeState : PendingEditorState<CrimeModel> { }
+public class PendingEditorExecutableState : PendingEditorState<ExecutableModel> { }
