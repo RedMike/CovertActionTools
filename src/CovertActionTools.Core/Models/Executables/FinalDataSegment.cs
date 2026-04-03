@@ -41,12 +41,6 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>Mission set plot strings (victim names, item names, etc.).</summary>
         public string[] Strings { get; set; } = Array.Empty<string>();
 
-        /// <summary>Number of null padding bytes after this record's last string in the string table.</summary>
-        public int PostStringPadding { get; set; }
-
-        /// <summary>Original pointer words from the binary. Used for byte-identical roundtrip when strings are unmodified.</summary>
-        public ushort[] OriginalPointerWords { get; set; } = Array.Empty<ushort>();
-
         public FinalMissionSetRecord Clone()
         {
             return new FinalMissionSetRecord
@@ -58,9 +52,7 @@ namespace CovertActionTools.Core.Models.Executables
                 Crime3Id = Crime3Id,
                 UnusedCrimeSlots = UnusedCrimeSlots.ToArray(),
                 FlagWord = FlagWord,
-                Strings = Strings.Select(s => s).ToArray(),
-                PostStringPadding = PostStringPadding,
-                OriginalPointerWords = OriginalPointerWords.ToArray()
+                Strings = Strings.Select(s => s).ToArray()
             };
         }
 
@@ -95,15 +87,6 @@ namespace CovertActionTools.Core.Models.Executables
                 }
             }
 
-            // Count null padding after the last string
-            var padCount = 0;
-            if (lastEndPtr > 0 && lastEndPtr < dataSegment.Length)
-            {
-                var padPos = lastEndPtr;
-                while (padPos < dataSegment.Length && dataSegment[padPos] == 0) padPos++;
-                padCount = padPos - lastEndPtr;
-            }
-
             return new FinalMissionSetRecord
             {
                 Name = name,
@@ -113,9 +96,7 @@ namespace CovertActionTools.Core.Models.Executables
                 Crime3Id = BitConverter.ToUInt16(data, offset + 0x1E),
                 UnusedCrimeSlots = DataSegmentHelper.Slice(data, offset + 0x20, UnusedSlotCount),
                 FlagWord = BitConverter.ToUInt16(data, offset + 0x28),
-                Strings = strings.ToArray(),
-                PostStringPadding = padCount,
-                OriginalPointerWords = ptrWords
+                Strings = strings.ToArray()
             };
         }
 
@@ -302,16 +283,53 @@ namespace CovertActionTools.Core.Models.Executables
 
         public byte[] ToBytes()
         {
-            // Rebuild the string table within PreMissionParamData from per-record strings
-            var preMissionBytes = PreMissionParamData.ToArray(); // start with original block
+            // The string table lives within PreMissionParamData at StringTableOffset.
+            // For unmodified data, we write PreMissionParamData as-is and compute pointer words
+            // by walking the raw bytes. When strings are edited, we modify the table in-place.
+            var preMissionBytes = PreMissionParamData.ToArray();
             if (StringTableLength > 0)
             {
-                // Build mission set record bytes using original pointer words
-                // (strings are stored in PreMissionParamData and pointer values still match)
+                // Compute pointer words for each record by walking the string table bytes.
+                // Algorithm: for each record, emit start of its first string, then for each
+                // subsequent word: if byte is non-null, skip to byte after null; else advance by 1.
+                // The walk position for each record starts where that record's strings begin in
+                // the table — determined by advancing past all previous records' strings.
+                var perRecordPtrWords = new List<ushort[]>();
+                var tablePos = StringTableOffset;
+                foreach (var ms in MissionSets)
+                {
+                    var words = new ushort[FinalMissionSetRecord.StringPointerCount];
+                    words[0] = (ushort)tablePos;
+                    var pos = tablePos;
+                    for (var w = 1; w < words.Length; w++)
+                    {
+                        if (pos < preMissionBytes.Length && preMissionBytes[pos] != 0)
+                        {
+                            while (pos < preMissionBytes.Length && preMissionBytes[pos] != 0) pos++;
+                            pos++;
+                        }
+                        else
+                        {
+                            pos++;
+                        }
+                        words[w] = (ushort)pos;
+                    }
+                    perRecordPtrWords.Add(words);
+
+                    // Advance tablePos to next record's first string.
+                    // The last pointer word tells us where the walk ended. Skip past remaining
+                    // null padding to find the next non-null byte (next record's first string).
+                    var walkEnd = (int)words[words.Length - 1];
+                    // walkEnd might be in null padding or string content. Advance past it.
+                    walkEnd++; // past the last word's position
+                    while (walkEnd < preMissionBytes.Length && preMissionBytes[walkEnd] == 0) walkEnd++;
+                    tablePos = walkEnd;
+                }
+
                 var missionSetBytes = new byte[MissionSets.Length * FinalMissionSetRecord.RecordSize];
                 for (var i = 0; i < MissionSets.Length; i++)
                 {
-                    Array.Copy(MissionSets[i].ToBytes(MissionSets[i].OriginalPointerWords), 0, missionSetBytes,
+                    Array.Copy(MissionSets[i].ToBytes(perRecordPtrWords[i]), 0, missionSetBytes,
                         i * FinalMissionSetRecord.RecordSize, FinalMissionSetRecord.RecordSize);
                 }
 
