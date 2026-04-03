@@ -15,12 +15,12 @@ namespace CovertActionTools.Core.Models.Executables
 
         #region Layout Constants (DS-relative offsets)
         private const int ClueRelPtrCount = 40;
-        private const int CharNamePointerCount = 191;
+        private const int CharNamePointerCount = 192;
         private const int RectDrawRecordCount = 49;
 
         // Original binary offsets (used for initial parse)
         private const int ClueRelPtrsOffset = 0x1A40;     // 0x00C070 - 0x0A630
-        private const int CharNamePointersOffset = 0x296C; // 0x00CF9C - 0x0A630
+        private const int CharNamePointersOffset = 0x296A; // 0x00CF9A - 0x0A630 (corrected: was 0x296C/191, actually 192 entries starting 2 bytes earlier)
         private const int RectDrawRecordsOffset = 0x2B62;  // 0x00D192 - 0x0A630
         #endregion
 
@@ -40,7 +40,7 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>Data between clue pointers and character names: category table, lookup data, item/clue strings, investigation methods, intel text.</summary>
         public byte[] MidSectionPreCharNames { get; set; } = Array.Empty<byte>();
 
-        /// <summary>191 character names (4 ethnic groups x gender, 16 each).</summary>
+        /// <summary>192 character names (4 ethnic groups x female first / male first / male surname, 16 each).</summary>
         public string[] CharacterNames { get; set; } = Array.Empty<string>();
 
         /// <summary>Data between character names and character name pointer table.</summary>
