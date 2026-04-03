@@ -500,6 +500,8 @@ public class SelectedExecutableWindow : BaseWindow
                         ImGui.EndTable();
                     }
 
+                    // TODO: The Crime editor window needs to be able to load these crime type
+                    // names from here instead of using hardcoded names.
                     DrawMissionSetCrimeSlot("Crime 1", ms, 0, final.CrimeTypeNames);
                     DrawMissionSetCrimeSlot("Crime 2", ms, 1, final.CrimeTypeNames);
                     DrawMissionSetCrimeSlot("Crime 3", ms, 2, final.CrimeTypeNames);
@@ -614,51 +616,63 @@ public class SelectedExecutableWindow : BaseWindow
         DrawReadOnlyInfo("Clue Relationship Pointers", $"{bug.ClueRelationshipPointers.Length} entries (read-only, pointers)");
         DrawReadOnlyInfo("Character Name Pointers", $"{bug.CharacterNamePointers.Length} entries (read-only, pointers)");
 
+        // TODO: Identify where record # comes from and if there is a name for each record.
         if (ImGui.CollapsingHeader("Rect Draw Records"))
         {
-            if (ImGui.BeginTable("RectDraw", 7, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+            if (ImGui.BeginTable("RectDraw", 5, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
             {
                 ImGui.TableSetupColumn("#");
-                ImGui.TableSetupColumn("Flag");
-                ImGui.TableSetupColumn("X1");
-                ImGui.TableSetupColumn("Y1");
-                ImGui.TableSetupColumn("X2");
-                ImGui.TableSetupColumn("Y2");
-                ImGui.TableSetupColumn("Colour");
+                ImGui.TableSetupColumn("X");
+                ImGui.TableSetupColumn("Y");
+                ImGui.TableSetupColumn("W");
+                ImGui.TableSetupColumn("H");
                 ImGui.TableHeadersRow();
 
                 for (var i = 0; i < bug.RectDrawRecords.Length; i++)
                 {
                     ImGui.PushID($"Rect_{i}");
                     var rec = bug.RectDrawRecords[i];
+
+                    // Row 1: X/Y/W/H
                     ImGui.TableNextRow();
 
                     ImGui.TableNextColumn();
                     ImGui.Text($"{i}");
 
                     ImGui.TableNextColumn();
-                    var newFlag = ImGuiExtensions.Input("##Flag", (int)rec.Flag, width: 50);
+                    var newX = ImGuiExtensions.Input("##X", (int)rec.X1, width: 60);
+                    if (newX != null) { rec.X1 = (ushort)newX.Value; _pendingState.RecordChange(); }
+
+                    ImGui.TableNextColumn();
+                    var newY = ImGuiExtensions.Input("##Y", (int)rec.Y1, width: 60);
+                    if (newY != null) { rec.Y1 = (ushort)newY.Value; _pendingState.RecordChange(); }
+
+                    ImGui.TableNextColumn();
+                    var w = rec.X2 - rec.X1;
+                    var newW = ImGuiExtensions.Input("##W", (int)w, width: 60);
+                    if (newW != null) { rec.X2 = (ushort)(rec.X1 + newW.Value); _pendingState.RecordChange(); }
+
+                    ImGui.TableNextColumn();
+                    var h = rec.Y2 - rec.Y1;
+                    var newH = ImGuiExtensions.Input("##H", (int)h, width: 60);
+                    if (newH != null) { rec.Y2 = (ushort)(rec.Y1 + newH.Value); _pendingState.RecordChange(); }
+
+                    // Row 2: Flag/Colour
+                    ImGui.TableNextRow();
+
+                    ImGui.TableNextColumn();
+                    // empty # column
+
+                    ImGui.TableNextColumn();
+                    var newFlag = ImGuiExtensions.Input("Flag", (int)rec.Flag, width: 60);
                     if (newFlag != null) { rec.Flag = (byte)newFlag.Value; _pendingState.RecordChange(); }
 
                     ImGui.TableNextColumn();
-                    var newX1 = ImGuiExtensions.Input("##X1", (int)rec.X1, width: 60);
-                    if (newX1 != null) { rec.X1 = (ushort)newX1.Value; _pendingState.RecordChange(); }
-
-                    ImGui.TableNextColumn();
-                    var newY1 = ImGuiExtensions.Input("##Y1", (int)rec.Y1, width: 60);
-                    if (newY1 != null) { rec.Y1 = (ushort)newY1.Value; _pendingState.RecordChange(); }
-
-                    ImGui.TableNextColumn();
-                    var newX2 = ImGuiExtensions.Input("##X2", (int)rec.X2, width: 60);
-                    if (newX2 != null) { rec.X2 = (ushort)newX2.Value; _pendingState.RecordChange(); }
-
-                    ImGui.TableNextColumn();
-                    var newY2 = ImGuiExtensions.Input("##Y2", (int)rec.Y2, width: 60);
-                    if (newY2 != null) { rec.Y2 = (ushort)newY2.Value; _pendingState.RecordChange(); }
-
-                    ImGui.TableNextColumn();
-                    var newCol = ImGuiExtensions.Input("##Col", (int)rec.Colour, width: 50);
+                    var newCol = ImGuiExtensions.Input("Colour", (int)rec.Colour, width: 60);
                     if (newCol != null) { rec.Colour = (ushort)newCol.Value; _pendingState.RecordChange(); }
+
+                    ImGui.TableNextColumn();
+                    ImGui.TableNextColumn();
 
                     ImGui.PopID();
                 }
@@ -688,6 +702,8 @@ public class SelectedExecutableWindow : BaseWindow
             DrawStringArray(chase.ChaseNarrativeStrings, "Narrative", chase.ChaseNarrativeByteSizes);
         }
 
+        // TODO: First entry (cars.pic) is likely a file reference that belongs in a separate
+        // section, not a gameplay string. Investigate and split it out.
         if (ImGui.CollapsingHeader("Chase Gameplay Strings"))
         {
             DrawStringArray(chase.ChaseGameplayStrings, "Gameplay", chase.ChaseGameplayByteSizes);
@@ -716,11 +732,16 @@ public class SelectedExecutableWindow : BaseWindow
         DrawReadOnlyInfo("Graphics Doc Pointers", $"{code.GraphicsDocPointers.Length} entries (read-only, pointers)");
         DrawReadOnlyInfo("Crypto Screen Params", $"{code.CryptoScreenParams.Length} bytes (read-only)");
 
+        // TODO: Crypto alphabet data appears wrong/weird when parsed as strings — investigate
+        // whether this region is actually null-terminated strings or a different structure.
         if (ImGui.CollapsingHeader("Crypto Alphabet Data"))
         {
             DrawStringArray(code.CryptoAlphabetData, "Alphabet", code.CryptoAlphabetByteSizes);
         }
 
+        // TODO: Crypto UI strings appear to be mis-split — e.g. "No" and "Yes" show as
+        // separate entries but are part of the quit dialog string. Investigate whether the
+        // null-terminated string splitting is correct for this region.
         if (ImGui.CollapsingHeader("Crypto UI Strings"))
         {
             DrawStringArray(code.CryptoUiStrings, "CryptoUI", code.CryptoUiStringsByteSizes);
