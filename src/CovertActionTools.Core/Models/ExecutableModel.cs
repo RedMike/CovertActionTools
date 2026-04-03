@@ -9,16 +9,13 @@ namespace CovertActionTools.Core.Models
     // - CODE: GraphicsDocPointers (56)
     // - TAC: EquipmentNamePointers (16)
     // - FINAL: CharacterNamePointers (192)
-    // - GAME: CharacterNamePointers (192)
-    // - BUG: CharacterNamePointers (192)
+    // - GAME: CharacterNamePointers (192), ClueRelationshipPointers (40), MonthNamePointers (12)
+    // - BUG: CharacterNamePointers (192), ClueRelationshipPointers (40)
     //
     // STORED AS-IS — strings extracted as read-only convenience, pointers kept:
     // - FINAL: MissionSetStringPointers (16x16 start/end pairs with inter-string null padding)
-    // - GAME: ClueRelationshipPointers (40), MonthNamePointers (12) — shared/duplicate string refs
-    // - BUG: ClueRelationshipPointers (40) — shared/duplicate string refs
-    // TODO: These need deduplication logic to extract unique strings and recompute pointers
-    // that share string references. The mission set string table also has complex inter-group
-    // null padding that must be preserved or reconstructed.
+    // TODO: The mission set string table has complex inter-group null padding that must be
+    // preserved or reconstructed.
 
     /// <summary>
     /// Model for an EXEPACK-compressed DOS executable.
