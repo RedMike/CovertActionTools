@@ -19,17 +19,22 @@ namespace CovertActionTools.Core.Models.Executables
         public string Name { get; set; } = string.Empty;
 
         /// <summary>
-        /// Rarity weight -- higher = less likely to be chosen for a room slot.
+        /// Surveillance quality increase granted when a bug is placed in this room type.
         /// </summary>
-        public ushort Rarity { get; set; }
+        public ushort SurveillanceQuality { get; set; }
 
         /// <summary>
-        /// Size constraint category: 1=small only, 2=no constraint, 4=large only.
+        /// Building size constraint bitfield, matched against the building's room grid area
+        /// (width * height): bit 0 (1) = small (area &lt;= 40), bit 1 (2) = medium (area 41-72),
+        /// bit 2 (4) = large (area &gt; 72). Only large rooms (bit 2) are valid as the local
+        /// agent's spawn room in a building.
         /// </summary>
         public ushort SizeConstraint { get; set; }
 
         /// <summary>
-        /// Room enabled flag: 7=enabled, 0=disabled.
+        /// Room enabled flag. Only bit 0 is tested at runtime (mask is hardcoded to 1),
+        /// so this is effectively boolean: 0 = disabled, non-zero = enabled.
+        /// Vanilla data uses 7 for enabled rooms, but only bit 0 matters.
         /// </summary>
         public ushort Enabled { get; set; }
 
@@ -38,7 +43,7 @@ namespace CovertActionTools.Core.Models.Executables
             return new TacRoomTypeRecord
             {
                 Name = Name,
-                Rarity = Rarity,
+                SurveillanceQuality = SurveillanceQuality,
                 SizeConstraint = SizeConstraint,
                 Enabled = Enabled
             };
@@ -53,7 +58,7 @@ namespace CovertActionTools.Core.Models.Executables
             return new TacRoomTypeRecord
             {
                 Name = name,
-                Rarity = BitConverter.ToUInt16(data, offset + NameLength),
+                SurveillanceQuality = BitConverter.ToUInt16(data, offset + NameLength),
                 SizeConstraint = BitConverter.ToUInt16(data, offset + NameLength + 2),
                 Enabled = BitConverter.ToUInt16(data, offset + NameLength + 4)
             };
@@ -64,8 +69,8 @@ namespace CovertActionTools.Core.Models.Executables
             var result = new byte[RecordSize];
             var nameBytes = Encoding.ASCII.GetBytes(Name);
             Array.Copy(nameBytes, 0, result, 0, Math.Min(nameBytes.Length, NameLength));
-            result[NameLength] = (byte)(Rarity & 0xFF);
-            result[NameLength + 1] = (byte)((Rarity >> 8) & 0xFF);
+            result[NameLength] = (byte)(SurveillanceQuality & 0xFF);
+            result[NameLength + 1] = (byte)((SurveillanceQuality >> 8) & 0xFF);
             result[NameLength + 2] = (byte)(SizeConstraint & 0xFF);
             result[NameLength + 3] = (byte)((SizeConstraint >> 8) & 0xFF);
             result[NameLength + 4] = (byte)(Enabled & 0xFF);
@@ -99,7 +104,23 @@ namespace CovertActionTools.Core.Models.Executables
         public ushort SpritePage { get; set; }
 
         /// <summary>
-        /// Object behaviour bitfield (openable, buggable, photographable, etc.).
+        /// Object behaviour bitfield:
+        ///   bit 0 (0x001) = Blocks Movement — occupies floor space, tile is impassable.
+        ///   bit 1 (0x002) = Openable — can be opened/closed; open sprite is SpritePage+1.
+        ///   bit 2 (0x004) = Buggable — player can place a listening device.
+        ///   bit 3 (0x008) = Photographable — player can photograph contents.
+        ///   bit 4 (0x010) = Is Door — propagates open/closed state to adjacent tile (through
+        ///                    wall) so pathfinding works from both sides. Direction determined
+        ///                    by (object_index &amp; 3).
+        ///   bit 5 (0x020) = Blocks LOS — fully blocks line-of-sight raycast (returns 0).
+        ///                    Bit 0 objects only partially obstruct (returns 1). Also blocks
+        ///                    movement.
+        ///   bit 6 (0x040) = Multi-tile — object spans 2 tiles along the X axis. Even-indexed
+        ///                    objects extend to X+1, odd to X-1. Paired object is index +/- 1.
+        ///   bit 7 (0x080) = Unused — never tested at runtime. Only set on Table objects.
+        ///   bit 8 (0x100) = Wall-Adjacent — during room generation, placed on wall tiles only
+        ///                    (not freestanding on empty floor).
+        ///   bit 9 (0x200) = Password Terminal — interactable as a cipher terminal.
         /// </summary>
         public ushort BehaviourFlags { get; set; }
 
@@ -240,8 +261,8 @@ namespace CovertActionTools.Core.Models.Executables
         private const int ObjectCount = 62;
         private const int EquipmentPointersOffset = 0x20E0; // 0x012F10 - 0x10E30
         private const int EquipmentPointerCount = 16;
-        private const int UnknownEquipTableOffset = 0x2100; // 0x012F30 - 0x10E30
-        private const int UnknownEquipTableCount = 48;
+        private const int EquipNavTableOffset = 0x2100; // 0x012F30 - 0x10E30
+        private const int EquipNavTableCount = 48;
         private const int RagdollCoordsOffset = 0x2160;     // 0x012F90 - 0x10E30
         private const int RagdollCoordCount = 44;           // 43 entries + (0,0) terminator
         private const int EquipSlotRectsOffset = 0x2214;    // 0x013044 - 0x10E30
@@ -275,8 +296,12 @@ namespace CovertActionTools.Core.Models.Executables
 
         // EquipmentNamePointers are computed at serialization time from EquipmentNames positions.
 
-        /// <summary>48 x uint16 table (values 0-11), purpose undecoded.</summary>
-        public ushort[] UnknownEquipTable { get; set; } = Array.Empty<ushort>();
+        /// <summary>
+        /// Equipment selection UI navigation table: 12 rows (one per equipment item) x 4 columns
+        /// (Up, Down, Left, Right). Each cell is the equipment index to navigate to when that
+        /// arrow key is pressed. Defines the cursor movement grid for the equipment selection screen.
+        /// </summary>
+        public ushort[] EquipmentNavTable { get; set; } = Array.Empty<ushort>();
 
         /// <summary>43 screen coordinates for ragdoll item positions + (0,0) terminator.</summary>
         public TacScreenCoordinate[] RagdollCoordinates { get; set; } = Array.Empty<TacScreenCoordinate>();
@@ -337,7 +362,7 @@ namespace CovertActionTools.Core.Models.Executables
             segment.MidSectionPreEquipNames = DataSegmentHelper.Slice(dataSegment, objectsEnd, blockStart - objectsEnd);
             segment.MidSectionPostEquipNames = DataSegmentHelper.Slice(dataSegment, blockEnd, EquipmentPointersOffset - blockEnd);
 
-            segment.UnknownEquipTable = DataSegmentHelper.BytesToUInt16Array(dataSegment, UnknownEquipTableOffset, UnknownEquipTableCount);
+            segment.EquipmentNavTable = DataSegmentHelper.BytesToUInt16Array(dataSegment, EquipNavTableOffset, EquipNavTableCount);
 
             segment.RagdollCoordinates = new TacScreenCoordinate[RagdollCoordCount];
             for (var i = 0; i < RagdollCoordCount; i++)
@@ -406,7 +431,7 @@ namespace CovertActionTools.Core.Models.Executables
             var charNamesBaseOffset = equipNamesBaseOffset + equipNamesBytes.Length
                 + MidSectionPostEquipNames.Length
                 + DataSegmentHelper.UInt16ArrayToBytes(equipNamePointers).Length
-                + DataSegmentHelper.UInt16ArrayToBytes(UnknownEquipTable).Length
+                + DataSegmentHelper.UInt16ArrayToBytes(EquipmentNavTable).Length
                 + ragdollBytes.Length + Unknown3.Length
                 + equipRectBytes.Length + PreCharNameData.Length;
             var charNamePointers = DataSegmentHelper.ComputeStringPointers(CharacterNames, charNamesBaseOffset);
@@ -421,7 +446,7 @@ namespace CovertActionTools.Core.Models.Executables
                 equipNamesBytes,
                 MidSectionPostEquipNames,
                 DataSegmentHelper.UInt16ArrayToBytes(equipNamePointers),
-                DataSegmentHelper.UInt16ArrayToBytes(UnknownEquipTable),
+                DataSegmentHelper.UInt16ArrayToBytes(EquipmentNavTable),
                 ragdollBytes,
                 Unknown3,
                 equipRectBytes,
@@ -444,7 +469,7 @@ namespace CovertActionTools.Core.Models.Executables
                 MidSectionPreEquipNames = MidSectionPreEquipNames.ToArray(),
                 EquipmentNames = EquipmentNames.Select(s => s).ToArray(),
                 MidSectionPostEquipNames = MidSectionPostEquipNames.ToArray(),
-                UnknownEquipTable = UnknownEquipTable.ToArray(),
+                EquipmentNavTable = EquipmentNavTable.ToArray(),
                 RagdollCoordinates = RagdollCoordinates.Select(c => c.Clone()).ToArray(),
                 Unknown3 = Unknown3.ToArray(),
                 EquipmentSlotRects = EquipmentSlotRects.Select(r => r.Clone()).ToArray(),
