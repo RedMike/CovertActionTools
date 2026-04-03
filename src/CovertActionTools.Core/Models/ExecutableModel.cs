@@ -4,18 +4,12 @@ using CovertActionTools.Core.Models.Executables;
 
 namespace CovertActionTools.Core.Models
 {
-    // Pointer recomputation status:
-    // DONE — pointers computed in ToBytes(), strings extracted and editable:
-    // - CODE: GraphicsDocPointers (56)
-    // - TAC: EquipmentNamePointers (16)
-    // - FINAL: CharacterNamePointers (192)
-    // - GAME: CharacterNamePointers (192), ClueRelationshipPointers (40), MonthNamePointers (12)
-    // - BUG: CharacterNamePointers (192), ClueRelationshipPointers (40)
+    // Pointer recomputation: all pointer arrays are now computed in ToBytes().
     //
-    // STORED AS-IS — strings extracted as read-only convenience, pointers kept:
-    // - FINAL: MissionSetStringPointers (16x16 start/end pairs with inter-string null padding)
-    // TODO: The mission set string table has complex inter-group null padding that must be
-    // preserved or reconstructed.
+    // TODO: Shared data sections (character names, clue relationship phrases) are duplicated
+    // across multiple EXEs (TAC, FINAL, GAME, BUG all have the same 192 character names;
+    // GAME and BUG share the same 40 clue phrases). These should be split into a shared
+    // data segment model so that editing names in one EXE automatically updates all others.
 
     /// <summary>
     /// Model for an EXEPACK-compressed DOS executable.

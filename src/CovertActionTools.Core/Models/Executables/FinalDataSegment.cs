@@ -39,6 +39,10 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>Flag word: 0x0001 for records 0-8, 0xFFFF for records 9-14. Purpose unknown.</summary>
         public ushort FlagWord { get; set; }
 
+        // TODO: Each slot currently holds one string (the victim/target name), but the game
+        // likely uses multiple strings per crime (victim, location, item, etc.). Investigate
+        // via Ghidra disassembly how FUN_1100_0906 and related functions use the full pointer
+        // pair range to determine if additional strings are referenced per slot.
         /// <summary>
         /// 7 crime slot strings (victim/item names). The game accesses these as 7 (start, end)
         /// pointer pairs at record offsets +0x2A through +0x44, indexed by crime slot (0-6).

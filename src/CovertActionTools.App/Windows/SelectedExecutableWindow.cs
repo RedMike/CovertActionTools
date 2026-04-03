@@ -667,21 +667,21 @@ public class SelectedExecutableWindow : BaseWindow
                     ImGui.Text($"{i}");
 
                     ImGui.TableNextColumn();
-                    var newX = ImGuiExtensions.Input("##X", (int)rec.X1, width: 60);
+                    var newX = ImGuiExtensions.Input("##X", (int)rec.X1, width: 100);
                     if (newX != null) { rec.X1 = (ushort)newX.Value; _pendingState.RecordChange(); }
 
                     ImGui.TableNextColumn();
-                    var newY = ImGuiExtensions.Input("##Y", (int)rec.Y1, width: 60);
+                    var newY = ImGuiExtensions.Input("##Y", (int)rec.Y1, width: 100);
                     if (newY != null) { rec.Y1 = (ushort)newY.Value; _pendingState.RecordChange(); }
 
                     ImGui.TableNextColumn();
                     var w = rec.X2 - rec.X1;
-                    var newW = ImGuiExtensions.Input("##W", (int)w, width: 60);
+                    var newW = ImGuiExtensions.Input("##W", (int)w, width: 100);
                     if (newW != null) { rec.X2 = (ushort)(rec.X1 + newW.Value); _pendingState.RecordChange(); }
 
                     ImGui.TableNextColumn();
                     var h = rec.Y2 - rec.Y1;
-                    var newH = ImGuiExtensions.Input("##H", (int)h, width: 60);
+                    var newH = ImGuiExtensions.Input("##H", (int)h, width: 100);
                     if (newH != null) { rec.Y2 = (ushort)(rec.Y1 + newH.Value); _pendingState.RecordChange(); }
 
                     // Row 2: Flag/Colour
@@ -691,11 +691,11 @@ public class SelectedExecutableWindow : BaseWindow
                     // empty # column
 
                     ImGui.TableNextColumn();
-                    var newFlag = ImGuiExtensions.Input("Flag", (int)rec.Flag, width: 60);
+                    var newFlag = ImGuiExtensions.Input("Flag", (int)rec.Flag, width: 100);
                     if (newFlag != null) { rec.Flag = (byte)newFlag.Value; _pendingState.RecordChange(); }
 
                     ImGui.TableNextColumn();
-                    var newCol = ImGuiExtensions.Input("Colour", (int)rec.Colour, width: 60);
+                    var newCol = ImGuiExtensions.Input("Colour", (int)rec.Colour, width: 100);
                     if (newCol != null) { rec.Colour = (ushort)newCol.Value; _pendingState.RecordChange(); }
 
                     ImGui.TableNextColumn();
@@ -847,7 +847,7 @@ public class SelectedExecutableWindow : BaseWindow
                     var idx = row + c;
                     ImGui.TableNextColumn();
                     ImGui.PushID($"{idPrefix}_{idx}");
-                    var newVal = ImGuiExtensions.Input("##v", (int)values[idx], width: 60);
+                    var newVal = ImGuiExtensions.Input("##v", (int)values[idx], width: 100);
                     if (newVal != null) { values[idx] = (ushort)newVal.Value; _pendingState.RecordChange(); }
                     ImGui.PopID();
                 }
