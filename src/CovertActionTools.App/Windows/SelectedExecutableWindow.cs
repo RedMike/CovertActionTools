@@ -511,7 +511,10 @@ public class SelectedExecutableWindow : BaseWindow
         }
 
         DrawReadOnlyInfo("Mission Set Parameters", $"{final.MissionSetParameters.Length} bytes (read-only)");
-        DrawReadOnlyInfo("Character Name Pointers", $"{final.CharacterNamePointers.Length} entries (read-only, pointers)");
+        if (ImGui.CollapsingHeader("Character Names"))
+        {
+            DrawStringArray(final.CharacterNames, "CharName");
+        }
 
         DrawRawSectionSizes("Raw Sections", new[]
         {
@@ -519,7 +522,8 @@ public class SelectedExecutableWindow : BaseWindow
             ("Unknown1", final.Unknown1.Length),
             ("PostMissionPreCrimeData", final.PostMissionPreCrimeData.Length),
             ("Unknown2", final.Unknown2.Length),
-            ("PostOrgPreCharPtrData", final.PostOrgPreCharPtrData.Length),
+            ("PostOrgPreCharNameData", final.PostOrgPreCharNameData.Length),
+            ("PostCharNameData", final.PostCharNameData.Length),
             ("TrailingData", final.TrailingData.Length)
         });
     }
@@ -580,14 +584,27 @@ public class SelectedExecutableWindow : BaseWindow
 
     private void DrawGameData(GameDataSegment game)
     {
-        DrawReadOnlyInfo("Character Name Pointers", $"{game.CharacterNamePointers.Length} entries (read-only, pointers)");
-        DrawReadOnlyInfo("Clue Relationship Pointers", $"{game.ClueRelationshipPointers.Length} entries (read-only, pointers)");
+        if (ImGui.CollapsingHeader("Character Names"))
+        {
+            DrawStringArray(game.CharacterNames, "CharName");
+        }
+
+        if (ImGui.CollapsingHeader("Clue Relationship Phrases"))
+        {
+            DrawStringArray(game.ClueRelationshipPhrases, "CluePhr");
+        }
+
         DrawReadOnlyInfo("Unknown Lookup Table", $"{game.UnknownLookupTable.Length} bytes (read-only)");
-        DrawReadOnlyInfo("Month Name Pointers", $"{game.MonthNamePointers.Length} entries (read-only, pointers)");
+
+        if (ImGui.CollapsingHeader("Month Names"))
+        {
+            DrawStringArray(game.MonthNames, "Month");
+        }
 
         DrawRawSectionSizes("Raw Sections", new[]
         {
-            ("PreCharNamePtrData", game.PreCharNamePtrData.Length),
+            ("PreCharNameData", game.PreCharNameData.Length),
+            ("PostCharNameData", game.PostCharNameData.Length),
             ("MidSection", game.MidSection.Length),
             ("TrailingData", game.TrailingData.Length)
         });
@@ -600,7 +617,11 @@ public class SelectedExecutableWindow : BaseWindow
     private void DrawBugData(BugDataSegment bug)
     {
         DrawReadOnlyInfo("Clue Relationship Pointers", $"{bug.ClueRelationshipPointers.Length} entries (read-only, pointers)");
-        DrawReadOnlyInfo("Character Name Pointers", $"{bug.CharacterNamePointers.Length} entries (read-only, pointers)");
+
+        if (ImGui.CollapsingHeader("Character Names"))
+        {
+            DrawStringArray(bug.CharacterNames, "CharName");
+        }
 
         // TODO: Identify where record # comes from and if there is a name for each record.
         if (ImGui.CollapsingHeader("Rect Draw Records"))
@@ -670,7 +691,8 @@ public class SelectedExecutableWindow : BaseWindow
         DrawRawSectionSizes("Raw Sections", new[]
         {
             ("PreClueRelPtrData", bug.PreClueRelPtrData.Length),
-            ("MidSection", bug.MidSection.Length),
+            ("MidSectionPreCharNames", bug.MidSectionPreCharNames.Length),
+            ("PostCharNameData", bug.PostCharNameData.Length),
             ("PostCharNamePtrData", bug.PostCharNamePtrData.Length),
             ("RectDrawTrailer", bug.RectDrawTrailer.Length),
             ("TrailingData", bug.TrailingData.Length)

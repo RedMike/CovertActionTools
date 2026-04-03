@@ -14,12 +14,14 @@ namespace CovertActionTools.Core.Models.Executables
         public const int DsParagraph = 0x0A63;
 
         #region Layout Constants (DS-relative offsets)
-        private const int ClueRelPtrsOffset = 0x1A40;     // 0x00C070 - 0x0A630
         private const int ClueRelPtrCount = 40;
-        private const int CharNamePointersOffset = 0x296C; // 0x00CF9C - 0x0A630
         private const int CharNamePointerCount = 191;
-        private const int RectDrawRecordsOffset = 0x2B62;   // 0x00D192 - 0x0A630
         private const int RectDrawRecordCount = 49;
+
+        // Original binary offsets (used for initial parse)
+        private const int ClueRelPtrsOffset = 0x1A40;     // 0x00C070 - 0x0A630
+        private const int CharNamePointersOffset = 0x296C; // 0x00CF9C - 0x0A630
+        private const int RectDrawRecordsOffset = 0x2B62;  // 0x00D192 - 0x0A630
         #endregion
 
         #region Fields (in binary order)
@@ -27,16 +29,26 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>Data before clue relationship pointers: runtime, flag table, BSS, structured data, BUG-unique strings, clue phrases, item tables.</summary>
         public byte[] PreClueRelPtrData { get; set; } = Array.Empty<byte>();
 
+        // TODO: ClueRelationshipPointers (40) have shared/duplicate string references.
+        // Extracting and recomputing requires deduplication logic. For now, stored as-is.
         /// <summary>40 DS-relative pointers to clue relationship phrases.</summary>
         public ushort[] ClueRelationshipPointers { get; set; } = Array.Empty<ushort>();
 
-        /// <summary>Data between clue pointers and character name pointers: category table, lookup data, item/clue strings, investigation methods, intel text, character names.</summary>
-        public byte[] MidSection { get; set; } = Array.Empty<byte>();
+        /// <summary>Clue relationship phrases (extracted from pointers, read-only convenience).</summary>
+        public string[] ClueRelationshipPhrases { get; set; } = Array.Empty<string>();
 
-        /// <summary>191 DS-relative pointers into character name strings.</summary>
-        public ushort[] CharacterNamePointers { get; set; } = Array.Empty<ushort>();
+        /// <summary>Data between clue pointers and character names: category table, lookup data, item/clue strings, investigation methods, intel text.</summary>
+        public byte[] MidSectionPreCharNames { get; set; } = Array.Empty<byte>();
 
-        /// <summary>Data between char name pointers and unknown structured block: status labels.</summary>
+        /// <summary>191 character names (4 ethnic groups x gender, 16 each).</summary>
+        public string[] CharacterNames { get; set; } = Array.Empty<string>();
+
+        /// <summary>Data between character names and character name pointer table.</summary>
+        public byte[] PostCharNameData { get; set; } = Array.Empty<byte>();
+
+        // CharacterNamePointers are computed at serialization time.
+
+        /// <summary>Data between char name pointers and rect draw records: status labels.</summary>
         public byte[] PostCharNamePtrData { get; set; } = Array.Empty<byte>();
 
         /// <summary>49 rectangle drawing records (12 bytes each): flag + coordinates + colour for screen layout.</summary>
@@ -57,11 +69,20 @@ namespace CovertActionTools.Core.Models.Executables
             segment.PreClueRelPtrData = DataSegmentHelper.Slice(dataSegment, 0, ClueRelPtrsOffset);
 
             segment.ClueRelationshipPointers = DataSegmentHelper.BytesToUInt16Array(dataSegment, ClueRelPtrsOffset, ClueRelPtrCount);
+            segment.ClueRelationshipPhrases = DataSegmentHelper.ExtractStringsFromPointers(segment.ClueRelationshipPointers, dataSegment);
 
             var clueRelEnd = ClueRelPtrsOffset + ClueRelPtrCount * 2;
-            segment.MidSection = DataSegmentHelper.Slice(dataSegment, clueRelEnd, CharNamePointersOffset - clueRelEnd);
 
-            segment.CharacterNamePointers = DataSegmentHelper.BytesToUInt16Array(dataSegment, CharNamePointersOffset, CharNamePointerCount);
+            // Extract character names using pointer table
+            var charPtrs = DataSegmentHelper.BytesToUInt16Array(dataSegment, CharNamePointersOffset, CharNamePointerCount);
+            segment.CharacterNames = DataSegmentHelper.ExtractStringsFromPointers(charPtrs, dataSegment);
+
+            var (charBlockStart, charBlockEnd) = DataSegmentHelper.FindStringBlockBounds(charPtrs, dataSegment);
+            segment.MidSectionPreCharNames = DataSegmentHelper.Slice(dataSegment, clueRelEnd, charBlockStart - clueRelEnd);
+            var postCharLen = CharNamePointersOffset - charBlockEnd;
+            segment.PostCharNameData = postCharLen > 0
+                ? DataSegmentHelper.Slice(dataSegment, charBlockEnd, postCharLen)
+                : Array.Empty<byte>();
 
             var charPtrsEnd = CharNamePointersOffset + CharNamePointerCount * 2;
             segment.PostCharNamePtrData = DataSegmentHelper.Slice(dataSegment, charPtrsEnd, RectDrawRecordsOffset - charPtrsEnd);
@@ -73,8 +94,7 @@ namespace CovertActionTools.Core.Models.Executables
             }
 
             var rectEnd = RectDrawRecordsOffset + RectDrawRecordCount * RectDrawRecord.RecordSize;
-            // Trailer: FF FF sentinel + 8 zero bytes = 10 bytes
-            var trailerSize = 10;
+            var trailerSize = 10; // FF FF sentinel + 8 zero bytes
             segment.RectDrawTrailer = DataSegmentHelper.Slice(dataSegment, rectEnd, trailerSize);
 
             var structEnd = rectEnd + trailerSize;
@@ -85,7 +105,14 @@ namespace CovertActionTools.Core.Models.Executables
 
         public byte[] ToBytes()
         {
-            var rectBytes = new byte[RectDrawRecordCount * RectDrawRecord.RecordSize];
+            var charNamesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(CharacterNames);
+
+            // Compute character name pointers
+            var charNamesBase = PreClueRelPtrData.Length + ClueRelPtrCount * 2
+                + MidSectionPreCharNames.Length;
+            var charNamePointers = DataSegmentHelper.ComputeStringPointers(CharacterNames, charNamesBase);
+
+            var rectBytes = new byte[RectDrawRecords.Length * RectDrawRecord.RecordSize];
             for (var i = 0; i < RectDrawRecords.Length; i++)
             {
                 Array.Copy(RectDrawRecords[i].ToBytes(), 0, rectBytes, i * RectDrawRecord.RecordSize, RectDrawRecord.RecordSize);
@@ -94,8 +121,10 @@ namespace CovertActionTools.Core.Models.Executables
             return DataSegmentHelper.Concatenate(
                 PreClueRelPtrData,
                 DataSegmentHelper.UInt16ArrayToBytes(ClueRelationshipPointers),
-                MidSection,
-                DataSegmentHelper.UInt16ArrayToBytes(CharacterNamePointers),
+                MidSectionPreCharNames,
+                charNamesBytes,
+                PostCharNameData,
+                DataSegmentHelper.UInt16ArrayToBytes(charNamePointers),
                 PostCharNamePtrData,
                 rectBytes,
                 RectDrawTrailer,
@@ -109,8 +138,10 @@ namespace CovertActionTools.Core.Models.Executables
             {
                 PreClueRelPtrData = PreClueRelPtrData.ToArray(),
                 ClueRelationshipPointers = ClueRelationshipPointers.ToArray(),
-                MidSection = MidSection.ToArray(),
-                CharacterNamePointers = CharacterNamePointers.ToArray(),
+                ClueRelationshipPhrases = ClueRelationshipPhrases.Select(s => s).ToArray(),
+                MidSectionPreCharNames = MidSectionPreCharNames.ToArray(),
+                CharacterNames = CharacterNames.Select(s => s).ToArray(),
+                PostCharNameData = PostCharNameData.ToArray(),
                 PostCharNamePtrData = PostCharNamePtrData.ToArray(),
                 RectDrawRecords = RectDrawRecords.Select(r => r.Clone()).ToArray(),
                 RectDrawTrailer = RectDrawTrailer.ToArray(),

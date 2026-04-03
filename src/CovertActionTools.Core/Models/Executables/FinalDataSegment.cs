@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
@@ -37,8 +38,17 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>Flag word: 0x0001 for records 0-8, 0xFFFF for records 9-14. Purpose unknown.</summary>
         public ushort FlagWord { get; set; }
 
-        /// <summary>16 DS-relative string pointer pairs into victim/item string table. Not editable (pointers).</summary>
+        // TODO: StringPointers are (start, end) pairs into the mission set string table with
+        // null padding between groups. The padding structure is complex (shared boundary words,
+        // incrementing fill values). Extracting individual strings and recomputing these pairs
+        // requires preserving the inter-string padding. For now, pointer words are stored as-is.
+        /// <summary>16 pointer words: (start, end) pairs into mission set string table.</summary>
         public ushort[] StringPointers { get; set; } = Array.Empty<ushort>();
+
+        /// <summary>
+        /// Mission set plot strings extracted from the pointer pairs (read-only convenience).
+        /// </summary>
+        public string[] Strings { get; set; } = Array.Empty<string>();
 
         public FinalMissionSetRecord Clone()
         {
@@ -51,17 +61,35 @@ namespace CovertActionTools.Core.Models.Executables
                 Crime3Id = Crime3Id,
                 UnusedCrimeSlots = UnusedCrimeSlots.ToArray(),
                 FlagWord = FlagWord,
-                StringPointers = StringPointers.ToArray()
+                StringPointers = StringPointers.ToArray(),
+                Strings = Strings.Select(s => s).ToArray()
             };
         }
 
-        public static FinalMissionSetRecord FromBytes(byte[] data, int offset)
+        public static FinalMissionSetRecord FromBytes(byte[] data, int offset, byte[] dataSegment)
         {
             var nameBytes = new byte[NameLength];
             Array.Copy(data, offset, nameBytes, 0, NameLength);
             var nameEnd = Array.IndexOf(nameBytes, (byte)0);
             if (nameEnd < 0) nameEnd = NameLength;
             var name = Encoding.ASCII.GetString(nameBytes, 0, nameEnd);
+
+            var ptrWords = DataSegmentHelper.BytesToUInt16Array(data, offset + 0x2A, StringPointerCount);
+
+            // Extract strings from (start, end) pointer pairs
+            var strings = new List<string>();
+            for (var i = 0; i < ptrWords.Length - 1; i++)
+            {
+                var start = ptrWords[i];
+                var end = ptrWords[i + 1];
+                if (end <= start || start >= dataSegment.Length || end > dataSegment.Length) break;
+                var strEnd = start;
+                while (strEnd < dataSegment.Length && strEnd < end && dataSegment[strEnd] != 0) strEnd++;
+                if (strEnd > start)
+                    strings.Add(Encoding.ASCII.GetString(dataSegment, start, strEnd - start));
+                else
+                    break;
+            }
 
             return new FinalMissionSetRecord
             {
@@ -72,7 +100,8 @@ namespace CovertActionTools.Core.Models.Executables
                 Crime3Id = BitConverter.ToUInt16(data, offset + 0x1E),
                 UnusedCrimeSlots = DataSegmentHelper.Slice(data, offset + 0x20, UnusedSlotCount),
                 FlagWord = BitConverter.ToUInt16(data, offset + 0x28),
-                StringPointers = DataSegmentHelper.BytesToUInt16Array(data, offset + 0x2A, StringPointerCount)
+                StringPointers = ptrWords,
+                Strings = strings.ToArray()
             };
         }
 
@@ -108,20 +137,18 @@ namespace CovertActionTools.Core.Models.Executables
         private const int MissionParamCount = 16;
         private const int MissionParamRecordSize = 26;
         private const int MissionParamsSize = MissionParamCount * MissionParamRecordSize; // 416
-        private const int PostMissionParamsGap = 2;        // 2-byte gap before mission set records
         private const int MissionSetsOffset = 0x1E9E;      // 0x012C1E - 0x10D80
         private const int MissionSetCount = 16;
         private const int CrimeTypesOffset = 0x2AFC;        // 0x01387C - 0x10D80
         private const int CrimeTypeCount = 13;
         private const int OrgsOffset = 0x2B88;              // 0x013908 - 0x10D80
         private const int OrgCount = 24;
-        private const int CharNamePointersOffset = 0x4526;  // 0x0152A6 - 0x10D80
         private const int CharNamePointerCount = 192;
         #endregion
 
         #region Fields (in binary order)
 
-        /// <summary>Data before mission set params: MSC runtime, BSS, RastPort, CGA, strings.</summary>
+        /// <summary>Data before mission set params: MSC runtime, BSS, RastPort, CGA, strings, mission set string table.</summary>
         public byte[] PreMissionParamData { get; set; } = Array.Empty<byte>();
 
         /// <summary>16 x 26-byte mission set parameter records (values 0-8, partially understood).</summary>
@@ -151,11 +178,16 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>Original per-string byte sizes for OrganisationNames (prevents pointer drift).</summary>
         public int[] OrganisationNameByteSizes { get; set; } = Array.Empty<int>();
 
-        /// <summary>Data between org names and character name pointers: career text, briefing, clue phrases, char names, item tables.</summary>
-        public byte[] PostOrgPreCharPtrData { get; set; } = Array.Empty<byte>();
+        /// <summary>Data between org names and character names: career text, briefing, clue phrases, item tables.</summary>
+        public byte[] PostOrgPreCharNameData { get; set; } = Array.Empty<byte>();
 
-        /// <summary>192 DS-relative pointers into character name strings.</summary>
-        public ushort[] CharacterNamePointers { get; set; } = Array.Empty<ushort>();
+        /// <summary>192 character names (4 ethnic groups x female first / male first / male surname, 16 each).</summary>
+        public string[] CharacterNames { get; set; } = Array.Empty<string>();
+
+        /// <summary>Data between character names and trailing data (gap before pointer table position).</summary>
+        public byte[] PostCharNameData { get; set; } = Array.Empty<byte>();
+
+        // CharacterNamePointers are computed at serialization time from CharacterNames positions.
 
         /// <summary>Everything after character name pointers: game state, file management, runtime, BSS.</summary>
         public byte[] TrailingData { get; set; } = Array.Empty<byte>();
@@ -176,7 +208,7 @@ namespace CovertActionTools.Core.Models.Executables
             segment.MissionSets = new FinalMissionSetRecord[MissionSetCount];
             for (var i = 0; i < MissionSetCount; i++)
             {
-                segment.MissionSets[i] = FinalMissionSetRecord.FromBytes(dataSegment, MissionSetsOffset + i * FinalMissionSetRecord.RecordSize);
+                segment.MissionSets[i] = FinalMissionSetRecord.FromBytes(dataSegment, MissionSetsOffset + i * FinalMissionSetRecord.RecordSize, dataSegment);
             }
 
             var missionSetsEnd = MissionSetsOffset + MissionSetCount * FinalMissionSetRecord.RecordSize;
@@ -196,11 +228,23 @@ namespace CovertActionTools.Core.Models.Executables
             segment.OrganisationNames = orgNames;
             segment.OrganisationNameByteSizes = orgSizes;
 
-            segment.PostOrgPreCharPtrData = DataSegmentHelper.Slice(dataSegment, orgEnd, CharNamePointersOffset - orgEnd);
+            // Extract character names using the pointer table at CharNamePointersOffset.
+            // This offset is fixed in the original binary. On re-parse of re-serialized data,
+            // we recompute it from the serialization order.
+            // For initial parse, use the constant. For re-parse, the pointer table follows
+            // the PostCharNameData section. We handle both by trying the constant first.
+            var charPtrTableOffset = FindCharNamePointerTableOffset(dataSegment, orgEnd);
+            var charPtrs = DataSegmentHelper.BytesToUInt16Array(dataSegment, charPtrTableOffset, CharNamePointerCount);
+            segment.CharacterNames = DataSegmentHelper.ExtractStringsFromPointers(charPtrs, dataSegment);
 
-            segment.CharacterNamePointers = DataSegmentHelper.BytesToUInt16Array(dataSegment, CharNamePointersOffset, CharNamePointerCount);
+            var (charBlockStart, charBlockEnd) = DataSegmentHelper.FindStringBlockBounds(charPtrs, dataSegment);
+            segment.PostOrgPreCharNameData = DataSegmentHelper.Slice(dataSegment, orgEnd, charBlockStart - orgEnd);
+            var postCharLen = charPtrTableOffset - charBlockEnd;
+            segment.PostCharNameData = postCharLen > 0
+                ? DataSegmentHelper.Slice(dataSegment, charBlockEnd, postCharLen)
+                : Array.Empty<byte>();
 
-            var charPtrsEnd = CharNamePointersOffset + CharNamePointerCount * 2;
+            var charPtrsEnd = charPtrTableOffset + CharNamePointerCount * 2;
             segment.TrailingData = DataSegmentHelper.Slice(dataSegment, charPtrsEnd, dataSegment.Length - charPtrsEnd);
 
             return segment;
@@ -208,11 +252,22 @@ namespace CovertActionTools.Core.Models.Executables
 
         public byte[] ToBytes()
         {
-            var missionSetBytes = new byte[MissionSetCount * FinalMissionSetRecord.RecordSize];
+            var missionSetBytes = new byte[MissionSets.Length * FinalMissionSetRecord.RecordSize];
             for (var i = 0; i < MissionSets.Length; i++)
             {
                 Array.Copy(MissionSets[i].ToBytes(), 0, missionSetBytes, i * FinalMissionSetRecord.RecordSize, FinalMissionSetRecord.RecordSize);
             }
+
+            var crimeBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(CrimeTypeNames, CrimeTypeNameByteSizes);
+            var orgBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(OrganisationNames, OrganisationNameByteSizes);
+            var charNamesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(CharacterNames);
+
+            // Compute character name pointer values
+            var charNamesBaseOffset = PreMissionParamData.Length + MissionSetParameters.Length
+                + Unknown1.Length + missionSetBytes.Length + PostMissionPreCrimeData.Length
+                + crimeBytes.Length + Unknown2.Length + orgBytes.Length
+                + PostOrgPreCharNameData.Length;
+            var charNamePointers = DataSegmentHelper.ComputeStringPointers(CharacterNames, charNamesBaseOffset);
 
             return DataSegmentHelper.Concatenate(
                 PreMissionParamData,
@@ -220,11 +275,13 @@ namespace CovertActionTools.Core.Models.Executables
                 Unknown1,
                 missionSetBytes,
                 PostMissionPreCrimeData,
-                DataSegmentHelper.NullTerminatedStringsToFixedBytes(CrimeTypeNames, CrimeTypeNameByteSizes),
+                crimeBytes,
                 Unknown2,
-                DataSegmentHelper.NullTerminatedStringsToFixedBytes(OrganisationNames, OrganisationNameByteSizes),
-                PostOrgPreCharPtrData,
-                DataSegmentHelper.UInt16ArrayToBytes(CharacterNamePointers),
+                orgBytes,
+                PostOrgPreCharNameData,
+                charNamesBytes,
+                PostCharNameData,
+                DataSegmentHelper.UInt16ArrayToBytes(charNamePointers),
                 TrailingData
             );
         }
@@ -243,10 +300,51 @@ namespace CovertActionTools.Core.Models.Executables
                 Unknown2 = Unknown2.ToArray(),
                 OrganisationNames = OrganisationNames.Select(s => s).ToArray(),
                 OrganisationNameByteSizes = OrganisationNameByteSizes.ToArray(),
-                PostOrgPreCharPtrData = PostOrgPreCharPtrData.ToArray(),
-                CharacterNamePointers = CharacterNamePointers.ToArray(),
+                PostOrgPreCharNameData = PostOrgPreCharNameData.ToArray(),
+                CharacterNames = CharacterNames.Select(s => s).ToArray(),
+                PostCharNameData = PostCharNameData.ToArray(),
                 TrailingData = TrailingData.ToArray()
             };
+        }
+
+        /// <summary>
+        /// Finds the character name pointer table offset. Uses the known constant for original
+        /// binary data, with a validation check. For re-serialized data where the constant
+        /// doesn't match, scans backwards from the end of the data segment.
+        /// </summary>
+        private static int FindCharNamePointerTableOffset(byte[] dataSegment, int searchStart)
+        {
+            // Try the known constant first
+            var knownOffset = 0x4526; // CharNamePointersOffset from original binary
+            if (knownOffset + CharNamePointerCount * 2 <= dataSegment.Length)
+            {
+                // Validate: first pointer should resolve to a printable ASCII string
+                var firstPtr = BitConverter.ToUInt16(dataSegment, knownOffset);
+                if (firstPtr > 0 && firstPtr < dataSegment.Length && dataSegment[firstPtr] >= 0x20 && dataSegment[firstPtr] < 0x7F)
+                {
+                    return knownOffset;
+                }
+            }
+
+            // Fallback: scan backwards from end of data segment looking for the pointer table.
+            // The table is followed by TrailingData. The last pointer should resolve to the
+            // last character name. Scan for a 384-byte block where most values resolve to strings.
+            var tableSize = CharNamePointerCount * 2;
+            for (var offset = dataSegment.Length - tableSize; offset >= searchStart; offset -= 2)
+            {
+                var validCount = 0;
+                for (var i = 0; i < Math.Min(10, CharNamePointerCount); i++)
+                {
+                    var ptr = BitConverter.ToUInt16(dataSegment, offset + i * 2);
+                    if (ptr > 0 && ptr < dataSegment.Length && dataSegment[ptr] >= 0x20 && dataSegment[ptr] < 0x7F)
+                    {
+                        validCount++;
+                    }
+                }
+                if (validCount >= 8) return offset; // Most of first 10 pointers valid
+            }
+
+            throw new InvalidOperationException("Could not find character name pointer table in FINAL data segment");
         }
 
         private static int FindNthNullTerminator(byte[] data, int startOffset, int count)
