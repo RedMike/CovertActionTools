@@ -261,6 +261,9 @@ namespace CovertActionTools.Core.Compression
             segmentData[0x0F] = (byte)'B';
 
             // Build packed data region: [dead_zone] [compressed] [FF padding]
+            // The EXEPACK stub scans at most 16 bytes backward for 0xFF padding.
+            // Total trailing 0xFF (from compressor + our padding) must be ≤ 15,
+            // otherwise the stub can't find the last command byte.
             var packedRegionLength = deadZone.Length + compressedPayload.Length;
             var exepackCs = (packedRegionLength + 15) / 16;
 
@@ -276,26 +279,41 @@ namespace CovertActionTools.Core.Compression
                 }
                 else
                 {
-                    // Compressed data grew; use minimum CS that fits with padding
-                    exepackCs = (packedRegionLength + 8 + 15) / 16;
+                    // Compressed data grew beyond original CS.
+                    // Strip trailing 0xFF from compressed data (the compressor adds 1-2),
+                    // then compute CS so that paragraph-alignment padding is the only
+                    // trailing 0xFF. This guarantees the last non-0xFF byte (a command)
+                    // is within the stub's 16-byte scan window.
+                    var trimmedLength = compressedPayload.Length;
+                    while (trimmedLength > 0 && compressedPayload[trimmedLength - 1] == 0xFF)
+                    {
+                        trimmedLength--;
+                    }
+
+                    var trimmedRegionLength = deadZone.Length + trimmedLength;
+                    exepackCs = (trimmedRegionLength + 15) / 16; // 0-15 bytes of padding
                 }
             }
 
-            // Calculate FF padding
+            // Calculate FF padding. May be negative if the compressor's trailing 0xFF
+            // extends past the CS boundary (trimmed region fit but untrimmed doesn't).
+            // In that case, truncate the compressed data to fit — the trailing 0xFF
+            // bytes are padding, not commands, so truncating them is safe.
             var paddingLength = exepackCs * 16 - packedRegionLength;
+            var compressedBytesToCopy = compressedPayload.Length;
             if (paddingLength < 0)
             {
-                exepackCs = (packedRegionLength + 8 + 15) / 16;
-                paddingLength = exepackCs * 16 - packedRegionLength;
+                compressedBytesToCopy += paddingLength; // reduce by overshoot
+                paddingLength = 0;
             }
 
             // Assemble packed payload: [dead zone][compressed][FF padding][EXEPACK segment]
             var packedPayload = new byte[exepackCs * 16 + segmentData.Length];
             Array.Copy(deadZone, 0, packedPayload, 0, deadZone.Length);
-            Array.Copy(compressedPayload, 0, packedPayload, deadZone.Length, compressedPayload.Length);
+            Array.Copy(compressedPayload, 0, packedPayload, deadZone.Length, compressedBytesToCopy);
             for (var i = 0; i < paddingLength; i++)
             {
-                packedPayload[deadZone.Length + compressedPayload.Length + i] = 0xFF;
+                packedPayload[deadZone.Length + compressedBytesToCopy + i] = 0xFF;
             }
             Array.Copy(segmentData, 0, packedPayload, exepackCs * 16, segmentData.Length);
 
