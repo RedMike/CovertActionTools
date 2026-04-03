@@ -4,12 +4,15 @@ using CovertActionTools.Core.Models.Executables;
 
 namespace CovertActionTools.Core.Models
 {
-    // TODO: All fields in the per-EXE data segment classes that currently store data pointers
-    // (DS-relative or otherwise) will need updating so that they do not store pointers.
-    // This is required so that we can create executable changes that e.g. add new items to
-    // arrays, remove items from arrays, change string sizes, etc, without all the pointers
-    // going out of sync. The publisher should recompute pointers at serialisation time from
-    // the actual data.
+    // Pointer recomputation status:
+    // - CODE: GraphicsDocPointers — DONE (computed in ToBytes from GraphicsLibraryDocs positions)
+    // - TAC: EquipmentNamePointers — DONE (computed in ToBytes from EquipmentNames positions)
+    // TODO: Remaining pointer arrays need the same treatment. This requires converting FromBytes
+    // to sequential (position-tracking) parsing instead of hardcoded offsets, because once section
+    // sizes can change, the fixed offset constants break on re-parsing modified data.
+    // - FINAL: CharacterNamePointers (192), MissionSetStringPointers (16x16 start/end pairs)
+    // - GAME: CharacterNamePointers (192), ClueRelationshipPointers (40), MonthNamePointers (12)
+    // - BUG: CharacterNamePointers (191), ClueRelationshipPointers (40)
 
     /// <summary>
     /// Model for an EXEPACK-compressed DOS executable.
