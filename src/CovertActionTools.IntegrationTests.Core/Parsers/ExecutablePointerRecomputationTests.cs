@@ -153,4 +153,24 @@ public class ExecutablePointerRecomputationTests
         }
         return -1;
     }
+
+    [Fact]
+    public void FINAL_DataSegmentSize_Preserved()
+    {
+        if (!File.Exists(Path.Combine(_scratchDir, "FINAL.EXE"))) return;
+
+        var decompression = new ExepackDecompression(NullLogger<ExepackDecompression>.Instance);
+        var parser = new LegacyExecutableParser(NullLogger<LegacyExecutableParser>.Instance, decompression);
+        parser.Start(_scratchDir);
+        while (!parser.RunStep()) { }
+        var model = new PackageModel();
+        parser.SetResult(model);
+
+        var final = model.Executables["FINAL"];
+
+        var dsBytes = final.GetDataSegmentBytes();
+
+        // Original FINAL data segment is 31200 bytes (from Python analysis)
+        Assert.Equal(31200, dsBytes.Length);
+    }
 }

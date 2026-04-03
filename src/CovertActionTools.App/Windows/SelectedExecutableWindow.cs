@@ -501,12 +501,15 @@ public class SelectedExecutableWindow : BaseWindow
 
                     ImGui.Text($"Unused Crime Slots: {ms.UnusedCrimeSlots.Length} bytes (always 0xFF)");
 
-                    if (ImGui.CollapsingHeader("Slot Strings"))
+                    if (ImGui.CollapsingHeader("Plot Strings"))
                     {
-                        for (var si = 0; si < ms.SlotStrings.Length; si++)
+                        for (var slot = 0; slot < 7 && slot * 2 + 1 < ms.SlotStrings.Length; slot++)
                         {
-                            var slotLabel = string.IsNullOrEmpty(ms.SlotStrings[si]) ? "(empty)" : ms.SlotStrings[si];
-                            ImGui.Text($"  Slot {si}: {slotLabel}");
+                            var victim = ms.SlotStrings[slot * 2];
+                            var item = ms.SlotStrings[slot * 2 + 1];
+                            if (string.IsNullOrEmpty(victim) && string.IsNullOrEmpty(item)) continue;
+                            ImGui.Text($"  Slot {slot} Victim: {(string.IsNullOrEmpty(victim) ? "(empty)" : victim)}");
+                            ImGui.Text($"  Slot {slot} Item:   {(string.IsNullOrEmpty(item) ? "(empty)" : item)}");
                         }
                     }
                 }

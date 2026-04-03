@@ -13,10 +13,11 @@ namespace CovertActionTools.Core.Models.Executables
     {
         public const int RecordSize = 74;
         public const int NameLength = 25;
-        public const int CrimeSlotCount = 3;
         public const int UnusedSlotCount = 8;
         public const int StringPointerCount = 16;
-        public const int CrimeSlotTotal = 7;
+        public const int CrimeSlotCount = 7;
+        public const int StringsPerSlot = 2;
+        public const int TotalSlotStrings = CrimeSlotCount * StringsPerSlot; // 14
 
         /// <summary>Mission set name, null-padded to 25 bytes.</summary>
         public string Name { get; set; } = string.Empty;
@@ -39,18 +40,15 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>Flag word: 0x0001 for records 0-8, 0xFFFF for records 9-14. Purpose unknown.</summary>
         public ushort FlagWord { get; set; }
 
-        // TODO: Each slot currently holds one string (the victim/target name), but the game
-        // likely uses multiple strings per crime (victim, location, item, etc.). Investigate
-        // via Ghidra disassembly how FUN_1100_0906 and related functions use the full pointer
-        // pair range to determine if additional strings are referenced per slot.
         /// <summary>
-        /// 7 crime slot strings (victim/item names). The game accesses these as 7 (start, end)
-        /// pointer pairs at record offsets +0x2A through +0x44, indexed by crime slot (0-6).
-        /// Empty slots contain empty strings. The remaining 2 words at +0x46/+0x48 are unused.
+        /// 14 crime slot string pointers stored as 7 pairs of (victim, item/location).
+        /// The game accesses slot N at record offset +0x2A + N*4 (2 pointers per slot).
+        /// Index 2*N = victim/target string, index 2*N+1 = item/location string.
+        /// Empty slots contain empty strings. 14 pointers + 2 trailing fill words = 16 total.
         /// </summary>
         public string[] SlotStrings { get; set; } = Array.Empty<string>();
 
-        // SlotString pointer pairs are computed at serialization time from string positions.
+        // SlotString pointers are computed at serialization time from string positions.
 
         /// <summary>Number of null padding bytes after this record's last string before the next record's strings.</summary>
         public int TrailingPadding { get; set; }
@@ -79,23 +77,20 @@ namespace CovertActionTools.Core.Models.Executables
             if (nameEnd < 0) nameEnd = NameLength;
             var name = Encoding.ASCII.GetString(nameBytes, 0, nameEnd);
 
-            // Extract 7 slot strings from (start, end) pointer pairs
-            var slotStrings = new string[CrimeSlotTotal];
-            for (var slot = 0; slot < CrimeSlotTotal; slot++)
+            // Extract 14 strings: 7 slots x 2 pointers each (victim + item/location)
+            var slotStrings = new string[TotalSlotStrings];
+            for (var i = 0; i < TotalSlotStrings; i++)
             {
-                var start = BitConverter.ToUInt16(data, offset + 0x2A + slot * 4);
-                var end = BitConverter.ToUInt16(data, offset + 0x2A + slot * 4 + 2);
-                if (start > 0 && start < dataSegment.Length && end > start && end <= dataSegment.Length)
+                var ptr = BitConverter.ToUInt16(data, offset + 0x2A + i * 2);
+                if (ptr > 0 && ptr < dataSegment.Length && dataSegment[ptr] != 0)
                 {
-                    var strEnd = start;
-                    while (strEnd < dataSegment.Length && strEnd < end && dataSegment[strEnd] != 0) strEnd++;
-                    slotStrings[slot] = strEnd > start
-                        ? Encoding.ASCII.GetString(dataSegment, start, strEnd - start)
-                        : string.Empty;
+                    var strEnd = ptr;
+                    while (strEnd < dataSegment.Length && dataSegment[strEnd] != 0) strEnd++;
+                    slotStrings[i] = Encoding.ASCII.GetString(dataSegment, ptr, strEnd - ptr);
                 }
                 else
                 {
-                    slotStrings[slot] = string.Empty;
+                    slotStrings[i] = string.Empty;
                 }
             }
 
@@ -118,7 +113,12 @@ namespace CovertActionTools.Core.Models.Executables
         /// for empty slots). nullPadStart is the offset where null padding begins after the
         /// last real string.
         /// </summary>
-        public byte[] ToBytes(int[] slotStringOffsets, int nullPadStart)
+        /// <summary>
+        /// Serializes the record to 74 bytes. stringOffsets contains the DS-relative byte
+        /// offset for each of the 14 slot strings. nullPadStart is the offset where null
+        /// padding begins (for empty string pointers and trailing fill words).
+        /// </summary>
+        public byte[] ToBytes(int[] stringOffsets, int nullPadStart)
         {
             var result = new byte[RecordSize];
             var nameBytes = Encoding.ASCII.GetBytes(Name);
@@ -130,27 +130,22 @@ namespace CovertActionTools.Core.Models.Executables
             Array.Copy(UnusedCrimeSlots, 0, result, 0x20, Math.Min(UnusedCrimeSlots.Length, UnusedSlotCount));
             result[0x28] = (byte)(FlagWord & 0xFF); result[0x29] = (byte)((FlagWord >> 8) & 0xFF);
 
-            // Build 16 pointer words: 7 (start, end) pairs + 2 trailing
+            // Build 16 pointer words: 14 string pointers + 2 trailing fill
             var words = new ushort[StringPointerCount];
             var fillPos = nullPadStart;
-            for (var slot = 0; slot < CrimeSlotTotal; slot++)
+            for (var i = 0; i < TotalSlotStrings; i++)
             {
-                var strOffset = slotStringOffsets[slot];
-                words[slot * 2] = (ushort)strOffset;
-                if (!string.IsNullOrEmpty(SlotStrings[slot]))
+                if (i < stringOffsets.Length && !string.IsNullOrEmpty(SlotStrings[i]))
                 {
-                    var endOffset = strOffset + Encoding.ASCII.GetByteCount(SlotStrings[slot]) + 1;
-                    words[slot * 2 + 1] = (ushort)endOffset;
+                    words[i] = (ushort)stringOffsets[i];
                 }
                 else
                 {
-                    // Empty slot: (start, start+1) pointing into null padding
-                    words[slot * 2] = (ushort)fillPos;
-                    words[slot * 2 + 1] = (ushort)(fillPos + 1);
-                    fillPos += 2;
+                    words[i] = (ushort)fillPos;
+                    fillPos++;
                 }
             }
-            // Last 2 words: continue fill
+            // Last 2 trailing fill words
             words[14] = (ushort)fillPos;
             words[15] = (ushort)(fillPos + 1);
 
@@ -254,12 +249,12 @@ namespace CovertActionTools.Core.Models.Executables
             for (var i = 0; i < MissionSetCount; i++)
             {
                 var recBase = MissionSetsOffset + i * FinalMissionSetRecord.RecordSize;
-                for (var slot = 0; slot < FinalMissionSetRecord.CrimeSlotTotal; slot++)
+                for (var si = 0; si < FinalMissionSetRecord.TotalSlotStrings; si++)
                 {
-                    var start = BitConverter.ToUInt16(dataSegment, recBase + 0x2A + slot * 4);
-                    if (start > 0 && start < dataSegment.Length && dataSegment[start] != 0)
+                    var ptr = BitConverter.ToUInt16(dataSegment, recBase + 0x2A + si * 2);
+                    if (ptr > 0 && ptr < dataSegment.Length && dataSegment[ptr] != 0)
                     {
-                        allSlotPtrs.Add(start);
+                        allSlotPtrs.Add(ptr);
                     }
                 }
             }
@@ -287,14 +282,14 @@ namespace CovertActionTools.Core.Models.Executables
                     // Find end of this record's last non-empty string
                     var lastEnd = 0;
                     var recBase = MissionSetsOffset + i * FinalMissionSetRecord.RecordSize;
-                    for (var slot = 0; slot < FinalMissionSetRecord.CrimeSlotTotal; slot++)
+                    for (var si = 0; si < FinalMissionSetRecord.TotalSlotStrings; si++)
                     {
-                        var start = BitConverter.ToUInt16(dataSegment, recBase + 0x2A + slot * 4);
-                        if (start > 0 && start < dataSegment.Length && dataSegment[start] != 0)
+                        var ptr = BitConverter.ToUInt16(dataSegment, recBase + 0x2A + si * 2);
+                        if (ptr > 0 && ptr < dataSegment.Length && dataSegment[ptr] != 0)
                         {
-                            var e = start;
+                            var e = (int)ptr;
                             while (e < dataSegment.Length && dataSegment[e] != 0) e++;
-                            e++; // past null
+                            e++;
                             if (e > lastEnd) lastEnd = e;
                         }
                     }
@@ -304,12 +299,12 @@ namespace CovertActionTools.Core.Models.Executables
                     if (i + 1 < MissionSetCount)
                     {
                         var nextBase = MissionSetsOffset + (i + 1) * FinalMissionSetRecord.RecordSize;
-                        for (var slot = 0; slot < FinalMissionSetRecord.CrimeSlotTotal; slot++)
+                        for (var si = 0; si < FinalMissionSetRecord.TotalSlotStrings; si++)
                         {
-                            var start = BitConverter.ToUInt16(dataSegment, nextBase + 0x2A + slot * 4);
-                            if (start > 0 && start < dataSegment.Length && dataSegment[start] != 0)
+                            var ptr = BitConverter.ToUInt16(dataSegment, nextBase + 0x2A + si * 2);
+                            if (ptr > 0 && ptr < dataSegment.Length && dataSegment[ptr] != 0)
                             {
-                                nextStart = start;
+                                nextStart = ptr;
                                 break;
                             }
                         }
@@ -373,50 +368,93 @@ namespace CovertActionTools.Core.Models.Executables
             // Build the string table from all records' slot strings
             var tableBase = PreStringTableData.Length;
             var tableParts = new List<byte>();
-            var perRecordSlotOffsets = new List<int[]>();
+            var perRecordStringOffsets = new List<int[]>();
             var perRecordNullPadStart = new List<int>();
 
             foreach (var ms in MissionSets)
             {
-                var slotOffsets = new int[FinalMissionSetRecord.CrimeSlotTotal];
-                for (var slot = 0; slot < FinalMissionSetRecord.CrimeSlotTotal; slot++)
+                var stringOffsets = new int[FinalMissionSetRecord.TotalSlotStrings];
+
+                // Write strings sequentially. Each pointer points to:
+                // - non-empty: the start of that string in the table
+                // - empty: the current position (a null byte — either previous string's
+                //   terminator or the padding area)
+                // Write strings slot by slot. Within a slot, strings are back-to-back.
+                // Between slots, there is 1 null byte gap (where empty second pointers point).
+                var lastSlotWithContent = -1;
+                for (var slot = 0; slot < FinalMissionSetRecord.CrimeSlotCount; slot++)
                 {
-                    if (!string.IsNullOrEmpty(ms.SlotStrings[slot]))
+                    var aIdx = slot * 2;
+                    var bIdx = slot * 2 + 1;
+                    var hasA = aIdx < ms.SlotStrings.Length && !string.IsNullOrEmpty(ms.SlotStrings[aIdx]);
+                    var hasB = bIdx < ms.SlotStrings.Length && !string.IsNullOrEmpty(ms.SlotStrings[bIdx]);
+
+                    if (!hasA && !hasB) continue;
+
+                    // Inter-slot null byte gap: only when the previous slot had A but not B
+                    // (the empty B pointer references the null terminator, creating a 1-byte gap)
+                    if (lastSlotWithContent >= 0)
                     {
-                        slotOffsets[slot] = tableBase + tableParts.Count;
-                        tableParts.AddRange(Encoding.ASCII.GetBytes(ms.SlotStrings[slot]));
+                        var prevBIdx = lastSlotWithContent * 2 + 1;
+                        var prevHadB = prevBIdx < ms.SlotStrings.Length && !string.IsNullOrEmpty(ms.SlotStrings[prevBIdx]);
+                        if (!prevHadB)
+                        {
+                            tableParts.Add(0);
+                        }
+                    }
+                    lastSlotWithContent = slot;
+
+                    if (hasA)
+                    {
+                        stringOffsets[aIdx] = tableBase + tableParts.Count;
+                        tableParts.AddRange(Encoding.ASCII.GetBytes(ms.SlotStrings[aIdx]));
+                        tableParts.Add(0); // null terminator
+                    }
+
+                    if (hasB)
+                    {
+                        stringOffsets[bIdx] = tableBase + tableParts.Count;
+                        tableParts.AddRange(Encoding.ASCII.GetBytes(ms.SlotStrings[bIdx]));
                         tableParts.Add(0);
                     }
+                    else if (hasA)
+                    {
+                        // Empty B pointer: point to A's null terminator
+                        stringOffsets[bIdx] = tableBase + tableParts.Count - 1;
+                    }
                 }
-                // Record where null padding starts for this record's empty slots
+
+                // Null padding area starts after all strings + final null terminator
                 var padStart = tableBase + tableParts.Count;
                 perRecordNullPadStart.Add(padStart);
 
-                // Fill empty slot offsets into null padding area
-                for (var slot = 0; slot < FinalMissionSetRecord.CrimeSlotTotal; slot++)
-                {
-                    if (string.IsNullOrEmpty(ms.SlotStrings[slot]))
-                    {
-                        slotOffsets[slot] = padStart; // will be set properly in ToBytes
-                    }
-                }
-                perRecordSlotOffsets.Add(slotOffsets);
-
-                // Add null padding to match original layout
+                // Write trailing padding (provides null bytes for empty pointer fill + gap to next record)
                 for (var p = 0; p < ms.TrailingPadding; p++)
                 {
                     tableParts.Add(0);
                 }
+
+                // Resolve remaining empty pointer offsets: point into the trailing padding area
+                var fillPos = padStart;
+                for (var i = 0; i < FinalMissionSetRecord.TotalSlotStrings; i++)
+                {
+                    if (stringOffsets[i] == 0 && tableBase > 0)
+                    {
+                        stringOffsets[i] = fillPos;
+                        fillPos++;
+                    }
+                }
+                perRecordStringOffsets.Add(stringOffsets);
             }
 
             var stringTableBytes = tableParts.ToArray();
 
-            // Build mission set record bytes with computed pointer words
+            // Build mission set record bytes with computed string pointers
             var missionSetBytes = new byte[MissionSets.Length * FinalMissionSetRecord.RecordSize];
             for (var i = 0; i < MissionSets.Length; i++)
             {
                 Array.Copy(
-                    MissionSets[i].ToBytes(perRecordSlotOffsets[i], perRecordNullPadStart[i]),
+                    MissionSets[i].ToBytes(perRecordStringOffsets[i], perRecordNullPadStart[i]),
                     0, missionSetBytes, i * FinalMissionSetRecord.RecordSize,
                     FinalMissionSetRecord.RecordSize);
             }
