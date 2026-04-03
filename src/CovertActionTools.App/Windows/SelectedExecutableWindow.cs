@@ -123,6 +123,9 @@ public class SelectedExecutableWindow : BaseWindow
                     if (newRarity != null) { room.Rarity = (ushort)newRarity.Value; _pendingState.RecordChange(); }
 
                     ImGui.TableNextColumn();
+                    // TODO: Bitfield. Bit 2 (value 4) = can be local agent room. Bits 0 and 1
+                    // (values 1 and 2) are unclear but at least one room of each type is required
+                    // or the game hangs during map generation.
                     var newSize = ImGuiExtensions.Input("##Size", (int)room.SizeConstraint, width: 80);
                     if (newSize != null) { room.SizeConstraint = (ushort)newSize.Value; _pendingState.RecordChange(); }
 
