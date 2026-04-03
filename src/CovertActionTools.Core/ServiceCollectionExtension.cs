@@ -22,6 +22,8 @@ namespace CovertActionTools.Core
         {
             services.AddSingleton<ILzwCompression, LzwCompression>();
             services.AddSingleton<ILzwDecompression, LzwDecompression>();
+            services.AddSingleton<IExepackCompression, ExepackCompression>();
+            services.AddSingleton<IExepackDecompression, ExepackDecompression>();
             
             var spriteSheetDataTypes = typeof(ServiceCollectionExtension).Assembly
                 .GetTypes()
@@ -44,6 +46,7 @@ namespace CovertActionTools.Core
             services.AddSingleton<ILegacyParser, LegacyAnimationParser>();
             services.AddSingleton<ILegacyParser, LegacyFontsParser>();
             services.AddSingleton<ILegacyParser, LegacyProseParser>();
+            services.AddSingleton<ILegacyParser, LegacyExecutableParser>();
             services.AddSingleton<IList<ILegacyParser>>(sp => sp.GetServices<ILegacyParser>().ToList());
 
             services.AddSingleton<SharedImageImporter>();
@@ -58,6 +61,7 @@ namespace CovertActionTools.Core
             services.AddSingleton<IImporter, AnimationImporter>();
             services.AddSingleton<IImporter, FontsImporter>();
             services.AddSingleton<IImporter, ProseImporter>();
+            services.AddSingleton<IImporter, ExecutableImporter>();
             services.AddSingleton<IList<IImporter>>(sp => sp.GetServices<IImporter>().ToList());
             
             services.AddSingleton<SharedImageExporter>();
@@ -72,6 +76,7 @@ namespace CovertActionTools.Core
             services.AddSingleton<IExporter, AnimationExporter>();
             services.AddSingleton<IExporter, FontsExporter>();
             services.AddSingleton<IExporter, ProseExporter>();
+            services.AddSingleton<IExporter, ExecutableExporter>();
             services.AddSingleton<IList<IExporter>>(sp => sp.GetServices<IExporter>().ToList());
 
             services.AddSingleton<ILegacyPublisher, AnimationPublisher>();
@@ -84,6 +89,7 @@ namespace CovertActionTools.Core
             services.AddSingleton<ILegacyPublisher, SimpleImagePublisher>();
             services.AddSingleton<ILegacyPublisher, TextPublisher>();
             services.AddSingleton<ILegacyPublisher, WorldPublisher>();
+            services.AddSingleton<ILegacyPublisher, ExecutablePublisher>();
             services.AddSingleton<IList<ILegacyPublisher>>(sp => sp.GetServices<ILegacyPublisher>().ToList());
             
             services.AddTransient<IPackageImporter<ILegacyParser>, PackageImporter<ILegacyParser>>();

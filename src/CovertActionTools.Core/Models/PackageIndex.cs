@@ -29,7 +29,8 @@ namespace CovertActionTools.Core.Models
         public HashSet<string> CatalogChanges { get; set; } = new();
         public bool FontChanges { get; set; }
         public bool ProseChanges { get; set; }
-        
+        public HashSet<string> ExecutableChanges { get; set; } = new();
+
         //Included means the changes will be included during publishing
         public HashSet<string> SimpleImageIncluded { get; set; } = new();
         public HashSet<int> CrimeIncluded { get; set; } = new();
@@ -41,6 +42,7 @@ namespace CovertActionTools.Core.Models
         public HashSet<string> CatalogIncluded { get; set; } = new();
         public bool FontIncluded { get; set; }
         public bool ProseIncluded { get; set; }
+        public HashSet<string> ExecutableIncluded { get; set; } = new();
         #endregion
 
         public PackageIndex Clone()
@@ -69,7 +71,9 @@ namespace CovertActionTools.Core.Models
                 FontChanges = FontChanges,
                 FontIncluded = FontIncluded,
                 ProseChanges = ProseChanges,
-                ProseIncluded = ProseIncluded
+                ProseIncluded = ProseIncluded,
+                ExecutableChanges = new HashSet<string>(ExecutableChanges),
+                ExecutableIncluded = new HashSet<string>(ExecutableIncluded)
             };
         }
     }
