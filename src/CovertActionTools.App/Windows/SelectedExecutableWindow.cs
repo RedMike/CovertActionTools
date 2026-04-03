@@ -365,6 +365,7 @@ public class SelectedExecutableWindow : BaseWindow
         {
             ImGui.TableNextRow();
             DrawFlagCheckbox("Unknown 1", ref flags, 0, obj);
+            // Openable objects use Sprite Y+1 (the row below) as the open sprite
             DrawFlagCheckbox("Openable", ref flags, 1, obj);
             DrawFlagCheckbox("Buggable", ref flags, 2, obj);
             DrawFlagCheckbox("Photographable", ref flags, 3, obj);
