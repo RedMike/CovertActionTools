@@ -101,7 +101,7 @@ public class SelectedExecutableWindow : BaseWindow
             if (ImGui.BeginTable("RoomTypes", 4, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
             {
                 ImGui.TableSetupColumn("Name");
-                ImGui.TableSetupColumn("Rarity");
+                ImGui.TableSetupColumn("Surv. Quality");
                 ImGui.TableSetupColumn("Size Constraint");
                 ImGui.TableSetupColumn("Enabled");
                 ImGui.TableHeadersRow();
@@ -117,20 +117,19 @@ public class SelectedExecutableWindow : BaseWindow
                     if (newName != null) { room.Name = newName; _pendingState.RecordChange(); }
 
                     ImGui.TableNextColumn();
-                    // TODO: Rarity value didn't seem to have any effect in testing — investigate
-                    // whether it's actually used by the room generation code or is vestigial.
-                    var newRarity = ImGuiExtensions.Input("##Rarity", (int)room.Rarity, width: 80);
-                    if (newRarity != null) { room.Rarity = (ushort)newRarity.Value; _pendingState.RecordChange(); }
+                    var newSurvQuality = ImGuiExtensions.Input("##SurvQuality", (int)room.SurveillanceQuality, width: 80);
+                    if (newSurvQuality != null) { room.SurveillanceQuality = (ushort)newSurvQuality.Value; _pendingState.RecordChange(); }
 
                     ImGui.TableNextColumn();
-                    // TODO: Bitfield. Bit 2 (value 4) = can be local agent room. Bits 0 and 1
-                    // (values 1 and 2) are unclear but at least one room of each type is required
-                    // or the game hangs during map generation.
+                    // Bitfield matched against building room grid area: bit 0 (1) = small
+                    // (area <= 40), bit 1 (2) = medium (41-72), bit 2 (4) = large (> 72).
+                    // Only large rooms (bit 2) are valid as the local agent spawn room.
                     var newSize = ImGuiExtensions.Input("##Size", (int)room.SizeConstraint, width: 80);
                     if (newSize != null) { room.SizeConstraint = (ushort)newSize.Value; _pendingState.RecordChange(); }
 
                     ImGui.TableNextColumn();
-                    // TODO: Make this a checkbox after investigating if values other than 0/7 have different effects
+                    // Only bit 0 is checked at runtime (mask hardcoded to 1), so effectively boolean.
+                    // Vanilla uses 7 for enabled, 0 for disabled.
                     var newEnabled = ImGuiExtensions.Input("##Enabled", (int)room.Enabled, width: 80);
                     if (newEnabled != null) { room.Enabled = (ushort)newEnabled.Value; _pendingState.RecordChange(); }
 
@@ -190,7 +189,7 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Unknown Equip Table"))
         {
-            DrawUShortArray(tac.UnknownEquipTable, "EquipTable", 8);
+            DrawUShortArray(tac.EquipmentNavTable, "EquipNavTable", 8);
         }
 
         // Resolve equipment names from the pointer table for labelling ragdoll items
@@ -369,7 +368,7 @@ public class SelectedExecutableWindow : BaseWindow
         if (ImGui.BeginTable("BehavFlags", 5))
         {
             ImGui.TableNextRow();
-            DrawFlagCheckbox("Unknown 1", ref flags, 0, obj);
+            DrawFlagCheckbox("Blocks Movement", ref flags, 0, obj);
             // Openable objects use Sprite Y+1 (the row below) as the open sprite
             DrawFlagCheckbox("Openable", ref flags, 1, obj);
             DrawFlagCheckbox("Buggable", ref flags, 2, obj);
@@ -379,8 +378,7 @@ public class SelectedExecutableWindow : BaseWindow
             ImGui.TableNextRow();
             DrawFlagCheckbox("Blocks LOS", ref flags, 5, obj);
             DrawFlagCheckbox("Multi-tile", ref flags, 6, obj);
-            DrawFlagCheckbox("Wall Gap", ref flags, 7, obj);
-            DrawFlagCheckbox("Unknown 2", ref flags, 8, obj);
+            DrawFlagCheckbox("Wall-Adjacent", ref flags, 8, obj);
             DrawFlagCheckbox("Password Terminal", ref flags, 9, obj);
 
             ImGui.EndTable();
