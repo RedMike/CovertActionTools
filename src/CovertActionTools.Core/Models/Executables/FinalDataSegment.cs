@@ -4,6 +4,53 @@ using System.Text;
 
 namespace CovertActionTools.Core.Models.Executables
 {
+    public class FinalMissionSetRecord
+    {
+        public const int RecordSize = 74;
+
+        /// <summary>
+        /// The full 74-byte record data. Name is embedded at the start (null-terminated).
+        /// Further field decomposition will be done in a future update.
+        /// </summary>
+        public byte[] RecordData { get; set; } = Array.Empty<byte>();
+
+        /// <summary>
+        /// Convenience property: extracts the null-terminated name from RecordData.
+        /// </summary>
+        public string Name
+        {
+            get
+            {
+                if (RecordData == null || RecordData.Length == 0) return string.Empty;
+                var end = Array.IndexOf(RecordData, (byte)0);
+                if (end < 0) end = Math.Min(RecordData.Length, 20);
+                return Encoding.ASCII.GetString(RecordData, 0, end);
+            }
+        }
+
+        public FinalMissionSetRecord Clone()
+        {
+            return new FinalMissionSetRecord
+            {
+                RecordData = RecordData.ToArray()
+            };
+        }
+
+        public static FinalMissionSetRecord FromBytes(byte[] data, int offset)
+        {
+            var record = new byte[RecordSize];
+            Array.Copy(data, offset, record, 0, RecordSize);
+            return new FinalMissionSetRecord { RecordData = record };
+        }
+
+        public byte[] ToBytes()
+        {
+            var result = new byte[RecordSize];
+            Array.Copy(RecordData, 0, result, 0, Math.Min(RecordData.Length, RecordSize));
+            return result;
+        }
+    }
+
     public class FinalDataSegment
     {
         /// <summary>DS paragraph value for FINAL.EXE.</summary>
