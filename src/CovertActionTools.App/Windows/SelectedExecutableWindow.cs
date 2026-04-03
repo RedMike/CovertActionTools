@@ -192,6 +192,9 @@ public class SelectedExecutableWindow : BaseWindow
         var destCount = 13;
         var srcCount = 15;
 
+        // TODO: Ragdoll dest points, source rects, and equipment slot rects map to the
+        // spritesheets on EQUIP1/EQUIP1M and EQUIP2. The parser will need to generate those
+        // spritesheets from this data and read them from there instead.
         if (ImGui.CollapsingHeader("Ragdoll Destination Points"))
         {
             if (ImGui.BeginTable("RagdollDest", 4, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
