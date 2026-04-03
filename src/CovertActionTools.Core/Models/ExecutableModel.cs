@@ -10,7 +10,7 @@ namespace CovertActionTools.Core.Models
     // - TAC: EquipmentNamePointers (16)
     // - FINAL: CharacterNamePointers (192)
     // - GAME: CharacterNamePointers (192)
-    // - BUG: CharacterNamePointers (192, was incorrectly 191 due to off-by-2 offset)
+    // - BUG: CharacterNamePointers (192)
     //
     // STORED AS-IS — strings extracted as read-only convenience, pointers kept:
     // - FINAL: MissionSetStringPointers (16x16 start/end pairs with inter-string null padding)

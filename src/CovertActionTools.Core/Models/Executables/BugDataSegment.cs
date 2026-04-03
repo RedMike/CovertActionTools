@@ -20,7 +20,7 @@ namespace CovertActionTools.Core.Models.Executables
 
         // Original binary offsets (used for initial parse)
         private const int ClueRelPtrsOffset = 0x1A40;     // 0x00C070 - 0x0A630
-        private const int CharNamePointersOffset = 0x296A; // 0x00CF9A - 0x0A630 (corrected: was 0x296C/191, actually 192 entries starting 2 bytes earlier)
+        private const int CharNamePointersOffset = 0x296A; // 0x00CF9A - 0x0A630
         private const int RectDrawRecordsOffset = 0x2B62;  // 0x00D192 - 0x0A630
         #endregion
 
