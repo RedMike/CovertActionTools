@@ -246,6 +246,8 @@ namespace CovertActionTools.Core.Models.Executables
         private const int RagdollCoordCount = 44;           // 43 entries + (0,0) terminator
         private const int EquipSlotRectsOffset = 0x2214;    // 0x013044 - 0x10E30
         private const int EquipSlotRectCount = 11;
+        private const int CharNamePointersOffset = 0x346C; // in TrailingData region
+        private const int CharNamePointerCount = 192;
         #endregion
 
         #region Fields (in binary order)
@@ -285,7 +287,18 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>11 TL/BR rectangle pairs for equipment slot UI positions.</summary>
         public TacScreenRect[] EquipmentSlotRects { get; set; } = Array.Empty<TacScreenRect>();
 
-        /// <summary>Everything after equipment slot rects: clue phrases, item tables, character names, C runtime, BSS.</summary>
+        /// <summary>Data after equipment slot rects and before character names: clue phrases, item tables.</summary>
+        public byte[] PreCharNameData { get; set; } = Array.Empty<byte>();
+
+        /// <summary>192 character names (4 ethnic groups x female first / male first / male surname, 16 each).</summary>
+        public string[] CharacterNames { get; set; } = Array.Empty<string>();
+
+        /// <summary>Data between character names and character name pointer table.</summary>
+        public byte[] PostCharNameData { get; set; } = Array.Empty<byte>();
+
+        // CharacterNamePointers are computed at serialization time.
+
+        /// <summary>Everything after character name pointers: C runtime, BSS.</summary>
         public byte[] TrailingData { get; set; } = Array.Empty<byte>();
 
         #endregion
@@ -340,7 +353,19 @@ namespace CovertActionTools.Core.Models.Executables
                 segment.EquipmentSlotRects[i] = TacScreenRect.FromBytes(dataSegment, EquipSlotRectsOffset + i * TacScreenRect.RecordSize);
             }
 
-            segment.TrailingData = DataSegmentHelper.Slice(dataSegment, equipRectsEnd, dataSegment.Length - equipRectsEnd);
+            // Extract character names using pointer table
+            var charPtrs = DataSegmentHelper.BytesToUInt16Array(dataSegment, CharNamePointersOffset, CharNamePointerCount);
+            segment.CharacterNames = DataSegmentHelper.ExtractStringsFromPointers(charPtrs, dataSegment);
+
+            var (charBlockStart, charBlockEnd) = DataSegmentHelper.FindStringBlockBounds(charPtrs, dataSegment);
+            segment.PreCharNameData = DataSegmentHelper.Slice(dataSegment, equipRectsEnd, charBlockStart - equipRectsEnd);
+            var postCharLen = CharNamePointersOffset - charBlockEnd;
+            segment.PostCharNameData = postCharLen > 0
+                ? DataSegmentHelper.Slice(dataSegment, charBlockEnd, postCharLen)
+                : Array.Empty<byte>();
+
+            var charPtrsEnd = CharNamePointersOffset + CharNamePointerCount * 2;
+            segment.TrailingData = DataSegmentHelper.Slice(dataSegment, charPtrsEnd, dataSegment.Length - charPtrsEnd);
 
             return segment;
         }
@@ -377,6 +402,16 @@ namespace CovertActionTools.Core.Models.Executables
             var equipNamePointers = DataSegmentHelper.ComputeStringPointers(EquipmentNames, equipNamesBaseOffset);
             var equipNamesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(EquipmentNames);
 
+            // Compute character name pointer values
+            var charNamesBaseOffset = equipNamesBaseOffset + equipNamesBytes.Length
+                + MidSectionPostEquipNames.Length
+                + DataSegmentHelper.UInt16ArrayToBytes(equipNamePointers).Length
+                + DataSegmentHelper.UInt16ArrayToBytes(UnknownEquipTable).Length
+                + ragdollBytes.Length + Unknown3.Length
+                + equipRectBytes.Length + PreCharNameData.Length;
+            var charNamePointers = DataSegmentHelper.ComputeStringPointers(CharacterNames, charNamesBaseOffset);
+            var charNamesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(CharacterNames);
+
             return DataSegmentHelper.Concatenate(
                 PreRoomData,
                 roomTypeBytes,
@@ -390,6 +425,10 @@ namespace CovertActionTools.Core.Models.Executables
                 ragdollBytes,
                 Unknown3,
                 equipRectBytes,
+                PreCharNameData,
+                charNamesBytes,
+                PostCharNameData,
+                DataSegmentHelper.UInt16ArrayToBytes(charNamePointers),
                 TrailingData
             );
         }
@@ -409,6 +448,9 @@ namespace CovertActionTools.Core.Models.Executables
                 RagdollCoordinates = RagdollCoordinates.Select(c => c.Clone()).ToArray(),
                 Unknown3 = Unknown3.ToArray(),
                 EquipmentSlotRects = EquipmentSlotRects.Select(r => r.Clone()).ToArray(),
+                PreCharNameData = PreCharNameData.ToArray(),
+                CharacterNames = CharacterNames.Select(s => s).ToArray(),
+                PostCharNameData = PostCharNameData.ToArray(),
                 TrailingData = TrailingData.ToArray()
             };
         }

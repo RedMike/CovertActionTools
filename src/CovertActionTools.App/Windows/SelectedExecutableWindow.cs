@@ -340,6 +340,11 @@ public class SelectedExecutableWindow : BaseWindow
             }
         }
 
+        if (ImGui.CollapsingHeader("Character Names"))
+        {
+            DrawStringArray(tac.CharacterNames, "CharName");
+        }
+
         DrawRawSectionSizes("Raw Sections", new[]
         {
             ("PreRoomData", tac.PreRoomData.Length),
@@ -347,6 +352,8 @@ public class SelectedExecutableWindow : BaseWindow
             ("MidSectionPreEquipNames", tac.MidSectionPreEquipNames.Length),
             ("MidSectionPostEquipNames", tac.MidSectionPostEquipNames.Length),
             ("Unknown3", tac.Unknown3.Length),
+            ("PreCharNameData", tac.PreCharNameData.Length),
+            ("PostCharNameData", tac.PostCharNameData.Length),
             ("TrailingData", tac.TrailingData.Length)
         });
     }
