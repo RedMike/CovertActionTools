@@ -336,6 +336,8 @@ public class SelectedExecutableWindow : BaseWindow
         });
     }
 
+    // TODO: Are the hardcoded ones just hardcoded from game logic or is the entire list
+    // hardcoded? To investigate later.
     private static string GetRagdollDestLabel(int index, string[] equipNames)
     {
         // 13 dest points: first 11 from equipment names, last 2 are ammo types
