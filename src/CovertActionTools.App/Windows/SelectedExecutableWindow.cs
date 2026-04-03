@@ -117,6 +117,8 @@ public class SelectedExecutableWindow : BaseWindow
                     if (newName != null) { room.Name = newName; _pendingState.RecordChange(); }
 
                     ImGui.TableNextColumn();
+                    // TODO: Rarity value didn't seem to have any effect in testing — investigate
+                    // whether it's actually used by the room generation code or is vestigial.
                     var newRarity = ImGuiExtensions.Input("##Rarity", (int)room.Rarity, width: 80);
                     if (newRarity != null) { room.Rarity = (ushort)newRarity.Value; _pendingState.RecordChange(); }
 
