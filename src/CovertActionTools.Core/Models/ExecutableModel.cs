@@ -4,6 +4,13 @@ using CovertActionTools.Core.Models.Executables;
 
 namespace CovertActionTools.Core.Models
 {
+    // TODO: All fields in the per-EXE data segment classes that currently store data pointers
+    // (DS-relative or otherwise) will need updating so that they do not store pointers.
+    // This is required so that we can create executable changes that e.g. add new items to
+    // arrays, remove items from arrays, change string sizes, etc, without all the pointers
+    // going out of sync. The publisher should recompute pointers at serialisation time from
+    // the actual data.
+
     /// <summary>
     /// Model for an EXEPACK-compressed DOS executable.
     /// Data segment field boundaries and interpretations are based on reverse engineering
