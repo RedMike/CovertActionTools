@@ -246,6 +246,8 @@ namespace CovertActionTools.Core.Models.Executables
         private const int RagdollCoordCount = 44;           // 43 entries + (0,0) terminator
         private const int EquipSlotRectsOffset = 0x2214;    // 0x013044 - 0x10E30
         private const int EquipSlotRectCount = 11;
+        private const int CharNamePointersOffset = 0x346C; // in TrailingData region
+        private const int CharNamePointerCount = 192;
         #endregion
 
         #region Fields (in binary order)
@@ -262,11 +264,16 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>62 object/furniture records (20 bytes each): name, sprite, behaviour flags, room placement.</summary>
         public TacObjectRecord[] Objects { get; set; } = Array.Empty<TacObjectRecord>();
 
-        /// <summary>Spritesheet config, directional offsets, RastPort blocks, BSS, CGA animation, all string data.</summary>
-        public byte[] MidSection { get; set; } = Array.Empty<byte>();
+        /// <summary>Data before equipment names: spritesheet config, directional offsets, RastPort blocks, BSS, CGA animation, string data.</summary>
+        public byte[] MidSectionPreEquipNames { get; set; } = Array.Empty<byte>();
 
-        /// <summary>16 DS-relative pointers to equipment name strings.</summary>
-        public ushort[] EquipmentNamePointers { get; set; } = Array.Empty<ushort>();
+        /// <summary>16 equipment name strings (resolved from DS-relative pointers).</summary>
+        public string[] EquipmentNames { get; set; } = Array.Empty<string>();
+
+        /// <summary>Data after equipment names but before equipment pointer table position.</summary>
+        public byte[] MidSectionPostEquipNames { get; set; } = Array.Empty<byte>();
+
+        // EquipmentNamePointers are computed at serialization time from EquipmentNames positions.
 
         /// <summary>48 x uint16 table (values 0-11), purpose undecoded.</summary>
         public ushort[] UnknownEquipTable { get; set; } = Array.Empty<ushort>();
@@ -280,7 +287,18 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>11 TL/BR rectangle pairs for equipment slot UI positions.</summary>
         public TacScreenRect[] EquipmentSlotRects { get; set; } = Array.Empty<TacScreenRect>();
 
-        /// <summary>Everything after equipment slot rects: clue phrases, item tables, character names, C runtime, BSS.</summary>
+        /// <summary>Data after equipment slot rects and before character names: clue phrases, item tables.</summary>
+        public byte[] PreCharNameData { get; set; } = Array.Empty<byte>();
+
+        /// <summary>192 character names (4 ethnic groups x female first / male first / male surname, 16 each).</summary>
+        public string[] CharacterNames { get; set; } = Array.Empty<string>();
+
+        /// <summary>Data between character names and character name pointer table.</summary>
+        public byte[] PostCharNameData { get; set; } = Array.Empty<byte>();
+
+        // CharacterNamePointers are computed at serialization time.
+
+        /// <summary>Everything after character name pointers: C runtime, BSS.</summary>
         public byte[] TrailingData { get; set; } = Array.Empty<byte>();
 
         #endregion
@@ -310,9 +328,14 @@ namespace CovertActionTools.Core.Models.Executables
                 segment.Objects[i] = TacObjectRecord.FromBytes(dataSegment, ObjectsOffset + i * TacObjectRecord.RecordSize);
             }
 
-            segment.MidSection = DataSegmentHelper.Slice(dataSegment, objectsEnd, EquipmentPointersOffset - objectsEnd);
+            // Read equipment name pointers to find and extract the strings from the mid section
+            var equipPtrs = DataSegmentHelper.BytesToUInt16Array(dataSegment, EquipmentPointersOffset, EquipmentPointerCount);
+            segment.EquipmentNames = DataSegmentHelper.ExtractStringsFromPointers(equipPtrs, dataSegment);
 
-            segment.EquipmentNamePointers = DataSegmentHelper.BytesToUInt16Array(dataSegment, EquipmentPointersOffset, EquipmentPointerCount);
+            // Split mid section around the equipment name string block
+            var (blockStart, blockEnd) = DataSegmentHelper.FindStringBlockBounds(equipPtrs, dataSegment);
+            segment.MidSectionPreEquipNames = DataSegmentHelper.Slice(dataSegment, objectsEnd, blockStart - objectsEnd);
+            segment.MidSectionPostEquipNames = DataSegmentHelper.Slice(dataSegment, blockEnd, EquipmentPointersOffset - blockEnd);
 
             segment.UnknownEquipTable = DataSegmentHelper.BytesToUInt16Array(dataSegment, UnknownEquipTableOffset, UnknownEquipTableCount);
 
@@ -330,7 +353,19 @@ namespace CovertActionTools.Core.Models.Executables
                 segment.EquipmentSlotRects[i] = TacScreenRect.FromBytes(dataSegment, EquipSlotRectsOffset + i * TacScreenRect.RecordSize);
             }
 
-            segment.TrailingData = DataSegmentHelper.Slice(dataSegment, equipRectsEnd, dataSegment.Length - equipRectsEnd);
+            // Extract character names using pointer table
+            var charPtrs = DataSegmentHelper.BytesToUInt16Array(dataSegment, CharNamePointersOffset, CharNamePointerCount);
+            segment.CharacterNames = DataSegmentHelper.ExtractStringsFromPointers(charPtrs, dataSegment);
+
+            var (charBlockStart, charBlockEnd) = DataSegmentHelper.FindStringBlockBounds(charPtrs, dataSegment);
+            segment.PreCharNameData = DataSegmentHelper.Slice(dataSegment, equipRectsEnd, charBlockStart - equipRectsEnd);
+            var postCharLen = CharNamePointersOffset - charBlockEnd;
+            segment.PostCharNameData = postCharLen > 0
+                ? DataSegmentHelper.Slice(dataSegment, charBlockEnd, postCharLen)
+                : Array.Empty<byte>();
+
+            var charPtrsEnd = CharNamePointersOffset + CharNamePointerCount * 2;
+            segment.TrailingData = DataSegmentHelper.Slice(dataSegment, charPtrsEnd, dataSegment.Length - charPtrsEnd);
 
             return segment;
         }
@@ -361,17 +396,39 @@ namespace CovertActionTools.Core.Models.Executables
                 Array.Copy(EquipmentSlotRects[i].ToBytes(), 0, equipRectBytes, i * TacScreenRect.RecordSize, TacScreenRect.RecordSize);
             }
 
+            // Compute equipment name pointer values from actual string positions
+            var equipNamesBaseOffset = PreRoomData.Length + roomTypeBytes.Length + Unknown1.Length
+                + objectBytes.Length + MidSectionPreEquipNames.Length;
+            var equipNamePointers = DataSegmentHelper.ComputeStringPointers(EquipmentNames, equipNamesBaseOffset);
+            var equipNamesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(EquipmentNames);
+
+            // Compute character name pointer values
+            var charNamesBaseOffset = equipNamesBaseOffset + equipNamesBytes.Length
+                + MidSectionPostEquipNames.Length
+                + DataSegmentHelper.UInt16ArrayToBytes(equipNamePointers).Length
+                + DataSegmentHelper.UInt16ArrayToBytes(UnknownEquipTable).Length
+                + ragdollBytes.Length + Unknown3.Length
+                + equipRectBytes.Length + PreCharNameData.Length;
+            var charNamePointers = DataSegmentHelper.ComputeStringPointers(CharacterNames, charNamesBaseOffset);
+            var charNamesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(CharacterNames);
+
             return DataSegmentHelper.Concatenate(
                 PreRoomData,
                 roomTypeBytes,
                 Unknown1,
                 objectBytes,
-                MidSection,
-                DataSegmentHelper.UInt16ArrayToBytes(EquipmentNamePointers),
+                MidSectionPreEquipNames,
+                equipNamesBytes,
+                MidSectionPostEquipNames,
+                DataSegmentHelper.UInt16ArrayToBytes(equipNamePointers),
                 DataSegmentHelper.UInt16ArrayToBytes(UnknownEquipTable),
                 ragdollBytes,
                 Unknown3,
                 equipRectBytes,
+                PreCharNameData,
+                charNamesBytes,
+                PostCharNameData,
+                DataSegmentHelper.UInt16ArrayToBytes(charNamePointers),
                 TrailingData
             );
         }
@@ -384,12 +441,16 @@ namespace CovertActionTools.Core.Models.Executables
                 RoomTypes = RoomTypes.Select(r => r.Clone()).ToArray(),
                 Unknown1 = Unknown1.ToArray(),
                 Objects = Objects.Select(o => o.Clone()).ToArray(),
-                MidSection = MidSection.ToArray(),
-                EquipmentNamePointers = EquipmentNamePointers.ToArray(),
+                MidSectionPreEquipNames = MidSectionPreEquipNames.ToArray(),
+                EquipmentNames = EquipmentNames.Select(s => s).ToArray(),
+                MidSectionPostEquipNames = MidSectionPostEquipNames.ToArray(),
                 UnknownEquipTable = UnknownEquipTable.ToArray(),
                 RagdollCoordinates = RagdollCoordinates.Select(c => c.Clone()).ToArray(),
                 Unknown3 = Unknown3.ToArray(),
                 EquipmentSlotRects = EquipmentSlotRects.Select(r => r.Clone()).ToArray(),
+                PreCharNameData = PreCharNameData.ToArray(),
+                CharacterNames = CharacterNames.Select(s => s).ToArray(),
+                PostCharNameData = PostCharNameData.ToArray(),
                 TrailingData = TrailingData.ToArray()
             };
         }

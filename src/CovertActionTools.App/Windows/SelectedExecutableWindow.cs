@@ -117,10 +117,15 @@ public class SelectedExecutableWindow : BaseWindow
                     if (newName != null) { room.Name = newName; _pendingState.RecordChange(); }
 
                     ImGui.TableNextColumn();
+                    // TODO: Rarity value didn't seem to have any effect in testing — investigate
+                    // whether it's actually used by the room generation code or is vestigial.
                     var newRarity = ImGuiExtensions.Input("##Rarity", (int)room.Rarity, width: 80);
                     if (newRarity != null) { room.Rarity = (ushort)newRarity.Value; _pendingState.RecordChange(); }
 
                     ImGui.TableNextColumn();
+                    // TODO: Bitfield. Bit 2 (value 4) = can be local agent room. Bits 0 and 1
+                    // (values 1 and 2) are unclear but at least one room of each type is required
+                    // or the game hangs during map generation.
                     var newSize = ImGuiExtensions.Input("##Size", (int)room.SizeConstraint, width: 80);
                     if (newSize != null) { room.SizeConstraint = (ushort)newSize.Value; _pendingState.RecordChange(); }
 
@@ -178,7 +183,10 @@ public class SelectedExecutableWindow : BaseWindow
             }
         }
 
-        DrawReadOnlyInfo("Equipment Name Pointers", $"{tac.EquipmentNamePointers.Length} entries (read-only, pointers)");
+        if (ImGui.CollapsingHeader("Equipment Names"))
+        {
+            DrawStringArray(tac.EquipmentNames, "EquipName");
+        }
 
         if (ImGui.CollapsingHeader("Unknown Equip Table"))
         {
@@ -186,7 +194,7 @@ public class SelectedExecutableWindow : BaseWindow
         }
 
         // Resolve equipment names from the pointer table for labelling ragdoll items
-        var equipNames = ResolveEquipmentNames(tac);
+        var equipNames = tac.EquipmentNames;
         // 13 dest points (entries 0-12), 15 src rect pairs (entries 13-42), entry 43 is (0,0) terminator (hidden)
         var destCount = 13;
         var srcCount = 15;
@@ -337,12 +345,20 @@ public class SelectedExecutableWindow : BaseWindow
             }
         }
 
+        if (ImGui.CollapsingHeader("Character Names"))
+        {
+            DrawStringArray(tac.CharacterNames, "CharName");
+        }
+
         DrawRawSectionSizes("Raw Sections", new[]
         {
             ("PreRoomData", tac.PreRoomData.Length),
             ("Unknown1", tac.Unknown1.Length),
-            ("MidSection", tac.MidSection.Length),
+            ("MidSectionPreEquipNames", tac.MidSectionPreEquipNames.Length),
+            ("MidSectionPostEquipNames", tac.MidSectionPostEquipNames.Length),
             ("Unknown3", tac.Unknown3.Length),
+            ("PreCharNameData", tac.PreCharNameData.Length),
+            ("PostCharNameData", tac.PostCharNameData.Length),
             ("TrailingData", tac.TrailingData.Length)
         });
     }
@@ -354,6 +370,7 @@ public class SelectedExecutableWindow : BaseWindow
         {
             ImGui.TableNextRow();
             DrawFlagCheckbox("Unknown 1", ref flags, 0, obj);
+            // Openable objects use Sprite Y+1 (the row below) as the open sprite
             DrawFlagCheckbox("Openable", ref flags, 1, obj);
             DrawFlagCheckbox("Buggable", ref flags, 2, obj);
             DrawFlagCheckbox("Photographable", ref flags, 3, obj);
@@ -449,24 +466,6 @@ public class SelectedExecutableWindow : BaseWindow
         return $"Item {index}";
     }
 
-    private static string[] ResolveEquipmentNames(TacDataSegment tac)
-    {
-        var dataSegment = tac.ToBytes();
-        var names = new List<string>();
-        foreach (var ptr in tac.EquipmentNamePointers)
-        {
-            if (ptr == 0 || ptr >= dataSegment.Length)
-            {
-                names.Add("");
-                continue;
-            }
-            var end = ptr;
-            while (end < dataSegment.Length && dataSegment[end] != 0) end++;
-            var name = Encoding.ASCII.GetString(dataSegment, ptr, end - ptr);
-            names.Add(name);
-        }
-        return names.ToArray();
-    }
 
     #endregion
 
@@ -507,7 +506,18 @@ public class SelectedExecutableWindow : BaseWindow
                     DrawMissionSetCrimeSlot("Crime 3", ms, 2, final.CrimeTypeNames);
 
                     ImGui.Text($"Unused Crime Slots: {ms.UnusedCrimeSlots.Length} bytes (always 0xFF)");
-                    ImGui.Text($"String Pointers: {ms.StringPointers.Length} entries (read-only, pointers)");
+
+                    if (ImGui.CollapsingHeader("Plot Strings"))
+                    {
+                        for (var slot = 0; slot < 7 && slot * 2 + 1 < ms.SlotStrings.Length; slot++)
+                        {
+                            var victim = ms.SlotStrings[slot * 2];
+                            var item = ms.SlotStrings[slot * 2 + 1];
+                            if (string.IsNullOrEmpty(victim) && string.IsNullOrEmpty(item)) continue;
+                            ImGui.Text($"  Slot {slot} Victim: {(string.IsNullOrEmpty(victim) ? "(empty)" : victim)}");
+                            ImGui.Text($"  Slot {slot} Item:   {(string.IsNullOrEmpty(item) ? "(empty)" : item)}");
+                        }
+                    }
                 }
 
                 ImGui.PopID();
@@ -525,15 +535,20 @@ public class SelectedExecutableWindow : BaseWindow
         }
 
         DrawReadOnlyInfo("Mission Set Parameters", $"{final.MissionSetParameters.Length} bytes (read-only)");
-        DrawReadOnlyInfo("Character Name Pointers", $"{final.CharacterNamePointers.Length} entries (read-only, pointers)");
+        if (ImGui.CollapsingHeader("Character Names"))
+        {
+            DrawStringArray(final.CharacterNames, "CharName");
+        }
 
         DrawRawSectionSizes("Raw Sections", new[]
         {
-            ("PreMissionParamData", final.PreMissionParamData.Length),
+            ("PreStringTableData", final.PreStringTableData.Length),
+            ("PostStringTableData", final.PostStringTableData.Length),
             ("Unknown1", final.Unknown1.Length),
             ("PostMissionPreCrimeData", final.PostMissionPreCrimeData.Length),
             ("Unknown2", final.Unknown2.Length),
-            ("PostOrgPreCharPtrData", final.PostOrgPreCharPtrData.Length),
+            ("PostOrgPreCharNameData", final.PostOrgPreCharNameData.Length),
+            ("PostCharNameData", final.PostCharNameData.Length),
             ("TrailingData", final.TrailingData.Length)
         });
     }
@@ -594,15 +609,29 @@ public class SelectedExecutableWindow : BaseWindow
 
     private void DrawGameData(GameDataSegment game)
     {
-        DrawReadOnlyInfo("Character Name Pointers", $"{game.CharacterNamePointers.Length} entries (read-only, pointers)");
-        DrawReadOnlyInfo("Clue Relationship Pointers", $"{game.ClueRelationshipPointers.Length} entries (read-only, pointers)");
+        if (ImGui.CollapsingHeader("Character Names"))
+        {
+            DrawStringArray(game.CharacterNames, "CharName");
+        }
+
+        if (ImGui.CollapsingHeader("Clue Relationship Phrases"))
+        {
+            DrawStringArray(game.ClueRelationshipPhrases, "CluePhr");
+        }
+
         DrawReadOnlyInfo("Unknown Lookup Table", $"{game.UnknownLookupTable.Length} bytes (read-only)");
-        DrawReadOnlyInfo("Month Name Pointers", $"{game.MonthNamePointers.Length} entries (read-only, pointers)");
+
+        if (ImGui.CollapsingHeader("Month Names"))
+        {
+            DrawStringArray(game.MonthNames, "Month");
+        }
 
         DrawRawSectionSizes("Raw Sections", new[]
         {
-            ("PreCharNamePtrData", game.PreCharNamePtrData.Length),
-            ("MidSection", game.MidSection.Length),
+            ("PreCharNameData", game.PreCharNameData.Length),
+            ("PostCharNameData", game.PostCharNameData.Length),
+            ("MidSectionPreClue", game.MidSectionPreClue.Length),
+            ("MidSectionPostMonth", game.MidSectionPostMonth.Length),
             ("TrailingData", game.TrailingData.Length)
         });
     }
@@ -613,8 +642,15 @@ public class SelectedExecutableWindow : BaseWindow
 
     private void DrawBugData(BugDataSegment bug)
     {
-        DrawReadOnlyInfo("Clue Relationship Pointers", $"{bug.ClueRelationshipPointers.Length} entries (read-only, pointers)");
-        DrawReadOnlyInfo("Character Name Pointers", $"{bug.CharacterNamePointers.Length} entries (read-only, pointers)");
+        if (ImGui.CollapsingHeader("Clue Relationship Phrases"))
+        {
+            DrawStringArray(bug.ClueRelationshipPhrases, "CluePhr");
+        }
+
+        if (ImGui.CollapsingHeader("Character Names"))
+        {
+            DrawStringArray(bug.CharacterNames, "CharName");
+        }
 
         // TODO: Identify where record # comes from and if there is a name for each record.
         if (ImGui.CollapsingHeader("Rect Draw Records"))
@@ -640,21 +676,21 @@ public class SelectedExecutableWindow : BaseWindow
                     ImGui.Text($"{i}");
 
                     ImGui.TableNextColumn();
-                    var newX = ImGuiExtensions.Input("##X", (int)rec.X1, width: 60);
+                    var newX = ImGuiExtensions.Input("##X", (int)rec.X1, width: 100);
                     if (newX != null) { rec.X1 = (ushort)newX.Value; _pendingState.RecordChange(); }
 
                     ImGui.TableNextColumn();
-                    var newY = ImGuiExtensions.Input("##Y", (int)rec.Y1, width: 60);
+                    var newY = ImGuiExtensions.Input("##Y", (int)rec.Y1, width: 100);
                     if (newY != null) { rec.Y1 = (ushort)newY.Value; _pendingState.RecordChange(); }
 
                     ImGui.TableNextColumn();
                     var w = rec.X2 - rec.X1;
-                    var newW = ImGuiExtensions.Input("##W", (int)w, width: 60);
+                    var newW = ImGuiExtensions.Input("##W", (int)w, width: 100);
                     if (newW != null) { rec.X2 = (ushort)(rec.X1 + newW.Value); _pendingState.RecordChange(); }
 
                     ImGui.TableNextColumn();
                     var h = rec.Y2 - rec.Y1;
-                    var newH = ImGuiExtensions.Input("##H", (int)h, width: 60);
+                    var newH = ImGuiExtensions.Input("##H", (int)h, width: 100);
                     if (newH != null) { rec.Y2 = (ushort)(rec.Y1 + newH.Value); _pendingState.RecordChange(); }
 
                     // Row 2: Flag/Colour
@@ -664,11 +700,11 @@ public class SelectedExecutableWindow : BaseWindow
                     // empty # column
 
                     ImGui.TableNextColumn();
-                    var newFlag = ImGuiExtensions.Input("Flag", (int)rec.Flag, width: 60);
+                    var newFlag = ImGuiExtensions.Input("Flag", (int)rec.Flag, width: 100);
                     if (newFlag != null) { rec.Flag = (byte)newFlag.Value; _pendingState.RecordChange(); }
 
                     ImGui.TableNextColumn();
-                    var newCol = ImGuiExtensions.Input("Colour", (int)rec.Colour, width: 60);
+                    var newCol = ImGuiExtensions.Input("Colour", (int)rec.Colour, width: 100);
                     if (newCol != null) { rec.Colour = (ushort)newCol.Value; _pendingState.RecordChange(); }
 
                     ImGui.TableNextColumn();
@@ -683,8 +719,10 @@ public class SelectedExecutableWindow : BaseWindow
 
         DrawRawSectionSizes("Raw Sections", new[]
         {
-            ("PreClueRelPtrData", bug.PreClueRelPtrData.Length),
-            ("MidSection", bug.MidSection.Length),
+            ("PreCluePhraseData", bug.PreCluePhraseData.Length),
+            ("PostCluePhraseData", bug.PostCluePhraseData.Length),
+            ("MidSectionPreCharNames", bug.MidSectionPreCharNames.Length),
+            ("PostCharNameData", bug.PostCharNameData.Length),
             ("PostCharNamePtrData", bug.PostCharNamePtrData.Length),
             ("RectDrawTrailer", bug.RectDrawTrailer.Length),
             ("TrailingData", bug.TrailingData.Length)
@@ -725,11 +763,10 @@ public class SelectedExecutableWindow : BaseWindow
     {
         if (ImGui.CollapsingHeader("Graphics Library Docs"))
         {
-            DrawStringArray(code.GraphicsLibraryDocs, "Doc", code.GraphicsLibraryDocsByteSizes);
+            DrawStringArray(code.GraphicsLibraryDocs, "Doc");
         }
 
         DrawReadOnlyInfo("Nibble Sprite Data", $"{code.NibbleSpriteData.Length} bytes (read-only)");
-        DrawReadOnlyInfo("Graphics Doc Pointers", $"{code.GraphicsDocPointers.Length} entries (read-only, pointers)");
         DrawReadOnlyInfo("Crypto Screen Params", $"{code.CryptoScreenParams.Length} bytes (read-only)");
 
         // TODO: Crypto alphabet data appears wrong/weird when parsed as strings — investigate
@@ -819,7 +856,7 @@ public class SelectedExecutableWindow : BaseWindow
                     var idx = row + c;
                     ImGui.TableNextColumn();
                     ImGui.PushID($"{idPrefix}_{idx}");
-                    var newVal = ImGuiExtensions.Input("##v", (int)values[idx], width: 60);
+                    var newVal = ImGuiExtensions.Input("##v", (int)values[idx], width: 100);
                     if (newVal != null) { values[idx] = (ushort)newVal.Value; _pendingState.RecordChange(); }
                     ImGui.PopID();
                 }
