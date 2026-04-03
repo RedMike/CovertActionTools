@@ -149,6 +149,7 @@ public class SelectedExecutableWindow : BaseWindow
                 var label = string.IsNullOrEmpty(obj.Name) ? $"Object {i}" : $"Object {i}: {obj.Name}";
                 if (ImGui.CollapsingHeader(label))
                 {
+                    // TODO: Sprite X/Y should come from/go to the sprite sheet on the GUYS2/GUYS3 images
                     if (ImGui.BeginTable($"ObjBasic_{i}", 3))
                     {
                         ImGui.TableNextRow();
