@@ -56,8 +56,8 @@ public class LegacyExecutableParserTests
 
         foreach (var kvp in model.Executables)
         {
-            Assert.True(kvp.Value.RawPayloadData.Length > 0,
-                $"{kvp.Key} has empty RawPayloadData");
+            Assert.True(kvp.Value.CodeSegment.Length > 0,
+                $"{kvp.Key} has empty CodeSegment");
         }
     }
 

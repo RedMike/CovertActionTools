@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using CovertActionTools.Core.Compression;
 using CovertActionTools.Core.Models;
+using CovertActionTools.Core.Models.Executables;
 using Microsoft.Extensions.Logging;
 
 namespace CovertActionTools.Core.Importing.Parsers
@@ -52,11 +53,11 @@ namespace CovertActionTools.Core.Importing.Parsers
             }
 
             var filePath = _filesToProcess[_currentIndex];
-            var name = System.IO.Path.GetFileNameWithoutExtension(filePath).ToUpperInvariant();
-            _logger.LogDebug("Parsing executable: {Name}", name);
+            var exeName = System.IO.Path.GetFileNameWithoutExtension(filePath).ToUpperInvariant();
+            _logger.LogDebug("Parsing executable: {Name}", exeName);
 
             var model = ParseExecutable(filePath);
-            _result[name] = model;
+            _result[exeName] = model;
 
             return _currentIndex;
         }
@@ -101,13 +102,25 @@ namespace CovertActionTools.Core.Importing.Parsers
                 _logger.LogDebug("Dead zone: {Size} bytes copied from packed data", deadZoneBoundary);
             }
 
-            // Split into dead zone and payload
+            // Split into dead zone and full payload (code + data)
             var deadZone = new byte[deadZoneBoundary];
             Array.Copy(decompResult.Data, 0, deadZone, 0, deadZoneBoundary);
 
-            var payloadLength = decompResult.Data.Length - deadZoneBoundary;
-            var rawPayloadData = new byte[payloadLength];
-            Array.Copy(decompResult.Data, deadZoneBoundary, rawPayloadData, 0, payloadLength);
+            // The remaining bytes after the dead zone contain code segment + data segment
+            var fullPayload = decompResult.Data;
+            var name = System.IO.Path.GetFileNameWithoutExtension(filePath).ToUpperInvariant();
+
+            // Determine DS boundary to split code and data segments
+            var dsParagraph = GetDsParagraph(name);
+            var dsOffset = dsParagraph * 16; // absolute offset in full payload
+
+            var codeSegmentLength = dsOffset - deadZoneBoundary;
+            var codeSegment = new byte[codeSegmentLength];
+            Array.Copy(fullPayload, deadZoneBoundary, codeSegment, 0, codeSegmentLength);
+
+            var dataSegmentLength = fullPayload.Length - dsOffset;
+            var dataSegmentBytes = new byte[dataSegmentLength];
+            Array.Copy(fullPayload, dsOffset, dataSegmentBytes, 0, dataSegmentLength);
 
             // Extract relocations
             var relocations = ExepackUtilities.ExtractRelocations(exepackHeader.ExepackSegment);
@@ -125,14 +138,14 @@ namespace CovertActionTools.Core.Importing.Parsers
             Array.Copy(fileData, 0, originalMzHeader, 0, mzHeader.HeaderSize);
 
             _logger.LogDebug(
-                "Parsed {Name}: payload={PayloadSize}, deadZone={DeadZone}, relocations={RelocCount}",
-                System.IO.Path.GetFileName(filePath), rawPayloadData.Length, deadZoneBoundary,
+                "Parsed {ExeName}: code={CodeSize}, data={DataSize}, deadZone={DeadZone}, relocations={RelocCount}",
+                name, codeSegment.Length, dataSegmentBytes.Length, deadZoneBoundary,
                 relocations.Length / 2);
 
-            return new ExecutableModel
+            var model = new ExecutableModel
             {
                 DeadZone = deadZone,
-                RawPayloadData = rawPayloadData,
+                CodeSegment = codeSegment,
                 OriginalMzHeader = originalMzHeader,
                 ExepackStub = stub,
                 Relocations = relocations,
@@ -141,12 +154,51 @@ namespace CovertActionTools.Core.Importing.Parsers
                 StackSS = exepackHeader.RealSS,
                 StackSP = exepackHeader.RealSP
             };
+
+            // Parse data segment into per-EXE structured model
+            switch (name)
+            {
+                case "TAC":
+                    model.TacData = TacDataSegment.FromBytes(dataSegmentBytes);
+                    break;
+                case "FINAL":
+                    model.FinalData = FinalDataSegment.FromBytes(dataSegmentBytes);
+                    break;
+                case "GAME":
+                    model.GameData = GameDataSegment.FromBytes(dataSegmentBytes);
+                    break;
+                case "BUG":
+                    model.BugData = BugDataSegment.FromBytes(dataSegmentBytes);
+                    break;
+                case "CHASE":
+                    model.ChaseData = ChaseDataSegment.FromBytes(dataSegmentBytes);
+                    break;
+                case "CODE":
+                    model.CodeData = CodeExeDataSegment.FromBytes(dataSegmentBytes);
+                    break;
+            }
+
+            return model;
+        }
+
+        private static int GetDsParagraph(string exeName)
+        {
+            switch (exeName)
+            {
+                case "TAC": return TacDataSegment.DsParagraph;
+                case "FINAL": return FinalDataSegment.DsParagraph;
+                case "GAME": return GameDataSegment.DsParagraph;
+                case "BUG": return BugDataSegment.DsParagraph;
+                case "CHASE": return ChaseDataSegment.DsParagraph;
+                case "CODE": return CodeExeDataSegment.DsParagraph;
+                default: throw new InvalidOperationException($"Unknown executable: {exeName}");
+            }
         }
 
         private static string[] GetMatchingFiles(string path)
         {
             return KnownExecutables
-                .Select(name => System.IO.Path.Combine(path, $"{name}.EXE"))
+                .Select(n => System.IO.Path.Combine(path, $"{n}.EXE"))
                 .Where(File.Exists)
                 .ToArray();
         }

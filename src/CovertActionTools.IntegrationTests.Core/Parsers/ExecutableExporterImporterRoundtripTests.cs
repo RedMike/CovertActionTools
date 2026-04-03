@@ -41,7 +41,7 @@ public class ExecutableExporterImporterRoundtripTests : IDisposable
             ["TEST"] = new ExecutableModel
             {
                 DeadZone = new byte[] { 0x01, 0x02, 0x03 },
-                RawPayloadData = new byte[] { 0x10, 0x20, 0x30, 0x40 },
+                CodeSegment = new byte[] { 0x10, 0x20, 0x30, 0x40 },
                 OriginalMzHeader = new byte[] { (byte)'M', (byte)'Z', 0x00, 0x01 },
                 ExepackStub = new byte[] { 0x8C, 0xC0, 0x05 },
                 Relocations = new ushort[] { 0x0000, 0x0010, 0x1000, 0x0020 },
@@ -59,7 +59,7 @@ public class ExecutableExporterImporterRoundtripTests : IDisposable
 
         var exe = result["TEST"];
         Assert.Equal(new byte[] { 0x01, 0x02, 0x03 }, exe.DeadZone);
-        Assert.Equal(new byte[] { 0x10, 0x20, 0x30, 0x40 }, exe.RawPayloadData);
+        Assert.Equal(new byte[] { 0x10, 0x20, 0x30, 0x40 }, exe.CodeSegment);
         Assert.Equal(new byte[] { (byte)'M', (byte)'Z', 0x00, 0x01 }, exe.OriginalMzHeader);
         Assert.Equal(new byte[] { 0x8C, 0xC0, 0x05 }, exe.ExepackStub);
         Assert.Equal(new ushort[] { 0x0000, 0x0010, 0x1000, 0x0020 }, exe.Relocations);
@@ -77,7 +77,7 @@ public class ExecutableExporterImporterRoundtripTests : IDisposable
             ["BUG"] = new ExecutableModel
             {
                 DeadZone = new byte[] { 0xAA },
-                RawPayloadData = new byte[] { 0xBB, 0xCC },
+                CodeSegment = new byte[] { 0xBB, 0xCC },
                 OriginalMzHeader = new byte[] { (byte)'M', (byte)'Z' },
                 ExepackStub = new byte[] { 0x01 },
                 Relocations = new ushort[] { 0x0000, 0x0010 },
@@ -86,7 +86,7 @@ public class ExecutableExporterImporterRoundtripTests : IDisposable
             ["TAC"] = new ExecutableModel
             {
                 DeadZone = new byte[] { 0xDD },
-                RawPayloadData = new byte[] { 0xEE, 0xFF },
+                CodeSegment = new byte[] { 0xEE, 0xFF },
                 OriginalMzHeader = new byte[] { (byte)'M', (byte)'Z' },
                 ExepackStub = new byte[] { 0x02 },
                 Relocations = new ushort[] { 0x1000, 0x0020 },
@@ -114,7 +114,7 @@ public class ExecutableExporterImporterRoundtripTests : IDisposable
         Assert.Single(result);
         var exe = result["EMPTY"];
         Assert.Empty(exe.DeadZone);
-        Assert.Empty(exe.RawPayloadData);
+        Assert.Empty(exe.CodeSegment);
         Assert.Empty(exe.OriginalMzHeader);
         Assert.Empty(exe.ExepackStub);
         Assert.Empty(exe.Relocations);
@@ -130,7 +130,7 @@ public class ExecutableExporterImporterRoundtripTests : IDisposable
     {
         var executables = new Dictionary<string, ExecutableModel>
         {
-            ["TEST"] = new ExecutableModel { RawPayloadData = new byte[] { 0x01 } }
+            ["TEST"] = new ExecutableModel { CodeSegment = new byte[] { 0x01 } }
         };
         var model = new PackageModel { Executables = executables };
 

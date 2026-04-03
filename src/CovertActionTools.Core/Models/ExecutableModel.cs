@@ -1,9 +1,21 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
+using CovertActionTools.Core.Models.Executables;
 
 namespace CovertActionTools.Core.Models
 {
+    // TODO: All fields in the per-EXE data segment classes that currently store data pointers
+    // (DS-relative or otherwise) will need updating so that they do not store pointers.
+    // This is required so that we can create executable changes that e.g. add new items to
+    // arrays, remove items from arrays, change string sizes, etc, without all the pointers
+    // going out of sync. The publisher should recompute pointers at serialisation time from
+    // the actual data.
+
+    /// <summary>
+    /// Model for an EXEPACK-compressed DOS executable.
+    /// Data segment field boundaries and interpretations are based on reverse engineering
+    /// and may not be fully accurate. Unknown regions are preserved as raw byte arrays.
+    /// </summary>
     public class ExecutableModel
     {
         #region Dead Zone
@@ -16,10 +28,27 @@ namespace CovertActionTools.Core.Models
 
         #region Payload
         /// <summary>
-        /// Decompressed program payload after the dead zone.
-        /// This is the modifiable program data that will later be split into structured fields.
+        /// x86-16 machine code segment (everything between the dead zone and the data segment).
         /// </summary>
-        public byte[] RawPayloadData { get; set; } = Array.Empty<byte>();
+        public byte[] CodeSegment { get; set; } = Array.Empty<byte>();
+
+        /// <summary>TAC.EXE data segment. Only populated when this model represents TAC.</summary>
+        public TacDataSegment TacData { get; set; }
+
+        /// <summary>FINAL.EXE data segment. Only populated when this model represents FINAL.</summary>
+        public FinalDataSegment FinalData { get; set; }
+
+        /// <summary>GAME.EXE data segment. Only populated when this model represents GAME.</summary>
+        public GameDataSegment GameData { get; set; }
+
+        /// <summary>BUG.EXE data segment. Only populated when this model represents BUG.</summary>
+        public BugDataSegment BugData { get; set; }
+
+        /// <summary>CHASE.EXE data segment. Only populated when this model represents CHASE.</summary>
+        public ChaseDataSegment ChaseData { get; set; }
+
+        /// <summary>CODE.EXE data segment. Only populated when this model represents CODE.</summary>
+        public CodeExeDataSegment CodeData { get; set; }
         #endregion
 
         #region EXEPACK Metadata
@@ -62,12 +91,32 @@ namespace CovertActionTools.Core.Models
         public ushort StackSP { get; set; }
         #endregion
 
+        /// <summary>
+        /// Reconstructs the data segment bytes from whichever per-EXE data model is populated.
+        /// </summary>
+        public byte[] GetDataSegmentBytes()
+        {
+            if (TacData != null) return TacData.ToBytes();
+            if (FinalData != null) return FinalData.ToBytes();
+            if (GameData != null) return GameData.ToBytes();
+            if (BugData != null) return BugData.ToBytes();
+            if (ChaseData != null) return ChaseData.ToBytes();
+            if (CodeData != null) return CodeData.ToBytes();
+            return Array.Empty<byte>();
+        }
+
         public ExecutableModel Clone()
         {
             return new ExecutableModel()
             {
                 DeadZone = DeadZone.ToArray(),
-                RawPayloadData = RawPayloadData.ToArray(),
+                CodeSegment = CodeSegment.ToArray(),
+                TacData = TacData?.Clone(),
+                FinalData = FinalData?.Clone(),
+                GameData = GameData?.Clone(),
+                BugData = BugData?.Clone(),
+                ChaseData = ChaseData?.Clone(),
+                CodeData = CodeData?.Clone(),
                 OriginalMzHeader = OriginalMzHeader.ToArray(),
                 ExepackStub = ExepackStub.ToArray(),
                 Relocations = Relocations.ToArray(),

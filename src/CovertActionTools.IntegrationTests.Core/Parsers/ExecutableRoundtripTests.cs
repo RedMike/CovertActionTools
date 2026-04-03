@@ -184,8 +184,11 @@ public class ExecutableRoundtripTests : IDisposable
         // Dead zone must match
         Assert.Equal(originalExe.DeadZone, reparsedExe.DeadZone);
 
-        // Payload must match
-        Assert.Equal(originalExe.RawPayloadData, reparsedExe.RawPayloadData);
+        // Code segment must match
+        Assert.Equal(originalExe.CodeSegment, reparsedExe.CodeSegment);
+
+        // Data segment bytes must match (serialized back from structured fields)
+        Assert.Equal(originalExe.GetDataSegmentBytes(), reparsedExe.GetDataSegmentBytes());
 
         // Entry point and stack must match
         Assert.Equal(originalExe.EntryCS, reparsedExe.EntryCS);
