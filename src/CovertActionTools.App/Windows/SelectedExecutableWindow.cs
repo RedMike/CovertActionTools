@@ -500,7 +500,15 @@ public class SelectedExecutableWindow : BaseWindow
                     DrawMissionSetCrimeSlot("Crime 3", ms, 2, final.CrimeTypeNames);
 
                     ImGui.Text($"Unused Crime Slots: {ms.UnusedCrimeSlots.Length} bytes (always 0xFF)");
-                    ImGui.Text($"String Pointers: {ms.StringPointers.Length} entries (read-only, pointers)");
+
+                    if (ImGui.CollapsingHeader("Slot Strings"))
+                    {
+                        for (var si = 0; si < ms.SlotStrings.Length; si++)
+                        {
+                            var slotLabel = string.IsNullOrEmpty(ms.SlotStrings[si]) ? "(empty)" : ms.SlotStrings[si];
+                            ImGui.Text($"  Slot {si}: {slotLabel}");
+                        }
+                    }
                 }
 
                 ImGui.PopID();
@@ -525,7 +533,8 @@ public class SelectedExecutableWindow : BaseWindow
 
         DrawRawSectionSizes("Raw Sections", new[]
         {
-            ("PreMissionParamData", final.PreMissionParamData.Length),
+            ("PreStringTableData", final.PreStringTableData.Length),
+            ("PostStringTableData", final.PostStringTableData.Length),
             ("Unknown1", final.Unknown1.Length),
             ("PostMissionPreCrimeData", final.PostMissionPreCrimeData.Length),
             ("Unknown2", final.Unknown2.Length),
