@@ -79,11 +79,17 @@ namespace CovertActionTools.Core.Exporting.Publishers
 
         private byte[] BuildPackedExecutable(ExecutableModel model)
         {
-            // Compress the payload (dead zone is excluded, handled separately)
-            var compressedPayload = _compression.Compress(model.RawPayloadData);
+            // Reconstruct the raw payload: code segment + data segment bytes
+            var dataSegmentBytes = model.GetDataSegmentBytes();
+            var rawPayload = new byte[model.CodeSegment.Length + dataSegmentBytes.Length];
+            Array.Copy(model.CodeSegment, 0, rawPayload, 0, model.CodeSegment.Length);
+            Array.Copy(dataSegmentBytes, 0, rawPayload, model.CodeSegment.Length, dataSegmentBytes.Length);
 
-            // Full payload length = dead zone + raw payload (for dest_len calculation)
-            var fullPayloadLength = model.DeadZone.Length + model.RawPayloadData.Length;
+            // Compress the payload (dead zone is excluded, handled separately)
+            var compressedPayload = _compression.Compress(rawPayload);
+
+            // Full payload length = dead zone + code segment + data segment (for dest_len calculation)
+            var fullPayloadLength = model.DeadZone.Length + rawPayload.Length;
 
             return ExepackUtilities.BuildPackedExe(
                 model.DeadZone,
