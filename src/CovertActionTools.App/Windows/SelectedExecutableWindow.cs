@@ -125,6 +125,7 @@ public class SelectedExecutableWindow : BaseWindow
                     if (newSize != null) { room.SizeConstraint = (ushort)newSize.Value; _pendingState.RecordChange(); }
 
                     ImGui.TableNextColumn();
+                    // TODO: Make this a checkbox after investigating if values other than 0/7 have different effects
                     var newEnabled = ImGuiExtensions.Input("##Enabled", (int)room.Enabled, width: 80);
                     if (newEnabled != null) { room.Enabled = (ushort)newEnabled.Value; _pendingState.RecordChange(); }
 
