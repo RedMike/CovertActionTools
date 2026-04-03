@@ -4,6 +4,10 @@ using System.Text;
 
 namespace CovertActionTools.Core.Models.Executables
 {
+    /// <summary>
+    /// Mission set record from FINAL.EXE (74 bytes).
+    /// Field interpretations are based on reverse engineering and may not be fully accurate.
+    /// </summary>
     public class FinalMissionSetRecord
     {
         public const int RecordSize = 74;
@@ -51,6 +55,11 @@ namespace CovertActionTools.Core.Models.Executables
         }
     }
 
+    /// <summary>
+    /// Structured data segment for FINAL.EXE.
+    /// Field boundaries and interpretations are based on reverse engineering and may not
+    /// be fully accurate. Unknown regions are preserved as raw byte arrays.
+    /// </summary>
     public class FinalDataSegment
     {
         /// <summary>DS paragraph value for FINAL.EXE.</summary>
@@ -77,7 +86,7 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>Data before mission set params: MSC runtime, BSS, RastPort, CGA, strings.</summary>
         public byte[] PreMissionParamData { get; set; } = Array.Empty<byte>();
 
-        /// <summary>16 × 26-byte mission set parameter records (values 0-8, partially understood).</summary>
+        /// <summary>16 x 26-byte mission set parameter records (values 0-8, partially understood).</summary>
         public byte[] MissionSetParameters { get; set; } = Array.Empty<byte>();
 
         /// <summary>2-byte gap between params and mission set records.</summary>

@@ -4,6 +4,11 @@ using CovertActionTools.Core.Models.Executables;
 
 namespace CovertActionTools.Core.Models
 {
+    /// <summary>
+    /// Model for an EXEPACK-compressed DOS executable.
+    /// Data segment field boundaries and interpretations are based on reverse engineering
+    /// and may not be fully accurate. Unknown regions are preserved as raw byte arrays.
+    /// </summary>
     public class ExecutableModel
     {
         #region Dead Zone

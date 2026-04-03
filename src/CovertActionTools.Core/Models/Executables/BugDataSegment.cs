@@ -3,6 +3,11 @@ using System.Linq;
 
 namespace CovertActionTools.Core.Models.Executables
 {
+    /// <summary>
+    /// Structured data segment for BUG.EXE.
+    /// Field boundaries and interpretations are based on reverse engineering and may not
+    /// be fully accurate. Unknown regions are preserved as raw byte arrays.
+    /// </summary>
     public class BugDataSegment
     {
         /// <summary>DS paragraph value for BUG.EXE.</summary>

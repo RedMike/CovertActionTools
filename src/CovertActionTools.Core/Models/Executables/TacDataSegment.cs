@@ -4,6 +4,10 @@ using System.Text;
 
 namespace CovertActionTools.Core.Models.Executables
 {
+    /// <summary>
+    /// Room type record from TAC.EXE (22 bytes).
+    /// Field interpretations are based on reverse engineering and may not be fully accurate.
+    /// </summary>
     public class TacRoomTypeRecord
     {
         public const int RecordSize = 22;
@@ -15,7 +19,7 @@ namespace CovertActionTools.Core.Models.Executables
         public string Name { get; set; } = string.Empty;
 
         /// <summary>
-        /// Rarity weight — higher = less likely to be chosen for a room slot.
+        /// Rarity weight -- higher = less likely to be chosen for a room slot.
         /// </summary>
         public ushort Rarity { get; set; }
 
@@ -70,6 +74,10 @@ namespace CovertActionTools.Core.Models.Executables
         }
     }
 
+    /// <summary>
+    /// Object/furniture record from TAC.EXE (20 bytes).
+    /// Field interpretations are based on reverse engineering and may not be fully accurate.
+    /// </summary>
     public class TacObjectRecord
     {
         public const int RecordSize = 20;
@@ -215,6 +223,11 @@ namespace CovertActionTools.Core.Models.Executables
         }
     }
 
+    /// <summary>
+    /// Structured data segment for TAC.EXE.
+    /// Field boundaries and interpretations are based on reverse engineering and may not
+    /// be fully accurate. Unknown regions are preserved as raw byte arrays.
+    /// </summary>
     public class TacDataSegment
     {
         /// <summary>DS paragraph value for TAC.EXE.</summary>
@@ -228,7 +241,7 @@ namespace CovertActionTools.Core.Models.Executables
         private const int EquipmentPointersOffset = 0x20E0; // 0x012F10 - 0x10E30
         private const int EquipmentPointerCount = 16;
         private const int UnknownEquipTableOffset = 0x2100; // 0x012F30 - 0x10E30
-        private const int UnknownEquipTableSize = 96;       // 48 × uint16
+        private const int UnknownEquipTableSize = 96;       // 48 x uint16
         private const int RagdollCoordsOffset = 0x2160;     // 0x012F90 - 0x10E30
         private const int RagdollCoordCount = 44;           // 43 entries + (0,0) terminator
         private const int EquipSlotRectsOffset = 0x2214;    // 0x013044 - 0x10E30
@@ -255,7 +268,7 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>16 DS-relative pointers to equipment name strings.</summary>
         public ushort[] EquipmentNamePointers { get; set; } = Array.Empty<ushort>();
 
-        /// <summary>48 × uint16 table (values 0-11), purpose undecoded.</summary>
+        /// <summary>48 x uint16 table (values 0-11), purpose undecoded.</summary>
         public byte[] Unknown2 { get; set; } = Array.Empty<byte>();
 
         /// <summary>43 screen coordinates for ragdoll item positions + (0,0) terminator.</summary>

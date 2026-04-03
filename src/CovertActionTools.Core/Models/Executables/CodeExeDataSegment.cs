@@ -3,13 +3,18 @@ using System.Linq;
 
 namespace CovertActionTools.Core.Models.Executables
 {
+    /// <summary>
+    /// Structured data segment for CODE.EXE.
+    /// Field boundaries and interpretations are based on reverse engineering and may not
+    /// be fully accurate. Unknown regions are preserved as raw byte arrays.
+    /// </summary>
     public class CodeExeDataSegment
     {
         /// <summary>DS paragraph value for CODE.EXE.</summary>
         public const int DsParagraph = 0x036D;
 
         #region Layout Constants (DS-relative offsets)
-        // DS×16 = 0x036D0
+        // DS*16 = 0x036D0
         private const int GraphicsDocsOffset = 0x006C;      // 0x00373C - 0x036D0
         private const int GraphicsDocsSize = 3716;           // 56 strings
         private const int NibbleSpriteOffset = 0x0EF0;       // 0x0045C0 - 0x036D0
@@ -41,7 +46,7 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>56 DS-relative pointers into the graphics documentation strings.</summary>
         public ushort[] GraphicsDocPointers { get; set; } = Array.Empty<ushort>();
 
-        /// <summary>22-byte crypto screen parameter record (319×199, mode, plane count, code pointer).</summary>
+        /// <summary>22-byte crypto screen parameter record (319x199, mode, plane count, code pointer).</summary>
         public byte[] CryptoScreenParams { get; set; } = Array.Empty<byte>();
 
         /// <summary>91 bytes: two copies of crypto alphabet (A-Z plus [,\\) + space buffer.</summary>
