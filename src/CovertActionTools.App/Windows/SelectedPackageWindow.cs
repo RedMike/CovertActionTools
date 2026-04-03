@@ -116,6 +116,7 @@ public class SelectedPackageWindow : BaseWindow
             DrawDiffsPlots(model);
             DrawDiffsProse(model);
             DrawDiffsWorlds(model);
+            DrawDiffsExecutables(model);
             ImGui.EndTable();
         }
         
@@ -257,6 +258,23 @@ public class SelectedPackageWindow : BaseWindow
                 else
                 {
                     model.Index.WorldIncluded.Remove(key);
+                }
+            });
+        }
+    }
+
+    private void DrawDiffsExecutables(PackageModel model)
+    {
+        foreach (var key in model.Index.ExecutableChanges)
+        {
+            DrawDiffsRow("Executable", key, model.Index.ExecutableIncluded.Contains(key), (ch) => {
+                if (ch)
+                {
+                    model.Index.ExecutableIncluded.Add(key);
+                }
+                else
+                {
+                    model.Index.ExecutableIncluded.Remove(key);
                 }
             });
         }

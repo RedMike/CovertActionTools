@@ -25,14 +25,20 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>Data before chase narrative: MSC runtime, file refs.</summary>
         public byte[] PreNarrativeData { get; set; } = Array.Empty<byte>();
 
-        /// <summary>Chase narrative text: gender-conditional outcome strings (~417 bytes).</summary>
-        public byte[] ChaseNarrativeText { get; set; } = Array.Empty<byte>();
+        /// <summary>Chase narrative text: gender-conditional outcome strings.</summary>
+        public string[] ChaseNarrativeStrings { get; set; } = Array.Empty<string>();
+
+        /// <summary>Original byte size of the narrative text region.</summary>
+        public int ChaseNarrativeByteSize { get; set; }
 
         /// <summary>BSS, image descriptors, nibble data, palette remap, coordinate data.</summary>
         public byte[] MidSection { get; set; } = Array.Empty<byte>();
 
-        /// <summary>Chase gameplay strings: cars.pic, speed display, quality ratings (~72 bytes).</summary>
-        public byte[] ChaseGameplayStrings { get; set; } = Array.Empty<byte>();
+        /// <summary>Chase gameplay strings: cars.pic, speed display, quality ratings.</summary>
+        public string[] ChaseGameplayStrings { get; set; } = Array.Empty<string>();
+
+        /// <summary>Original byte size of the gameplay strings region.</summary>
+        public int ChaseGameplayByteSize { get; set; }
 
         /// <summary>Everything after: quit dialog, infrastructure, overlay, C runtime, BSS.</summary>
         public byte[] TrailingData { get; set; } = Array.Empty<byte>();
@@ -45,12 +51,14 @@ namespace CovertActionTools.Core.Models.Executables
 
             segment.PreNarrativeData = DataSegmentHelper.Slice(dataSegment, 0, NarrativeTextOffset);
 
-            segment.ChaseNarrativeText = DataSegmentHelper.Slice(dataSegment, NarrativeTextOffset, NarrativeSize);
+            segment.ChaseNarrativeStrings = DataSegmentHelper.AllNullTerminatedStringsFromBytes(dataSegment, NarrativeTextOffset, NarrativeSize);
+            segment.ChaseNarrativeByteSize = NarrativeSize;
 
             var narrativeEnd = NarrativeTextOffset + NarrativeSize;
             segment.MidSection = DataSegmentHelper.Slice(dataSegment, narrativeEnd, GameplayStringsOffset - narrativeEnd);
 
-            segment.ChaseGameplayStrings = DataSegmentHelper.Slice(dataSegment, GameplayStringsOffset, GameplayStringsSize);
+            segment.ChaseGameplayStrings = DataSegmentHelper.AllNullTerminatedStringsFromBytes(dataSegment, GameplayStringsOffset, GameplayStringsSize);
+            segment.ChaseGameplayByteSize = GameplayStringsSize;
 
             var gameplayEnd = GameplayStringsOffset + GameplayStringsSize;
             segment.TrailingData = DataSegmentHelper.Slice(dataSegment, gameplayEnd, dataSegment.Length - gameplayEnd);
@@ -62,9 +70,9 @@ namespace CovertActionTools.Core.Models.Executables
         {
             return DataSegmentHelper.Concatenate(
                 PreNarrativeData,
-                ChaseNarrativeText,
+                DataSegmentHelper.NullTerminatedStringsToBytesFixedSize(ChaseNarrativeStrings, ChaseNarrativeByteSize),
                 MidSection,
-                ChaseGameplayStrings,
+                DataSegmentHelper.NullTerminatedStringsToBytesFixedSize(ChaseGameplayStrings, ChaseGameplayByteSize),
                 TrailingData
             );
         }
@@ -74,9 +82,11 @@ namespace CovertActionTools.Core.Models.Executables
             return new ChaseDataSegment
             {
                 PreNarrativeData = PreNarrativeData.ToArray(),
-                ChaseNarrativeText = ChaseNarrativeText.ToArray(),
+                ChaseNarrativeStrings = ChaseNarrativeStrings.Select(s => s).ToArray(),
+                ChaseNarrativeByteSize = ChaseNarrativeByteSize,
                 MidSection = MidSection.ToArray(),
-                ChaseGameplayStrings = ChaseGameplayStrings.ToArray(),
+                ChaseGameplayStrings = ChaseGameplayStrings.Select(s => s).ToArray(),
+                ChaseGameplayByteSize = ChaseGameplayByteSize,
                 TrailingData = TrailingData.ToArray()
             };
         }

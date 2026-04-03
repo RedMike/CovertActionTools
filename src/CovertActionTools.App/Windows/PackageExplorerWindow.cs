@@ -77,6 +77,7 @@ public class PackageExplorerWindow : BaseWindow
             DrawPlotsView(model);
             DrawProseView(model);
             DrawWorldsView(model);
+            DrawExecutablesView(model);
 
             ImGui.TreePop();
         }
@@ -446,7 +447,36 @@ public class PackageExplorerWindow : BaseWindow
                     ImGui.TreePop();
                 }
             }
-            
+
+            ImGui.TreePop();
+        }
+    }
+
+    private void DrawExecutablesView(PackageModel model)
+    {
+        if (ImGui.TreeNodeEx("Executables", ImGuiTreeNodeFlags.SpanAvailWidth))
+        {
+            foreach (var exe in model.Executables.OrderBy(x => x.Key))
+            {
+                var nodeFlags = ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.SpanAvailWidth;
+                if (_mainEditorState.SelectedItem != null &&
+                    _mainEditorState.SelectedItem.Value.type == MainEditorState.ItemType.Executable &&
+                    _mainEditorState.SelectedItem.Value.id == exe.Key)
+                {
+                    nodeFlags |= ImGuiTreeNodeFlags.Selected;
+                }
+
+                if (ImGui.TreeNodeEx($"{exe.Key}", nodeFlags))
+                {
+                    if (ImGui.IsItemClicked())
+                    {
+                        _mainEditorState.SelectedItem = (MainEditorState.ItemType.Executable, exe.Key);
+                    }
+
+                    ImGui.TreePop();
+                }
+            }
+
             ImGui.TreePop();
         }
     }
