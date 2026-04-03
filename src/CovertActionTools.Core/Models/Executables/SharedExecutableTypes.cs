@@ -94,6 +94,61 @@ namespace CovertActionTools.Core.Models.Executables
             return parts.ToArray();
         }
 
+        public static (string[] strings, int[] byteSizes) NullTerminatedStringsWithSizesFromBytes(byte[] data, int offset, int count)
+        {
+            var strings = new string[count];
+            var sizes = new int[count];
+            var pos = offset;
+            for (var i = 0; i < count; i++)
+            {
+                var end = pos;
+                while (end < data.Length && data[end] != 0) end++;
+                strings[i] = Encoding.ASCII.GetString(data, pos, end - pos);
+                sizes[i] = end - pos + 1; // string length + null terminator
+                pos = end + 1;
+            }
+            return (strings, sizes);
+        }
+
+        public static (string[] strings, int[] byteSizes) AllNullTerminatedStringsWithSizesFromBytes(byte[] data, int offset, int length)
+        {
+            var strings = new List<string>();
+            var sizes = new List<int>();
+            var pos = offset;
+            var end = offset + length;
+            while (pos < end)
+            {
+                var strEnd = pos;
+                while (strEnd < end && data[strEnd] != 0) strEnd++;
+                strings.Add(Encoding.ASCII.GetString(data, pos, strEnd - pos));
+                sizes.Add(strEnd - pos + 1);
+                pos = strEnd + 1;
+            }
+            return (strings.ToArray(), sizes.ToArray());
+        }
+
+        public static byte[] NullTerminatedStringsToFixedBytes(string[] strings, int[] originalByteSizes)
+        {
+            var parts = new List<byte>();
+            for (var i = 0; i < strings.Length; i++)
+            {
+                var slotSize = i < originalByteSizes.Length ? originalByteSizes[i] : strings[i].Length + 1;
+                var slot = new byte[slotSize];
+                var strBytes = Encoding.ASCII.GetBytes(strings[i]);
+                Array.Copy(strBytes, 0, slot, 0, Math.Min(strBytes.Length, slotSize - 1));
+                parts.AddRange(slot);
+            }
+            return parts.ToArray();
+        }
+
+        public static byte[] PadToSize(byte[] data, int size)
+        {
+            if (data.Length >= size) return DataSegmentHelper.Slice(data, 0, size);
+            var result = new byte[size];
+            Array.Copy(data, 0, result, 0, data.Length);
+            return result;
+        }
+
         public static byte[] NullTerminatedStringsToBytesFixedSize(string[] strings, int size)
         {
             var result = new byte[size];

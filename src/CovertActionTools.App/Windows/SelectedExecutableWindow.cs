@@ -500,23 +500,9 @@ public class SelectedExecutableWindow : BaseWindow
                         ImGui.EndTable();
                     }
 
-                    if (ImGui.BeginTable($"MSCrimes", 3))
-                    {
-                        ImGui.TableNextRow();
-                        ImGui.TableNextColumn();
-                        var newC1 = ImGuiExtensions.Input("Crime 1", (int)ms.Crime1Id, width: 80);
-                        if (newC1 != null) { ms.Crime1Id = (ushort)newC1.Value; _pendingState.RecordChange(); }
-
-                        ImGui.TableNextColumn();
-                        var newC2 = ImGuiExtensions.Input("Crime 2", (int)ms.Crime2Id, width: 80);
-                        if (newC2 != null) { ms.Crime2Id = (ushort)newC2.Value; _pendingState.RecordChange(); }
-
-                        ImGui.TableNextColumn();
-                        var newC3 = ImGuiExtensions.Input("Crime 3", (int)ms.Crime3Id, width: 80);
-                        if (newC3 != null) { ms.Crime3Id = (ushort)newC3.Value; _pendingState.RecordChange(); }
-
-                        ImGui.EndTable();
-                    }
+                    DrawMissionSetCrimeSlot("Crime 1", ms, 0, final.CrimeTypeNames);
+                    DrawMissionSetCrimeSlot("Crime 2", ms, 1, final.CrimeTypeNames);
+                    DrawMissionSetCrimeSlot("Crime 3", ms, 2, final.CrimeTypeNames);
 
                     ImGui.Text($"Unused Crime Slots: {ms.UnusedCrimeSlots.Length} bytes (always 0xFF)");
                     ImGui.Text($"String Pointers: {ms.StringPointers.Length} entries (read-only, pointers)");
@@ -528,12 +514,12 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Crime Type Names"))
         {
-            DrawStringArray(final.CrimeTypeNames, "CrimeType");
+            DrawStringArray(final.CrimeTypeNames, "CrimeType", final.CrimeTypeNameByteSizes);
         }
 
         if (ImGui.CollapsingHeader("Organisation Names"))
         {
-            DrawStringArray(final.OrganisationNames, "OrgName");
+            DrawStringArray(final.OrganisationNames, "OrgName", final.OrganisationNameByteSizes);
         }
 
         DrawReadOnlyInfo("Mission Set Parameters", $"{final.MissionSetParameters.Length} bytes (read-only)");
@@ -548,6 +534,56 @@ public class SelectedExecutableWindow : BaseWindow
             ("PostOrgPreCharPtrData", final.PostOrgPreCharPtrData.Length),
             ("TrailingData", final.TrailingData.Length)
         });
+    }
+
+    private void DrawMissionSetCrimeSlot(string label, FinalMissionSetRecord ms, int slotIndex, string[] crimeTypeNames)
+    {
+        var crimeId = slotIndex switch
+        {
+            0 => ms.Crime1Id,
+            1 => ms.Crime2Id,
+            2 => ms.Crime3Id,
+            _ => (ushort)0xFFFF
+        };
+
+        var enabled = crimeId != 0xFFFF;
+        var origEnabled = enabled;
+        ImGui.Checkbox($"{label} Enabled", ref enabled);
+        if (enabled != origEnabled)
+        {
+            var newId = enabled ? (ushort)0 : (ushort)0xFFFF;
+            SetMissionSetCrimeId(ms, slotIndex, newId);
+            _pendingState.RecordChange();
+            crimeId = newId;
+        }
+
+        if (enabled)
+        {
+            ImGui.SameLine();
+            // Build dropdown from crime type names
+            var ids = Enumerable.Range(0, crimeTypeNames.Length).ToList();
+            var labels = ids.Select(id => $"{id}: {crimeTypeNames[id]}").ToList();
+            var currentIdx = ids.FindIndex(x => x == crimeId);
+            if (currentIdx < 0) currentIdx = 0;
+            var origIdx = currentIdx;
+            ImGui.SetNextItemWidth(200.0f);
+            ImGui.Combo($"##{label}", ref currentIdx, labels.ToArray(), labels.Count);
+            if (currentIdx != origIdx)
+            {
+                SetMissionSetCrimeId(ms, slotIndex, (ushort)ids[currentIdx]);
+                _pendingState.RecordChange();
+            }
+        }
+    }
+
+    private static void SetMissionSetCrimeId(FinalMissionSetRecord ms, int slotIndex, ushort value)
+    {
+        switch (slotIndex)
+        {
+            case 0: ms.Crime1Id = value; break;
+            case 1: ms.Crime2Id = value; break;
+            case 2: ms.Crime3Id = value; break;
+        }
     }
 
     #endregion
@@ -649,12 +685,12 @@ public class SelectedExecutableWindow : BaseWindow
     {
         if (ImGui.CollapsingHeader("Chase Narrative Strings"))
         {
-            DrawStringArray(chase.ChaseNarrativeStrings, "Narrative");
+            DrawStringArray(chase.ChaseNarrativeStrings, "Narrative", chase.ChaseNarrativeByteSizes);
         }
 
         if (ImGui.CollapsingHeader("Chase Gameplay Strings"))
         {
-            DrawStringArray(chase.ChaseGameplayStrings, "Gameplay");
+            DrawStringArray(chase.ChaseGameplayStrings, "Gameplay", chase.ChaseGameplayByteSizes);
         }
 
         DrawRawSectionSizes("Raw Sections", new[]
@@ -673,7 +709,7 @@ public class SelectedExecutableWindow : BaseWindow
     {
         if (ImGui.CollapsingHeader("Graphics Library Docs"))
         {
-            DrawStringArray(code.GraphicsLibraryDocs, "Doc");
+            DrawStringArray(code.GraphicsLibraryDocs, "Doc", code.GraphicsLibraryDocsByteSizes);
         }
 
         DrawReadOnlyInfo("Nibble Sprite Data", $"{code.NibbleSpriteData.Length} bytes (read-only)");
@@ -682,12 +718,12 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Crypto Alphabet Data"))
         {
-            DrawStringArray(code.CryptoAlphabetData, "Alphabet");
+            DrawStringArray(code.CryptoAlphabetData, "Alphabet", code.CryptoAlphabetByteSizes);
         }
 
         if (ImGui.CollapsingHeader("Crypto UI Strings"))
         {
-            DrawStringArray(code.CryptoUiStrings, "CryptoUI");
+            DrawStringArray(code.CryptoUiStrings, "CryptoUI", code.CryptoUiStringsByteSizes);
         }
 
         DrawRawSectionSizes("Raw Sections", new[]
@@ -702,17 +738,39 @@ public class SelectedExecutableWindow : BaseWindow
 
     #region Shared Drawing Helpers
 
-    private void DrawStringArray(string[] strings, string idPrefix)
+    // TODO: Allow different string lengths after pointer recalculation is implemented.
+    // Currently each string is fixed to its original byte size to prevent pointer drift.
+    private void DrawStringArray(string[] strings, string idPrefix, int[]? byteSizes = null)
     {
         for (var i = 0; i < strings.Length; i++)
         {
             ImGui.PushID($"{idPrefix}_{i}");
             var contentSize = ImGui.GetContentRegionAvail();
-            var newVal = ImGuiExtensions.Input($"[{i}]", strings[i], 256, width: (int)contentSize.X - 80);
-            if (newVal != null)
+            // Max editable length = original byte size minus null terminator
+            var maxLen = byteSizes != null && i < byteSizes.Length ? byteSizes[i] - 1 : 256;
+            if (maxLen < 1) maxLen = 1;
+
+            if (strings[i].Contains('\n'))
             {
-                strings[i] = newVal;
-                _pendingState.RecordChange();
+                // Multiline for strings with newlines
+                var val = strings[i];
+                var origVal = val;
+                ImGui.InputTextMultiline($"[{i}]", ref val, (uint)maxLen + 1,
+                    new Vector2(contentSize.X - 80, 80.0f));
+                if (val != origVal && val.Length <= maxLen)
+                {
+                    strings[i] = val;
+                    _pendingState.RecordChange();
+                }
+            }
+            else
+            {
+                var newVal = ImGuiExtensions.Input($"[{i}]", strings[i], maxLen, width: (int)contentSize.X - 80);
+                if (newVal != null)
+                {
+                    strings[i] = newVal;
+                    _pendingState.RecordChange();
+                }
             }
             ImGui.PopID();
         }

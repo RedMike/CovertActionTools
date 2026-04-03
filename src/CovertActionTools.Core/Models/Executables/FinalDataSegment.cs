@@ -139,11 +139,17 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>13 crime type name strings.</summary>
         public string[] CrimeTypeNames { get; set; } = Array.Empty<string>();
 
+        /// <summary>Original per-string byte sizes for CrimeTypeNames (prevents pointer drift).</summary>
+        public int[] CrimeTypeNameByteSizes { get; set; } = Array.Empty<int>();
+
         /// <summary>Data between crime type names end and organisation names start.</summary>
         public byte[] Unknown2 { get; set; } = Array.Empty<byte>();
 
         /// <summary>24 organisation name strings.</summary>
         public string[] OrganisationNames { get; set; } = Array.Empty<string>();
+
+        /// <summary>Original per-string byte sizes for OrganisationNames (prevents pointer drift).</summary>
+        public int[] OrganisationNameByteSizes { get; set; } = Array.Empty<int>();
 
         /// <summary>Data between org names and character name pointers: career text, briefing, clue phrases, char names, item tables.</summary>
         public byte[] PostOrgPreCharPtrData { get; set; } = Array.Empty<byte>();
@@ -178,13 +184,17 @@ namespace CovertActionTools.Core.Models.Executables
 
             // Crime type names: 13 null-terminated strings
             var crimeEnd = FindNthNullTerminator(dataSegment, CrimeTypesOffset, CrimeTypeCount);
-            segment.CrimeTypeNames = DataSegmentHelper.NullTerminatedStringsFromBytes(dataSegment, CrimeTypesOffset, CrimeTypeCount);
+            var (crimeNames, crimeSizes) = DataSegmentHelper.NullTerminatedStringsWithSizesFromBytes(dataSegment, CrimeTypesOffset, CrimeTypeCount);
+            segment.CrimeTypeNames = crimeNames;
+            segment.CrimeTypeNameByteSizes = crimeSizes;
 
             segment.Unknown2 = DataSegmentHelper.Slice(dataSegment, crimeEnd, OrgsOffset - crimeEnd);
 
             // Organisation names: 24 null-terminated strings
             var orgEnd = FindNthNullTerminator(dataSegment, OrgsOffset, OrgCount);
-            segment.OrganisationNames = DataSegmentHelper.NullTerminatedStringsFromBytes(dataSegment, OrgsOffset, OrgCount);
+            var (orgNames, orgSizes) = DataSegmentHelper.NullTerminatedStringsWithSizesFromBytes(dataSegment, OrgsOffset, OrgCount);
+            segment.OrganisationNames = orgNames;
+            segment.OrganisationNameByteSizes = orgSizes;
 
             segment.PostOrgPreCharPtrData = DataSegmentHelper.Slice(dataSegment, orgEnd, CharNamePointersOffset - orgEnd);
 
@@ -210,9 +220,9 @@ namespace CovertActionTools.Core.Models.Executables
                 Unknown1,
                 missionSetBytes,
                 PostMissionPreCrimeData,
-                DataSegmentHelper.NullTerminatedStringsToBytes(CrimeTypeNames),
+                DataSegmentHelper.NullTerminatedStringsToFixedBytes(CrimeTypeNames, CrimeTypeNameByteSizes),
                 Unknown2,
-                DataSegmentHelper.NullTerminatedStringsToBytes(OrganisationNames),
+                DataSegmentHelper.NullTerminatedStringsToFixedBytes(OrganisationNames, OrganisationNameByteSizes),
                 PostOrgPreCharPtrData,
                 DataSegmentHelper.UInt16ArrayToBytes(CharacterNamePointers),
                 TrailingData
@@ -229,8 +239,10 @@ namespace CovertActionTools.Core.Models.Executables
                 MissionSets = MissionSets.Select(m => m.Clone()).ToArray(),
                 PostMissionPreCrimeData = PostMissionPreCrimeData.ToArray(),
                 CrimeTypeNames = CrimeTypeNames.Select(s => s).ToArray(),
+                CrimeTypeNameByteSizes = CrimeTypeNameByteSizes.ToArray(),
                 Unknown2 = Unknown2.ToArray(),
                 OrganisationNames = OrganisationNames.Select(s => s).ToArray(),
+                OrganisationNameByteSizes = OrganisationNameByteSizes.ToArray(),
                 PostOrgPreCharPtrData = PostOrgPreCharPtrData.ToArray(),
                 CharacterNamePointers = CharacterNamePointers.ToArray(),
                 TrailingData = TrailingData.ToArray()
