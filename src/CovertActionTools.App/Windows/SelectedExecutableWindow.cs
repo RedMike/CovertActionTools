@@ -212,7 +212,7 @@ public class SelectedExecutableWindow : BaseWindow
                     ImGui.Text($"{i}");
 
                     ImGui.TableNextColumn();
-                    ImGui.Text(i < equipNames.Length ? equipNames[i] : $"Item {i}");
+                    ImGui.Text(GetRagdollDestLabel(i, equipNames));
 
                     ImGui.TableNextColumn();
                     var newX = ImGuiExtensions.Input("##X", (int)coord.X, width: 80);
@@ -256,8 +256,7 @@ public class SelectedExecutableWindow : BaseWindow
                     ImGui.Text($"{i}");
 
                     ImGui.TableNextColumn();
-                    // First 13 src items match the dest items; last 2 are non-equipment (Wound, Target)
-                    ImGui.Text(i < equipNames.Length ? equipNames[i] : $"Item {i}");
+                    ImGui.Text(GetRagdollSrcLabel(i, equipNames));
 
                     ImGui.TableNextColumn();
                     var newX = ImGuiExtensions.Input("##X", (int)tl.X, width: 80);
@@ -335,6 +334,26 @@ public class SelectedExecutableWindow : BaseWindow
             ("Unknown3", tac.Unknown3.Length),
             ("TrailingData", tac.TrailingData.Length)
         });
+    }
+
+    private static string GetRagdollDestLabel(int index, string[] equipNames)
+    {
+        // 13 dest points: first 11 from equipment names, last 2 are ammo types
+        if (index == 11) return "Ammo Bullet";
+        if (index == 12) return "Ammo Magazine";
+        if (index < equipNames.Length && !string.IsNullOrEmpty(equipNames[index])) return equipNames[index];
+        return $"Item {index}";
+    }
+
+    private static string GetRagdollSrcLabel(int index, string[] equipNames)
+    {
+        // 15 src rects: first 11 from equipment names, then 4 hardcoded
+        if (index == 11) return "Ammo Bullet";
+        if (index == 12) return "Ammo Magazine";
+        if (index == 13) return "Wound";
+        if (index == 14) return "Target";
+        if (index < equipNames.Length && !string.IsNullOrEmpty(equipNames[index])) return equipNames[index];
+        return $"Item {index}";
     }
 
     private static string[] ResolveEquipmentNames(TacDataSegment tac)
