@@ -39,22 +39,26 @@ namespace CovertActionTools.Core.Models.Executables
 
         // CharacterNamePointers are computed at serialization time.
 
-        /// <summary>Data between char name pointer table and clue phrases: status labels, structured data, dialogue.</summary>
-        public byte[] MidSectionPreClue { get; set; } = Array.Empty<byte>();
+        /// <summary>Data between char name pointer table and clue relationship pointers: status labels, structured data, dialogue, month data, clue/month strings.</summary>
+        public byte[] MidSection { get; set; } = Array.Empty<byte>();
 
-        /// <summary>40 clue relationship phrases (e.g. " tied to ", " registered to ").</summary>
-        public string[] ClueRelationshipPhrases { get; set; } = Array.Empty<string>();
-
-        /// <summary>12 month name abbreviations (Jan-Dec).</summary>
-        public string[] MonthNames { get; set; } = Array.Empty<string>();
-
-        /// <summary>Data between month names and clue relationship pointer table.</summary>
-        public byte[] MidSectionPostMonth { get; set; } = Array.Empty<byte>();
-
-        // ClueRelationshipPointers and MonthNamePointers are computed at serialization time.
+        // TODO: ClueRelationshipPointers (40) and MonthNamePointers (12) have shared/duplicate
+        // string references — multiple pointers point to the same physical string. Extracting
+        // and recomputing requires deduplication logic. For now, stored as-is.
+        /// <summary>40 DS-relative pointers to clue relationship phrases.</summary>
+        public ushort[] ClueRelationshipPointers { get; set; } = Array.Empty<ushort>();
 
         /// <summary>48-byte lookup table (values include 0,1,2,4,8 + popcount pattern), undecoded.</summary>
         public byte[] UnknownLookupTable { get; set; } = Array.Empty<byte>();
+
+        /// <summary>12 DS-relative pointers to month name abbreviations.</summary>
+        public ushort[] MonthNamePointers { get; set; } = Array.Empty<ushort>();
+
+        /// <summary>Clue relationship phrases (extracted from pointers, read-only convenience).</summary>
+        public string[] ClueRelationshipPhrases { get; set; } = Array.Empty<string>();
+
+        /// <summary>Month name abbreviations (extracted from pointers, read-only convenience).</summary>
+        public string[] MonthNames { get; set; } = Array.Empty<string>();
 
         /// <summary>Everything after month name pointers: item/clue strings, CIA strings, file management, overlay, C runtime, BSS.</summary>
         public byte[] TrailingData { get; set; } = Array.Empty<byte>();
@@ -77,22 +81,15 @@ namespace CovertActionTools.Core.Models.Executables
                 : Array.Empty<byte>();
 
             var charPtrsEnd = CharNamePointersOffset + CharNamePointerCount * 2;
+            segment.MidSection = DataSegmentHelper.Slice(dataSegment, charPtrsEnd, ClueRelPtrsOffset - charPtrsEnd);
 
-            // Extract clue phrases and month names from MidSection using their pointer tables
-            var cluePtrs = DataSegmentHelper.BytesToUInt16Array(dataSegment, ClueRelPtrsOffset, ClueRelPtrCount);
-            segment.ClueRelationshipPhrases = DataSegmentHelper.ExtractStringsFromPointers(cluePtrs, dataSegment);
-            var (clueBlockStart, clueBlockEnd) = DataSegmentHelper.FindStringBlockBounds(cluePtrs, dataSegment);
+            segment.ClueRelationshipPointers = DataSegmentHelper.BytesToUInt16Array(dataSegment, ClueRelPtrsOffset, ClueRelPtrCount);
+            segment.ClueRelationshipPhrases = DataSegmentHelper.ExtractStringsFromPointers(segment.ClueRelationshipPointers, dataSegment);
 
-            var monthPtrs = DataSegmentHelper.BytesToUInt16Array(dataSegment, MonthNamePtrsOffset, MonthNamePtrCount);
-            segment.MonthNames = DataSegmentHelper.ExtractStringsFromPointers(monthPtrs, dataSegment);
-            var (_, monthBlockEnd) = DataSegmentHelper.FindStringBlockBounds(monthPtrs, dataSegment);
-
-            // Split MidSection: pre-clue | clue phrases | month names | post-month
-            segment.MidSectionPreClue = DataSegmentHelper.Slice(dataSegment, charPtrsEnd, clueBlockStart - charPtrsEnd);
-            segment.MidSectionPostMonth = DataSegmentHelper.Slice(dataSegment, monthBlockEnd, ClueRelPtrsOffset - monthBlockEnd);
-
-            // Clue pointer table, unknown lookup, month pointer table
             segment.UnknownLookupTable = DataSegmentHelper.Slice(dataSegment, UnknownLookupOffset, UnknownLookupSize);
+
+            segment.MonthNamePointers = DataSegmentHelper.BytesToUInt16Array(dataSegment, MonthNamePtrsOffset, MonthNamePtrCount);
+            segment.MonthNames = DataSegmentHelper.ExtractStringsFromPointers(segment.MonthNamePointers, dataSegment);
 
             var monthPtrsEnd = MonthNamePtrsOffset + MonthNamePtrCount * 2;
             segment.TrailingData = DataSegmentHelper.Slice(dataSegment, monthPtrsEnd, dataSegment.Length - monthPtrsEnd);
@@ -108,29 +105,15 @@ namespace CovertActionTools.Core.Models.Executables
             var charNamesBase = PreCharNameData.Length;
             var charNamePointers = DataSegmentHelper.ComputeStringPointers(CharacterNames, charNamesBase);
 
-            var cluePhrasesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(ClueRelationshipPhrases);
-            var monthNamesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(MonthNames);
-
-            // Compute clue and month pointer values
-            var clueBase = charNamesBase + charNamesBytes.Length + PostCharNameData.Length
-                + CharNamePointerCount * 2 + MidSectionPreClue.Length;
-            var cluePointers = DataSegmentHelper.ComputeStringPointers(ClueRelationshipPhrases, clueBase);
-
-            var monthBase = clueBase + cluePhrasesBytes.Length;
-            var monthPointers = DataSegmentHelper.ComputeStringPointers(MonthNames, monthBase);
-
             return DataSegmentHelper.Concatenate(
                 PreCharNameData,
                 charNamesBytes,
                 PostCharNameData,
                 DataSegmentHelper.UInt16ArrayToBytes(charNamePointers),
-                MidSectionPreClue,
-                cluePhrasesBytes,
-                monthNamesBytes,
-                MidSectionPostMonth,
-                DataSegmentHelper.UInt16ArrayToBytes(cluePointers),
+                MidSection,
+                DataSegmentHelper.UInt16ArrayToBytes(ClueRelationshipPointers),
                 UnknownLookupTable,
-                DataSegmentHelper.UInt16ArrayToBytes(monthPointers),
+                DataSegmentHelper.UInt16ArrayToBytes(MonthNamePointers),
                 TrailingData
             );
         }
@@ -142,11 +125,12 @@ namespace CovertActionTools.Core.Models.Executables
                 PreCharNameData = PreCharNameData.ToArray(),
                 CharacterNames = CharacterNames.Select(s => s).ToArray(),
                 PostCharNameData = PostCharNameData.ToArray(),
-                MidSectionPreClue = MidSectionPreClue.ToArray(),
+                MidSection = MidSection.ToArray(),
+                ClueRelationshipPointers = ClueRelationshipPointers.ToArray(),
                 ClueRelationshipPhrases = ClueRelationshipPhrases.Select(s => s).ToArray(),
-                MonthNames = MonthNames.Select(s => s).ToArray(),
-                MidSectionPostMonth = MidSectionPostMonth.ToArray(),
                 UnknownLookupTable = UnknownLookupTable.ToArray(),
+                MonthNamePointers = MonthNamePointers.ToArray(),
+                MonthNames = MonthNames.Select(s => s).ToArray(),
                 TrailingData = TrailingData.ToArray()
             };
         }

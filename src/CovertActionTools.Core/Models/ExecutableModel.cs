@@ -4,16 +4,21 @@ using CovertActionTools.Core.Models.Executables;
 
 namespace CovertActionTools.Core.Models
 {
-    // Pointer recomputation — all pointer arrays are now handled:
+    // Pointer recomputation status:
     // DONE — pointers computed in ToBytes(), strings extracted and editable:
     // - CODE: GraphicsDocPointers (56)
-    // - TAC: EquipmentNamePointers (16), CharacterNamePointers (192)
+    // - TAC: EquipmentNamePointers (16)
     // - FINAL: CharacterNamePointers (192)
-    // - GAME: CharacterNamePointers (192), ClueRelationshipPointers (40), MonthNamePointers (12)
-    // - BUG: CharacterNamePointers (192), ClueRelationshipPointers (40)
+    // - GAME: CharacterNamePointers (192)
+    // - BUG: CharacterNamePointers (192)
     //
-    // DONE — strings extracted per-record, original pointer words preserved for roundtrip:
-    // - FINAL: MissionSetStringPointers (16x16 start/end pairs, padding preserved via PostStringPadding)
+    // STORED AS-IS — strings extracted as read-only convenience, pointers kept:
+    // - FINAL: MissionSetStringPointers (16x16 start/end pairs with inter-string null padding)
+    // - GAME: ClueRelationshipPointers (40), MonthNamePointers (12) — shared/duplicate string refs
+    // - BUG: ClueRelationshipPointers (40) — shared/duplicate string refs
+    // TODO: These need deduplication logic to extract unique strings and recompute pointers
+    // that share string references. The mission set string table also has complex inter-group
+    // null padding that must be preserved or reconstructed.
 
     /// <summary>
     /// Model for an EXEPACK-compressed DOS executable.

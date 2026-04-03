@@ -187,21 +187,8 @@ public class ExecutableRoundtripTests : IDisposable
         // Code segment must match
         Assert.Equal(originalExe.CodeSegment, reparsedExe.CodeSegment);
 
-        // Dead zone size may differ slightly after EXEPACK recompression, which shifts the
-        // code/data boundary. Compare the combined code+data payload instead.
-        var origCode = originalExe.CodeSegment;
-        var origData = originalExe.GetDataSegmentBytes();
-        var repCode = reparsedExe.CodeSegment;
-        var repData = reparsedExe.GetDataSegmentBytes();
-        Assert.Equal(origCode.Length + origData.Length, repCode.Length + repData.Length);
-
-        var origCombined = new byte[origCode.Length + origData.Length];
-        Array.Copy(origCode, 0, origCombined, 0, origCode.Length);
-        Array.Copy(origData, 0, origCombined, origCode.Length, origData.Length);
-        var repCombined = new byte[repCode.Length + repData.Length];
-        Array.Copy(repCode, 0, repCombined, 0, repCode.Length);
-        Array.Copy(repData, 0, repCombined, repCode.Length, repData.Length);
-        Assert.Equal(origCombined, repCombined);
+        // Data segment bytes must match (serialized back from structured fields)
+        Assert.Equal(originalExe.GetDataSegmentBytes(), reparsedExe.GetDataSegmentBytes());
 
         // Entry point and stack must match
         Assert.Equal(originalExe.EntryCS, reparsedExe.EntryCS);

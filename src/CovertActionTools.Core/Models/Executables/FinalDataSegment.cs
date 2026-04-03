@@ -38,7 +38,16 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>Flag word: 0x0001 for records 0-8, 0xFFFF for records 9-14. Purpose unknown.</summary>
         public ushort FlagWord { get; set; }
 
-        /// <summary>Mission set plot strings (victim names, item names, etc.).</summary>
+        // TODO: StringPointers are (start, end) pairs into the mission set string table with
+        // null padding between groups. The padding structure is complex (shared boundary words,
+        // incrementing fill values). Extracting individual strings and recomputing these pairs
+        // requires preserving the inter-string padding. For now, pointer words are stored as-is.
+        /// <summary>16 pointer words: (start, end) pairs into mission set string table.</summary>
+        public ushort[] StringPointers { get; set; } = Array.Empty<ushort>();
+
+        /// <summary>
+        /// Mission set plot strings extracted from the pointer pairs (read-only convenience).
+        /// </summary>
         public string[] Strings { get; set; } = Array.Empty<string>();
 
         public FinalMissionSetRecord Clone()
@@ -52,6 +61,7 @@ namespace CovertActionTools.Core.Models.Executables
                 Crime3Id = Crime3Id,
                 UnusedCrimeSlots = UnusedCrimeSlots.ToArray(),
                 FlagWord = FlagWord,
+                StringPointers = StringPointers.ToArray(),
                 Strings = Strings.Select(s => s).ToArray()
             };
         }
@@ -68,7 +78,6 @@ namespace CovertActionTools.Core.Models.Executables
 
             // Extract strings from (start, end) pointer pairs
             var strings = new List<string>();
-            var lastEndPtr = 0;
             for (var i = 0; i < ptrWords.Length - 1; i++)
             {
                 var start = ptrWords[i];
@@ -77,14 +86,9 @@ namespace CovertActionTools.Core.Models.Executables
                 var strEnd = start;
                 while (strEnd < dataSegment.Length && strEnd < end && dataSegment[strEnd] != 0) strEnd++;
                 if (strEnd > start)
-                {
                     strings.Add(Encoding.ASCII.GetString(dataSegment, start, strEnd - start));
-                    lastEndPtr = ptrWords[i + 1];
-                }
                 else
-                {
                     break;
-                }
             }
 
             return new FinalMissionSetRecord
@@ -96,11 +100,12 @@ namespace CovertActionTools.Core.Models.Executables
                 Crime3Id = BitConverter.ToUInt16(data, offset + 0x1E),
                 UnusedCrimeSlots = DataSegmentHelper.Slice(data, offset + 0x20, UnusedSlotCount),
                 FlagWord = BitConverter.ToUInt16(data, offset + 0x28),
+                StringPointers = ptrWords,
                 Strings = strings.ToArray()
             };
         }
 
-        public byte[] ToBytes(ushort[] stringPointerWords)
+        public byte[] ToBytes()
         {
             var result = new byte[RecordSize];
             var nameBytes = Encoding.ASCII.GetBytes(Name);
@@ -111,7 +116,7 @@ namespace CovertActionTools.Core.Models.Executables
             result[0x1E] = (byte)(Crime3Id & 0xFF); result[0x1F] = (byte)((Crime3Id >> 8) & 0xFF);
             Array.Copy(UnusedCrimeSlots, 0, result, 0x20, Math.Min(UnusedCrimeSlots.Length, UnusedSlotCount));
             result[0x28] = (byte)(FlagWord & 0xFF); result[0x29] = (byte)((FlagWord >> 8) & 0xFF);
-            var ptrBytes = DataSegmentHelper.UInt16ArrayToBytes(stringPointerWords);
+            var ptrBytes = DataSegmentHelper.UInt16ArrayToBytes(StringPointers);
             Array.Copy(ptrBytes, 0, result, 0x2A, Math.Min(ptrBytes.Length, StringPointerCount * 2));
             return result;
         }
@@ -145,12 +150,6 @@ namespace CovertActionTools.Core.Models.Executables
 
         /// <summary>Data before mission set params: MSC runtime, BSS, RastPort, CGA, strings, mission set string table.</summary>
         public byte[] PreMissionParamData { get; set; } = Array.Empty<byte>();
-
-        /// <summary>Offset of the mission set string table within PreMissionParamData.</summary>
-        public int StringTableOffset { get; set; }
-
-        /// <summary>Length of the mission set string table within PreMissionParamData.</summary>
-        public int StringTableLength { get; set; }
 
         /// <summary>16 x 26-byte mission set parameter records (values 0-8, partially understood).</summary>
         public byte[] MissionSetParameters { get; set; } = Array.Empty<byte>();
@@ -199,37 +198,7 @@ namespace CovertActionTools.Core.Models.Executables
         {
             var segment = new FinalDataSegment();
 
-            // Store the full pre-param block as-is for byte-identical roundtrip.
-            // Record the string table location within it for editing support.
             segment.PreMissionParamData = DataSegmentHelper.Slice(dataSegment, 0, MissionParamsOffset);
-
-            // Find string table boundaries from mission set pointer words
-            var tempContentPtrs = new List<int>();
-            for (var i = 0; i < MissionSetCount; i++)
-            {
-                var recBase = MissionSetsOffset + i * FinalMissionSetRecord.RecordSize + 0x2A;
-                for (var w = 0; w < FinalMissionSetRecord.StringPointerCount; w++)
-                {
-                    var ptr = BitConverter.ToUInt16(dataSegment, recBase + w * 2);
-                    if (ptr > 0 && ptr < dataSegment.Length && dataSegment[ptr] != 0)
-                    {
-                        tempContentPtrs.Add(ptr);
-                    }
-                }
-            }
-            if (tempContentPtrs.Count > 0)
-            {
-                segment.StringTableOffset = tempContentPtrs.Min();
-                var maxEnd = 0;
-                foreach (var ptr in tempContentPtrs)
-                {
-                    var e = ptr;
-                    while (e < dataSegment.Length && dataSegment[e] != 0) e++;
-                    e++;
-                    if (e > maxEnd) maxEnd = e;
-                }
-                segment.StringTableLength = maxEnd - segment.StringTableOffset;
-            }
 
             segment.MissionSetParameters = DataSegmentHelper.Slice(dataSegment, MissionParamsOffset, MissionParamsSize);
 
@@ -283,96 +252,37 @@ namespace CovertActionTools.Core.Models.Executables
 
         public byte[] ToBytes()
         {
-            // The string table lives within PreMissionParamData at StringTableOffset.
-            // For unmodified data, we write PreMissionParamData as-is and compute pointer words
-            // by walking the raw bytes. When strings are edited, we modify the table in-place.
-            var preMissionBytes = PreMissionParamData.ToArray();
-            if (StringTableLength > 0)
-            {
-                // Compute pointer words for each record by walking the string table bytes.
-                // Algorithm: for each record, emit start of its first string, then for each
-                // subsequent word: if byte is non-null, skip to byte after null; else advance by 1.
-                // The walk position for each record starts where that record's strings begin in
-                // the table — determined by advancing past all previous records' strings.
-                var perRecordPtrWords = new List<ushort[]>();
-                var tablePos = StringTableOffset;
-                foreach (var ms in MissionSets)
-                {
-                    var words = new ushort[FinalMissionSetRecord.StringPointerCount];
-                    words[0] = (ushort)tablePos;
-                    var pos = tablePos;
-                    for (var w = 1; w < words.Length; w++)
-                    {
-                        if (pos < preMissionBytes.Length && preMissionBytes[pos] != 0)
-                        {
-                            while (pos < preMissionBytes.Length && preMissionBytes[pos] != 0) pos++;
-                            pos++;
-                        }
-                        else
-                        {
-                            pos++;
-                        }
-                        words[w] = (ushort)pos;
-                    }
-                    perRecordPtrWords.Add(words);
-
-                    // Advance tablePos to next record's first string.
-                    // The last pointer word tells us where the walk ended. Skip past remaining
-                    // null padding to find the next non-null byte (next record's first string).
-                    var walkEnd = (int)words[words.Length - 1];
-                    // walkEnd might be in null padding or string content. Advance past it.
-                    walkEnd++; // past the last word's position
-                    while (walkEnd < preMissionBytes.Length && preMissionBytes[walkEnd] == 0) walkEnd++;
-                    tablePos = walkEnd;
-                }
-
-                var missionSetBytes = new byte[MissionSets.Length * FinalMissionSetRecord.RecordSize];
-                for (var i = 0; i < MissionSets.Length; i++)
-                {
-                    Array.Copy(MissionSets[i].ToBytes(perRecordPtrWords[i]), 0, missionSetBytes,
-                        i * FinalMissionSetRecord.RecordSize, FinalMissionSetRecord.RecordSize);
-                }
-
-                var crimeBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(CrimeTypeNames, CrimeTypeNameByteSizes);
-                var orgBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(OrganisationNames, OrganisationNameByteSizes);
-                var charNamesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(CharacterNames);
-
-                var charNamesBaseOffset = preMissionBytes.Length + MissionSetParameters.Length
-                    + Unknown1.Length + missionSetBytes.Length + PostMissionPreCrimeData.Length
-                    + crimeBytes.Length + Unknown2.Length + orgBytes.Length
-                    + PostOrgPreCharNameData.Length;
-                var charNamePointers = DataSegmentHelper.ComputeStringPointers(CharacterNames, charNamesBaseOffset);
-
-                return DataSegmentHelper.Concatenate(
-                    preMissionBytes, MissionSetParameters, Unknown1, missionSetBytes,
-                    PostMissionPreCrimeData, crimeBytes, Unknown2, orgBytes,
-                    PostOrgPreCharNameData, charNamesBytes, PostCharNameData,
-                    DataSegmentHelper.UInt16ArrayToBytes(charNamePointers), TrailingData
-                );
-            }
-
-            // Fallback: no string table (shouldn't happen for valid FINAL data)
-            var fallbackMsBytes = new byte[MissionSets.Length * FinalMissionSetRecord.RecordSize];
+            var missionSetBytes = new byte[MissionSets.Length * FinalMissionSetRecord.RecordSize];
             for (var i = 0; i < MissionSets.Length; i++)
             {
-                Array.Copy(MissionSets[i].ToBytes(new ushort[FinalMissionSetRecord.StringPointerCount]),
-                    0, fallbackMsBytes, i * FinalMissionSetRecord.RecordSize, FinalMissionSetRecord.RecordSize);
+                Array.Copy(MissionSets[i].ToBytes(), 0, missionSetBytes, i * FinalMissionSetRecord.RecordSize, FinalMissionSetRecord.RecordSize);
             }
 
-            var fbCrimeBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(CrimeTypeNames, CrimeTypeNameByteSizes);
-            var fbOrgBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(OrganisationNames, OrganisationNameByteSizes);
-            var fbCharNamesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(CharacterNames);
-            var fbCharBase = preMissionBytes.Length + MissionSetParameters.Length
-                + Unknown1.Length + fallbackMsBytes.Length + PostMissionPreCrimeData.Length
-                + fbCrimeBytes.Length + Unknown2.Length + fbOrgBytes.Length
+            var crimeBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(CrimeTypeNames, CrimeTypeNameByteSizes);
+            var orgBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(OrganisationNames, OrganisationNameByteSizes);
+            var charNamesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(CharacterNames);
+
+            // Compute character name pointer values
+            var charNamesBaseOffset = PreMissionParamData.Length + MissionSetParameters.Length
+                + Unknown1.Length + missionSetBytes.Length + PostMissionPreCrimeData.Length
+                + crimeBytes.Length + Unknown2.Length + orgBytes.Length
                 + PostOrgPreCharNameData.Length;
-            var fbCharPtrs = DataSegmentHelper.ComputeStringPointers(CharacterNames, fbCharBase);
+            var charNamePointers = DataSegmentHelper.ComputeStringPointers(CharacterNames, charNamesBaseOffset);
 
             return DataSegmentHelper.Concatenate(
-                preMissionBytes, MissionSetParameters, Unknown1, fallbackMsBytes,
-                PostMissionPreCrimeData, fbCrimeBytes, Unknown2, fbOrgBytes,
-                PostOrgPreCharNameData, fbCharNamesBytes, PostCharNameData,
-                DataSegmentHelper.UInt16ArrayToBytes(fbCharPtrs), TrailingData
+                PreMissionParamData,
+                MissionSetParameters,
+                Unknown1,
+                missionSetBytes,
+                PostMissionPreCrimeData,
+                crimeBytes,
+                Unknown2,
+                orgBytes,
+                PostOrgPreCharNameData,
+                charNamesBytes,
+                PostCharNameData,
+                DataSegmentHelper.UInt16ArrayToBytes(charNamePointers),
+                TrailingData
             );
         }
 
@@ -381,8 +291,6 @@ namespace CovertActionTools.Core.Models.Executables
             return new FinalDataSegment
             {
                 PreMissionParamData = PreMissionParamData.ToArray(),
-                StringTableOffset = StringTableOffset,
-                StringTableLength = StringTableLength,
                 MissionSetParameters = MissionSetParameters.ToArray(),
                 Unknown1 = Unknown1.ToArray(),
                 MissionSets = MissionSets.Select(m => m.Clone()).ToArray(),

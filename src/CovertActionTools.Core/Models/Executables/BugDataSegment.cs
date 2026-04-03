@@ -26,16 +26,16 @@ namespace CovertActionTools.Core.Models.Executables
 
         #region Fields (in binary order)
 
-        /// <summary>Data before clue phrases: runtime, flag table, BSS, structured data, BUG-unique strings.</summary>
-        public byte[] PreCluePhraseData { get; set; } = Array.Empty<byte>();
+        /// <summary>Data before clue relationship pointers: runtime, flag table, BSS, structured data, BUG-unique strings, clue phrases, item tables.</summary>
+        public byte[] PreClueRelPtrData { get; set; } = Array.Empty<byte>();
 
-        /// <summary>40 clue relationship phrases (e.g. " tied to ", " registered to ").</summary>
+        // TODO: ClueRelationshipPointers (40) have shared/duplicate string references.
+        // Extracting and recomputing requires deduplication logic. For now, stored as-is.
+        /// <summary>40 DS-relative pointers to clue relationship phrases.</summary>
+        public ushort[] ClueRelationshipPointers { get; set; } = Array.Empty<ushort>();
+
+        /// <summary>Clue relationship phrases (extracted from pointers, read-only convenience).</summary>
         public string[] ClueRelationshipPhrases { get; set; } = Array.Empty<string>();
-
-        /// <summary>Data between clue phrases and clue relationship pointer table.</summary>
-        public byte[] PostCluePhraseData { get; set; } = Array.Empty<byte>();
-
-        // ClueRelationshipPointers are computed at serialization time.
 
         /// <summary>Data between clue pointers and character names: category table, lookup data, item/clue strings, investigation methods, intel text.</summary>
         public byte[] MidSectionPreCharNames { get; set; } = Array.Empty<byte>();
@@ -66,16 +66,10 @@ namespace CovertActionTools.Core.Models.Executables
         {
             var segment = new BugDataSegment();
 
-            // Extract clue phrases using pointer table
-            var cluePtrs = DataSegmentHelper.BytesToUInt16Array(dataSegment, ClueRelPtrsOffset, ClueRelPtrCount);
-            segment.ClueRelationshipPhrases = DataSegmentHelper.ExtractStringsFromPointers(cluePtrs, dataSegment);
+            segment.PreClueRelPtrData = DataSegmentHelper.Slice(dataSegment, 0, ClueRelPtrsOffset);
 
-            var (clueBlockStart, clueBlockEnd) = DataSegmentHelper.FindStringBlockBounds(cluePtrs, dataSegment);
-            segment.PreCluePhraseData = DataSegmentHelper.Slice(dataSegment, 0, clueBlockStart);
-            var postClueLen = ClueRelPtrsOffset - clueBlockEnd;
-            segment.PostCluePhraseData = postClueLen > 0
-                ? DataSegmentHelper.Slice(dataSegment, clueBlockEnd, postClueLen)
-                : Array.Empty<byte>();
+            segment.ClueRelationshipPointers = DataSegmentHelper.BytesToUInt16Array(dataSegment, ClueRelPtrsOffset, ClueRelPtrCount);
+            segment.ClueRelationshipPhrases = DataSegmentHelper.ExtractStringsFromPointers(segment.ClueRelationshipPointers, dataSegment);
 
             var clueRelEnd = ClueRelPtrsOffset + ClueRelPtrCount * 2;
 
@@ -113,15 +107,9 @@ namespace CovertActionTools.Core.Models.Executables
         {
             var charNamesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(CharacterNames);
 
-            var cluePhrasesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(ClueRelationshipPhrases);
-
-            // Compute clue phrase pointers
-            var clueBase = PreCluePhraseData.Length;
-            var cluePointers = DataSegmentHelper.ComputeStringPointers(ClueRelationshipPhrases, clueBase);
-
             // Compute character name pointers
-            var charNamesBase = clueBase + cluePhrasesBytes.Length + PostCluePhraseData.Length
-                + ClueRelPtrCount * 2 + MidSectionPreCharNames.Length;
+            var charNamesBase = PreClueRelPtrData.Length + ClueRelPtrCount * 2
+                + MidSectionPreCharNames.Length;
             var charNamePointers = DataSegmentHelper.ComputeStringPointers(CharacterNames, charNamesBase);
 
             var rectBytes = new byte[RectDrawRecords.Length * RectDrawRecord.RecordSize];
@@ -131,10 +119,8 @@ namespace CovertActionTools.Core.Models.Executables
             }
 
             return DataSegmentHelper.Concatenate(
-                PreCluePhraseData,
-                cluePhrasesBytes,
-                PostCluePhraseData,
-                DataSegmentHelper.UInt16ArrayToBytes(cluePointers),
+                PreClueRelPtrData,
+                DataSegmentHelper.UInt16ArrayToBytes(ClueRelationshipPointers),
                 MidSectionPreCharNames,
                 charNamesBytes,
                 PostCharNameData,
@@ -150,9 +136,9 @@ namespace CovertActionTools.Core.Models.Executables
         {
             return new BugDataSegment
             {
-                PreCluePhraseData = PreCluePhraseData.ToArray(),
+                PreClueRelPtrData = PreClueRelPtrData.ToArray(),
+                ClueRelationshipPointers = ClueRelationshipPointers.ToArray(),
                 ClueRelationshipPhrases = ClueRelationshipPhrases.Select(s => s).ToArray(),
-                PostCluePhraseData = PostCluePhraseData.ToArray(),
                 MidSectionPreCharNames = MidSectionPreCharNames.ToArray(),
                 CharacterNames = CharacterNames.Select(s => s).ToArray(),
                 PostCharNameData = PostCharNameData.ToArray(),

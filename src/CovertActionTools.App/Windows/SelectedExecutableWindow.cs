@@ -500,14 +500,7 @@ public class SelectedExecutableWindow : BaseWindow
                     DrawMissionSetCrimeSlot("Crime 3", ms, 2, final.CrimeTypeNames);
 
                     ImGui.Text($"Unused Crime Slots: {ms.UnusedCrimeSlots.Length} bytes (always 0xFF)");
-                    if (ms.Strings.Length > 0)
-                    {
-                        ImGui.Text($"Plot Strings: {ms.Strings.Length}");
-                        for (var si = 0; si < ms.Strings.Length; si++)
-                        {
-                            ImGui.Text($"  [{si}] {ms.Strings[si]}");
-                        }
-                    }
+                    ImGui.Text($"String Pointers: {ms.StringPointers.Length} entries (read-only, pointers)");
                 }
 
                 ImGui.PopID();
@@ -619,8 +612,7 @@ public class SelectedExecutableWindow : BaseWindow
         {
             ("PreCharNameData", game.PreCharNameData.Length),
             ("PostCharNameData", game.PostCharNameData.Length),
-            ("MidSectionPreClue", game.MidSectionPreClue.Length),
-            ("MidSectionPostMonth", game.MidSectionPostMonth.Length),
+            ("MidSection", game.MidSection.Length),
             ("TrailingData", game.TrailingData.Length)
         });
     }
@@ -631,10 +623,7 @@ public class SelectedExecutableWindow : BaseWindow
 
     private void DrawBugData(BugDataSegment bug)
     {
-        if (ImGui.CollapsingHeader("Clue Relationship Phrases"))
-        {
-            DrawStringArray(bug.ClueRelationshipPhrases, "CluePhr");
-        }
+        DrawReadOnlyInfo("Clue Relationship Pointers", $"{bug.ClueRelationshipPointers.Length} entries (read-only, pointers)");
 
         if (ImGui.CollapsingHeader("Character Names"))
         {
@@ -708,8 +697,7 @@ public class SelectedExecutableWindow : BaseWindow
 
         DrawRawSectionSizes("Raw Sections", new[]
         {
-            ("PreCluePhraseData", bug.PreCluePhraseData.Length),
-            ("PostCluePhraseData", bug.PostCluePhraseData.Length),
+            ("PreClueRelPtrData", bug.PreClueRelPtrData.Length),
             ("MidSectionPreCharNames", bug.MidSectionPreCharNames.Length),
             ("PostCharNameData", bug.PostCharNameData.Length),
             ("PostCharNamePtrData", bug.PostCharNamePtrData.Length),

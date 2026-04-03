@@ -9,8 +9,6 @@ namespace CovertActionTools.Core.Models.Executables
     {
         public static byte[] Slice(byte[] data, int offset, int length)
         {
-            if (length <= 0 || offset >= data.Length) return Array.Empty<byte>();
-            if (offset + length > data.Length) length = data.Length - offset;
             var result = new byte[length];
             Array.Copy(data, offset, result, 0, length);
             return result;
