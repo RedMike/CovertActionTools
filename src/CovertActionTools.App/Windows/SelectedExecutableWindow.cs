@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Text;
 using CovertActionTools.App.ViewModels;
 using CovertActionTools.Core.Models;
 using CovertActionTools.Core.Models.Executables;
@@ -185,23 +186,33 @@ public class SelectedExecutableWindow : BaseWindow
             DrawUShortArray(tac.UnknownEquipTable, "EquipTable", 8);
         }
 
-        if (ImGui.CollapsingHeader("Ragdoll Coordinates"))
+        // Resolve equipment names from the pointer table for labelling ragdoll items
+        var equipNames = ResolveEquipmentNames(tac);
+        // 13 dest points (entries 0-12), 15 src rect pairs (entries 13-42), entry 43 is (0,0) terminator (hidden)
+        var destCount = 13;
+        var srcCount = 15;
+
+        if (ImGui.CollapsingHeader("Ragdoll Destination Points"))
         {
-            if (ImGui.BeginTable("Ragdoll", 3, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+            if (ImGui.BeginTable("RagdollDest", 4, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
             {
                 ImGui.TableSetupColumn("#");
+                ImGui.TableSetupColumn("Item");
                 ImGui.TableSetupColumn("X");
                 ImGui.TableSetupColumn("Y");
                 ImGui.TableHeadersRow();
 
-                for (var i = 0; i < tac.RagdollCoordinates.Length; i++)
+                for (var i = 0; i < destCount && i < tac.RagdollCoordinates.Length; i++)
                 {
-                    ImGui.PushID($"Ragdoll_{i}");
+                    ImGui.PushID($"RagdollDest_{i}");
                     var coord = tac.RagdollCoordinates[i];
                     ImGui.TableNextRow();
 
                     ImGui.TableNextColumn();
                     ImGui.Text($"{i}");
+
+                    ImGui.TableNextColumn();
+                    ImGui.Text(i < equipNames.Length ? equipNames[i] : $"Item {i}");
 
                     ImGui.TableNextColumn();
                     var newX = ImGuiExtensions.Input("##X", (int)coord.X, width: 80);
@@ -210,6 +221,61 @@ public class SelectedExecutableWindow : BaseWindow
                     ImGui.TableNextColumn();
                     var newY = ImGuiExtensions.Input("##Y", (int)coord.Y, width: 80);
                     if (newY != null) { coord.Y = (ushort)newY.Value; _pendingState.RecordChange(); }
+
+                    ImGui.PopID();
+                }
+
+                ImGui.EndTable();
+            }
+        }
+
+        if (ImGui.CollapsingHeader("Ragdoll Source Rects"))
+        {
+            if (ImGui.BeginTable("RagdollSrc", 6, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+            {
+                ImGui.TableSetupColumn("#");
+                ImGui.TableSetupColumn("Item");
+                ImGui.TableSetupColumn("X");
+                ImGui.TableSetupColumn("Y");
+                ImGui.TableSetupColumn("W");
+                ImGui.TableSetupColumn("H");
+                ImGui.TableHeadersRow();
+
+                for (var i = 0; i < srcCount; i++)
+                {
+                    var tlIdx = destCount + i * 2;
+                    var brIdx = tlIdx + 1;
+                    if (brIdx >= tac.RagdollCoordinates.Length) break;
+
+                    ImGui.PushID($"RagdollSrc_{i}");
+                    var tl = tac.RagdollCoordinates[tlIdx];
+                    var br = tac.RagdollCoordinates[brIdx];
+                    ImGui.TableNextRow();
+
+                    ImGui.TableNextColumn();
+                    ImGui.Text($"{i}");
+
+                    ImGui.TableNextColumn();
+                    // First 13 src items match the dest items; last 2 are non-equipment (Wound, Target)
+                    ImGui.Text(i < equipNames.Length ? equipNames[i] : $"Item {i}");
+
+                    ImGui.TableNextColumn();
+                    var newX = ImGuiExtensions.Input("##X", (int)tl.X, width: 80);
+                    if (newX != null) { tl.X = (ushort)newX.Value; _pendingState.RecordChange(); }
+
+                    ImGui.TableNextColumn();
+                    var newY = ImGuiExtensions.Input("##Y", (int)tl.Y, width: 80);
+                    if (newY != null) { tl.Y = (ushort)newY.Value; _pendingState.RecordChange(); }
+
+                    ImGui.TableNextColumn();
+                    var w = br.X - tl.X;
+                    var newW = ImGuiExtensions.Input("##W", w, width: 80);
+                    if (newW != null) { br.X = (ushort)(tl.X + newW.Value); _pendingState.RecordChange(); }
+
+                    ImGui.TableNextColumn();
+                    var h = br.Y - tl.Y;
+                    var newH = ImGuiExtensions.Input("##H", h, width: 80);
+                    if (newH != null) { br.Y = (ushort)(tl.Y + newH.Value); _pendingState.RecordChange(); }
 
                     ImGui.PopID();
                 }
@@ -269,6 +335,25 @@ public class SelectedExecutableWindow : BaseWindow
             ("Unknown3", tac.Unknown3.Length),
             ("TrailingData", tac.TrailingData.Length)
         });
+    }
+
+    private static string[] ResolveEquipmentNames(TacDataSegment tac)
+    {
+        var dataSegment = tac.ToBytes();
+        var names = new List<string>();
+        foreach (var ptr in tac.EquipmentNamePointers)
+        {
+            if (ptr == 0 || ptr >= dataSegment.Length)
+            {
+                names.Add("");
+                continue;
+            }
+            var end = ptr;
+            while (end < dataSegment.Length && dataSegment[end] != 0) end++;
+            var name = Encoding.ASCII.GetString(dataSegment, ptr, end - ptr);
+            names.Add(name);
+        }
+        return names.ToArray();
     }
 
     #endregion
