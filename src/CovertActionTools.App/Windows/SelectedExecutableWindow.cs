@@ -285,13 +285,14 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Equipment Slot Rects"))
         {
-            if (ImGui.BeginTable("EquipRects", 5, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+            if (ImGui.BeginTable("EquipRects", 6, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
             {
                 ImGui.TableSetupColumn("#");
-                ImGui.TableSetupColumn("X1");
-                ImGui.TableSetupColumn("Y1");
-                ImGui.TableSetupColumn("X2");
-                ImGui.TableSetupColumn("Y2");
+                ImGui.TableSetupColumn("Item");
+                ImGui.TableSetupColumn("X");
+                ImGui.TableSetupColumn("Y");
+                ImGui.TableSetupColumn("W");
+                ImGui.TableSetupColumn("H");
                 ImGui.TableHeadersRow();
 
                 for (var i = 0; i < tac.EquipmentSlotRects.Length; i++)
@@ -303,21 +304,29 @@ public class SelectedExecutableWindow : BaseWindow
                     ImGui.TableNextColumn();
                     ImGui.Text($"{i}");
 
+                    // Slot 0 = Uzi (equipment index 1), no Pistol in slot list
                     ImGui.TableNextColumn();
-                    var newX1 = ImGuiExtensions.Input("##X1", (int)rect.X1, width: 80);
-                    if (newX1 != null) { rect.X1 = (ushort)newX1.Value; _pendingState.RecordChange(); }
+                    var equipIdx = i + 1;
+                    ImGui.Text(equipIdx < equipNames.Length && !string.IsNullOrEmpty(equipNames[equipIdx])
+                        ? equipNames[equipIdx] : $"Item {equipIdx}");
 
                     ImGui.TableNextColumn();
-                    var newY1 = ImGuiExtensions.Input("##Y1", (int)rect.Y1, width: 80);
-                    if (newY1 != null) { rect.Y1 = (ushort)newY1.Value; _pendingState.RecordChange(); }
+                    var newX = ImGuiExtensions.Input("##X", (int)rect.X1, width: 80);
+                    if (newX != null) { rect.X1 = (ushort)newX.Value; _pendingState.RecordChange(); }
 
                     ImGui.TableNextColumn();
-                    var newX2 = ImGuiExtensions.Input("##X2", (int)rect.X2, width: 80);
-                    if (newX2 != null) { rect.X2 = (ushort)newX2.Value; _pendingState.RecordChange(); }
+                    var newY = ImGuiExtensions.Input("##Y", (int)rect.Y1, width: 80);
+                    if (newY != null) { rect.Y1 = (ushort)newY.Value; _pendingState.RecordChange(); }
 
                     ImGui.TableNextColumn();
-                    var newY2 = ImGuiExtensions.Input("##Y2", (int)rect.Y2, width: 80);
-                    if (newY2 != null) { rect.Y2 = (ushort)newY2.Value; _pendingState.RecordChange(); }
+                    var w = rect.X2 - rect.X1;
+                    var newW = ImGuiExtensions.Input("##W", (int)w, width: 80);
+                    if (newW != null) { rect.X2 = (ushort)(rect.X1 + newW.Value); _pendingState.RecordChange(); }
+
+                    ImGui.TableNextColumn();
+                    var h = rect.Y2 - rect.Y1;
+                    var newH = ImGuiExtensions.Input("##H", (int)h, width: 80);
+                    if (newH != null) { rect.Y2 = (ushort)(rect.Y1 + newH.Value); _pendingState.RecordChange(); }
 
                     ImGui.PopID();
                 }
