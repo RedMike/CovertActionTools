@@ -379,9 +379,31 @@ public class SelectedExecutableWindow : BaseWindow
             DrawStringArray(tac.CharacterNames, "CharName");
         }
 
-        if (ImGui.CollapsingHeader("Direction Offsets"))
+        if (ImGui.CollapsingHeader("Movement Pixel DX/DY"))
         {
-            DrawShortArray(tac.DirectionOffsets, "DirOff", 8);
+            ImGui.Text("Walking pixel offsets per direction (9 entries: stationary + 8 compass)");
+            ImGui.Text("DX:"); ImGui.SameLine();
+            DrawShortArray(tac.MovementPixelDX, "MpxDX", 9);
+            ImGui.Text("DY:"); ImGui.SameLine();
+            DrawShortArray(tac.MovementPixelDY, "MpxDY", 9);
+        }
+
+        if (ImGui.CollapsingHeader("Jumping Tile DX/DY"))
+        {
+            ImGui.Text("Jumping tile offsets per direction (9 entries: stationary + 8 compass)");
+            ImGui.Text("DX:"); ImGui.SameLine();
+            DrawShortArray(tac.JumpingTileDX, "JtDX", 9);
+            ImGui.Text("DY:"); ImGui.SameLine();
+            DrawShortArray(tac.JumpingTileDY, "JtDY", 9);
+        }
+
+        if (ImGui.CollapsingHeader("Tile Adjacency DX/DY"))
+        {
+            ImGui.Text("Cardinal tile adjacency (4 entries: N/E/S/W)");
+            ImGui.Text("DX:"); ImGui.SameLine();
+            DrawShortArray(tac.TileAdjacencyDX, "TaDX", 4);
+            ImGui.Text("DY:"); ImGui.SameLine();
+            DrawShortArray(tac.TileAdjacencyDY, "TaDY", 4);
         }
 
         if (ImGui.CollapsingHeader("Clue Relationship Phrases"))

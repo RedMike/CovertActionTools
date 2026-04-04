@@ -272,7 +272,10 @@ namespace CovertActionTools.Core.Models.Executables
         #endregion
 
         #region MidSection Sub-offsets (DS-relative)
-        private const int DirectionOffsetCount = 48;
+        private const int MovementPixelCount = 9;
+        private const int JumpingTileCount = 9;
+        private const int TileAdjacencyCount = 4;
+        private const int UnreferencedGapSize = 6;
         private const int SpriteConfigsSize = 60;
         private const int BssBlockEnd = 0x1ABE;
         #endregion
@@ -316,10 +319,44 @@ namespace CovertActionTools.Core.Models.Executables
         #region MidSection (between Objects and Equipment Name strings)
 
         /// <summary>
-        /// 48 signed int16 direction offsets (dx/dy pairs for 8 compass directions at multiple speeds).
-        /// Used by the sprite movement system for character animation.
+        /// Movement Pixel DX: 9 pixel-scale direction offsets (values +/-2, +/-3) used for walking movement.
+        /// Entry 0 = stationary, entries 1-8 = 8 compass directions. Indexed by direction * 2.
         /// </summary>
-        public short[] DirectionOffsets { get; set; } = Array.Empty<short>();
+        public short[] MovementPixelDX { get; set; } = Array.Empty<short>();
+
+        /// <summary>
+        /// Movement Pixel DY: 9 pixel-scale direction offsets (values +/-2, +/-3) used for walking movement.
+        /// </summary>
+        public short[] MovementPixelDY { get; set; } = Array.Empty<short>();
+
+        /// <summary>
+        /// Jumping Tile DX: 9 tile-scale direction offsets (values +/-1) used for jumping movement.
+        /// Also reused for tile adjacency checks in NPC AI. Indexed by direction * 2.
+        /// </summary>
+        public short[] JumpingTileDX { get; set; } = Array.Empty<short>();
+
+        /// <summary>
+        /// Jumping Tile DY: 9 tile-scale direction offsets (values +/-1) used for jumping movement.
+        /// </summary>
+        public short[] JumpingTileDY { get; set; } = Array.Empty<short>();
+
+        /// <summary>
+        /// Tile Adjacency DX: 4 cardinal direction offsets (N/E/S/W) used for map generation
+        /// and door propagation. Indexed by (direction &amp; 3) * 2.
+        /// </summary>
+        public short[] TileAdjacencyDX { get; set; } = Array.Empty<short>();
+
+        /// <summary>
+        /// Tile Adjacency DY: 4 cardinal direction offsets (N/E/S/W) used for map generation
+        /// and door propagation.
+        /// </summary>
+        public short[] TileAdjacencyDY { get; set; } = Array.Empty<short>();
+
+        /// <summary>2-byte gap between Tile Adjacency DX and DY arrays.</summary>
+        public byte[] TileAdjacencyMidGap { get; set; } = Array.Empty<byte>();
+
+        /// <summary>Unreferenced 6-byte gap between tile adjacency tables and sprite configs.</summary>
+        public byte[] MovementTableGap { get; set; } = Array.Empty<byte>();
 
         /// <summary>3 sprite sheet configuration records (20 bytes each): RastPort-style rendering config.</summary>
         public byte[] SpriteSheetConfigs { get; set; } = Array.Empty<byte>();
@@ -470,14 +507,49 @@ namespace CovertActionTools.Core.Models.Executables
 
             #region Parse MidSection sub-sections
 
-            // Direction offsets: 48 signed int16 values starting right after objects
-            segment.DirectionOffsets = new short[DirectionOffsetCount];
-            for (var i = 0; i < DirectionOffsetCount; i++)
-            {
-                segment.DirectionOffsets[i] = BitConverter.ToInt16(dataSegment, objectsEnd + i * 2);
-            }
+            #region Parse movement tables (6 arrays + gap)
 
-            var spriteConfigStart = objectsEnd + DirectionOffsetCount * 2;
+            var pos = objectsEnd;
+
+            segment.MovementPixelDX = new short[MovementPixelCount];
+            for (var i = 0; i < MovementPixelCount; i++)
+                segment.MovementPixelDX[i] = BitConverter.ToInt16(dataSegment, pos + i * 2);
+            pos += MovementPixelCount * 2;
+
+            segment.MovementPixelDY = new short[MovementPixelCount];
+            for (var i = 0; i < MovementPixelCount; i++)
+                segment.MovementPixelDY[i] = BitConverter.ToInt16(dataSegment, pos + i * 2);
+            pos += MovementPixelCount * 2;
+
+            segment.JumpingTileDX = new short[JumpingTileCount];
+            for (var i = 0; i < JumpingTileCount; i++)
+                segment.JumpingTileDX[i] = BitConverter.ToInt16(dataSegment, pos + i * 2);
+            pos += JumpingTileCount * 2;
+
+            segment.JumpingTileDY = new short[JumpingTileCount];
+            for (var i = 0; i < JumpingTileCount; i++)
+                segment.JumpingTileDY[i] = BitConverter.ToInt16(dataSegment, pos + i * 2);
+            pos += JumpingTileCount * 2;
+
+            segment.TileAdjacencyDX = new short[TileAdjacencyCount];
+            for (var i = 0; i < TileAdjacencyCount; i++)
+                segment.TileAdjacencyDX[i] = BitConverter.ToInt16(dataSegment, pos + i * 2);
+            pos += TileAdjacencyCount * 2;
+
+            segment.TileAdjacencyMidGap = DataSegmentHelper.Slice(dataSegment, pos, 2);
+            pos += 2;
+
+            segment.TileAdjacencyDY = new short[TileAdjacencyCount];
+            for (var i = 0; i < TileAdjacencyCount; i++)
+                segment.TileAdjacencyDY[i] = BitConverter.ToInt16(dataSegment, pos + i * 2);
+            pos += TileAdjacencyCount * 2;
+
+            segment.MovementTableGap = DataSegmentHelper.Slice(dataSegment, pos, UnreferencedGapSize);
+            pos += UnreferencedGapSize;
+
+            #endregion
+
+            var spriteConfigStart = pos;
             segment.SpriteSheetConfigs = DataSegmentHelper.Slice(dataSegment, spriteConfigStart, SpriteConfigsSize);
 
             var bssStart = spriteConfigStart + SpriteConfigsSize;
@@ -601,15 +673,15 @@ namespace CovertActionTools.Core.Models.Executables
             }
 
             // Serialize MidSection sub-sections
-            var directionBytes = new byte[DirectionOffsets.Length * 2];
-            for (var i = 0; i < DirectionOffsets.Length; i++)
-            {
-                directionBytes[i * 2] = (byte)(DirectionOffsets[i] & 0xFF);
-                directionBytes[i * 2 + 1] = (byte)((DirectionOffsets[i] >> 8) & 0xFF);
-            }
-
             var midSectionBytes = DataSegmentHelper.Concatenate(
-                directionBytes,
+                ShortArrayToBytes(MovementPixelDX),
+                ShortArrayToBytes(MovementPixelDY),
+                ShortArrayToBytes(JumpingTileDX),
+                ShortArrayToBytes(JumpingTileDY),
+                ShortArrayToBytes(TileAdjacencyDX),
+                TileAdjacencyMidGap,
+                ShortArrayToBytes(TileAdjacencyDY),
+                MovementTableGap,
                 SpriteSheetConfigs,
                 BssBlock,
                 GameplayData
@@ -670,6 +742,17 @@ namespace CovertActionTools.Core.Models.Executables
             );
         }
 
+        private static byte[] ShortArrayToBytes(short[] values)
+        {
+            var result = new byte[values.Length * 2];
+            for (var i = 0; i < values.Length; i++)
+            {
+                result[i * 2] = (byte)(values[i] & 0xFF);
+                result[i * 2 + 1] = (byte)((values[i] >> 8) & 0xFF);
+            }
+            return result;
+        }
+
         public TacDataSegment Clone()
         {
             return new TacDataSegment
@@ -678,7 +761,14 @@ namespace CovertActionTools.Core.Models.Executables
                 RoomTypes = RoomTypes.Select(r => r.Clone()).ToArray(),
                 Unknown1 = Unknown1.ToArray(),
                 Objects = Objects.Select(o => o.Clone()).ToArray(),
-                DirectionOffsets = DirectionOffsets.ToArray(),
+                MovementPixelDX = MovementPixelDX.ToArray(),
+                MovementPixelDY = MovementPixelDY.ToArray(),
+                JumpingTileDX = JumpingTileDX.ToArray(),
+                JumpingTileDY = JumpingTileDY.ToArray(),
+                TileAdjacencyDX = TileAdjacencyDX.ToArray(),
+                TileAdjacencyMidGap = TileAdjacencyMidGap.ToArray(),
+                TileAdjacencyDY = TileAdjacencyDY.ToArray(),
+                MovementTableGap = MovementTableGap.ToArray(),
                 SpriteSheetConfigs = SpriteSheetConfigs.ToArray(),
                 BssBlock = BssBlock.ToArray(),
                 GameplayData = GameplayData.ToArray(),
