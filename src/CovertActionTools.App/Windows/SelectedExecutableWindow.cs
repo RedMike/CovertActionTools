@@ -842,9 +842,15 @@ public class SelectedExecutableWindow : BaseWindow
             DrawStringArray(final.CharacterNames, "CharName");
         }
 
-        if (ImGui.CollapsingHeader("Career/Hall of Fame Strings"))
+        if (ImGui.CollapsingHeader("Career Review Strings"))
         {
-            DrawStringArray(final.CareerHofStrings, "CareerHof", final.CareerHofStringSizes);
+            DrawStringArray(final.CareerReviewStrings, "CareerRev", final.CareerReviewStringSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Mission End Strings"))
+        {
+            ImGui.TextWrapped("gender.pic, character name defaults, scene codes (lau/off/bch/cas), flavour texts, file refs, filename fragments (dude/babe/.pic).");
+            DrawStringArray(final.MissionEndStrings, "MissionEnd", final.MissionEndStringSizes);
         }
 
         if (ImGui.CollapsingHeader("Mission End Scene Table"))
@@ -872,7 +878,7 @@ public class SelectedExecutableWindow : BaseWindow
                         if (idx < final.MissionEndSceneRecords.Length)
                         {
                             var val = (int)(short)final.MissionEndSceneRecords[idx];
-                            ImGui.SetNextItemWidth(60.0f);
+                            ImGui.SetNextItemWidth(80.0f);
                             if (ImGui.InputInt($"##Scene_{r}_{w}", ref val))
                             {
                                 final.MissionEndSceneRecords[idx] = (ushort)val;
@@ -887,8 +893,14 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Briefing Strings"))
         {
-            ImGui.TextWrapped("Briefing intro, region descriptions, mission text, practice prompt, file refs. May contain 0x80+ control bytes.");
+            ImGui.TextWrapped("Briefing intro, region descriptions, mission text, practice prompt, file refs (briefing.pan, 10.dta, crime0.dta, world0.dta).");
             DrawStringArray(final.BriefingStrings, "BriefStr", final.BriefingStringSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Hall of Fame Strings"))
+        {
+            ImGui.TextWrapped("fame.dta file refs, display titles, score formatting labels. May contain 0x80+ control bytes.");
+            DrawStringArray(final.HallOfFameStrings, "HofStr", final.HallOfFameStringSizes);
         }
 
         if (ImGui.CollapsingHeader("Clue Relationship Phrases"))
@@ -913,9 +925,9 @@ public class SelectedExecutableWindow : BaseWindow
             for (var i = 0; i < final.ClueCategoryBytes.Length; i++)
             {
                 if (i > 0 && i % 10 != 0) ImGui.SameLine();
-                ImGui.SetNextItemWidth(40.0f);
+                ImGui.SetNextItemWidth(60.0f);
                 var val = (int)final.ClueCategoryBytes[i];
-                if (ImGui.InputInt($"##ClueCat{i}", ref val))
+                if (ImGui.InputInt($"[{i}]##ClueCat{i}", ref val))
                 {
                     final.ClueCategoryBytes[i] = (byte)Math.Clamp(val, 0, 255);
                     _pendingState.RecordChange();
@@ -929,9 +941,9 @@ public class SelectedExecutableWindow : BaseWindow
             for (var i = 0; i < final.ItemCountData.Length; i++)
             {
                 if (i > 0) ImGui.SameLine();
-                ImGui.SetNextItemWidth(40.0f);
+                ImGui.SetNextItemWidth(60.0f);
                 var val = (int)final.ItemCountData[i];
-                if (ImGui.InputInt($"##ICD{i}", ref val))
+                if (ImGui.InputInt($"[{i}]##ICD{i}", ref val))
                 {
                     final.ItemCountData[i] = (byte)Math.Clamp(val, 0, 255);
                     _pendingState.RecordChange();

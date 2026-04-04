@@ -315,7 +315,11 @@ namespace CovertActionTools.Core.Models.Executables
         private const int PlotFileBufferSize = 9;           // "*PL0000\0\0"
 
         // PostOrgPreCharNameData sub-section sizes (bytes, from binary investigation)
-        private const int CareerHofStringsByteSize = 676;       // TL: 42 null-terminated strings
+        private const int CareerReviewStringsByteSize = 203;     // 19 career review strings
+        private const int CrimeOrgPointerTableSize = 78;        // 39 uint16 pointers (13 crime + 26 org, recomputed)
+        private const int MissionEndStringsByteSize = 395;      // 24 mission end strings
+        private const int CrimePointerCount = 13;
+        private const int OrgPointerCount = 26;                 // includes PFO and M18
         private const int ScenePointersByteSize = 9;            // 1 null + 4 uint16 (skipped, recomputed)
         private const int SceneRecordCount = 21;                // 4 scenes x 5 variations + 1 all-masterminds
         private const int SceneRecordWords = 5;                 // words per record
@@ -478,11 +482,24 @@ namespace CovertActionTools.Core.Models.Executables
 
         #region PostOrgPreCharNameData sub-sections (in binary order)
 
-        /// <summary>42 career/HoF strings: career review labels, mission end scene filenames
-        /// ("lau","off","bch","cas"), flavour texts, pic/cat file refs.</summary>
-        public string[] CareerHofStrings { get; set; } = Array.Empty<string>();
-        /// <summary>Original byte sizes for CareerHofStrings (prevents pointer drift).</summary>
-        public int[] CareerHofStringSizes { get; set; } = Array.Empty<int>();
+        /// <summary>19 career review strings: "Career", "The Career of", case summary labels,
+        /// arrest counts, EP formatting, MasterMinds Arrested heading.</summary>
+        public string[] CareerReviewStrings { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for CareerReviewStrings (prevents pointer drift).</summary>
+        public int[] CareerReviewStringSizes { get; set; } = Array.Empty<int>();
+
+        // Crime/org name pointer table (78 bytes = 13 crime + 26 org uint16 pointers) is
+        // NOT stored — recomputed at serialization from CrimeTypeNames and OrganisationNames.
+
+        /// <summary>24 mission end strings: gender.pic, Max, Remington, ARRESTED, scene codes
+        /// ("lau","off","bch","cas"), 4 flavour texts, file refs (final4.cat, back.pic, etc.),
+        /// filename fragments (dude, babe, .pic).</summary>
+        public string[] MissionEndStrings { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for MissionEndStrings (prevents pointer drift).</summary>
+        public int[] MissionEndStringSizes { get; set; } = Array.Empty<int>();
+
+        // 4 scene filename pointers (uint16 into MissionEndStrings for "lau","off","bch","cas")
+        // are NOT stored — recomputed at serialization.
 
         /// <summary>
         /// Mission end scene selection table: 21 records x 5 uint16 words (105 values).
@@ -494,11 +511,17 @@ namespace CovertActionTools.Core.Models.Executables
 
         // No gap between scene records and briefing strings — they are contiguous.
 
-        /// <summary>~38 briefing intro strings: "Red Herring", region descriptions, mission intro,
-        /// practice prompt, file refs, HoF labels. Contains 0x80+ control bytes (Latin-1).</summary>
+        /// <summary>Briefing intro strings: "Red Herring", region descriptions, mission intro,
+        /// practice prompt, briefing.pan, 10.dta, crime0.dta, world0.dta file refs.</summary>
         public string[] BriefingStrings { get; set; } = Array.Empty<string>();
         /// <summary>Original byte sizes for BriefingStrings.</summary>
         public int[] BriefingStringSizes { get; set; } = Array.Empty<int>();
+
+        /// <summary>Hall of Fame display strings: fame.dta file refs (x4), "Hall of Fame",
+        /// "COVERT ACTION", score formatting labels. Contains 0x80+ control bytes.</summary>
+        public string[] HallOfFameStrings { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for HallOfFameStrings.</summary>
+        public int[] HallOfFameStringSizes { get; set; } = Array.Empty<int>();
 
         /// <summary>40 clue relationship phrases (" tied to ", " registered to ", etc.).
         /// Identical content to TAC/GAME/BUG EXEs.</summary>
@@ -899,11 +922,15 @@ namespace CovertActionTools.Core.Models.Executables
                 Unknown2 = Unknown2.ToArray(),
                 OrganisationNames = OrganisationNames.Select(s => s).ToArray(),
                 OrganisationNameByteSizes = OrganisationNameByteSizes.ToArray(),
-                CareerHofStrings = CareerHofStrings.ToArray(),
-                CareerHofStringSizes = CareerHofStringSizes.ToArray(),
+                CareerReviewStrings = CareerReviewStrings.ToArray(),
+                CareerReviewStringSizes = CareerReviewStringSizes.ToArray(),
+                MissionEndStrings = MissionEndStrings.ToArray(),
+                MissionEndStringSizes = MissionEndStringSizes.ToArray(),
                 MissionEndSceneRecords = MissionEndSceneRecords.ToArray(),
                 BriefingStrings = BriefingStrings.ToArray(),
                 BriefingStringSizes = BriefingStringSizes.ToArray(),
+                HallOfFameStrings = HallOfFameStrings.ToArray(),
+                HallOfFameStringSizes = HallOfFameStringSizes.ToArray(),
                 ClueRelationshipPhrases = ClueRelationshipPhrases.ToArray(),
                 CluePhraseSizes = CluePhraseSizes.ToArray(),
                 MonthAbbreviations = MonthAbbreviations.ToArray(),
@@ -1269,13 +1296,22 @@ namespace CovertActionTools.Core.Models.Executables
         {
             var pos = start;
 
-            // TL: Career/HoF strings (676 bytes)
-            var tlEnd = pos + CareerHofStringsByteSize;
-            var (careerStrings, careerSizes) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
-                data, pos, CareerHofStringsByteSize);
-            segment.CareerHofStrings = careerStrings;
-            segment.CareerHofStringSizes = careerSizes;
-            pos = tlEnd;
+            // TL group 1: Career review strings (203 bytes, 19 strings)
+            var (careerStrs, careerSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+                data, pos, CareerReviewStringsByteSize);
+            segment.CareerReviewStrings = careerStrs;
+            segment.CareerReviewStringSizes = careerSzs;
+            pos += CareerReviewStringsByteSize;
+
+            // Crime/org pointer table (78 bytes = 39 uint16) — skip, recomputed
+            pos += CrimeOrgPointerTableSize;
+
+            // TL group 2: Mission end strings (395 bytes, 24 strings)
+            var (meStrs, meSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+                data, pos, MissionEndStringsByteSize);
+            segment.MissionEndStrings = meStrs;
+            segment.MissionEndStringSizes = meSzs;
+            pos += MissionEndStringsByteSize;
 
             // Scene pointers: 1 null + 4 uint16 = 9 bytes (skipped, recomputed at serialize)
             pos += ScenePointersByteSize;
@@ -1288,62 +1324,25 @@ namespace CovertActionTools.Core.Models.Executables
                 pos += 2;
             }
 
-            // TM: Briefing strings — from pos to clue phrases start.
-            // Clue phrases start after briefing, and total TM = briefing + clue + months + intel headers.
-            // We know clue phrases size (544), months (48), intel headers (134).
-            // TM total = (end of intel headers) - pos, where intel headers end at TN start.
-            // TN starts at: pos + briefingSize + 544 + 48 + 134 + 80 (clue ptr table) + 40 (category bytes)
-            // + 8 (item count) + 24 (month ptr) + 3 (padding) + ... = complex.
-            // Simpler: compute TM end from total remaining size minus known fixed sections.
-            //
-            // Fixed sections after TM:
-            //   TN: CluePhrasePointerTableSize(80) + ClueCategoryBytesSize(40) = 120
-            //   TO header: ItemCountDataSize(8) + MonthPointerTableSize(24) + IntelMidPaddingSize(3) = 35
-            //   TO strings: variable, but we can find their boundaries
-            //
-            // Better approach: TM size = total PostOrgPreCharNameData - TL - scenePointers - sceneRecords
-            //   - terminator - TN - TO. But TO is also variable.
-            //
-            // Most reliable: use the clue phrase content to detect the boundary.
-            // Briefing region ends where clue phrases begin. Clue phrases are 544 bytes,
-            // months 48, intel headers 134, totalling 726 bytes before TN.
-            // TN + TO are the rest. We know TN = 120 fixed bytes.
-            // After TN comes TO which runs to `end`.
-            //
-            // Strategy: compute TM end as (end - TO_size - TN_size), but TO_size is variable.
-            // Instead, scan backwards from `end` to find fixed-size sections.
-            //
-            // Actually the simplest approach: TM total byte size is known from the section map.
-            // TM = 1516 bytes, but we need it to be robust if strings change.
-            //
-            // Use the known structure: after TM comes TN (120 bytes), then TO to end.
-            // TO starts with ItemCountData (8 bytes), then MonthPointerTable (24), then padding (3),
-            // then strings, then EvidenceRankPointerTable (160 bytes), then more strings, then ClueSystemData.
-            //
-            // For roundtrip fidelity with NullTerminatedStringsToFixedBytes + sizes arrays,
-            // we can use the known fixed byte sizes from the original parse.
-            // Briefing size = TM total - clue phrases - months - intel headers.
-            var tmTotal = end - pos
-                - CluePhrasePointerTableSize - ClueCategoryBytesSize
-                - ItemCountDataSize - MonthPointerTableSize - IntelMidPaddingSize
-                - EvidenceRankPointerTableSize;
-
-            // tmTotal now includes TM strings + TO strings + ClueSystemData.
-            // We need to separate them. Use fixed sizes for clue phrases, months, intel headers.
-            // Briefing size = tmTotal - CluePhrasesSize - MonthsSize - IntelHeadersSize - (TO string sizes) - ClueSystemData.
-            // This is still circular. Let me just use the section map's fixed byte sizes.
-
-            // The briefing section size can be derived: we know clue phrases start at a fixed offset
-            // relative to TM start. From investigation: briefing = 790 bytes within TM.
-            // But for robustness, use: TM total = 1516 bytes.
-            // briefingSize = 1516 - 544 - 48 - 134 = 790.
-            var briefingSize = pos + 1516 - pos - CluePhrasesSize - MonthsSize - IntelHeadersSize;
+            // TM: Briefing + HoF strings.
+            // Total TM = 1516 - CluePhrasesSize - MonthsSize - IntelHeadersSize = 790 bytes.
+            // Within that, briefing = 638 bytes, HoF = 152 bytes (split at first "fame.dta").
+            var tmStringSize = 1516 - CluePhrasesSize - MonthsSize - IntelHeadersSize; // 790
+            var fameOffset = FindMarkerString(data, pos, pos + tmStringSize, "fame.dta");
+            var briefingSize = fameOffset - pos;
+            var hofSize = tmStringSize - briefingSize;
 
             var (briefingStrs, briefingSizes) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
                 data, pos, briefingSize);
             segment.BriefingStrings = briefingStrs;
             segment.BriefingStringSizes = briefingSizes;
             pos += briefingSize;
+
+            var (hofStrs, hofSizes) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+                data, pos, hofSize);
+            segment.HallOfFameStrings = hofStrs;
+            segment.HallOfFameStringSizes = hofSizes;
+            pos += hofSize;
 
             // Clue relationship phrases (544 bytes)
             var (cluePhrases, clueSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
@@ -1480,8 +1479,10 @@ namespace CovertActionTools.Core.Models.Executables
         private byte[] BuildPostOrgPreCharNameData()
         {
             // Serialize all string sections with fixed sizes for roundtrip fidelity
-            var careerBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(CareerHofStrings, CareerHofStringSizes);
+            var careerReviewBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(CareerReviewStrings, CareerReviewStringSizes);
+            var missionEndBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(MissionEndStrings, MissionEndStringSizes);
             var briefingBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(BriefingStrings, BriefingStringSizes);
+            var hofBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(HallOfFameStrings, HallOfFameStringSizes);
             var clueBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(ClueRelationshipPhrases, CluePhraseSizes);
             var monthBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(MonthAbbreviations, MonthSizes);
             var intelHdrBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(IntelHeaders, IntelHeaderSizes);
@@ -1491,41 +1492,13 @@ namespace CovertActionTools.Core.Models.Executables
             var evItemBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(EvidenceItemNames, EvidenceItemSizes);
             var invMethodBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(InvestigationMethods, InvestigationMethodSizes);
 
-            // Compute cumulative base offset for pointer tables.
-            // All offsets are DS-relative. The PostOrgPreCharNameData region starts at a certain
-            // DS offset; we compute pointer targets relative to the start of the full data segment.
-            // We don't know the absolute DS offset here, so we compute relative to data segment start
-            // and the caller's placement will make them correct.
-            // Actually: ComputeStringPointers takes a baseOffset that is the DS-relative position
-            // of the first string. We need to know where each string section lands in the full
-            // data segment. The caller places this block at a known offset.
-            // For now, we use a placeholder base and let the final assembly compute correctly.
+            // Crime/org pointer table (78 bytes) — placeholder, patched after assembly
+            var crimeOrgPtrPlaceholder = new byte[CrimeOrgPointerTableSize];
 
-            // Step 1: compute sizes of everything before each pointer table target
-            // Scene pointers point into CareerHofStrings — we need to find "lau","off","bch","cas" indices
-            var sceneFilenameIndices = FindSceneFilenameIndices(CareerHofStrings);
-
-            // Compute scene pointer bytes: 1 null + 4 uint16 pointers into career strings.
-            // The pointers are DS-relative, so we need the absolute offset of career strings start.
-            // This will be patched by the caller, similar to RastPort config pointer.
-            // For simplicity, store as relative-to-block-start and let caller add the block's DS offset.
-            // Actually, we can compute: scene pointers point to specific strings within careerBytes.
-            // The career string at index i starts at sum of CareerHofStringSizes[0..i-1].
+            // Scene pointer data: 1 null separator + 4 uint16 pointers — placeholder, patched
             var scenePointerData = new byte[ScenePointersByteSize];
-            // First byte is null (terminator of last career string — already in careerBytes)
-            // Wait: the null is the terminator of the last career string. careerBytes already
-            // includes it. The scene pointer region starts with a null byte that's part of the
-            // gap, then 4 uint16s.
-            // Actually from investigation: the 9 bytes are [0x00, ptr0_lo, ptr0_hi, ptr1_lo, ptr1_hi, ...]
-            // The 0x00 is the null terminator of the last TL string — but it's also counted in
-            // CareerHofStringsByteSize (676 bytes). On re-serialize, careerBytes from
-            // NullTerminatedStringsToFixedBytes already includes that null. So the leading 0x00
-            // in scenePointerData is a separator/padding byte, not a string terminator.
-            scenePointerData[0] = 0; // separator
-            // Pointer values will be patched after we know the block's DS offset
-            // For now, write zeros — they'll be patched in PatchPostOrgPointers
 
-            // Step 2: scene record bytes
+            // Scene record bytes
             var sceneRecordData = new byte[SceneRecordsByteSize];
             for (var i = 0; i < MissionEndSceneRecords.Length; i++)
             {
@@ -1533,25 +1506,19 @@ namespace CovertActionTools.Core.Models.Executables
                 sceneRecordData[i * 2 + 1] = (byte)((MissionEndSceneRecords[i] >> 8) & 0xFF);
             }
 
-            // Clue phrase pointer table: 40 pointers into ClueRelationshipPhrases
-            // Will be patched after assembly
-
-            // Month pointer table: 12 pointers into MonthAbbreviations
-            // Will be patched after assembly
-
-            // Evidence/rank pointer table: pointers into ranks + types + items
-            // Will be patched after assembly
-
-            // Assemble in binary order — pointer tables as zero placeholders
+            // Other pointer table placeholders — patched after assembly
             var cluePtrPlaceholder = new byte[CluePhrasePointerTableSize];
             var monthPtrPlaceholder = new byte[MonthPointerTableSize];
             var evRankPtrPlaceholder = new byte[EvidenceRankPointerTableSize];
 
             var result = DataSegmentHelper.Concatenate(
-                careerBytes,
+                careerReviewBytes,
+                crimeOrgPtrPlaceholder,
+                missionEndBytes,
                 scenePointerData,
                 sceneRecordData,
                 briefingBytes,
+                hofBytes,
                 clueBytes,
                 monthBytes,
                 intelHdrBytes,
@@ -1578,24 +1545,27 @@ namespace CovertActionTools.Core.Models.Executables
         /// </summary>
         private void PatchPostOrgPointers(byte[] fullDataSegment, int postOrgStart)
         {
-            // Compute actual DS-relative offsets for each string section
-            var careerBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(CareerHofStrings, CareerHofStringSizes);
+            var careerReviewBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(CareerReviewStrings, CareerReviewStringSizes);
+            var missionEndBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(MissionEndStrings, MissionEndStringSizes);
             var briefingBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(BriefingStrings, BriefingStringSizes);
+            var hofBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(HallOfFameStrings, HallOfFameStringSizes);
             var clueBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(ClueRelationshipPhrases, CluePhraseSizes);
             var monthBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(MonthAbbreviations, MonthSizes);
             var intelHdrBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(IntelHeaders, IntelHeaderSizes);
+            var intelTxtBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(IntelReportTexts, IntelReportTextSizes);
             var rankBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(RankNames, RankNameSizes);
             var evTypeBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(EvidenceTypeAbbreviations, EvidenceTypeSizes);
             var evItemBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(EvidenceItemNames, EvidenceItemSizes);
-            var intelTxtBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(IntelReportTexts, IntelReportTextSizes);
-            var invMethodBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(InvestigationMethods, InvestigationMethodSizes);
 
             // Cumulative offsets within postOrgBlock
-            var careerStart = 0;
-            var scenePtrStart = careerStart + careerBytes.Length;
+            var careerReviewStart = 0;
+            var crimeOrgPtrStart = careerReviewStart + careerReviewBytes.Length;
+            var missionEndStart = crimeOrgPtrStart + CrimeOrgPointerTableSize;
+            var scenePtrStart = missionEndStart + missionEndBytes.Length;
             var sceneRecStart = scenePtrStart + ScenePointersByteSize;
             var briefStart = sceneRecStart + SceneRecordsByteSize;
-            var clueStart = briefStart + briefingBytes.Length;
+            var hofStart = briefStart + briefingBytes.Length;
+            var clueStart = hofStart + hofBytes.Length;
             var monthStart = clueStart + clueBytes.Length;
             var intelHdrStart = monthStart + monthBytes.Length;
             var cluePtrStart = intelHdrStart + intelHdrBytes.Length;
@@ -1608,20 +1578,42 @@ namespace CovertActionTools.Core.Models.Executables
             var evTypeStart = rankStart + rankBytes.Length;
             var evItemStart = evTypeStart + evTypeBytes.Length;
             var evPtrStart = evItemStart + evItemBytes.Length;
-            var invStart = evPtrStart + EvidenceRankPointerTableSize;
 
-            // 1. Scene filename pointers (4 uint16 at scenePtrStart + 1)
-            var sceneIndices = FindSceneFilenameIndices(CareerHofStrings);
-            var careerPtrs = DataSegmentHelper.ComputeStringPointers(CareerHofStrings, postOrgStart + careerStart);
+            // 1. Crime/org pointer table: 13 crime type pointers + 26 org name pointers
+            // These point OUTSIDE postOrg, into CrimeTypeNames and OrganisationNames before this block.
+            var crimeNamesBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(CrimeTypeNames, CrimeTypeNameByteSizes);
+            var orgNamesBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(OrganisationNames, OrganisationNameByteSizes);
+            var orgStart = postOrgStart - orgNamesBytes.Length;
+            var unknown2Start = orgStart - Unknown2.Length;
+            var crimeStart = unknown2Start - crimeNamesBytes.Length;
+
+            var crimePtrs = DataSegmentHelper.ComputeStringPointers(CrimeTypeNames, crimeStart);
+            var orgPtrs = DataSegmentHelper.ComputeStringPointers(OrganisationNames, orgStart);
+            for (var i = 0; i < CrimePointerCount && i < crimePtrs.Length; i++)
+            {
+                fullDataSegment[postOrgStart + crimeOrgPtrStart + i * 2] = (byte)(crimePtrs[i] & 0xFF);
+                fullDataSegment[postOrgStart + crimeOrgPtrStart + i * 2 + 1] = (byte)((crimePtrs[i] >> 8) & 0xFF);
+            }
+            for (var i = 0; i < OrgPointerCount && i < orgPtrs.Length; i++)
+            {
+                var offset = (CrimePointerCount + i) * 2;
+                fullDataSegment[postOrgStart + crimeOrgPtrStart + offset] = (byte)(orgPtrs[i] & 0xFF);
+                fullDataSegment[postOrgStart + crimeOrgPtrStart + offset + 1] = (byte)((orgPtrs[i] >> 8) & 0xFF);
+            }
+
+            // 2. Scene filename pointers (4 uint16 at scenePtrStart + 1)
+            var sceneIndices = FindSceneFilenameIndices(MissionEndStrings);
+            var mePtrs = DataSegmentHelper.ComputeStringPointers(MissionEndStrings, postOrgStart + missionEndStart);
             for (var i = 0; i < SceneFilenameCount; i++)
             {
                 var idx = sceneIndices[i];
-                var ptr = careerPtrs[idx];
+                if (idx < 0) continue;
+                var ptr = mePtrs[idx];
                 fullDataSegment[postOrgStart + scenePtrStart + 1 + i * 2] = (byte)(ptr & 0xFF);
                 fullDataSegment[postOrgStart + scenePtrStart + 1 + i * 2 + 1] = (byte)((ptr >> 8) & 0xFF);
             }
 
-            // 2. Clue phrase pointers (40 uint16 at cluePtrStart)
+            // 3. Clue phrase pointers (40 uint16 at cluePtrStart)
             var cluePtrs = DataSegmentHelper.ComputeStringPointers(ClueRelationshipPhrases, postOrgStart + clueStart);
             for (var i = 0; i < cluePtrs.Length; i++)
             {
@@ -1629,7 +1621,7 @@ namespace CovertActionTools.Core.Models.Executables
                 fullDataSegment[postOrgStart + cluePtrStart + i * 2 + 1] = (byte)((cluePtrs[i] >> 8) & 0xFF);
             }
 
-            // 3. Month pointers (12 uint16 at monthPtrStart)
+            // 4. Month pointers (12 uint16 at monthPtrStart)
             var monthPtrs = DataSegmentHelper.ComputeStringPointers(MonthAbbreviations, postOrgStart + monthStart);
             for (var i = 0; i < monthPtrs.Length; i++)
             {
@@ -1637,7 +1629,7 @@ namespace CovertActionTools.Core.Models.Executables
                 fullDataSegment[postOrgStart + monthPtrStart + i * 2 + 1] = (byte)((monthPtrs[i] >> 8) & 0xFF);
             }
 
-            // 4. Evidence/rank pointer table (pointers to ranks + types + items)
+            // 5. Evidence/rank pointer table (pointers to ranks + types + items)
             var allEvStrings = new string[RankNames.Length + EvidenceTypeAbbreviations.Length + EvidenceItemNames.Length];
             Array.Copy(RankNames, 0, allEvStrings, 0, RankNames.Length);
             Array.Copy(EvidenceTypeAbbreviations, 0, allEvStrings, RankNames.Length, EvidenceTypeAbbreviations.Length);
@@ -1650,17 +1642,17 @@ namespace CovertActionTools.Core.Models.Executables
             }
         }
 
-        /// <summary>Finds indices of the 4 scene filename strings ("lau","off","bch","cas") in CareerHofStrings.</summary>
-        private static int[] FindSceneFilenameIndices(string[] careerStrings)
+        /// <summary>Finds indices of the 4 scene filename strings ("lau","off","bch","cas") in MissionEndStrings.</summary>
+        private static int[] FindSceneFilenameIndices(string[] strings)
         {
             var targets = new[] { "lau", "off", "bch", "cas" };
             var indices = new int[targets.Length];
             for (var t = 0; t < targets.Length; t++)
             {
                 indices[t] = -1;
-                for (var i = 0; i < careerStrings.Length; i++)
+                for (var i = 0; i < strings.Length; i++)
                 {
-                    if (careerStrings[i] == targets[t])
+                    if (strings[i] == targets[t])
                     {
                         indices[t] = i;
                         break;
