@@ -313,6 +313,27 @@ namespace CovertActionTools.Core.Models.Executables
         private const int RastPortSize = 20;                // 20-byte RastPort block
         private const int RastPortConfigPointerSize = 2;    // 2-byte config pointer after RastPort
         private const int PlotFileBufferSize = 9;           // "*PL0000\0\0"
+
+        // PostOrgPreCharNameData sub-section sizes (bytes, from binary investigation)
+        private const int CareerReviewStringsByteSize = 203;     // 19 career review strings
+        private const int CrimeOrgPointerTableSize = 78;        // 39 uint16 pointers (13 crime + 26 org, recomputed)
+        private const int MissionEndStringsByteSize = 395;      // 24 mission end strings
+        private const int CrimePointerCount = 13;
+        private const int OrgPointerCount = 26;                 // includes PFO and M18
+        private const int ScenePointersByteSize = 9;            // 1 null + 4 uint16 (skipped, recomputed)
+        private const int SceneRecordCount = 21;                // 4 scenes x 5 variations + 1 all-masterminds
+        private const int SceneRecordWords = 5;                 // words per record
+        private const int SceneRecordsByteSize = SceneRecordCount * SceneRecordWords * 2; // 210
+        private const int CluePhrasesSize = 544;               // 40 phrases, identical to TAC
+        private const int MonthsSize = 48;                     // 12 months, identical to TAC
+        private const int IntelHeadersSize = 134;              // ~13 strings
+        private const int CluePhrasePointerTableSize = 80;     // 40 x uint16 (skipped, recomputed)
+        private const int ClueCategoryDataSize = 48;          // 16 bit flags + 4x8 popcount lookups
+        private const int MonthPointerTableSize = 24;          // 12 x uint16 (skipped, recomputed)
+        private const int IntelMidPaddingSize = 3;
+        private const int EvidenceRankPointerTableSize = 160;  // (skipped, recomputed)
+        private const int SceneFilenameCount = 4;              // "lau", "off", "bch", "cas"
+        private const int GameStateDataSize = 1242;            // TR section: DS:0x46A6-0x4B7F
         #endregion
 
         #region Fields (in binary order)
@@ -459,8 +480,116 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>Original per-string byte sizes for OrganisationNames (prevents pointer drift).</summary>
         public int[] OrganisationNameByteSizes { get; set; } = Array.Empty<int>();
 
-        /// <summary>Data between org names and character names: career text, briefing, clue phrases, item tables.</summary>
-        public byte[] PostOrgPreCharNameData { get; set; } = Array.Empty<byte>();
+        #region PostOrgPreCharNameData sub-sections (in binary order)
+
+        /// <summary>19 career review strings: "Career", "The Career of", case summary labels,
+        /// arrest counts, EP formatting, MasterMinds Arrested heading.</summary>
+        public string[] CareerReviewStrings { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for CareerReviewStrings (prevents pointer drift).</summary>
+        public int[] CareerReviewStringSizes { get; set; } = Array.Empty<int>();
+
+        // Crime/org name pointer table (78 bytes = 13 crime + 26 org uint16 pointers) is
+        // NOT stored — recomputed at serialization from CrimeTypeNames and OrganisationNames.
+
+        /// <summary>24 mission end strings: gender.pic, Max, Remington, ARRESTED, scene codes
+        /// ("lau","off","bch","cas"), 4 flavour texts, file refs (final4.cat, back.pic, etc.),
+        /// filename fragments (dude, babe, .pic).</summary>
+        public string[] MissionEndStrings { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for MissionEndStrings (prevents pointer drift).</summary>
+        public int[] MissionEndStringSizes { get; set; } = Array.Empty<int>();
+
+        // 4 scene filename pointers (uint16 into MissionEndStrings for "lau","off","bch","cas")
+        // are NOT stored — recomputed at serialization.
+
+        /// <summary>
+        /// Mission end scene selection table: 21 records x 5 uint16 words (105 values).
+        /// 4 scene types (laundromat/office/beach/casino) x 5 score variations + 1 all-masterminds record.
+        /// Word[0] = scene index (0-3), words[1-4] = sub-image numbers or 0xFFFF (unused).
+        /// Combined with player gender to build filenames like "laudude1.pic" / "laubabe1.pic".
+        /// </summary>
+        public ushort[] MissionEndSceneRecords { get; set; } = Array.Empty<ushort>();
+
+        // No gap between scene records and briefing strings — they are contiguous.
+
+        /// <summary>Briefing intro strings: "Red Herring", region descriptions, mission intro,
+        /// practice prompt, briefing.pan, 10.dta, crime0.dta, world0.dta file refs.</summary>
+        public string[] BriefingStrings { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for BriefingStrings.</summary>
+        public int[] BriefingStringSizes { get; set; } = Array.Empty<int>();
+
+        /// <summary>Hall of Fame display strings: fame.dta file refs (x4), "Hall of Fame",
+        /// "COVERT ACTION", score formatting labels. Contains 0x80+ control bytes.</summary>
+        public string[] HallOfFameStrings { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for HallOfFameStrings.</summary>
+        public int[] HallOfFameStringSizes { get; set; } = Array.Empty<int>();
+
+        /// <summary>40 clue relationship phrases (" tied to ", " registered to ", etc.).
+        /// Identical content to TAC/GAME/BUG EXEs.</summary>
+        public string[] ClueRelationshipPhrases { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for clue phrase slots.</summary>
+        public int[] CluePhraseSizes { get; set; } = Array.Empty<int>();
+
+        /// <summary>12 month abbreviations: "Jan", "Feb", ... "Dec". Identical to TAC.</summary>
+        public string[] MonthAbbreviations { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for month abbreviation slots.</summary>
+        public int[] MonthSizes { get; set; } = Array.Empty<int>();
+
+        /// <summary>Intel report headers and format fragments ("CODED MESSAGE:", "MEETING NOTES:", etc.).
+        /// Same content as TAC.</summary>
+        public string[] IntelHeaders { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for intel header slots.</summary>
+        public int[] IntelHeaderSizes { get; set; } = Array.Empty<int>();
+
+        /// <summary>
+        /// 48-byte clue category and popcount lookup table. Identical across FINAL/TAC/GAME.
+        /// Bytes 0-15: category bit flags per clue pair (values 1/2/4/8 = single-bit masks).
+        /// Bytes 16-23: popcount(0-7) + 0 lookup.
+        /// Bytes 24-31: popcount(0-7) + 1 lookup.
+        /// Bytes 32-39: popcount(0-7) + 1 lookup (duplicate of 24-31).
+        /// Bytes 40-47: popcount(0-7) + 2 lookup.
+        /// TODO: investigate how the clue system uses this table — the bit flags likely map
+        /// clue slots to evidence categories, and the popcount sub-tables count active categories
+        /// for a given bitmask. Trace from GAME.EXE clue processing code to confirm.
+        /// </summary>
+        public byte[] ClueCategoryData { get; set; } = Array.Empty<byte>();
+
+        /// <summary>3 bytes: zero padding between month pointer table and intel report texts.</summary>
+        public byte[] IntelMidPadding { get; set; } = Array.Empty<byte>();
+
+        /// <summary>Agent identification templates (~17 strings). Identical to TAC.
+        /// Contains newline (0x0A) bytes.</summary>
+        public string[] IntelReportTexts { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for intel report text slots.</summary>
+        public int[] IntelReportTextSizes { get; set; } = Array.Empty<int>();
+
+        /// <summary>8 agent rank names: "Recruit", "Operative", ... "MasterMind". Identical to TAC.</summary>
+        public string[] RankNames { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for rank name slots.</summary>
+        public int[] RankNameSizes { get; set; } = Array.Empty<int>();
+
+        /// <summary>8 evidence type abbreviations: "CAR", "WPN", "ADR", "TKT", "MSG", "$", "$", "FCE".
+        /// Identical to TAC.</summary>
+        public string[] EvidenceTypeAbbreviations { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for evidence type slots.</summary>
+        public int[] EvidenceTypeSizes { get; set; } = Array.Empty<int>();
+
+        /// <summary>64 evidence item name templates: vehicles(8), weapons(8), streets(8),
+        /// airlines(8), telecom(8), money(16), passports(8). Identical to TAC.</summary>
+        public string[] EvidenceItemNames { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for evidence item slots.</summary>
+        public int[] EvidenceItemSizes { get; set; } = Array.Empty<int>();
+
+        /// <summary>8 investigation method names: "Clandestine Photo", ... "Local Authorities", "Clue".
+        /// Identical to TAC.</summary>
+        public string[] InvestigationMethods { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for investigation method slots.</summary>
+        public int[] InvestigationMethodSizes { get; set; } = Array.Empty<int>();
+
+        /// <summary>Remaining clue system data: UI text, template variables, file references,
+        /// suspect labels, message templates. Preserved as raw blob (same pattern as TAC).</summary>
+        public byte[] ClueSystemData { get; set; } = Array.Empty<byte>();
+
+        #endregion
 
         /// <summary>192 character names (4 ethnic groups x female first / male first / male surname, 16 each).</summary>
         public string[] CharacterNames { get; set; } = Array.Empty<string>();
@@ -470,7 +599,16 @@ namespace CovertActionTools.Core.Models.Executables
 
         // CharacterNamePointers are computed at serialization time from CharacterNames positions.
 
-        /// <summary>Everything after character name pointers: game state, file management, runtime, BSS.</summary>
+        /// <summary>
+        /// Game state and file management data (1,242 bytes). Contains status labels, chronology
+        /// phrases, save/load UI, difficulty suffixes, EXE chain refs, disk prompts, PANI markers,
+        /// RastPort blocks, and palette data — interleaved strings and binary.
+        /// TODO: split into typed sub-sections when the interleaved binary regions are understood.
+        /// </summary>
+        public byte[] GameStateData { get; set; } = Array.Empty<byte>();
+
+        /// <summary>MSC overlay/error strings, game state buffers, C runtime internals, BSS.
+        /// Not editable — preserved for binary roundtrip fidelity only.</summary>
         public byte[] TrailingData { get; set; } = Array.Empty<byte>();
 
         #endregion
@@ -597,14 +735,16 @@ namespace CovertActionTools.Core.Models.Executables
             segment.CharacterNames = DataSegmentHelper.ExtractStringsFromPointers(charPtrs, dataSegment);
 
             var (charBlockStart, charBlockEnd) = DataSegmentHelper.FindStringBlockBounds(charPtrs, dataSegment);
-            segment.PostOrgPreCharNameData = DataSegmentHelper.Slice(dataSegment, orgEnd, charBlockStart - orgEnd);
+            ParsePostOrgPreCharNameData(dataSegment, orgEnd, charBlockStart, segment);
             var postCharLen = charPtrTableOffset - charBlockEnd;
             segment.PostCharNameData = postCharLen > 0
                 ? DataSegmentHelper.Slice(dataSegment, charBlockEnd, postCharLen)
                 : Array.Empty<byte>();
 
             var charPtrsEnd = charPtrTableOffset + CharNamePointerCount * 2;
-            segment.TrailingData = DataSegmentHelper.Slice(dataSegment, charPtrsEnd, dataSegment.Length - charPtrsEnd);
+            segment.GameStateData = DataSegmentHelper.Slice(dataSegment, charPtrsEnd, GameStateDataSize);
+            var trailingStart = charPtrsEnd + GameStateDataSize;
+            segment.TrailingData = DataSegmentHelper.Slice(dataSegment, trailingStart, dataSegment.Length - trailingStart);
 
             return segment;
         }
@@ -719,12 +859,15 @@ namespace CovertActionTools.Core.Models.Executables
             // Build PostMissionPreCrimeData from sub-sections
             var postMissionBytes = BuildPostMissionPreCrimeData();
 
+            // Build PostOrgPreCharNameData from sub-sections with recomputed pointer tables
+            var postOrgBytes = BuildPostOrgPreCharNameData();
+
             // Compute character name pointer values
             var charNamesBaseOffset = PreStringTableData.Length + stringTableBytes.Length
                 + PostStringTableData.Length + orgAppearanceBytes.Length
                 + Unknown1.Length + missionSetBytes.Length + postMissionBytes.Length
                 + crimeBytes.Length + Unknown2.Length + orgBytes.Length
-                + PostOrgPreCharNameData.Length;
+                + postOrgBytes.Length;
             var charNamePointers = DataSegmentHelper.ComputeStringPointers(CharacterNames, charNamesBaseOffset);
 
             var result = DataSegmentHelper.Concatenate(
@@ -738,10 +881,11 @@ namespace CovertActionTools.Core.Models.Executables
                 crimeBytes,
                 Unknown2,
                 orgBytes,
-                PostOrgPreCharNameData,
+                postOrgBytes,
                 charNamesBytes,
                 PostCharNameData,
                 DataSegmentHelper.UInt16ArrayToBytes(charNamePointers),
+                GameStateData,
                 TrailingData
             );
 
@@ -750,6 +894,11 @@ namespace CovertActionTools.Core.Models.Executables
                 + PostStringTableData.Length + orgAppearanceBytes.Length
                 + Unknown1.Length + missionSetBytes.Length;
             PatchRastPortConfigPointer(result, postMissionStart, postMissionBytes);
+
+            // Patch all pointer tables in PostOrgPreCharNameData
+            var postOrgStart = postMissionStart + postMissionBytes.Length
+                + crimeBytes.Length + Unknown2.Length + orgBytes.Length;
+            PatchPostOrgPointers(result, postOrgStart);
 
             return result;
         }
@@ -792,9 +941,37 @@ namespace CovertActionTools.Core.Models.Executables
                 Unknown2 = Unknown2.ToArray(),
                 OrganisationNames = OrganisationNames.Select(s => s).ToArray(),
                 OrganisationNameByteSizes = OrganisationNameByteSizes.ToArray(),
-                PostOrgPreCharNameData = PostOrgPreCharNameData.ToArray(),
+                CareerReviewStrings = CareerReviewStrings.ToArray(),
+                CareerReviewStringSizes = CareerReviewStringSizes.ToArray(),
+                MissionEndStrings = MissionEndStrings.ToArray(),
+                MissionEndStringSizes = MissionEndStringSizes.ToArray(),
+                MissionEndSceneRecords = MissionEndSceneRecords.ToArray(),
+                BriefingStrings = BriefingStrings.ToArray(),
+                BriefingStringSizes = BriefingStringSizes.ToArray(),
+                HallOfFameStrings = HallOfFameStrings.ToArray(),
+                HallOfFameStringSizes = HallOfFameStringSizes.ToArray(),
+                ClueRelationshipPhrases = ClueRelationshipPhrases.ToArray(),
+                CluePhraseSizes = CluePhraseSizes.ToArray(),
+                MonthAbbreviations = MonthAbbreviations.ToArray(),
+                MonthSizes = MonthSizes.ToArray(),
+                IntelHeaders = IntelHeaders.ToArray(),
+                IntelHeaderSizes = IntelHeaderSizes.ToArray(),
+                ClueCategoryData = ClueCategoryData.ToArray(),
+                IntelMidPadding = IntelMidPadding.ToArray(),
+                IntelReportTexts = IntelReportTexts.ToArray(),
+                IntelReportTextSizes = IntelReportTextSizes.ToArray(),
+                RankNames = RankNames.ToArray(),
+                RankNameSizes = RankNameSizes.ToArray(),
+                EvidenceTypeAbbreviations = EvidenceTypeAbbreviations.ToArray(),
+                EvidenceTypeSizes = EvidenceTypeSizes.ToArray(),
+                EvidenceItemNames = EvidenceItemNames.ToArray(),
+                EvidenceItemSizes = EvidenceItemSizes.ToArray(),
+                InvestigationMethods = InvestigationMethods.ToArray(),
+                InvestigationMethodSizes = InvestigationMethodSizes.ToArray(),
+                ClueSystemData = ClueSystemData.ToArray(),
                 CharacterNames = CharacterNames.Select(s => s).ToArray(),
                 PostCharNameData = PostCharNameData.ToArray(),
+                GameStateData = GameStateData.ToArray(),
                 TrailingData = TrailingData.ToArray()
             };
         }
@@ -1124,6 +1301,378 @@ namespace CovertActionTools.Core.Models.Executables
         {
             parts.Add((byte)(value & 0xFF));
             parts.Add((byte)((value >> 8) & 0xFF));
+        }
+
+        #endregion
+
+        #region PostOrgPreCharNameData parsing and serialization
+
+        /// <summary>
+        /// Parses the PostOrgPreCharNameData region (between org names and character names)
+        /// into typed sub-section fields. Uses byte-boundary extraction with fixed sub-region sizes.
+        /// </summary>
+        private static void ParsePostOrgPreCharNameData(byte[] data, int start, int end, FinalDataSegment segment)
+        {
+            var pos = start;
+
+            // TL group 1: Career review strings (203 bytes, 19 strings)
+            var (careerStrs, careerSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+                data, pos, CareerReviewStringsByteSize);
+            segment.CareerReviewStrings = careerStrs;
+            segment.CareerReviewStringSizes = careerSzs;
+            pos += CareerReviewStringsByteSize;
+
+            // Crime/org pointer table (78 bytes = 39 uint16) — skip, recomputed
+            pos += CrimeOrgPointerTableSize;
+
+            // TL group 2: Mission end strings (395 bytes, 24 strings)
+            var (meStrs, meSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+                data, pos, MissionEndStringsByteSize);
+            segment.MissionEndStrings = meStrs;
+            segment.MissionEndStringSizes = meSzs;
+            pos += MissionEndStringsByteSize;
+
+            // Scene pointers: 1 null + 4 uint16 = 9 bytes (skipped, recomputed at serialize)
+            pos += ScenePointersByteSize;
+
+            // Scene records: 21 x 5 uint16 = 210 bytes
+            segment.MissionEndSceneRecords = new ushort[SceneRecordCount * SceneRecordWords];
+            for (var i = 0; i < segment.MissionEndSceneRecords.Length; i++)
+            {
+                segment.MissionEndSceneRecords[i] = BitConverter.ToUInt16(data, pos);
+                pos += 2;
+            }
+
+            // TM: Briefing + HoF strings.
+            // Total TM = 1516 - CluePhrasesSize - MonthsSize - IntelHeadersSize = 790 bytes.
+            // Within that, briefing = 638 bytes, HoF = 152 bytes (split at first "fame.dta").
+            var tmStringSize = 1516 - CluePhrasesSize - MonthsSize - IntelHeadersSize; // 790
+            var fameOffset = FindMarkerString(data, pos, pos + tmStringSize, "fame.dta");
+            var briefingSize = fameOffset - pos;
+            var hofSize = tmStringSize - briefingSize;
+
+            var (briefingStrs, briefingSizes) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+                data, pos, briefingSize);
+            segment.BriefingStrings = briefingStrs;
+            segment.BriefingStringSizes = briefingSizes;
+            pos += briefingSize;
+
+            var (hofStrs, hofSizes) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+                data, pos, hofSize);
+            segment.HallOfFameStrings = hofStrs;
+            segment.HallOfFameStringSizes = hofSizes;
+            pos += hofSize;
+
+            // Clue relationship phrases (544 bytes)
+            var (cluePhrases, clueSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+                data, pos, CluePhrasesSize);
+            segment.ClueRelationshipPhrases = cluePhrases;
+            segment.CluePhraseSizes = clueSzs;
+            pos += CluePhrasesSize;
+
+            // Month abbreviations (48 bytes)
+            var (months, monthSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+                data, pos, MonthsSize);
+            segment.MonthAbbreviations = months;
+            segment.MonthSizes = monthSzs;
+            pos += MonthsSize;
+
+            // Intel headers (134 bytes)
+            var (intelHdrs, intelHdrSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+                data, pos, IntelHeadersSize);
+            segment.IntelHeaders = intelHdrs;
+            segment.IntelHeaderSizes = intelHdrSzs;
+            pos += IntelHeadersSize;
+
+            // TN: Clue phrase pointer table (80 bytes) — skip, recomputed
+            pos += CluePhrasePointerTableSize;
+
+            // TN: Clue category bytes (40 bytes)
+            segment.ClueCategoryData = DataSegmentHelper.Slice(data, pos, ClueCategoryDataSize);
+            pos += ClueCategoryDataSize;
+
+            // TO: Month pointer table (24 bytes) — skip, recomputed
+            pos += MonthPointerTableSize;
+
+            // TO: Padding (3 bytes)
+            segment.IntelMidPadding = DataSegmentHelper.Slice(data, pos, IntelMidPaddingSize);
+            pos += IntelMidPaddingSize;
+
+            // TO: Intel report texts — from pos to rank names.
+            // Rank names start with "Recruit\0". Scan for this marker.
+            var rankStart = FindMarkerString(data, pos, end, "Recruit");
+            var intelTextsSize = rankStart - pos;
+            var (intelTexts, intelTextSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+                data, pos, intelTextsSize);
+            segment.IntelReportTexts = intelTexts;
+            segment.IntelReportTextSizes = intelTextSzs;
+            pos = rankStart;
+
+            // TO: Rank names — 8 strings, ending before evidence type abbreviations.
+            // Evidence types start with "CAR\0".
+            var evTypesStart = FindMarkerString(data, pos, end, "CAR");
+            var rankSize = evTypesStart - pos;
+            var (ranks, rankSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+                data, pos, rankSize);
+            segment.RankNames = ranks;
+            segment.RankNameSizes = rankSzs;
+            pos = evTypesStart;
+
+            // TO: Evidence type abbreviations — 8 strings, ending before evidence items.
+            // Evidence items start with "Ford Escort".
+            var evItemsStart = FindMarkerString(data, pos, end, "Ford Escort");
+            var evTypesSize = evItemsStart - pos;
+            var (evTypes, evTypeSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+                data, pos, evTypesSize);
+            segment.EvidenceTypeAbbreviations = evTypes;
+            segment.EvidenceTypeSizes = evTypeSzs;
+            pos = evItemsStart;
+
+            // TO: Evidence item names — strings until evidence/rank pointer table.
+            // The pointer table is 160 bytes of uint16 values that point back into ranks/types/items.
+            // Find it by scanning for the first pointer value that matches rankStart's DS offset.
+            // Simpler: evidence items end 1 byte before the pointer table. The pointer table
+            // starts immediately after the last evidence item null terminator + 1 padding null.
+            // From investigation: evidence items end at pos + N, then 1 null, then 160-byte pointer table.
+            // We can find the pointer table by looking for a sequence of uint16 values that all
+            // resolve to valid string starts. Or: just scan for "Clandestine Photo" to find
+            // investigation methods, then back-calculate.
+            var invMethodsStart = FindMarkerString(data, pos, end, "Clandestine Photo");
+            var evPtrTableStart = invMethodsStart - EvidenceRankPointerTableSize;
+            var evItemsSize = evPtrTableStart - pos;
+            var (evItems, evItemSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+                data, pos, evItemsSize);
+            segment.EvidenceItemNames = evItems;
+            segment.EvidenceItemSizes = evItemSzs;
+            pos = invMethodsStart; // skip pointer table (recomputed)
+
+            // TO: Investigation methods — 8 strings ending before clue system data.
+            // Clue system starts with bytes containing 0x87 control code ("Source:").
+            // From investigation: inv methods are 134 bytes (same as TAC).
+            // Find the end by counting 8 strings.
+            var invPos = pos;
+            for (var i = 0; i < 8; i++)
+            {
+                while (invPos < end && data[invPos] != 0) invPos++;
+                invPos++; // skip null
+            }
+            var invSize = invPos - pos;
+            var (invMethods, invMethodSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+                data, pos, invSize);
+            segment.InvestigationMethods = invMethods;
+            segment.InvestigationMethodSizes = invMethodSzs;
+            pos = invPos;
+
+            // TO: Clue system data — everything remaining
+            segment.ClueSystemData = DataSegmentHelper.Slice(data, pos, end - pos);
+        }
+
+        /// <summary>Finds a marker string in the data segment by scanning for its ASCII bytes.</summary>
+        private static int FindMarkerString(byte[] data, int start, int end, string marker)
+        {
+            var markerBytes = Encoding.ASCII.GetBytes(marker);
+            for (var i = start; i <= end - markerBytes.Length; i++)
+            {
+                var match = true;
+                for (var j = 0; j < markerBytes.Length; j++)
+                {
+                    if (data[i + j] != markerBytes[j])
+                    {
+                        match = false;
+                        break;
+                    }
+                }
+                if (match) return i;
+            }
+            return end; // fallback
+        }
+
+        /// <summary>
+        /// Builds the PostOrgPreCharNameData byte array from sub-section fields,
+        /// recomputing all pointer tables from string positions.
+        /// </summary>
+        private byte[] BuildPostOrgPreCharNameData()
+        {
+            // Serialize all string sections with fixed sizes for roundtrip fidelity
+            var careerReviewBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(CareerReviewStrings, CareerReviewStringSizes);
+            var missionEndBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(MissionEndStrings, MissionEndStringSizes);
+            var briefingBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(BriefingStrings, BriefingStringSizes);
+            var hofBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(HallOfFameStrings, HallOfFameStringSizes);
+            var clueBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(ClueRelationshipPhrases, CluePhraseSizes);
+            var monthBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(MonthAbbreviations, MonthSizes);
+            var intelHdrBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(IntelHeaders, IntelHeaderSizes);
+            var intelTxtBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(IntelReportTexts, IntelReportTextSizes);
+            var rankBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(RankNames, RankNameSizes);
+            var evTypeBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(EvidenceTypeAbbreviations, EvidenceTypeSizes);
+            var evItemBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(EvidenceItemNames, EvidenceItemSizes);
+            var invMethodBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(InvestigationMethods, InvestigationMethodSizes);
+
+            // Crime/org pointer table (78 bytes) — placeholder, patched after assembly
+            var crimeOrgPtrPlaceholder = new byte[CrimeOrgPointerTableSize];
+
+            // Scene pointer data: 1 null separator + 4 uint16 pointers — placeholder, patched
+            var scenePointerData = new byte[ScenePointersByteSize];
+
+            // Scene record bytes
+            var sceneRecordData = new byte[SceneRecordsByteSize];
+            for (var i = 0; i < MissionEndSceneRecords.Length; i++)
+            {
+                sceneRecordData[i * 2] = (byte)(MissionEndSceneRecords[i] & 0xFF);
+                sceneRecordData[i * 2 + 1] = (byte)((MissionEndSceneRecords[i] >> 8) & 0xFF);
+            }
+
+            // Other pointer table placeholders — patched after assembly
+            var cluePtrPlaceholder = new byte[CluePhrasePointerTableSize];
+            var monthPtrPlaceholder = new byte[MonthPointerTableSize];
+            var evRankPtrPlaceholder = new byte[EvidenceRankPointerTableSize];
+
+            var result = DataSegmentHelper.Concatenate(
+                careerReviewBytes,
+                crimeOrgPtrPlaceholder,
+                missionEndBytes,
+                scenePointerData,
+                sceneRecordData,
+                briefingBytes,
+                hofBytes,
+                clueBytes,
+                monthBytes,
+                intelHdrBytes,
+                cluePtrPlaceholder,
+                ClueCategoryData,
+                monthPtrPlaceholder,
+                IntelMidPadding,
+                intelTxtBytes,
+                rankBytes,
+                evTypeBytes,
+                evItemBytes,
+                evRankPtrPlaceholder,
+                invMethodBytes,
+                ClueSystemData
+            );
+
+            return result;
+        }
+
+        /// <summary>
+        /// Patches all pointer tables in the PostOrgPreCharNameData block after the full
+        /// data segment layout is known. Called from ToBytes() after assembly.
+        /// </summary>
+        private void PatchPostOrgPointers(byte[] fullDataSegment, int postOrgStart)
+        {
+            var careerReviewBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(CareerReviewStrings, CareerReviewStringSizes);
+            var missionEndBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(MissionEndStrings, MissionEndStringSizes);
+            var briefingBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(BriefingStrings, BriefingStringSizes);
+            var hofBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(HallOfFameStrings, HallOfFameStringSizes);
+            var clueBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(ClueRelationshipPhrases, CluePhraseSizes);
+            var monthBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(MonthAbbreviations, MonthSizes);
+            var intelHdrBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(IntelHeaders, IntelHeaderSizes);
+            var intelTxtBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(IntelReportTexts, IntelReportTextSizes);
+            var rankBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(RankNames, RankNameSizes);
+            var evTypeBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(EvidenceTypeAbbreviations, EvidenceTypeSizes);
+            var evItemBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(EvidenceItemNames, EvidenceItemSizes);
+
+            // Cumulative offsets within postOrgBlock
+            var careerReviewStart = 0;
+            var crimeOrgPtrStart = careerReviewStart + careerReviewBytes.Length;
+            var missionEndStart = crimeOrgPtrStart + CrimeOrgPointerTableSize;
+            var scenePtrStart = missionEndStart + missionEndBytes.Length;
+            var sceneRecStart = scenePtrStart + ScenePointersByteSize;
+            var briefStart = sceneRecStart + SceneRecordsByteSize;
+            var hofStart = briefStart + briefingBytes.Length;
+            var clueStart = hofStart + hofBytes.Length;
+            var monthStart = clueStart + clueBytes.Length;
+            var intelHdrStart = monthStart + monthBytes.Length;
+            var cluePtrStart = intelHdrStart + intelHdrBytes.Length;
+            var catStart = cluePtrStart + CluePhrasePointerTableSize;
+            var monthPtrStart = catStart + ClueCategoryDataSize;
+            var paddingStart = monthPtrStart + MonthPointerTableSize;
+            var intelTxtStart = paddingStart + IntelMidPaddingSize;
+            var rankStart = intelTxtStart + intelTxtBytes.Length;
+            var evTypeStart = rankStart + rankBytes.Length;
+            var evItemStart = evTypeStart + evTypeBytes.Length;
+            var evPtrStart = evItemStart + evItemBytes.Length;
+
+            // 1. Crime/org pointer table: 13 crime type pointers + 26 org name pointers
+            // These point OUTSIDE postOrg, into CrimeTypeNames and OrganisationNames before this block.
+            var crimeNamesBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(CrimeTypeNames, CrimeTypeNameByteSizes);
+            var orgNamesBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(OrganisationNames, OrganisationNameByteSizes);
+            var orgStart = postOrgStart - orgNamesBytes.Length;
+            var unknown2Start = orgStart - Unknown2.Length;
+            var crimeStart = unknown2Start - crimeNamesBytes.Length;
+
+            var crimePtrs = DataSegmentHelper.ComputeStringPointers(CrimeTypeNames, crimeStart);
+            var orgPtrs = DataSegmentHelper.ComputeStringPointers(OrganisationNames, orgStart);
+            for (var i = 0; i < CrimePointerCount && i < crimePtrs.Length; i++)
+            {
+                fullDataSegment[postOrgStart + crimeOrgPtrStart + i * 2] = (byte)(crimePtrs[i] & 0xFF);
+                fullDataSegment[postOrgStart + crimeOrgPtrStart + i * 2 + 1] = (byte)((crimePtrs[i] >> 8) & 0xFF);
+            }
+            for (var i = 0; i < OrgPointerCount && i < orgPtrs.Length; i++)
+            {
+                var offset = (CrimePointerCount + i) * 2;
+                fullDataSegment[postOrgStart + crimeOrgPtrStart + offset] = (byte)(orgPtrs[i] & 0xFF);
+                fullDataSegment[postOrgStart + crimeOrgPtrStart + offset + 1] = (byte)((orgPtrs[i] >> 8) & 0xFF);
+            }
+
+            // 2. Scene filename pointers (4 uint16 at scenePtrStart + 1)
+            var sceneIndices = FindSceneFilenameIndices(MissionEndStrings);
+            var mePtrs = DataSegmentHelper.ComputeStringPointers(MissionEndStrings, postOrgStart + missionEndStart);
+            for (var i = 0; i < SceneFilenameCount; i++)
+            {
+                var idx = sceneIndices[i];
+                if (idx < 0) continue;
+                var ptr = mePtrs[idx];
+                fullDataSegment[postOrgStart + scenePtrStart + 1 + i * 2] = (byte)(ptr & 0xFF);
+                fullDataSegment[postOrgStart + scenePtrStart + 1 + i * 2 + 1] = (byte)((ptr >> 8) & 0xFF);
+            }
+
+            // 3. Clue phrase pointers (40 uint16 at cluePtrStart)
+            var cluePtrs = DataSegmentHelper.ComputeStringPointers(ClueRelationshipPhrases, postOrgStart + clueStart);
+            for (var i = 0; i < cluePtrs.Length; i++)
+            {
+                fullDataSegment[postOrgStart + cluePtrStart + i * 2] = (byte)(cluePtrs[i] & 0xFF);
+                fullDataSegment[postOrgStart + cluePtrStart + i * 2 + 1] = (byte)((cluePtrs[i] >> 8) & 0xFF);
+            }
+
+            // 4. Month pointers (12 uint16 at monthPtrStart)
+            var monthPtrs = DataSegmentHelper.ComputeStringPointers(MonthAbbreviations, postOrgStart + monthStart);
+            for (var i = 0; i < monthPtrs.Length; i++)
+            {
+                fullDataSegment[postOrgStart + monthPtrStart + i * 2] = (byte)(monthPtrs[i] & 0xFF);
+                fullDataSegment[postOrgStart + monthPtrStart + i * 2 + 1] = (byte)((monthPtrs[i] >> 8) & 0xFF);
+            }
+
+            // 5. Evidence/rank pointer table (pointers to ranks + types + items)
+            var allEvStrings = new string[RankNames.Length + EvidenceTypeAbbreviations.Length + EvidenceItemNames.Length];
+            Array.Copy(RankNames, 0, allEvStrings, 0, RankNames.Length);
+            Array.Copy(EvidenceTypeAbbreviations, 0, allEvStrings, RankNames.Length, EvidenceTypeAbbreviations.Length);
+            Array.Copy(EvidenceItemNames, 0, allEvStrings, RankNames.Length + EvidenceTypeAbbreviations.Length, EvidenceItemNames.Length);
+            var evPtrs = DataSegmentHelper.ComputeStringPointers(allEvStrings, postOrgStart + rankStart);
+            for (var i = 0; i < evPtrs.Length && i * 2 + 1 < EvidenceRankPointerTableSize; i++)
+            {
+                fullDataSegment[postOrgStart + evPtrStart + i * 2] = (byte)(evPtrs[i] & 0xFF);
+                fullDataSegment[postOrgStart + evPtrStart + i * 2 + 1] = (byte)((evPtrs[i] >> 8) & 0xFF);
+            }
+        }
+
+        /// <summary>Finds indices of the 4 scene filename strings ("lau","off","bch","cas") in MissionEndStrings.</summary>
+        private static int[] FindSceneFilenameIndices(string[] strings)
+        {
+            var targets = new[] { "lau", "off", "bch", "cas" };
+            var indices = new int[targets.Length];
+            for (var t = 0; t < targets.Length; t++)
+            {
+                indices[t] = -1;
+                for (var i = 0; i < strings.Length; i++)
+                {
+                    if (strings[i] == targets[t])
+                    {
+                        indices[t] = i;
+                        break;
+                    }
+                }
+            }
+            return indices;
         }
 
         #endregion
