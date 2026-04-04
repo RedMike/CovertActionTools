@@ -189,7 +189,38 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Equipment Nav Table"))
         {
-            DrawUShortArray(tac.EquipmentNavTable, "EquipNavTable", 8);
+            ImGui.Text("Cursor navigation grid: 12 equipment items x 4 directions");
+            if (ImGui.BeginTable("EquipNav", 5, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+            {
+                ImGui.TableSetupColumn("Item");
+                ImGui.TableSetupColumn("Up");
+                ImGui.TableSetupColumn("Down");
+                ImGui.TableSetupColumn("Left");
+                ImGui.TableSetupColumn("Right");
+                ImGui.TableHeadersRow();
+
+                var equipNames = tac.EquipmentNames;
+                for (var row = 0; row < 12 && row * 4 + 3 < tac.EquipmentNavTable.Length; row++)
+                {
+                    ImGui.TableNextRow();
+                    ImGui.TableNextColumn();
+                    var equipIdx = row + 1;
+                    ImGui.Text(equipIdx < equipNames.Length && !string.IsNullOrEmpty(equipNames[equipIdx])
+                        ? equipNames[equipIdx] : $"Item {equipIdx}");
+
+                    for (var col = 0; col < 4; col++)
+                    {
+                        var idx = row * 4 + col;
+                        ImGui.TableNextColumn();
+                        ImGui.PushID($"EquipNav_{idx}");
+                        var newVal = ImGuiExtensions.Input("##v", (int)tac.EquipmentNavTable[idx], width: 80);
+                        if (newVal != null) { tac.EquipmentNavTable[idx] = (ushort)newVal.Value; _pendingState.RecordChange(); }
+                        ImGui.PopID();
+                    }
+                }
+
+                ImGui.EndTable();
+            }
         }
 
         // Resolve equipment names from the pointer table for labelling ragdoll items
