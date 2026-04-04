@@ -368,13 +368,8 @@ namespace CovertActionTools.Core.Models.Executables
         /// </summary>
         public string[] TrainingScreenStrings { get; set; } = Array.Empty<string>();
 
-        /// <summary>
-        /// 10-byte column position header used by the training screen to lay out skill bar columns.
-        /// Contains x-coordinate values encoded as ASCII bytes interleaved with '$' separators.
-        /// In the original binary this is prepended to "Average" as one null-terminated string;
-        /// the game code accesses the "Average" portion by offsetting into the string.
-        /// </summary>
-        public byte[] TrainingScreenColumnPositions { get; set; } = Array.Empty<byte>();
+        /// <summary>5 x-coordinate values for laying out skill bar columns on the training screen.</summary>
+        public byte[] TrainingScreenColumnXCoords { get; set; } = Array.Empty<byte>();
 
         /// <summary>4 color/mode words used by the training screen for skill bar rendering (one per skill display slot).</summary>
         public ushort[] TrainingScreenColorWords { get; set; } = Array.Empty<ushort>();
@@ -753,7 +748,7 @@ namespace CovertActionTools.Core.Models.Executables
                 CharacterCreationStrings = CharacterCreationStrings.Select(s => s).ToArray(),
                 SkillNames = SkillNames.Select(s => s).ToArray(),
                 TrainingScreenStrings = TrainingScreenStrings.Select(s => s).ToArray(),
-                TrainingScreenColumnPositions = TrainingScreenColumnPositions.ToArray(),
+                TrainingScreenColumnXCoords = TrainingScreenColumnXCoords.ToArray(),
                 TrainingScreenColorWords = TrainingScreenColorWords.ToArray(),
                 TrainingScreenPaletteRemap = TrainingScreenPaletteRemap.ToArray(),
                 TrainingScreenRemapTerminator = TrainingScreenRemapTerminator,
@@ -817,9 +812,12 @@ namespace CovertActionTools.Core.Models.Executables
                 // starts with non-letter ASCII (position bytes) and ends with "Average"
                 if (raw.Length > 10 && Encoding.ASCII.GetString(raw, raw.Length - 7, 7) == "Average")
                 {
-                    // Split: first part is column position bytes, rest is "Average" label
+                    // Split: extract x-coordinates from even indices, rest is "Average" label
                     var colPosLen = raw.Length - 7; // "Average" is 7 chars
-                    segment.TrainingScreenColumnPositions = DataSegmentHelper.Slice(raw, 0, colPosLen);
+                    var xCoords = new byte[colPosLen / 2];
+                    for (var ci = 0; ci < xCoords.Length; ci++)
+                        xCoords[ci] = raw[ci * 2];
+                    segment.TrainingScreenColumnXCoords = xCoords;
                     trainingStrings.Add(Encoding.ASCII.GetString(raw, colPosLen, 7)); // "Average"
                     pos = strEnd + 1;
                     continue;
@@ -927,10 +925,14 @@ namespace CovertActionTools.Core.Models.Executables
             // TrainingScreenStrings — recombine column positions with "Average" into one null-terminated string
             for (var i = 0; i < TrainingScreenStrings.Length; i++)
             {
-                if (TrainingScreenStrings[i] == "Average" && TrainingScreenColumnPositions.Length > 0)
+                if (TrainingScreenStrings[i] == "Average" && TrainingScreenColumnXCoords.Length > 0)
                 {
-                    // Recombine: column position bytes + "Average" + null
-                    parts.AddRange(TrainingScreenColumnPositions);
+                    // Recombine: x-coords interleaved with '$' separators + "Average" + null
+                    foreach (var x in TrainingScreenColumnXCoords)
+                    {
+                        parts.Add(x);
+                        parts.Add(0x24); // '$'
+                    }
                     parts.AddRange(Encoding.ASCII.GetBytes("Average"));
                     parts.Add(0);
                 }

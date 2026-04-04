@@ -685,7 +685,7 @@ public class SelectedExecutableWindow : BaseWindow
             DrawStringArray(final.PlotFileStrings, "PlotStr");
         }
 
-        if (ImGui.CollapsingHeader("Character Creation Strings (tentative)"))
+        if (ImGui.CollapsingHeader("Character Creation Strings"))
         {
             ImGui.TextWrapped("TODO: difficulty menu options may need splitting into individual strings.");
             DrawStringArray(final.CharacterCreationStrings, "CharCreate");
@@ -717,7 +717,7 @@ public class SelectedExecutableWindow : BaseWindow
             }
         }
 
-        if (ImGui.CollapsingHeader("Training Screen Strings (tentative)"))
+        if (ImGui.CollapsingHeader("Training Screen Strings"))
         {
             DrawStringArray(final.TrainingScreenStrings, "TrainStr");
         }
@@ -732,11 +732,17 @@ public class SelectedExecutableWindow : BaseWindow
             }
 
             ImGui.Separator();
-            ImGui.Text("Column position header (10 bytes, x-coords with '$' separators):");
-            if (final.TrainingScreenColumnPositions.Length > 0)
+            ImGui.Text("Column X positions (one per skill bar column):");
+            for (var i = 0; i < final.TrainingScreenColumnXCoords.Length; i++)
             {
-                var posStr = Encoding.ASCII.GetString(final.TrainingScreenColumnPositions);
-                ImGui.TextDisabled(posStr);
+                if (i > 0) ImGui.SameLine();
+                ImGui.SetNextItemWidth(60.0f);
+                var val = (int)final.TrainingScreenColumnXCoords[i];
+                if (ImGui.InputInt($"##ColX{i}", ref val))
+                {
+                    final.TrainingScreenColumnXCoords[i] = (byte)Math.Clamp(val, 0, 255);
+                    _pendingState.RecordChange();
+                }
             }
 
             ImGui.Separator();
@@ -754,7 +760,7 @@ public class SelectedExecutableWindow : BaseWindow
             }
         }
 
-        if (ImGui.CollapsingHeader("Copyright Protection Strings (tentative)"))
+        if (ImGui.CollapsingHeader("Copyright Protection Strings"))
         {
             DrawStringArray(final.CopyrightProtectionStrings, "CopyProt");
         }
