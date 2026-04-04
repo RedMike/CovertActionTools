@@ -294,8 +294,8 @@ namespace CovertActionTools.Core.Models.Executables
         private const int MissionSetCount = 16;
         private const int CrimeTypesOffset = 0x2AFC;        // 0x01387C - 0x10D80
         private const int CrimeTypeCount = 13;
-        private const int OrgsOffset = 0x2B88;              // 0x013908 - 0x10D80
-        private const int OrgCount = 24;
+        private const int OrgsOffset = 0x2B80;              // 0x013900 - 0x10D80
+        private const int OrgCount = 26;
         private const int CharNamePointerCount = 192;
         #endregion
 
