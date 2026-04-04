@@ -842,6 +842,130 @@ public class SelectedExecutableWindow : BaseWindow
             DrawStringArray(final.CharacterNames, "CharName");
         }
 
+        if (ImGui.CollapsingHeader("Career/Hall of Fame Strings"))
+        {
+            DrawStringArray(final.CareerHofStrings, "CareerHof", final.CareerHofStringSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Mission End Scene Table"))
+        {
+            ImGui.TextWrapped("21 records (4 scenes x 5 score variations + 1 all-masterminds). Word[0]=scene index (0-3: lau/off/bch/cas), words[1-4]=sub-image numbers (-1=unused).");
+            if (ImGui.BeginTable("SceneRecords", 6, ImGuiTableFlags.Borders | ImGuiTableFlags.SizingFixedFit))
+            {
+                ImGui.TableSetupColumn("#");
+                ImGui.TableSetupColumn("Scene");
+                ImGui.TableSetupColumn("Img 1");
+                ImGui.TableSetupColumn("Img 2");
+                ImGui.TableSetupColumn("Img 3");
+                ImGui.TableSetupColumn("Img 4");
+                ImGui.TableHeadersRow();
+
+                for (var r = 0; r < 21; r++)
+                {
+                    ImGui.TableNextRow();
+                    ImGui.TableNextColumn();
+                    ImGui.Text($"{r}");
+                    for (var w = 0; w < 5; w++)
+                    {
+                        ImGui.TableNextColumn();
+                        var idx = r * 5 + w;
+                        if (idx < final.MissionEndSceneRecords.Length)
+                        {
+                            var val = (int)(short)final.MissionEndSceneRecords[idx];
+                            ImGui.SetNextItemWidth(60.0f);
+                            if (ImGui.InputInt($"##Scene_{r}_{w}", ref val))
+                            {
+                                final.MissionEndSceneRecords[idx] = (ushort)val;
+                                _pendingState.RecordChange();
+                            }
+                        }
+                    }
+                }
+                ImGui.EndTable();
+            }
+        }
+
+        if (ImGui.CollapsingHeader("Briefing Strings"))
+        {
+            ImGui.TextWrapped("Briefing intro, region descriptions, mission text, practice prompt, file refs. May contain 0x80+ control bytes.");
+            DrawStringArray(final.BriefingStrings, "BriefStr", final.BriefingStringSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Clue Relationship Phrases"))
+        {
+            ImGui.TextWrapped("40 clue relationship phrases (shared across TAC/GAME/BUG EXEs).");
+            DrawStringArray(final.ClueRelationshipPhrases, "CluePhrase", final.CluePhraseSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Month Abbreviations"))
+        {
+            DrawStringArray(final.MonthAbbreviations, "Month", final.MonthSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Intel Headers"))
+        {
+            DrawStringArray(final.IntelHeaders, "IntelHdr", final.IntelHeaderSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Clue Category Bytes"))
+        {
+            ImGui.TextWrapped("40 bytes: category index per clue slot (values 0-8).");
+            for (var i = 0; i < final.ClueCategoryBytes.Length; i++)
+            {
+                if (i > 0 && i % 10 != 0) ImGui.SameLine();
+                ImGui.SetNextItemWidth(40.0f);
+                var val = (int)final.ClueCategoryBytes[i];
+                if (ImGui.InputInt($"##ClueCat{i}", ref val))
+                {
+                    final.ClueCategoryBytes[i] = (byte)Math.Clamp(val, 0, 255);
+                    _pendingState.RecordChange();
+                }
+            }
+        }
+
+        if (ImGui.CollapsingHeader("Item Count Data"))
+        {
+            ImGui.TextWrapped("8-byte item count lookup table.");
+            for (var i = 0; i < final.ItemCountData.Length; i++)
+            {
+                if (i > 0) ImGui.SameLine();
+                ImGui.SetNextItemWidth(40.0f);
+                var val = (int)final.ItemCountData[i];
+                if (ImGui.InputInt($"##ICD{i}", ref val))
+                {
+                    final.ItemCountData[i] = (byte)Math.Clamp(val, 0, 255);
+                    _pendingState.RecordChange();
+                }
+            }
+        }
+
+        if (ImGui.CollapsingHeader("Intel Report Texts"))
+        {
+            ImGui.TextWrapped("Agent identification templates (shared with TAC).");
+            DrawStringArray(final.IntelReportTexts, "IntelTxt", final.IntelReportTextSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Rank Names"))
+        {
+            DrawStringArray(final.RankNames, "Rank", final.RankNameSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Evidence Type Abbreviations"))
+        {
+            DrawStringArray(final.EvidenceTypeAbbreviations, "EvType", final.EvidenceTypeSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Evidence Item Names"))
+        {
+            ImGui.TextWrapped("Vehicles(8), weapons(8), streets(8), airlines(8), telecom(8), money(16), passports(8).");
+            DrawStringArray(final.EvidenceItemNames, "EvItem", final.EvidenceItemSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Investigation Methods"))
+        {
+            DrawStringArray(final.InvestigationMethods, "InvMethod", final.InvestigationMethodSizes);
+        }
+
         DrawRawSectionSizes("Raw Sections", new[]
         {
             ("PreStringTableData", final.PreStringTableData.Length),
@@ -849,7 +973,7 @@ public class SelectedExecutableWindow : BaseWindow
             ("Unknown1", final.Unknown1.Length),
             ("PlotFileBuffer", final.PlotFileBuffer.Length),
             ("Unknown2", final.Unknown2.Length),
-            ("PostOrgPreCharNameData", final.PostOrgPreCharNameData.Length),
+            ("ClueSystemData", final.ClueSystemData.Length),
             ("PostCharNameData", final.PostCharNameData.Length),
             ("TrailingData", final.TrailingData.Length)
         });
