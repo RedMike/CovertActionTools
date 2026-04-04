@@ -187,7 +187,7 @@ public class SelectedExecutableWindow : BaseWindow
             DrawStringArray(tac.EquipmentNames, "EquipName");
         }
 
-        if (ImGui.CollapsingHeader("Unknown Equip Table"))
+        if (ImGui.CollapsingHeader("Equipment Nav Table"))
         {
             DrawUShortArray(tac.EquipmentNavTable, "EquipNavTable", 8);
         }
