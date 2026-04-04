@@ -349,14 +349,65 @@ public class SelectedExecutableWindow : BaseWindow
             DrawStringArray(tac.CharacterNames, "CharName");
         }
 
+        if (ImGui.CollapsingHeader("Direction Offsets"))
+        {
+            DrawShortArray(tac.DirectionOffsets, "DirOff", 8);
+        }
+
+        if (ImGui.CollapsingHeader("Clue Relationship Phrases"))
+        {
+            DrawStringArray(tac.ClueRelationshipPhrases, "CluePhrase", tac.CluePhraseSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Month Abbreviations"))
+        {
+            DrawStringArray(tac.MonthAbbreviations, "Month", tac.MonthSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Intel Headers"))
+        {
+            DrawStringArray(tac.IntelHeaders, "IntelHdr", tac.IntelHeaderSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Intel Report Texts"))
+        {
+            DrawStringArray(tac.IntelReportTexts, "IntelTxt", tac.IntelReportTextSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Rank Names"))
+        {
+            DrawStringArray(tac.RankNames, "Rank", tac.RankNameSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Evidence Type Abbreviations"))
+        {
+            DrawStringArray(tac.EvidenceTypeAbbreviations, "EvType", tac.EvidenceTypeSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Evidence Item Names"))
+        {
+            DrawStringArray(tac.EvidenceItemNames, "EvItem", tac.EvidenceItemSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Investigation Methods"))
+        {
+            DrawStringArray(tac.InvestigationMethods, "InvMethod", tac.InvestigationMethodSizes);
+        }
+
         DrawRawSectionSizes("Raw Sections", new[]
         {
             ("PreRoomData", tac.PreRoomData.Length),
             ("Unknown1", tac.Unknown1.Length),
-            ("MidSectionPreEquipNames", tac.MidSectionPreEquipNames.Length),
+            ("SpriteSheetConfigs", tac.SpriteSheetConfigs.Length),
+            ("BssBlock", tac.BssBlock.Length),
+            ("GameplayData", tac.GameplayData.Length),
             ("MidSectionPostEquipNames", tac.MidSectionPostEquipNames.Length),
             ("Unknown3", tac.Unknown3.Length),
-            ("PreCharNameData", tac.PreCharNameData.Length),
+            ("CluePhrasePointerTable", tac.CluePhrasePointerTable.Length),
+            ("ItemCountData", tac.ItemCountData.Length),
+            ("MonthPointerTable", tac.MonthPointerTable.Length),
+            ("EvidenceRankPointerTable", tac.EvidenceRankPointerTable.Length),
+            ("ClueSystemData", tac.ClueSystemData.Length),
             ("PostCharNameData", tac.PostCharNameData.Length),
             ("TrailingData", tac.TrailingData.Length)
         });
@@ -856,6 +907,38 @@ public class SelectedExecutableWindow : BaseWindow
                     ImGui.PushID($"{idPrefix}_{idx}");
                     var newVal = ImGuiExtensions.Input("##v", (int)values[idx], width: 100);
                     if (newVal != null) { values[idx] = (ushort)newVal.Value; _pendingState.RecordChange(); }
+                    ImGui.PopID();
+                }
+            }
+
+            ImGui.EndTable();
+        }
+    }
+
+    private void DrawShortArray(short[] values, string idPrefix, int columns)
+    {
+        if (ImGui.BeginTable($"{idPrefix}_table", columns + 1, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+        {
+            ImGui.TableSetupColumn("#");
+            for (var c = 0; c < columns; c++)
+            {
+                ImGui.TableSetupColumn($"+{c}");
+            }
+            ImGui.TableHeadersRow();
+
+            for (var row = 0; row < values.Length; row += columns)
+            {
+                ImGui.TableNextRow();
+                ImGui.TableNextColumn();
+                ImGui.Text($"{row}");
+
+                for (var c = 0; c < columns && row + c < values.Length; c++)
+                {
+                    var idx = row + c;
+                    ImGui.TableNextColumn();
+                    ImGui.PushID($"{idPrefix}_{idx}");
+                    var newVal = ImGuiExtensions.Input("##v", (int)values[idx], width: 100);
+                    if (newVal != null) { values[idx] = (short)newVal.Value; _pendingState.RecordChange(); }
                     ImGui.PopID();
                 }
             }
