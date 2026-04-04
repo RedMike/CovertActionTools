@@ -16,13 +16,13 @@ namespace CovertActionTools.Core.Models.Executables
         #region Layout Constants (DS-relative offsets)
         private const int CharNamePointerCount = 192;
         private const int ClueRelPtrCount = 40;
-        private const int UnknownLookupSize = 48;
+        private const int ClueCategoryDataSize = 48;
         private const int MonthNamePtrCount = 12;
 
         // Original binary offsets (used for initial parse)
         private const int CharNamePointersOffset = 0x1C2A; // 0x013C8A - 0x12060
         private const int ClueRelPtrsOffset = 0x2B3E;      // 0x014B9E - 0x12060
-        private const int UnknownLookupOffset = 0x2B8E;     // 0x014BEE - 0x12060
+        private const int ClueCategoryDataOffset = 0x2B8E;     // 0x014BEE - 0x12060
         private const int MonthNamePtrsOffset = 0x2BBE;     // 0x014C1E - 0x12060
         #endregion
 
@@ -53,8 +53,13 @@ namespace CovertActionTools.Core.Models.Executables
 
         // ClueRelationshipPointers (40) and MonthNamePointers (12) are computed at serialization time.
 
-        /// <summary>48-byte lookup table (values include 0,1,2,4,8 + popcount pattern), undecoded.</summary>
-        public byte[] UnknownLookupTable { get; set; } = Array.Empty<byte>();
+        /// <summary>
+        /// 48-byte clue category and popcount lookup table. Identical across FINAL/TAC/GAME.
+        /// Bytes 0-15: category bit flags per clue pair (values 1/2/4/8 = single-bit masks).
+        /// Bytes 16-47: four 8-entry popcount lookup sub-tables with offsets +0, +1, +1, +2.
+        /// TODO: investigate how the clue system uses this table — trace from clue processing code.
+        /// </summary>
+        public byte[] ClueCategoryData { get; set; } = Array.Empty<byte>();
 
         /// <summary>Everything after month name pointers: item/clue strings, CIA strings, file management, overlay, C runtime, BSS.</summary>
         public byte[] TrailingData { get; set; } = Array.Empty<byte>();
@@ -92,7 +97,7 @@ namespace CovertActionTools.Core.Models.Executables
             segment.MidSectionPreClue = DataSegmentHelper.Slice(dataSegment, charPtrsEnd, clueBlockStart - charPtrsEnd);
             segment.MidSectionPostMonth = DataSegmentHelper.Slice(dataSegment, monthBlockEnd, ClueRelPtrsOffset - monthBlockEnd);
 
-            segment.UnknownLookupTable = DataSegmentHelper.Slice(dataSegment, UnknownLookupOffset, UnknownLookupSize);
+            segment.ClueCategoryData = DataSegmentHelper.Slice(dataSegment, ClueCategoryDataOffset, ClueCategoryDataSize);
 
             var monthPtrsEnd = MonthNamePtrsOffset + MonthNamePtrCount * 2;
             segment.TrailingData = DataSegmentHelper.Slice(dataSegment, monthPtrsEnd, dataSegment.Length - monthPtrsEnd);
@@ -130,7 +135,7 @@ namespace CovertActionTools.Core.Models.Executables
                 monthNameBytes,
                 MidSectionPostMonth,
                 DataSegmentHelper.UInt16ArrayToBytes(cluePointers),
-                UnknownLookupTable,
+                ClueCategoryData,
                 DataSegmentHelper.UInt16ArrayToBytes(monthPointers),
                 TrailingData
             );
@@ -147,7 +152,7 @@ namespace CovertActionTools.Core.Models.Executables
                 ClueRelationshipPhrases = ClueRelationshipPhrases.Select(s => s).ToArray(),
                 MonthNames = MonthNames.Select(s => s).ToArray(),
                 MidSectionPostMonth = MidSectionPostMonth.ToArray(),
-                UnknownLookupTable = UnknownLookupTable.ToArray(),
+                ClueCategoryData = ClueCategoryData.ToArray(),
                 TrailingData = TrailingData.ToArray()
             };
         }

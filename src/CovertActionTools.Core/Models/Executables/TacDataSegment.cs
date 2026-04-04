@@ -286,8 +286,8 @@ namespace CovertActionTools.Core.Models.Executables
         private const int IntelHeadersStart = 0x24BC;
         private const int CluePhraseTableOffset = 0x2542;
         private const int CluePhraseTableSize = 80;
-        private const int ItemCountDataOffset = 0x2592;
-        private const int ItemCountDataSize = 48;
+        private const int ClueCategoryDataOffset = 0x2592;
+        private const int ClueCategoryDataSize = 48;
         private const int MonthTableOffset = 0x25C2;
         private const int MonthTableSize = 24;
         private const int IntelPaddingOffset = 0x25DA;
@@ -416,8 +416,18 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>Pointer table for the 40 clue relationship phrases (DS-relative offsets, preserved as raw bytes).</summary>
         public byte[] CluePhrasePointerTable { get; set; } = Array.Empty<byte>();
 
-        /// <summary>48-byte item count/type lookup table used by the clue system.</summary>
-        public byte[] ItemCountData { get; set; } = Array.Empty<byte>();
+        /// <summary>
+        /// 48-byte clue category and popcount lookup table. Identical across FINAL/TAC/GAME.
+        /// Bytes 0-15: category bit flags per clue pair (values 1/2/4/8 = single-bit masks).
+        /// Bytes 16-23: popcount(0-7) + 0 lookup.
+        /// Bytes 24-31: popcount(0-7) + 1 lookup.
+        /// Bytes 32-39: popcount(0-7) + 1 lookup (duplicate of 24-31).
+        /// Bytes 40-47: popcount(0-7) + 2 lookup.
+        /// TODO: investigate how the clue system uses this table — the bit flags likely map
+        /// clue slots to evidence categories, and the popcount sub-tables count active categories
+        /// for a given bitmask. Trace from GAME.EXE clue processing code to confirm.
+        /// </summary>
+        public byte[] ClueCategoryData { get; set; } = Array.Empty<byte>();
 
         /// <summary>Pointer table for the 12 month abbreviations (DS-relative offsets, preserved as raw bytes).</summary>
         public byte[] MonthPointerTable { get; set; } = Array.Empty<byte>();
@@ -590,7 +600,7 @@ namespace CovertActionTools.Core.Models.Executables
             segment.IntelHeaderSizes = intelHdrSzs;
 
             segment.CluePhrasePointerTable = DataSegmentHelper.Slice(dataSegment, CluePhraseTableOffset, CluePhraseTableSize);
-            segment.ItemCountData = DataSegmentHelper.Slice(dataSegment, ItemCountDataOffset, ItemCountDataSize);
+            segment.ClueCategoryData = DataSegmentHelper.Slice(dataSegment, ClueCategoryDataOffset, ClueCategoryDataSize);
             segment.MonthPointerTable = DataSegmentHelper.Slice(dataSegment, MonthTableOffset, MonthTableSize);
             segment.IntelMidPadding = DataSegmentHelper.Slice(dataSegment, IntelPaddingOffset, IntelPaddingSize);
 
@@ -694,7 +704,7 @@ namespace CovertActionTools.Core.Models.Executables
                 DataSegmentHelper.NullTerminatedStringsToFixedBytes(MonthAbbreviations, MonthSizes),
                 DataSegmentHelper.NullTerminatedStringsToFixedBytes(IntelHeaders, IntelHeaderSizes),
                 CluePhrasePointerTable,
-                ItemCountData,
+                ClueCategoryData,
                 MonthPointerTable,
                 IntelMidPadding,
                 DataSegmentHelper.NullTerminatedStringsToFixedBytes(IntelReportTexts, IntelReportTextSizes),
@@ -778,7 +788,7 @@ namespace CovertActionTools.Core.Models.Executables
                 IntelHeaders = IntelHeaders.ToArray(),
                 IntelHeaderSizes = IntelHeaderSizes.ToArray(),
                 CluePhrasePointerTable = CluePhrasePointerTable.ToArray(),
-                ItemCountData = ItemCountData.ToArray(),
+                ClueCategoryData = ClueCategoryData.ToArray(),
                 MonthPointerTable = MonthPointerTable.ToArray(),
                 IntelMidPadding = IntelMidPadding.ToArray(),
                 IntelReportTexts = IntelReportTexts.ToArray(),

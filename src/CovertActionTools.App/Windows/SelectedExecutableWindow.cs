@@ -451,7 +451,7 @@ public class SelectedExecutableWindow : BaseWindow
             ("MidSectionPostEquipNames", tac.MidSectionPostEquipNames.Length),
             ("RagdollRectPadding", tac.RagdollRectPadding.Length),
             ("CluePhrasePointerTable", tac.CluePhrasePointerTable.Length),
-            ("ItemCountData", tac.ItemCountData.Length),
+            ("ClueCategoryData", tac.ClueCategoryData.Length),
             ("MonthPointerTable", tac.MonthPointerTable.Length),
             ("EvidenceRankPointerTable", tac.EvidenceRankPointerTable.Length),
             ("ClueSystemData", tac.ClueSystemData.Length),
@@ -919,33 +919,22 @@ public class SelectedExecutableWindow : BaseWindow
             DrawStringArray(final.IntelHeaders, "IntelHdr", final.IntelHeaderSizes);
         }
 
-        if (ImGui.CollapsingHeader("Clue Category Bytes"))
+        if (ImGui.CollapsingHeader("Clue Category Data"))
         {
-            ImGui.TextWrapped("40 bytes: category index per clue slot (values 0-8).");
-            for (var i = 0; i < final.ClueCategoryBytes.Length; i++)
+            ImGui.TextWrapped("48-byte clue category and popcount lookup table (identical across FINAL/TAC/GAME). Bytes 0-15: category bit flags. Bytes 16-47: four 8-entry popcount lookup sub-tables with offsets +0, +1, +1, +2.");
+            for (var i = 0; i < final.ClueCategoryData.Length; i++)
             {
-                if (i > 0 && i % 10 != 0) ImGui.SameLine();
+                if (i > 0 && i % 8 != 0) ImGui.SameLine();
+                if (i == 0) ImGui.Text("Bit flags:");
+                if (i == 16) ImGui.Text("Popcount +0:");
+                if (i == 24) ImGui.Text("Popcount +1:");
+                if (i == 32) ImGui.Text("Popcount +1:");
+                if (i == 40) ImGui.Text("Popcount +2:");
                 ImGui.SetNextItemWidth(60.0f);
-                var val = (int)final.ClueCategoryBytes[i];
+                var val = (int)final.ClueCategoryData[i];
                 if (ImGui.InputInt($"[{i}]##ClueCat{i}", ref val))
                 {
-                    final.ClueCategoryBytes[i] = (byte)Math.Clamp(val, 0, 255);
-                    _pendingState.RecordChange();
-                }
-            }
-        }
-
-        if (ImGui.CollapsingHeader("Item Count Data"))
-        {
-            ImGui.TextWrapped("8-byte item count lookup table.");
-            for (var i = 0; i < final.ItemCountData.Length; i++)
-            {
-                if (i > 0) ImGui.SameLine();
-                ImGui.SetNextItemWidth(60.0f);
-                var val = (int)final.ItemCountData[i];
-                if (ImGui.InputInt($"[{i}]##ICD{i}", ref val))
-                {
-                    final.ItemCountData[i] = (byte)Math.Clamp(val, 0, 255);
+                    final.ClueCategoryData[i] = (byte)Math.Clamp(val, 0, 255);
                     _pendingState.RecordChange();
                 }
             }
@@ -1063,7 +1052,7 @@ public class SelectedExecutableWindow : BaseWindow
             DrawStringArray(game.ClueRelationshipPhrases, "CluePhr");
         }
 
-        DrawReadOnlyInfo("Unknown Lookup Table", $"{game.UnknownLookupTable.Length} bytes (read-only)");
+        DrawReadOnlyInfo("Clue Category Data", $"{game.ClueCategoryData.Length} bytes (48-byte category flags + popcount lookup)");
 
         if (ImGui.CollapsingHeader("Month Names"))
         {

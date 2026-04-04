@@ -328,8 +328,7 @@ namespace CovertActionTools.Core.Models.Executables
         private const int MonthsSize = 48;                     // 12 months, identical to TAC
         private const int IntelHeadersSize = 134;              // ~13 strings
         private const int CluePhrasePointerTableSize = 80;     // 40 x uint16 (skipped, recomputed)
-        private const int ClueCategoryBytesSize = 40;
-        private const int ItemCountDataSize = 8;
+        private const int ClueCategoryDataSize = 48;          // 16 bit flags + 4x8 popcount lookups
         private const int MonthPointerTableSize = 24;          // 12 x uint16 (skipped, recomputed)
         private const int IntelMidPaddingSize = 3;
         private const int EvidenceRankPointerTableSize = 160;  // (skipped, recomputed)
@@ -540,11 +539,18 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>Original byte sizes for intel header slots.</summary>
         public int[] IntelHeaderSizes { get; set; } = Array.Empty<int>();
 
-        /// <summary>40 bytes: category index per clue slot (values 0-8). Identical to TAC.</summary>
-        public byte[] ClueCategoryBytes { get; set; } = Array.Empty<byte>();
-
-        /// <summary>8-byte item count lookup table [2,3,3,4,3,4,4,5] (popcount+2 pattern).</summary>
-        public byte[] ItemCountData { get; set; } = Array.Empty<byte>();
+        /// <summary>
+        /// 48-byte clue category and popcount lookup table. Identical across FINAL/TAC/GAME.
+        /// Bytes 0-15: category bit flags per clue pair (values 1/2/4/8 = single-bit masks).
+        /// Bytes 16-23: popcount(0-7) + 0 lookup.
+        /// Bytes 24-31: popcount(0-7) + 1 lookup.
+        /// Bytes 32-39: popcount(0-7) + 1 lookup (duplicate of 24-31).
+        /// Bytes 40-47: popcount(0-7) + 2 lookup.
+        /// TODO: investigate how the clue system uses this table — the bit flags likely map
+        /// clue slots to evidence categories, and the popcount sub-tables count active categories
+        /// for a given bitmask. Trace from GAME.EXE clue processing code to confirm.
+        /// </summary>
+        public byte[] ClueCategoryData { get; set; } = Array.Empty<byte>();
 
         /// <summary>3 bytes: zero padding between month pointer table and intel report texts.</summary>
         public byte[] IntelMidPadding { get; set; } = Array.Empty<byte>();
@@ -937,8 +943,7 @@ namespace CovertActionTools.Core.Models.Executables
                 MonthSizes = MonthSizes.ToArray(),
                 IntelHeaders = IntelHeaders.ToArray(),
                 IntelHeaderSizes = IntelHeaderSizes.ToArray(),
-                ClueCategoryBytes = ClueCategoryBytes.ToArray(),
-                ItemCountData = ItemCountData.ToArray(),
+                ClueCategoryData = ClueCategoryData.ToArray(),
                 IntelMidPadding = IntelMidPadding.ToArray(),
                 IntelReportTexts = IntelReportTexts.ToArray(),
                 IntelReportTextSizes = IntelReportTextSizes.ToArray(),
@@ -1369,12 +1374,8 @@ namespace CovertActionTools.Core.Models.Executables
             pos += CluePhrasePointerTableSize;
 
             // TN: Clue category bytes (40 bytes)
-            segment.ClueCategoryBytes = DataSegmentHelper.Slice(data, pos, ClueCategoryBytesSize);
-            pos += ClueCategoryBytesSize;
-
-            // TO: Item count data (8 bytes)
-            segment.ItemCountData = DataSegmentHelper.Slice(data, pos, ItemCountDataSize);
-            pos += ItemCountDataSize;
+            segment.ClueCategoryData = DataSegmentHelper.Slice(data, pos, ClueCategoryDataSize);
+            pos += ClueCategoryDataSize;
 
             // TO: Month pointer table (24 bytes) — skip, recomputed
             pos += MonthPointerTableSize;
@@ -1523,8 +1524,7 @@ namespace CovertActionTools.Core.Models.Executables
                 monthBytes,
                 intelHdrBytes,
                 cluePtrPlaceholder,
-                ClueCategoryBytes,
-                ItemCountData,
+                ClueCategoryData,
                 monthPtrPlaceholder,
                 IntelMidPadding,
                 intelTxtBytes,
@@ -1570,8 +1570,7 @@ namespace CovertActionTools.Core.Models.Executables
             var intelHdrStart = monthStart + monthBytes.Length;
             var cluePtrStart = intelHdrStart + intelHdrBytes.Length;
             var catStart = cluePtrStart + CluePhrasePointerTableSize;
-            var itemCountStart = catStart + ClueCategoryBytesSize;
-            var monthPtrStart = itemCountStart + ItemCountDataSize;
+            var monthPtrStart = catStart + ClueCategoryDataSize;
             var paddingStart = monthPtrStart + MonthPointerTableSize;
             var intelTxtStart = paddingStart + IntelMidPaddingSize;
             var rankStart = intelTxtStart + intelTxtBytes.Length;
