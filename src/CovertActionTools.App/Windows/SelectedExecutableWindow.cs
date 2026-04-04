@@ -121,17 +121,25 @@ public class SelectedExecutableWindow : BaseWindow
                     if (newSurvQuality != null) { room.SurveillanceQuality = (ushort)newSurvQuality.Value; _pendingState.RecordChange(); }
 
                     ImGui.TableNextColumn();
-                    // Bitfield matched against building room grid area: bit 0 (1) = small
-                    // (area <= 40), bit 1 (2) = medium (41-72), bit 2 (4) = large (> 72).
-                    // Only large rooms (bit 2) are valid as the local agent spawn room.
-                    var newSize = ImGuiExtensions.Input("##Size", (int)room.SizeConstraint, width: 80);
-                    if (newSize != null) { room.SizeConstraint = (ushort)newSize.Value; _pendingState.RecordChange(); }
+                    var sizeIdx = room.SizeConstraint == 1 ? 0 : room.SizeConstraint == 2 ? 1 :
+                        room.SizeConstraint == 4 ? 2 : room.SizeConstraint == 3 ? 3 :
+                        room.SizeConstraint == 5 ? 4 : room.SizeConstraint == 6 ? 5 :
+                        room.SizeConstraint == 7 ? 6 : 0;
+                    ImGui.SetNextItemWidth(120);
+                    if (ImGui.Combo("##Size", ref sizeIdx, "Small\0Medium\0Large\0Small+Medium\0Small+Large\0Medium+Large\0All\0"))
+                    {
+                        var sizeValues = new ushort[] { 1, 2, 4, 3, 5, 6, 7 };
+                        room.SizeConstraint = sizeValues[sizeIdx];
+                        _pendingState.RecordChange();
+                    }
 
                     ImGui.TableNextColumn();
-                    // Only bit 0 is checked at runtime (mask hardcoded to 1), so effectively boolean.
-                    // Vanilla uses 7 for enabled, 0 for disabled.
-                    var newEnabled = ImGuiExtensions.Input("##Enabled", (int)room.Enabled, width: 80);
-                    if (newEnabled != null) { room.Enabled = (ushort)newEnabled.Value; _pendingState.RecordChange(); }
+                    var enabled = room.Enabled != 0;
+                    if (ImGui.Checkbox("##Enabled", ref enabled))
+                    {
+                        room.Enabled = (ushort)(enabled ? 7 : 0);
+                        _pendingState.RecordChange();
+                    }
 
                     ImGui.PopID();
                 }
@@ -187,9 +195,39 @@ public class SelectedExecutableWindow : BaseWindow
             DrawStringArray(tac.EquipmentNames, "EquipName");
         }
 
-        if (ImGui.CollapsingHeader("Unknown Equip Table"))
+        if (ImGui.CollapsingHeader("Equipment Nav Table"))
         {
-            DrawUShortArray(tac.EquipmentNavTable, "EquipNavTable", 8);
+            ImGui.Text("Cursor navigation grid: 12 equipment items x 4 directions");
+            if (ImGui.BeginTable("EquipNav", 5, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+            {
+                ImGui.TableSetupColumn("Item");
+                ImGui.TableSetupColumn("Up");
+                ImGui.TableSetupColumn("Down");
+                ImGui.TableSetupColumn("Left");
+                ImGui.TableSetupColumn("Right");
+                ImGui.TableHeadersRow();
+
+                for (var row = 0; row < 12 && row * 4 + 3 < tac.EquipmentNavTable.Length; row++)
+                {
+                    ImGui.TableNextRow();
+                    ImGui.TableNextColumn();
+                    var equipIdx = row + 1;
+                    ImGui.Text(equipIdx < tac.EquipmentNames.Length && !string.IsNullOrEmpty(tac.EquipmentNames[equipIdx])
+                        ? tac.EquipmentNames[equipIdx] : $"Item {equipIdx}");
+
+                    for (var col = 0; col < 4; col++)
+                    {
+                        var idx = row * 4 + col;
+                        ImGui.TableNextColumn();
+                        ImGui.PushID($"EquipNav_{idx}");
+                        var newVal = ImGuiExtensions.Input("##v", (int)tac.EquipmentNavTable[idx], width: 80);
+                        if (newVal != null) { tac.EquipmentNavTable[idx] = (ushort)newVal.Value; _pendingState.RecordChange(); }
+                        ImGui.PopID();
+                    }
+                }
+
+                ImGui.EndTable();
+            }
         }
 
         // Resolve equipment names from the pointer table for labelling ragdoll items
@@ -349,14 +387,74 @@ public class SelectedExecutableWindow : BaseWindow
             DrawStringArray(tac.CharacterNames, "CharName");
         }
 
+        if (ImGui.CollapsingHeader("Movement Pixel DX/DY"))
+        {
+            DrawDirectionTable("MvPx", CompassLabels9, tac.MovementPixelDX, tac.MovementPixelDY, "Walking pixel offsets per direction");
+        }
+
+        if (ImGui.CollapsingHeader("Jumping Tile DX/DY"))
+        {
+            DrawDirectionTable("JpTl", CompassLabels9, tac.JumpingTileDX, tac.JumpingTileDY, "Jumping tile offsets per direction");
+        }
+
+        if (ImGui.CollapsingHeader("Tile Adjacency DX/DY"))
+        {
+            DrawDirectionTable("TlAd", CardinalLabels4, tac.TileAdjacencyDX, tac.TileAdjacencyDY, "Cardinal tile adjacency for map generation and doors");
+        }
+
+        if (ImGui.CollapsingHeader("Clue Relationship Phrases"))
+        {
+            DrawStringArray(tac.ClueRelationshipPhrases, "CluePhrase", tac.CluePhraseSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Month Abbreviations"))
+        {
+            DrawStringArray(tac.MonthAbbreviations, "Month", tac.MonthSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Intel Headers"))
+        {
+            DrawStringArray(tac.IntelHeaders, "IntelHdr", tac.IntelHeaderSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Intel Report Texts"))
+        {
+            DrawStringArray(tac.IntelReportTexts, "IntelTxt", tac.IntelReportTextSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Rank Names"))
+        {
+            DrawStringArray(tac.RankNames, "Rank", tac.RankNameSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Evidence Type Abbreviations"))
+        {
+            DrawStringArray(tac.EvidenceTypeAbbreviations, "EvType", tac.EvidenceTypeSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Evidence Item Names"))
+        {
+            DrawStringArray(tac.EvidenceItemNames, "EvItem", tac.EvidenceItemSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Investigation Methods"))
+        {
+            DrawStringArray(tac.InvestigationMethods, "InvMethod", tac.InvestigationMethodSizes);
+        }
+
         DrawRawSectionSizes("Raw Sections", new[]
         {
             ("PreRoomData", tac.PreRoomData.Length),
-            ("Unknown1", tac.Unknown1.Length),
-            ("MidSectionPreEquipNames", tac.MidSectionPreEquipNames.Length),
+            ("SpriteSheetConfigs", tac.SpriteSheetConfigs.Length),
+            ("BssBlock", tac.BssBlock.Length),
+            ("GameplayData", tac.GameplayData.Length),
             ("MidSectionPostEquipNames", tac.MidSectionPostEquipNames.Length),
-            ("Unknown3", tac.Unknown3.Length),
-            ("PreCharNameData", tac.PreCharNameData.Length),
+            ("RagdollRectPadding", tac.RagdollRectPadding.Length),
+            ("CluePhrasePointerTable", tac.CluePhrasePointerTable.Length),
+            ("ItemCountData", tac.ItemCountData.Length),
+            ("MonthPointerTable", tac.MonthPointerTable.Length),
+            ("EvidenceRankPointerTable", tac.EvidenceRankPointerTable.Length),
+            ("ClueSystemData", tac.ClueSystemData.Length),
             ("PostCharNameData", tac.PostCharNameData.Length),
             ("TrailingData", tac.TrailingData.Length)
         });
@@ -792,6 +890,9 @@ public class SelectedExecutableWindow : BaseWindow
 
     #endregion
 
+    private static readonly string[] CompassLabels9 = { "None", "N", "NE", "E", "SE", "S", "SW", "W", "NW" };
+    private static readonly string[] CardinalLabels4 = { "N", "E", "S", "W" };
+
     #region Shared Drawing Helpers
 
     // TODO: Allow different string lengths after pointer recalculation is implemented.
@@ -856,6 +957,72 @@ public class SelectedExecutableWindow : BaseWindow
                     ImGui.PushID($"{idPrefix}_{idx}");
                     var newVal = ImGuiExtensions.Input("##v", (int)values[idx], width: 100);
                     if (newVal != null) { values[idx] = (ushort)newVal.Value; _pendingState.RecordChange(); }
+                    ImGui.PopID();
+                }
+            }
+
+            ImGui.EndTable();
+        }
+    }
+
+    private void DrawDirectionTable(string idPrefix, string[] labels, short[] dx, short[] dy, string description)
+    {
+        ImGui.Text(description);
+        if (ImGui.BeginTable($"{idPrefix}_table", 3, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+        {
+            ImGui.TableSetupColumn("Direction");
+            ImGui.TableSetupColumn("DX");
+            ImGui.TableSetupColumn("DY");
+            ImGui.TableHeadersRow();
+
+            var count = Math.Min(labels.Length, Math.Min(dx.Length, dy.Length));
+            for (var i = 0; i < count; i++)
+            {
+                ImGui.TableNextRow();
+                ImGui.TableNextColumn();
+                ImGui.Text(labels[i]);
+
+                ImGui.TableNextColumn();
+                ImGui.PushID($"{idPrefix}_dx_{i}");
+                var newDx = ImGuiExtensions.Input("##v", (int)dx[i], width: 80);
+                if (newDx != null) { dx[i] = (short)newDx.Value; _pendingState.RecordChange(); }
+                ImGui.PopID();
+
+                ImGui.TableNextColumn();
+                ImGui.PushID($"{idPrefix}_dy_{i}");
+                var newDy = ImGuiExtensions.Input("##v", (int)dy[i], width: 80);
+                if (newDy != null) { dy[i] = (short)newDy.Value; _pendingState.RecordChange(); }
+                ImGui.PopID();
+            }
+
+            ImGui.EndTable();
+        }
+    }
+
+    private void DrawShortArray(short[] values, string idPrefix, int columns)
+    {
+        if (ImGui.BeginTable($"{idPrefix}_table", columns + 1, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+        {
+            ImGui.TableSetupColumn("#");
+            for (var c = 0; c < columns; c++)
+            {
+                ImGui.TableSetupColumn($"+{c}");
+            }
+            ImGui.TableHeadersRow();
+
+            for (var row = 0; row < values.Length; row += columns)
+            {
+                ImGui.TableNextRow();
+                ImGui.TableNextColumn();
+                ImGui.Text($"{row}");
+
+                for (var c = 0; c < columns && row + c < values.Length; c++)
+                {
+                    var idx = row + c;
+                    ImGui.TableNextColumn();
+                    ImGui.PushID($"{idPrefix}_{idx}");
+                    var newVal = ImGuiExtensions.Input("##v", (int)values[idx], width: 100);
+                    if (newVal != null) { values[idx] = (short)newVal.Value; _pendingState.RecordChange(); }
                     ImGui.PopID();
                 }
             }
