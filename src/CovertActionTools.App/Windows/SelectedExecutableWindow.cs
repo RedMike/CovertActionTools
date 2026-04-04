@@ -581,8 +581,20 @@ public class SelectedExecutableWindow : BaseWindow
                     var newName = ImGuiExtensions.Input("Name", ms.Name, FinalMissionSetRecord.NameLength, width: 200);
                     if (newName != null) { ms.Name = newName; _pendingState.RecordChange(); }
 
-                    var newOrgMask = ImGuiExtensions.Input("Org Type Mask", (int)ms.OrgTypeMask, width: 80);
-                    if (newOrgMask != null) { ms.OrgTypeMask = (byte)newOrgMask.Value; _pendingState.RecordChange(); }
+                    ImGui.Text("Org Alliances:");
+                    ImGui.SameLine();
+                    var orgMask = (int)ms.OrgTypeMask;
+                    var a1 = (orgMask & 0x01) != 0;
+                    var a2 = (orgMask & 0x02) != 0;
+                    var a3 = (orgMask & 0x04) != 0;
+                    var a4 = (orgMask & 0x08) != 0;
+                    if (ImGui.Checkbox("1##org", ref a1)) { ms.OrgTypeMask = (byte)((orgMask & ~0x01) | (a1 ? 0x01 : 0)); _pendingState.RecordChange(); }
+                    ImGui.SameLine();
+                    if (ImGui.Checkbox("2##org", ref a2)) { ms.OrgTypeMask = (byte)((orgMask & ~0x02) | (a2 ? 0x02 : 0)); _pendingState.RecordChange(); }
+                    ImGui.SameLine();
+                    if (ImGui.Checkbox("3##org", ref a3)) { ms.OrgTypeMask = (byte)((orgMask & ~0x04) | (a3 ? 0x04 : 0)); _pendingState.RecordChange(); }
+                    ImGui.SameLine();
+                    if (ImGui.Checkbox("4##org", ref a4)) { ms.OrgTypeMask = (byte)((orgMask & ~0x08) | (a4 ? 0x08 : 0)); _pendingState.RecordChange(); }
 
                     // TODO: The Crime editor window needs to be able to load these crime type
                     // names from here instead of using hardcoded names.
