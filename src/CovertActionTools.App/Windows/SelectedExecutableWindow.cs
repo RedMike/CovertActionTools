@@ -199,14 +199,13 @@ public class SelectedExecutableWindow : BaseWindow
                 ImGui.TableSetupColumn("Right");
                 ImGui.TableHeadersRow();
 
-                var equipNames = tac.EquipmentNames;
                 for (var row = 0; row < 12 && row * 4 + 3 < tac.EquipmentNavTable.Length; row++)
                 {
                     ImGui.TableNextRow();
                     ImGui.TableNextColumn();
                     var equipIdx = row + 1;
-                    ImGui.Text(equipIdx < equipNames.Length && !string.IsNullOrEmpty(equipNames[equipIdx])
-                        ? equipNames[equipIdx] : $"Item {equipIdx}");
+                    ImGui.Text(equipIdx < tac.EquipmentNames.Length && !string.IsNullOrEmpty(tac.EquipmentNames[equipIdx])
+                        ? tac.EquipmentNames[equipIdx] : $"Item {equipIdx}");
 
                     for (var col = 0; col < 4; col++)
                     {
