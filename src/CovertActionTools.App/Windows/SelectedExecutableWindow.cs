@@ -971,11 +971,7 @@ public class SelectedExecutableWindow : BaseWindow
         {
             ("PreStringTableData", final.PreStringTableData.Length),
             ("PostStringTableData", final.PostStringTableData.Length),
-            ("Unknown1", final.Unknown1.Length),
-            ("PlotFileBuffer", final.PlotFileBuffer.Length),
-            ("Unknown2", final.Unknown2.Length),
             ("ClueSystemData", final.ClueSystemData.Length),
-            ("PostCharNameData", final.PostCharNameData.Length),
             ("TrailingData", final.TrailingData.Length)
         });
     }
