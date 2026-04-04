@@ -301,6 +301,18 @@ namespace CovertActionTools.Core.Models.Executables
         private const int OrgsOffset = 0x2B80;              // 0x013900 - 0x10D80
         private const int OrgCount = 26;
         private const int CharNamePointerCount = 192;
+
+        // PostMissionPreCrimeData sub-section layout (DS-relative offsets within original binary)
+        private const int PlotFileStringsCount = 9;         // *PL0090, briefing.pan, plot.txt, victim, item, *PL000A, *PL000a, briefing.pan, plot.txt
+        private const int CharCreationStringsCount = 2;     // "Max's code name is:" + difficulty menu
+        private const int SkillNameCount = 5;               // Combat, Driving, Cryptography, Electronics, Stamina
+        private const int TrainingScreenStringsCount = 8;   // training.pic, " ", " practice\n ", " training\n ", column header, Average, Good, Excellent, Awesome -> BUT the column header includes "Average", so actually the raw parse gives different counts
+        private const int TrainingColorWordCount = 4;
+        private const int TrainingPaletteRemapSize = 16;
+        private const int CopyrightProtStringsCount = 2;    // "Max, I'm sure..." + " among these faces."
+        private const int RastPortSize = 20;                // 20-byte RastPort block
+        private const int RastPortConfigPointerSize = 2;    // 2-byte config pointer after RastPort
+        private const int PlotFileBufferSize = 9;           // "*PL0000\0\0"
         #endregion
 
         #region Fields (in binary order)
@@ -328,8 +340,109 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>16 mission set records (74 bytes each): name, crime IDs, flags, string pointers.</summary>
         public FinalMissionSetRecord[] MissionSets { get; set; } = Array.Empty<FinalMissionSetRecord>();
 
-        /// <summary>Data between mission sets and crime types: plot/briefing strings, skill names, case text.</summary>
-        public byte[] PostMissionPreCrimeData { get; set; } = Array.Empty<byte>();
+        #region PostMissionPreCrimeData sub-sections (in binary order)
+
+        /// <summary>
+        /// Plot file reference strings used during mission setup: tutorial plot ref (*PL0090),
+        /// briefing.pan, plot.txt, slot 7 hardcoded victim/item strings, alternate plot refs.
+        /// TODO: investigate *PL000A/*PL000a alternate plot ref logic (part of plot file model/parser weirdness).
+        /// </summary>
+        public string[] PlotFileStrings { get; set; } = Array.Empty<string>();
+
+        /// <summary>
+        /// Character creation strings: "Max's code name is:" and difficulty selection menu text.
+        /// TODO: the difficulty menu string contains multiple menu options as one string (newline-separated).
+        /// Investigate whether these should be split into individual option strings.
+        /// </summary>
+        public string[] CharacterCreationStrings { get; set; } = Array.Empty<string>();
+
+        /// <summary>
+        /// 5 skill names: Combat, Driving, Cryptography, Electronics, Stamina.
+        /// Note: Stamina (index 4) is unused in the game normally.
+        /// </summary>
+        public string[] SkillNames { get; set; } = Array.Empty<string>();
+
+        /// <summary>
+        /// Training screen UI strings: training.pic, formatting strings, skill rating labels.
+        /// Does not include the column position header (stored separately in TrainingScreenColumnPositions).
+        /// </summary>
+        public string[] TrainingScreenStrings { get; set; } = Array.Empty<string>();
+
+        /// <summary>5 x-coordinate values for laying out skill bar columns on the training screen.</summary>
+        public byte[] TrainingScreenColumnXCoords { get; set; } = Array.Empty<byte>();
+
+        /// <summary>4 color/mode words used by the training screen for skill bar rendering (one per skill display slot).</summary>
+        public ushort[] TrainingScreenColorWords { get; set; } = Array.Empty<ushort>();
+
+        /// <summary>16-byte VGA palette remap table for the training screen. Index = source color, value = dest color.</summary>
+        public byte[] TrainingScreenPaletteRemap { get; set; } = Array.Empty<byte>();
+
+        /// <summary>Trailing null byte after the palette remap table.</summary>
+        public byte TrainingScreenRemapTerminator { get; set; }
+
+        /// <summary>Copyright protection screen strings: "Max, I'm sure you recognize the head of\nthe " and " among these faces.\n".</summary>
+        public string[] CopyrightProtectionStrings { get; set; } = Array.Empty<string>();
+
+        /// <summary>
+        /// Game progress strings: briefing templates, case chronology intro, MasterMind capture text,
+        /// promotion dialogue, retirement text, continue/save/end menus, difficulty change menus.
+        /// TODO: some strings contain multiple menu options as one newline-separated string.
+        /// Investigate whether these should be split into individual option strings.
+        /// </summary>
+        public string[] GameProgressStrings { get; set; } = Array.Empty<string>();
+
+        /// <summary>
+        /// RastPort graphics context block (20 bytes). Used as a display descriptor for the briefing panel.
+        /// Fields: DataOffset, Page, OriginX, OriginY, ExtentX (319), ExtentY (199), Flag, MaxColor (15), BPP (4), Reserved.
+        /// The first 2 bytes (DataOffset) overlap with the null terminator of the last GameProgressStrings entry.
+        /// </summary>
+        public ushort RastPortDataOffset { get; set; }
+        public ushort RastPortPage { get; set; }
+        public ushort RastPortOriginX { get; set; }
+        public ushort RastPortOriginY { get; set; }
+        public ushort RastPortExtentX { get; set; } = 319;
+        public ushort RastPortExtentY { get; set; } = 199;
+        public ushort RastPortFlag { get; set; }
+        public ushort RastPortMaxColor { get; set; } = 15;
+        public ushort RastPortBPP { get; set; } = 4;
+        public ushort RastPortReserved { get; set; }
+
+        // RastPort config pointer (2 bytes after the 20-byte block) is computed at serialization time.
+
+        /// <summary>
+        /// Writable plot file buffer (9 bytes). Initial value "*PL0000\0\0" — always overwritten at runtime
+        /// before use. Preserved for binary roundtrip fidelity only; not shown in editor UI.
+        /// </summary>
+        public byte[] PlotFileBuffer { get; set; } = Array.Empty<byte>();
+
+        /// <summary>
+        /// Chronology format strings used to build case event text. Format tokens (" (", ") ", "/", "^"),
+        /// event phrases ("sent message to", "You arrested", etc.), and status phrases ("Mission completed.",
+        /// " went into hiding.", etc.). Accessed by unrecognized code in FUN_1100_1da2.
+        /// Includes intentional empty strings used as format placeholders.
+        /// </summary>
+        public string[] ChronologyFormatStrings { get; set; } = Array.Empty<string>();
+
+        /// <summary>
+        /// Time/date display template "HH:MM AM Mon DD" with fixed separator characters.
+        /// Digits and month name are overwritten at runtime by FUN_1100_2c94; the fixed
+        /// characters (":", " ", "M") are preserved from the template. Only the month+day
+        /// portion is displayed in-game (e.g. "Jan 08"). FUN_2c94 also strcat's " 10" onto
+        /// the end of this buffer at runtime, but it is never displayed.
+        /// </summary>
+        public string TimeTemplateBuffer { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Efficiency report display strings: "Efficiency Report", status labels (At Large, ARRESTED, TURNED,
+        /// CONFISCATED), EP score formatting, Double Agent text, Efficiency Rating, formatting delimiters.
+        /// Contains 0x89 bytes whose purpose is unconfirmed. The EGRAPHIC text renderer stops and returns
+        /// when it encounters any byte >= 0x80, but what happens after the return is not yet traced.
+        /// The 0x89 may trigger a color change or re-render; in-game testing is needed to confirm.
+        /// See scratch/exe-investigation/FINAL.efficiency-report-0x89.md for full investigation notes.
+        /// </summary>
+        public string[] EfficiencyReportStrings { get; set; } = Array.Empty<string>();
+
+        #endregion
 
         /// <summary>13 crime type name strings.</summary>
         public string[] CrimeTypeNames { get; set; } = Array.Empty<string>();
@@ -458,7 +571,7 @@ namespace CovertActionTools.Core.Models.Executables
             segment.Unknown1 = DataSegmentHelper.Slice(dataSegment, missionSetsStart, MissionSetsOffset - missionSetsStart);
 
             var missionSetsEnd = MissionSetsOffset + MissionSetCount * FinalMissionSetRecord.RecordSize;
-            segment.PostMissionPreCrimeData = DataSegmentHelper.Slice(dataSegment, missionSetsEnd, CrimeTypesOffset - missionSetsEnd);
+            ParsePostMissionPreCrimeData(dataSegment, missionSetsEnd, CrimeTypesOffset, segment);
 
             // Crime type names: 13 null-terminated strings
             var crimeEnd = FindNthNullTerminator(dataSegment, CrimeTypesOffset, CrimeTypeCount);
@@ -603,22 +716,25 @@ namespace CovertActionTools.Core.Models.Executables
                 Array.Copy(CopyrightOrgHeads[i].ToBytes(), 0, orgAppearanceBytes, i * CopyrightOrgHeadRecordSize, CopyrightOrgHeadRecordSize);
             }
 
+            // Build PostMissionPreCrimeData from sub-sections
+            var postMissionBytes = BuildPostMissionPreCrimeData();
+
             // Compute character name pointer values
             var charNamesBaseOffset = PreStringTableData.Length + stringTableBytes.Length
                 + PostStringTableData.Length + orgAppearanceBytes.Length
-                + Unknown1.Length + missionSetBytes.Length + PostMissionPreCrimeData.Length
+                + Unknown1.Length + missionSetBytes.Length + postMissionBytes.Length
                 + crimeBytes.Length + Unknown2.Length + orgBytes.Length
                 + PostOrgPreCharNameData.Length;
             var charNamePointers = DataSegmentHelper.ComputeStringPointers(CharacterNames, charNamesBaseOffset);
 
-            return DataSegmentHelper.Concatenate(
+            var result = DataSegmentHelper.Concatenate(
                 PreStringTableData,
                 stringTableBytes,
                 PostStringTableData,
                 orgAppearanceBytes,
                 Unknown1,
                 missionSetBytes,
-                PostMissionPreCrimeData,
+                postMissionBytes,
                 crimeBytes,
                 Unknown2,
                 orgBytes,
@@ -628,6 +744,14 @@ namespace CovertActionTools.Core.Models.Executables
                 DataSegmentHelper.UInt16ArrayToBytes(charNamePointers),
                 TrailingData
             );
+
+            // Patch the RastPort config pointer now that we know the full layout
+            var postMissionStart = PreStringTableData.Length + stringTableBytes.Length
+                + PostStringTableData.Length + orgAppearanceBytes.Length
+                + Unknown1.Length + missionSetBytes.Length;
+            PatchRastPortConfigPointer(result, postMissionStart, postMissionBytes);
+
+            return result;
         }
 
         public FinalDataSegment Clone()
@@ -639,7 +763,30 @@ namespace CovertActionTools.Core.Models.Executables
                 CopyrightOrgHeads = CopyrightOrgHeads.Select(o => o.Clone()).ToArray(),
                 Unknown1 = Unknown1.ToArray(),
                 MissionSets = MissionSets.Select(m => m.Clone()).ToArray(),
-                PostMissionPreCrimeData = PostMissionPreCrimeData.ToArray(),
+                PlotFileStrings = PlotFileStrings.Select(s => s).ToArray(),
+                CharacterCreationStrings = CharacterCreationStrings.Select(s => s).ToArray(),
+                SkillNames = SkillNames.Select(s => s).ToArray(),
+                TrainingScreenStrings = TrainingScreenStrings.Select(s => s).ToArray(),
+                TrainingScreenColumnXCoords = TrainingScreenColumnXCoords.ToArray(),
+                TrainingScreenColorWords = TrainingScreenColorWords.ToArray(),
+                TrainingScreenPaletteRemap = TrainingScreenPaletteRemap.ToArray(),
+                TrainingScreenRemapTerminator = TrainingScreenRemapTerminator,
+                CopyrightProtectionStrings = CopyrightProtectionStrings.Select(s => s).ToArray(),
+                GameProgressStrings = GameProgressStrings.Select(s => s).ToArray(),
+                RastPortDataOffset = RastPortDataOffset,
+                RastPortPage = RastPortPage,
+                RastPortOriginX = RastPortOriginX,
+                RastPortOriginY = RastPortOriginY,
+                RastPortExtentX = RastPortExtentX,
+                RastPortExtentY = RastPortExtentY,
+                RastPortFlag = RastPortFlag,
+                RastPortMaxColor = RastPortMaxColor,
+                RastPortBPP = RastPortBPP,
+                RastPortReserved = RastPortReserved,
+                PlotFileBuffer = PlotFileBuffer.ToArray(),
+                ChronologyFormatStrings = ChronologyFormatStrings.Select(s => s).ToArray(),
+                TimeTemplateBuffer = TimeTemplateBuffer,
+                EfficiencyReportStrings = EfficiencyReportStrings.Select(s => s).ToArray(),
                 CrimeTypeNames = CrimeTypeNames.Select(s => s).ToArray(),
                 CrimeTypeNameByteSizes = CrimeTypeNameByteSizes.ToArray(),
                 Unknown2 = Unknown2.ToArray(),
@@ -651,6 +798,335 @@ namespace CovertActionTools.Core.Models.Executables
                 TrailingData = TrailingData.ToArray()
             };
         }
+
+        #region PostMissionPreCrimeData parsing and serialization
+
+        /// <summary>
+        /// Parses the PostMissionPreCrimeData region (between mission sets and crime types)
+        /// into typed sub-section fields. Uses string counting from known section boundaries.
+        /// </summary>
+        private static void ParsePostMissionPreCrimeData(byte[] data, int start, int end, FinalDataSegment segment)
+        {
+            var pos = start;
+
+            // PlotFileStrings: 9 null-terminated strings
+            segment.PlotFileStrings = ReadStrings(data, ref pos, PlotFileStringsCount);
+
+            // CharacterCreationStrings: 2 null-terminated strings
+            segment.CharacterCreationStrings = ReadStrings(data, ref pos, CharCreationStringsCount);
+
+            // SkillNames: 5 null-terminated strings
+            segment.SkillNames = ReadStrings(data, ref pos, SkillNameCount);
+
+            // TrainingScreenStrings: read strings until we hit the column position header.
+            // The column position header is a 10-byte binary prefix followed by "Average" in one
+            // null-terminated string. We detect it by finding a string that starts with non-letter
+            // bytes (the '$'-separated position data) and ends with "Average".
+            var trainingStrings = new List<string>();
+            while (pos < end)
+            {
+                var strEnd = pos;
+                while (strEnd < end && data[strEnd] != 0) strEnd++;
+                var raw = DataSegmentHelper.Slice(data, pos, strEnd - pos);
+
+                // Detect the column position + Average combined string:
+                // starts with non-letter ASCII (position bytes) and ends with "Average"
+                if (raw.Length > 10 && Encoding.ASCII.GetString(raw, raw.Length - 7, 7) == "Average")
+                {
+                    // Split: extract x-coordinates from even indices, rest is "Average" label
+                    var colPosLen = raw.Length - 7; // "Average" is 7 chars
+                    var xCoords = new byte[colPosLen / 2];
+                    for (var ci = 0; ci < xCoords.Length; ci++)
+                        xCoords[ci] = raw[ci * 2];
+                    segment.TrainingScreenColumnXCoords = xCoords;
+                    trainingStrings.Add(Encoding.ASCII.GetString(raw, colPosLen, 7)); // "Average"
+                    pos = strEnd + 1;
+                    continue;
+                }
+
+                var s = Encoding.ASCII.GetString(data, pos, strEnd - pos);
+                pos = strEnd + 1;
+                trainingStrings.Add(s);
+
+                if (s == "Awesome")
+                    break;
+            }
+            segment.TrainingScreenStrings = trainingStrings.ToArray();
+
+            // TrainingScreenColorWords: skip one null padding byte, then 4 uint16 words
+            if (pos < end && data[pos] == 0) pos++; // skip padding null after Awesome
+            segment.TrainingScreenColorWords = new ushort[TrainingColorWordCount];
+            for (var i = 0; i < TrainingColorWordCount && pos + 1 < end; i++)
+            {
+                segment.TrainingScreenColorWords[i] = BitConverter.ToUInt16(data, pos);
+                pos += 2;
+            }
+
+            // TrainingScreenPaletteRemap: 16 bytes
+            segment.TrainingScreenPaletteRemap = DataSegmentHelper.Slice(data, pos, TrainingPaletteRemapSize);
+            pos += TrainingPaletteRemapSize;
+
+            // Trailing null terminator byte
+            segment.TrainingScreenRemapTerminator = pos < end ? data[pos] : (byte)0;
+            pos++;
+
+            // CopyrightProtectionStrings: 2 null-terminated strings
+            segment.CopyrightProtectionStrings = ReadStrings(data, ref pos, CopyrightProtStringsCount);
+
+            // GameProgressStrings: read strings until we're within 22 bytes of the RastPort block.
+            // The RastPort's DataOffset field (first 2 bytes) overlaps with the null terminator of the
+            // last GameProgressStrings entry. We detect the RastPort by scanning for the
+            // signature: 00 00 3F 01 C7 00 (OriginX=0, OriginY=0, ExtentX=319, ExtentY=199).
+            var rastPortStart = FindRastPortInRegion(data, pos, end);
+            var gameProgressStrings = new List<string>();
+            // The RastPort DO field starts at rastPortStart, but its first 2 bytes overlap with
+            // what precedes it (the last string's null terminator + the DO value).
+            // Read strings up to rastPortStart + 2 (the DO field is part of the preceding region).
+            var gameProgressEnd = rastPortStart;
+            while (pos < gameProgressEnd)
+            {
+                var strEnd = pos;
+                while (strEnd < gameProgressEnd && data[strEnd] != 0) strEnd++;
+                var s = Encoding.ASCII.GetString(data, pos, strEnd - pos);
+                pos = strEnd + 1;
+                gameProgressStrings.Add(s);
+            }
+            segment.GameProgressStrings = gameProgressStrings.ToArray();
+
+            // RastPort: 20 bytes (starts at rastPortStart, overlapping with the last string's null + DO)
+            pos = rastPortStart;
+            segment.RastPortDataOffset = BitConverter.ToUInt16(data, pos); pos += 2;
+            segment.RastPortPage = BitConverter.ToUInt16(data, pos); pos += 2;
+            segment.RastPortOriginX = BitConverter.ToUInt16(data, pos); pos += 2;
+            segment.RastPortOriginY = BitConverter.ToUInt16(data, pos); pos += 2;
+            segment.RastPortExtentX = BitConverter.ToUInt16(data, pos); pos += 2;
+            segment.RastPortExtentY = BitConverter.ToUInt16(data, pos); pos += 2;
+            segment.RastPortFlag = BitConverter.ToUInt16(data, pos); pos += 2;
+            segment.RastPortMaxColor = BitConverter.ToUInt16(data, pos); pos += 2;
+            segment.RastPortBPP = BitConverter.ToUInt16(data, pos); pos += 2;
+            segment.RastPortReserved = BitConverter.ToUInt16(data, pos); pos += 2;
+
+            // RastPort config pointer (2 bytes) — skip, will be recomputed
+            pos += RastPortConfigPointerSize;
+
+            // PlotFileBuffer: 9 bytes
+            segment.PlotFileBuffer = DataSegmentHelper.Slice(data, pos, PlotFileBufferSize);
+            pos += PlotFileBufferSize;
+
+            // ChronologyFormatStrings: strings until " 10" (the last string before the time template).
+            // Includes "You turned ", " " separator, and " 10" suffix used by FUN_2c94.
+            var chronStrings = new List<string>();
+            while (pos < end)
+            {
+                var strEnd = pos;
+                while (strEnd < end && data[strEnd] != 0) strEnd++;
+                var s = Encoding.ASCII.GetString(data, pos, strEnd - pos);
+                chronStrings.Add(s);
+                pos = strEnd + 1;
+                if (s == " 10")
+                    break;
+            }
+            segment.ChronologyFormatStrings = chronStrings.ToArray();
+
+            // Null separator + TimeTemplateBuffer: "00:00 AM Jun 00"
+            if (pos < end && data[pos] == 0) pos++; // skip null separator
+            var tmplEnd = pos;
+            while (tmplEnd < end && data[tmplEnd] != 0) tmplEnd++;
+            segment.TimeTemplateBuffer = Encoding.ASCII.GetString(data, pos, tmplEnd - pos);
+            pos = tmplEnd + 1;
+
+            // EfficiencyReportStrings: all remaining strings to end of region
+            var effStrings = new List<string>();
+            while (pos < end)
+            {
+                var strEnd = pos;
+                while (strEnd < end && data[strEnd] != 0) strEnd++;
+                // Use Latin-1 to preserve 0x89 bytes faithfully
+                var bytes = DataSegmentHelper.Slice(data, pos, strEnd - pos);
+                var s = new string(Array.ConvertAll(bytes, b => (char)b));
+                pos = strEnd + 1;
+                effStrings.Add(s);
+            }
+            segment.EfficiencyReportStrings = effStrings.ToArray();
+        }
+
+        /// <summary>
+        /// Serializes all PostMissionPreCrimeData sub-sections back into a contiguous byte array.
+        /// Handles variable-length strings and recalculates the RastPort config pointer.
+        /// </summary>
+        private byte[] BuildPostMissionPreCrimeData()
+        {
+            var parts = new List<byte>();
+
+            // PlotFileStrings
+            parts.AddRange(DataSegmentHelper.NullTerminatedStringsToBytes(PlotFileStrings));
+
+            // CharacterCreationStrings
+            parts.AddRange(DataSegmentHelper.NullTerminatedStringsToBytes(CharacterCreationStrings));
+
+            // SkillNames
+            parts.AddRange(DataSegmentHelper.NullTerminatedStringsToBytes(SkillNames));
+
+            // TrainingScreenStrings — recombine column positions with "Average" into one null-terminated string
+            for (var i = 0; i < TrainingScreenStrings.Length; i++)
+            {
+                if (TrainingScreenStrings[i] == "Average" && TrainingScreenColumnXCoords.Length > 0)
+                {
+                    // Recombine: x-coords interleaved with '$' separators + "Average" + null
+                    foreach (var x in TrainingScreenColumnXCoords)
+                    {
+                        parts.Add(x);
+                        parts.Add(0x24); // '$'
+                    }
+                    parts.AddRange(Encoding.ASCII.GetBytes("Average"));
+                    parts.Add(0);
+                }
+                else
+                {
+                    parts.AddRange(Encoding.ASCII.GetBytes(TrainingScreenStrings[i]));
+                    parts.Add(0);
+                }
+            }
+
+            // Padding null + TrainingScreenColorWords
+            parts.Add(0);
+            foreach (var w in TrainingScreenColorWords)
+            {
+                parts.Add((byte)(w & 0xFF));
+                parts.Add((byte)((w >> 8) & 0xFF));
+            }
+
+            // TrainingScreenPaletteRemap + terminator
+            parts.AddRange(TrainingScreenPaletteRemap);
+            parts.Add(TrainingScreenRemapTerminator);
+
+            // CopyrightProtectionStrings
+            parts.AddRange(DataSegmentHelper.NullTerminatedStringsToBytes(CopyrightProtectionStrings));
+
+            // GameProgressStrings — the last string's null terminator overlaps with RastPort DO
+            var gpBytes = DataSegmentHelper.NullTerminatedStringsToBytes(GameProgressStrings);
+            // Remove the final null terminator — it becomes the first byte of the RastPort DO field
+            if (gpBytes.Length > 0)
+            {
+                parts.AddRange(DataSegmentHelper.Slice(gpBytes, 0, gpBytes.Length - 1));
+            }
+
+            // RastPort: 20 bytes. First 2 bytes (DO) include the null terminator from GameProgressStrings.
+            // We write the full 20-byte block, with DO's low byte being 0x00 (the null terminator).
+            WriteUInt16(parts, RastPortDataOffset);
+            WriteUInt16(parts, RastPortPage);
+            WriteUInt16(parts, RastPortOriginX);
+            WriteUInt16(parts, RastPortOriginY);
+            WriteUInt16(parts, RastPortExtentX);
+            WriteUInt16(parts, RastPortExtentY);
+            WriteUInt16(parts, RastPortFlag);
+            WriteUInt16(parts, RastPortMaxColor);
+            WriteUInt16(parts, RastPortBPP);
+            WriteUInt16(parts, RastPortReserved);
+
+            // RastPort config pointer: points to RastPort + 2 (the Page field).
+            // This is a DS-relative offset. We need to compute the absolute DS offset of the
+            // RastPort start within the full data segment. The PostMissionPreCrimeData region
+            // starts at MissionSetsOffset + MissionSetCount * RecordSize in the original layout,
+            // but with variable-length strings, we compute it relative to the start of this block.
+            // The config pointer = DS offset of RastPort + 2.
+            // At serialization time, the caller places this block at a known position.
+            // We use a placeholder here and patch it in ToBytes().
+            var rastPortConfigPtrPos = parts.Count;
+            WriteUInt16(parts, 0x0000); // placeholder — patched below
+
+            // PlotFileBuffer
+            parts.AddRange(DataSegmentHelper.PadToSize(PlotFileBuffer, PlotFileBufferSize));
+
+            // ChronologyFormatStrings
+            parts.AddRange(DataSegmentHelper.NullTerminatedStringsToBytes(ChronologyFormatStrings));
+
+            // Null separator + TimeTemplateBuffer
+            parts.Add(0);
+            parts.AddRange(Encoding.ASCII.GetBytes(TimeTemplateBuffer));
+            parts.Add(0);
+
+            // EfficiencyReportStrings — encode chars > 0x7F as raw bytes
+            foreach (var s in EfficiencyReportStrings)
+            {
+                foreach (var c in s)
+                    parts.Add((byte)c);
+                parts.Add(0);
+            }
+
+            var result = parts.ToArray();
+
+            // Patch the RastPort config pointer. The RastPort block starts at
+            // (rastPortConfigPtrPos - RastPortConfigPointerSize - RastPortSize) within this byte array.
+            // The config pointer = overall DS offset of (RastPort start + 2).
+            // But we don't know the absolute DS offset here — we need the caller to provide it.
+            // Instead, store the local offset and let ToBytes patch it.
+            // Actually, we can compute it: PostMissionPreCrimeData starts at a known position
+            // in the full data segment. We'll return the raw bytes and let ToBytes patch the pointer.
+
+            return result;
+        }
+
+        /// <summary>
+        /// Patches the RastPort config pointer in the serialized data segment.
+        /// Called after the full data segment layout is known.
+        /// </summary>
+        private static void PatchRastPortConfigPointer(byte[] fullDataSegment, int postMissionStart, byte[] postMissionBytes)
+        {
+            // Find the RastPort signature within postMissionBytes
+            var rpLocalOffset = FindRastPortInRegion(postMissionBytes, 0, postMissionBytes.Length);
+            if (rpLocalOffset < 0) return;
+
+            // The config pointer is at RastPort + 20 bytes
+            var configPtrLocalOffset = rpLocalOffset + RastPortSize;
+            if (configPtrLocalOffset + 1 >= postMissionBytes.Length) return;
+
+            // Compute the DS-relative offset of the RastPort + 2 (config portion)
+            var rastPortDsOffset = postMissionStart + rpLocalOffset + 2;
+            fullDataSegment[postMissionStart + configPtrLocalOffset] = (byte)(rastPortDsOffset & 0xFF);
+            fullDataSegment[postMissionStart + configPtrLocalOffset + 1] = (byte)((rastPortDsOffset >> 8) & 0xFF);
+        }
+
+        /// <summary>Finds the start of a RastPort block by scanning for the OriginX=0, OriginY=0, ExtentX=319, ExtentY=199 signature.</summary>
+        private static int FindRastPortInRegion(byte[] data, int start, int end)
+        {
+            // Signature: 00 00 00 00 3F 01 C7 00 at RastPort + 4
+            for (var i = start; i + RastPortSize <= end; i++)
+            {
+                if (i + 12 <= end
+                    && data[i + 4] == 0x00 && data[i + 5] == 0x00   // OriginX = 0
+                    && data[i + 6] == 0x00 && data[i + 7] == 0x00   // OriginY = 0
+                    && data[i + 8] == 0x3F && data[i + 9] == 0x01   // ExtentX = 319
+                    && data[i + 10] == 0xC7 && data[i + 11] == 0x00 // ExtentY = 199
+                    && data[i + 14] == 0x0F && data[i + 15] == 0x00 // MaxColor = 15
+                    && data[i + 16] == 0x04 && data[i + 17] == 0x00) // BPP = 4
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        private static string[] ReadStrings(byte[] data, ref int pos, int count)
+        {
+            var result = new string[count];
+            for (var i = 0; i < count; i++)
+            {
+                var strEnd = pos;
+                while (strEnd < data.Length && data[strEnd] != 0) strEnd++;
+                result[i] = Encoding.ASCII.GetString(data, pos, strEnd - pos);
+                pos = strEnd + 1;
+            }
+            return result;
+        }
+
+        private static void WriteUInt16(List<byte> parts, ushort value)
+        {
+            parts.Add((byte)(value & 0xFF));
+            parts.Add((byte)((value >> 8) & 0xFF));
+        }
+
+        #endregion
 
         /// <summary>
         /// Finds the character name pointer table offset. Uses the known constant for original

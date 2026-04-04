@@ -679,6 +679,164 @@ public class SelectedExecutableWindow : BaseWindow
                 ImGui.PopID();
             }
         }
+        if (ImGui.CollapsingHeader("Plot File Strings (tentative)"))
+        {
+            ImGui.TextWrapped("Mission setup plot file references and hardcoded slot 7 strings. TODO: investigate *PL000A/*PL000a alternate plot ref logic.");
+            DrawStringArray(final.PlotFileStrings, "PlotStr");
+        }
+
+        if (ImGui.CollapsingHeader("Character Creation Strings"))
+        {
+            ImGui.TextWrapped("TODO: difficulty menu options may need splitting into individual strings.");
+            DrawStringArray(final.CharacterCreationStrings, "CharCreate");
+        }
+
+        if (ImGui.CollapsingHeader("Skill Names"))
+        {
+            for (var i = 0; i < final.SkillNames.Length; i++)
+            {
+                ImGui.PushID($"Skill_{i}");
+                var isStamina = i == 4;
+                if (isStamina)
+                {
+                    ImGui.BeginDisabled();
+                    ImGui.InputText($"[{i}] (unused in game)", ref final.SkillNames[i], 64);
+                    ImGui.EndDisabled();
+                }
+                else
+                {
+                    var contentSize = ImGui.GetContentRegionAvail();
+                    var newVal = ImGuiExtensions.Input($"[{i}]", final.SkillNames[i], 256, width: (int)contentSize.X - 80);
+                    if (newVal != null)
+                    {
+                        final.SkillNames[i] = newVal;
+                        _pendingState.RecordChange();
+                    }
+                }
+                ImGui.PopID();
+            }
+        }
+
+        if (ImGui.CollapsingHeader("Training Screen Strings"))
+        {
+            DrawStringArray(final.TrainingScreenStrings, "TrainStr");
+        }
+
+        if (ImGui.CollapsingHeader("Training Screen Data"))
+        {
+            ImGui.Text("Skill bar color indices (one per display slot):");
+            for (var i = 0; i < final.TrainingScreenColorWords.Length; i++)
+            {
+                var v = ImGuiExtensions.Input($"Color [{i}]", (int)final.TrainingScreenColorWords[i], width: 60);
+                if (v != null) { final.TrainingScreenColorWords[i] = (ushort)v.Value; _pendingState.RecordChange(); }
+            }
+
+            ImGui.Separator();
+            ImGui.Text("Column X positions (one per skill bar column):");
+            for (var i = 0; i < final.TrainingScreenColumnXCoords.Length; i++)
+            {
+                if (i > 0) ImGui.SameLine();
+                ImGui.SetNextItemWidth(60.0f);
+                var val = (int)final.TrainingScreenColumnXCoords[i];
+                if (ImGui.InputInt($"##ColX{i}", ref val))
+                {
+                    final.TrainingScreenColumnXCoords[i] = (byte)Math.Clamp(val, 0, 255);
+                    _pendingState.RecordChange();
+                }
+            }
+
+            ImGui.Separator();
+            ImGui.Text("VGA palette remap table (16 entries, index -> color):");
+            for (var i = 0; i < final.TrainingScreenPaletteRemap.Length; i++)
+            {
+                if (i > 0 && i % 8 != 0) ImGui.SameLine();
+                ImGui.SetNextItemWidth(60.0f);
+                var val = (int)final.TrainingScreenPaletteRemap[i];
+                if (ImGui.InputInt($"[{i}]##{i}", ref val))
+                {
+                    final.TrainingScreenPaletteRemap[i] = (byte)val;
+                    _pendingState.RecordChange();
+                }
+            }
+        }
+
+        if (ImGui.CollapsingHeader("Copyright Protection Strings"))
+        {
+            DrawStringArray(final.CopyrightProtectionStrings, "CopyProt");
+        }
+
+        if (ImGui.CollapsingHeader("Game Progress Strings"))
+        {
+            ImGui.TextWrapped("Briefing templates, case wrap-up, promotion, retirement, continue/save/end menus. TODO: some strings contain multiple menu options as one newline-separated string.");
+            DrawStringArray(final.GameProgressStrings, "GameProg");
+        }
+
+        if (ImGui.CollapsingHeader("RastPort Display Context (tentative)"))
+        {
+            ImGui.TextWrapped("20-byte graphics context descriptor for the briefing panel. 320x200 VGA.");
+            if (ImGui.BeginTable("RastPort", 2))
+            {
+                ImGui.TableNextRow(); ImGui.TableNextColumn(); ImGui.Text("Data Offset");
+                ImGui.TableNextColumn();
+                var rdo = ImGuiExtensions.Input("##RPDO", (int)final.RastPortDataOffset, width: 80);
+                if (rdo != null) { final.RastPortDataOffset = (ushort)rdo.Value; _pendingState.RecordChange(); }
+
+                ImGui.TableNextRow(); ImGui.TableNextColumn(); ImGui.Text("Page");
+                ImGui.TableNextColumn();
+                var rp = ImGuiExtensions.Input("##RPPage", (int)final.RastPortPage, width: 80);
+                if (rp != null) { final.RastPortPage = (ushort)rp.Value; _pendingState.RecordChange(); }
+
+                ImGui.TableNextRow(); ImGui.TableNextColumn(); ImGui.Text("Flag");
+                ImGui.TableNextColumn();
+                var rf = ImGuiExtensions.Input("##RPFlag", (int)final.RastPortFlag, width: 80);
+                if (rf != null) { final.RastPortFlag = (ushort)rf.Value; _pendingState.RecordChange(); }
+
+                ImGui.TableNextRow(); ImGui.TableNextColumn(); ImGui.Text("Extent X");
+                ImGui.TableNextColumn(); ImGui.Text($"{final.RastPortExtentX} (read-only)");
+
+                ImGui.TableNextRow(); ImGui.TableNextColumn(); ImGui.Text("Extent Y");
+                ImGui.TableNextColumn(); ImGui.Text($"{final.RastPortExtentY} (read-only)");
+
+                ImGui.EndTable();
+            }
+        }
+
+        if (ImGui.CollapsingHeader("Chronology Format Strings (tentative)"))
+        {
+            ImGui.TextWrapped("Format tokens and event phrases for building case chronology text. Empty entries are intentional format placeholders.");
+            DrawStringArray(final.ChronologyFormatStrings, "ChronStr");
+        }
+
+        if (ImGui.CollapsingHeader("Time Template (tentative)"))
+        {
+            ImGui.TextWrapped("Time/date display template. Digits and month are overwritten at runtime. Only month+day portion is shown in-game (e.g. 'Jan 08'). Fixed separator characters (:, spaces, M) are preserved.");
+            ImGui.Text("Template (HH:MM AM Mon DD):");
+            var tmpl = final.TimeTemplateBuffer;
+            var contentSize = ImGui.GetContentRegionAvail();
+            var newTmpl = ImGuiExtensions.Input("##TimeTemplate", tmpl, 32, width: (int)contentSize.X - 80);
+            if (newTmpl != null)
+            {
+                final.TimeTemplateBuffer = newTmpl;
+                _pendingState.RecordChange();
+            }
+        }
+
+        if (ImGui.CollapsingHeader("Efficiency Report Strings (tentative)"))
+        {
+            ImGui.TextWrapped("Efficiency report display strings. Contains 0x89 bytes whose purpose is unconfirmed — the text renderer stops at bytes >= 0x80 but the full call chain is not yet traced. See scratch docs for investigation notes.");
+            for (var i = 0; i < final.EfficiencyReportStrings.Length; i++)
+            {
+                ImGui.PushID($"EffRpt_{i}");
+                var s = final.EfficiencyReportStrings[i];
+                // Display with 0x89 shown as \x89 for readability
+                var display = s.Replace("\x89", "\\x89");
+                ImGui.TextDisabled($"[{i}]");
+                ImGui.SameLine();
+                ImGui.Text(display);
+                ImGui.PopID();
+            }
+        }
+
         if (ImGui.CollapsingHeader("Character Names"))
         {
             DrawStringArray(final.CharacterNames, "CharName");
@@ -689,7 +847,7 @@ public class SelectedExecutableWindow : BaseWindow
             ("PreStringTableData", final.PreStringTableData.Length),
             ("PostStringTableData", final.PostStringTableData.Length),
             ("Unknown1", final.Unknown1.Length),
-            ("PostMissionPreCrimeData", final.PostMissionPreCrimeData.Length),
+            ("PlotFileBuffer", final.PlotFileBuffer.Length),
             ("Unknown2", final.Unknown2.Length),
             ("PostOrgPreCharNameData", final.PostOrgPreCharNameData.Length),
             ("PostCharNameData", final.PostCharNameData.Length),
