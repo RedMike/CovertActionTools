@@ -310,9 +310,6 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>10 room type records (22 bytes each).</summary>
         public TacRoomTypeRecord[] RoomTypes { get; set; } = Array.Empty<TacRoomTypeRecord>();
 
-        /// <summary>Gap between room types and object records (0 bytes in vanilla).</summary>
-        public byte[] Unknown1 { get; set; } = Array.Empty<byte>();
-
         /// <summary>62 object/furniture records (20 bytes each).</summary>
         public TacObjectRecord[] Objects { get; set; } = Array.Empty<TacObjectRecord>();
 
@@ -387,8 +384,8 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>43 screen coordinates for ragdoll item positions + (0,0) terminator.</summary>
         public TacScreenCoordinate[] RagdollCoordinates { get; set; } = Array.Empty<TacScreenCoordinate>();
 
-        /// <summary>4-byte separator between ragdoll coordinates and equipment slot rects.</summary>
-        public byte[] Unknown3 { get; set; } = Array.Empty<byte>();
+        /// <summary>4-byte padding between ragdoll coordinates and equipment slot rects (no direct code references).</summary>
+        public byte[] RagdollRectPadding { get; set; } = Array.Empty<byte>();
 
         /// <summary>11 TL/BR rectangle pairs for equipment slot UI positions.</summary>
         public TacScreenRect[] EquipmentSlotRects { get; set; } = Array.Empty<TacScreenRect>();
@@ -491,8 +488,6 @@ namespace CovertActionTools.Core.Models.Executables
                 segment.RoomTypes[i] = TacRoomTypeRecord.FromBytes(dataSegment, RoomTypesOffset + i * TacRoomTypeRecord.RecordSize);
             }
 
-            segment.Unknown1 = DataSegmentHelper.Slice(dataSegment, roomTypesEnd, ObjectsOffset - roomTypesEnd);
-
             segment.Objects = new TacObjectRecord[ObjectCount];
             for (var i = 0; i < ObjectCount; i++)
             {
@@ -569,7 +564,7 @@ namespace CovertActionTools.Core.Models.Executables
                 segment.RagdollCoordinates[i] = TacScreenCoordinate.FromBytes(dataSegment, RagdollCoordsOffset + i * TacScreenCoordinate.RecordSize);
             }
 
-            segment.Unknown3 = DataSegmentHelper.Slice(dataSegment, ragdollEnd, EquipSlotRectsOffset - ragdollEnd);
+            segment.RagdollRectPadding = DataSegmentHelper.Slice(dataSegment, ragdollEnd, EquipSlotRectsOffset - ragdollEnd);
 
             segment.EquipmentSlotRects = new TacScreenRect[EquipSlotRectCount];
             for (var i = 0; i < EquipSlotRectCount; i++)
@@ -688,7 +683,7 @@ namespace CovertActionTools.Core.Models.Executables
             );
 
             // Compute equipment name pointer values from actual string positions
-            var equipNamesBaseOffset = PreRoomData.Length + roomTypeBytes.Length + Unknown1.Length
+            var equipNamesBaseOffset = PreRoomData.Length + roomTypeBytes.Length
                 + objectBytes.Length + midSectionBytes.Length;
             var equipNamePointers = DataSegmentHelper.ComputeStringPointers(EquipmentNames, equipNamesBaseOffset);
             var equipNamesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(EquipmentNames);
@@ -716,7 +711,7 @@ namespace CovertActionTools.Core.Models.Executables
                 + MidSectionPostEquipNames.Length
                 + DataSegmentHelper.UInt16ArrayToBytes(equipNamePointers).Length
                 + DataSegmentHelper.UInt16ArrayToBytes(EquipmentNavTable).Length
-                + ragdollBytes.Length + Unknown3.Length
+                + ragdollBytes.Length + RagdollRectPadding.Length
                 + equipRectBytes.Length + preCharNameBytes.Length;
             var charNamePointers = DataSegmentHelper.ComputeStringPointers(CharacterNames, charNamesBaseOffset);
             var charNamesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(CharacterNames);
@@ -724,7 +719,6 @@ namespace CovertActionTools.Core.Models.Executables
             return DataSegmentHelper.Concatenate(
                 PreRoomData,
                 roomTypeBytes,
-                Unknown1,
                 objectBytes,
                 midSectionBytes,
                 equipNamesBytes,
@@ -732,7 +726,7 @@ namespace CovertActionTools.Core.Models.Executables
                 DataSegmentHelper.UInt16ArrayToBytes(equipNamePointers),
                 DataSegmentHelper.UInt16ArrayToBytes(EquipmentNavTable),
                 ragdollBytes,
-                Unknown3,
+                RagdollRectPadding,
                 equipRectBytes,
                 preCharNameBytes,
                 charNamesBytes,
@@ -759,7 +753,6 @@ namespace CovertActionTools.Core.Models.Executables
             {
                 PreRoomData = PreRoomData.ToArray(),
                 RoomTypes = RoomTypes.Select(r => r.Clone()).ToArray(),
-                Unknown1 = Unknown1.ToArray(),
                 Objects = Objects.Select(o => o.Clone()).ToArray(),
                 MovementPixelDX = MovementPixelDX.ToArray(),
                 MovementPixelDY = MovementPixelDY.ToArray(),
@@ -776,7 +769,7 @@ namespace CovertActionTools.Core.Models.Executables
                 MidSectionPostEquipNames = MidSectionPostEquipNames.ToArray(),
                 EquipmentNavTable = EquipmentNavTable.ToArray(),
                 RagdollCoordinates = RagdollCoordinates.Select(c => c.Clone()).ToArray(),
-                Unknown3 = Unknown3.ToArray(),
+                RagdollRectPadding = RagdollRectPadding.ToArray(),
                 EquipmentSlotRects = EquipmentSlotRects.Select(r => r.Clone()).ToArray(),
                 ClueRelationshipPhrases = ClueRelationshipPhrases.ToArray(),
                 CluePhraseSizes = CluePhraseSizes.ToArray(),
