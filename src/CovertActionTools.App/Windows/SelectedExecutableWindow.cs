@@ -826,7 +826,7 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Efficiency Report Strings (tentative)"))
         {
-            ImGui.TextWrapped("Efficiency report display strings. Contains 0x89 (shown as \\x89) — a non-printable game text formatting character.");
+            ImGui.TextWrapped("Efficiency report display strings. Contains 0x89 bytes whose purpose is unconfirmed — the text renderer stops at bytes >= 0x80 but the full call chain is not yet traced. See scratch docs for investigation notes.");
             for (var i = 0; i < final.EfficiencyReportStrings.Length; i++)
             {
                 ImGui.PushID($"EffRpt_{i}");

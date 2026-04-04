@@ -438,7 +438,10 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>
         /// Efficiency report display strings: "Efficiency Report", status labels (At Large, ARRESTED, TURNED,
         /// CONFISCATED), EP score formatting, Double Agent text, Efficiency Rating, formatting delimiters.
-        /// Contains 0x89 bytes — a non-printable game text formatting character (likely line break/separator).
+        /// Contains 0x89 bytes whose purpose is unconfirmed. The EGRAPHIC text renderer stops and returns
+        /// when it encounters any byte >= 0x80, but what happens after the return is not yet traced.
+        /// The 0x89 may trigger a color change or re-render; in-game testing is needed to confirm.
+        /// See scratch/exe-investigation/FINAL.efficiency-report-0x89.md for full investigation notes.
         /// </summary>
         public string[] EfficiencyReportStrings { get; set; } = Array.Empty<string>();
 
