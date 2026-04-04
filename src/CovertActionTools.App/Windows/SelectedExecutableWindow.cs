@@ -687,10 +687,11 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Character Creation Strings (tentative)"))
         {
+            ImGui.TextWrapped("TODO: difficulty menu options may need splitting into individual strings.");
             DrawStringArray(final.CharacterCreationStrings, "CharCreate");
         }
 
-        if (ImGui.CollapsingHeader("Skill Names (tentative)"))
+        if (ImGui.CollapsingHeader("Skill Names"))
         {
             for (var i = 0; i < final.SkillNames.Length; i++)
             {
@@ -721,7 +722,7 @@ public class SelectedExecutableWindow : BaseWindow
             DrawStringArray(final.TrainingScreenStrings, "TrainStr");
         }
 
-        if (ImGui.CollapsingHeader("Training Screen Data (tentative)"))
+        if (ImGui.CollapsingHeader("Training Screen Data"))
         {
             ImGui.Text("Skill bar color indices (one per display slot):");
             for (var i = 0; i < final.TrainingScreenColorWords.Length; i++)
@@ -731,13 +732,21 @@ public class SelectedExecutableWindow : BaseWindow
             }
 
             ImGui.Separator();
+            ImGui.Text("Column position header (10 bytes, x-coords with '$' separators):");
+            if (final.TrainingScreenColumnPositions.Length > 0)
+            {
+                var posStr = Encoding.ASCII.GetString(final.TrainingScreenColumnPositions);
+                ImGui.TextDisabled(posStr);
+            }
+
+            ImGui.Separator();
             ImGui.Text("VGA palette remap table (16 entries, index -> color):");
             for (var i = 0; i < final.TrainingScreenPaletteRemap.Length; i++)
             {
-                if (i > 0) ImGui.SameLine();
-                ImGui.SetNextItemWidth(30.0f);
+                if (i > 0 && i % 8 != 0) ImGui.SameLine();
+                ImGui.SetNextItemWidth(60.0f);
                 var val = (int)final.TrainingScreenPaletteRemap[i];
-                if (ImGui.InputInt($"##{i}", ref val))
+                if (ImGui.InputInt($"[{i}]##{i}", ref val))
                 {
                     final.TrainingScreenPaletteRemap[i] = (byte)val;
                     _pendingState.RecordChange();
@@ -750,9 +759,9 @@ public class SelectedExecutableWindow : BaseWindow
             DrawStringArray(final.CopyrightProtectionStrings, "CopyProt");
         }
 
-        if (ImGui.CollapsingHeader("Game Progress Strings (tentative)"))
+        if (ImGui.CollapsingHeader("Game Progress Strings"))
         {
-            ImGui.TextWrapped("Briefing templates, case wrap-up, promotion, retirement, continue/save/end menus.");
+            ImGui.TextWrapped("Briefing templates, case wrap-up, promotion, retirement, continue/save/end menus. TODO: some strings contain multiple menu options as one newline-separated string.");
             DrawStringArray(final.GameProgressStrings, "GameProg");
         }
 
@@ -788,7 +797,7 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Game Event Strings (tentative)"))
         {
-            ImGui.TextWrapped("Chronology event phrases, time/date templates, efficiency report labels.");
+            ImGui.TextWrapped("Chronology event phrases, time/date templates, efficiency report labels. Note: some strings contain 0x89 bytes (game text rendering formatting character). Empty entries are null-byte separators between string groups.");
             DrawStringArray(final.GameEventStrings, "GameEvt");
         }
 

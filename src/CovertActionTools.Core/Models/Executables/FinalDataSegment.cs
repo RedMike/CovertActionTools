@@ -349,7 +349,11 @@ namespace CovertActionTools.Core.Models.Executables
         /// </summary>
         public string[] PlotFileStrings { get; set; } = Array.Empty<string>();
 
-        /// <summary>Character creation strings: "Max's code name is:" and difficulty selection menu text.</summary>
+        /// <summary>
+        /// Character creation strings: "Max's code name is:" and difficulty selection menu text.
+        /// TODO: the difficulty menu string contains multiple menu options as one string (newline-separated).
+        /// Investigate whether these should be split into individual option strings.
+        /// </summary>
         public string[] CharacterCreationStrings { get; set; } = Array.Empty<string>();
 
         /// <summary>
@@ -358,8 +362,19 @@ namespace CovertActionTools.Core.Models.Executables
         /// </summary>
         public string[] SkillNames { get; set; } = Array.Empty<string>();
 
-        /// <summary>Training screen UI strings: training.pic, formatting strings, column position header, skill rating labels.</summary>
+        /// <summary>
+        /// Training screen UI strings: training.pic, formatting strings, skill rating labels.
+        /// Does not include the column position header (stored separately in TrainingScreenColumnPositions).
+        /// </summary>
         public string[] TrainingScreenStrings { get; set; } = Array.Empty<string>();
+
+        /// <summary>
+        /// 10-byte column position header used by the training screen to lay out skill bar columns.
+        /// Contains x-coordinate values encoded as ASCII bytes interleaved with '$' separators.
+        /// In the original binary this is prepended to "Average" as one null-terminated string;
+        /// the game code accesses the "Average" portion by offsetting into the string.
+        /// </summary>
+        public byte[] TrainingScreenColumnPositions { get; set; } = Array.Empty<byte>();
 
         /// <summary>4 color/mode words used by the training screen for skill bar rendering (one per skill display slot).</summary>
         public ushort[] TrainingScreenColorWords { get; set; } = Array.Empty<ushort>();
@@ -376,6 +391,8 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>
         /// Game progress strings: briefing templates, case chronology intro, MasterMind capture text,
         /// promotion dialogue, retirement text, continue/save/end menus, difficulty change menus.
+        /// TODO: some strings contain multiple menu options as one newline-separated string.
+        /// Investigate whether these should be split into individual option strings.
         /// </summary>
         public string[] GameProgressStrings { get; set; } = Array.Empty<string>();
 
@@ -406,6 +423,8 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>
         /// Game event strings: chronology event phrases (sent message to, arrested, hiding, etc.),
         /// time/date format templates, and efficiency report labels (At Large, ARRESTED, EP scores, etc.).
+        /// Contains 0x89 bytes which are a game text rendering formatting character (likely newline/separator).
+        /// Also contains empty strings from null-byte separators between string groups.
         /// </summary>
         public string[] GameEventStrings { get; set; } = Array.Empty<string>();
 
@@ -734,6 +753,7 @@ namespace CovertActionTools.Core.Models.Executables
                 CharacterCreationStrings = CharacterCreationStrings.Select(s => s).ToArray(),
                 SkillNames = SkillNames.Select(s => s).ToArray(),
                 TrainingScreenStrings = TrainingScreenStrings.Select(s => s).ToArray(),
+                TrainingScreenColumnPositions = TrainingScreenColumnPositions.ToArray(),
                 TrainingScreenColorWords = TrainingScreenColorWords.ToArray(),
                 TrainingScreenPaletteRemap = TrainingScreenPaletteRemap.ToArray(),
                 TrainingScreenRemapTerminator = TrainingScreenRemapTerminator,
@@ -782,22 +802,33 @@ namespace CovertActionTools.Core.Models.Executables
             // SkillNames: 5 null-terminated strings
             segment.SkillNames = ReadStrings(data, ref pos, SkillNameCount);
 
-            // TrainingScreenStrings: read strings until we hit the binary data block.
-            // The last string is "Awesome" followed by a null, then a 0x00 byte, then non-string data.
-            // We detect the boundary: after "Awesome\0", the next byte is 0x00 (extra null before binary data).
+            // TrainingScreenStrings: read strings until we hit the column position header.
+            // The column position header is a 10-byte binary prefix followed by "Average" in one
+            // null-terminated string. We detect it by finding a string that starts with non-letter
+            // bytes (the '$'-separated position data) and ends with "Average".
             var trainingStrings = new List<string>();
             while (pos < end)
             {
                 var strEnd = pos;
                 while (strEnd < end && data[strEnd] != 0) strEnd++;
-                var s = Encoding.ASCII.GetString(data, pos, strEnd - pos);
-                pos = strEnd + 1; // skip null terminator
+                var raw = DataSegmentHelper.Slice(data, pos, strEnd - pos);
 
+                // Detect the column position + Average combined string:
+                // starts with non-letter ASCII (position bytes) and ends with "Average"
+                if (raw.Length > 10 && Encoding.ASCII.GetString(raw, raw.Length - 7, 7) == "Average")
+                {
+                    // Split: first part is column position bytes, rest is "Average" label
+                    var colPosLen = raw.Length - 7; // "Average" is 7 chars
+                    segment.TrainingScreenColumnPositions = DataSegmentHelper.Slice(raw, 0, colPosLen);
+                    trainingStrings.Add(Encoding.ASCII.GetString(raw, colPosLen, 7)); // "Average"
+                    pos = strEnd + 1;
+                    continue;
+                }
+
+                var s = Encoding.ASCII.GetString(data, pos, strEnd - pos);
+                pos = strEnd + 1;
                 trainingStrings.Add(s);
 
-                // After "Awesome" (the last training string), the next byte is 0x00 (padding)
-                // followed by the binary color words. Detect: if the string we just read is
-                // not empty and the next bytes form small uint16 values (< 16), we've hit the boundary.
                 if (s == "Awesome")
                     break;
             }
@@ -893,8 +924,22 @@ namespace CovertActionTools.Core.Models.Executables
             // SkillNames
             parts.AddRange(DataSegmentHelper.NullTerminatedStringsToBytes(SkillNames));
 
-            // TrainingScreenStrings
-            parts.AddRange(DataSegmentHelper.NullTerminatedStringsToBytes(TrainingScreenStrings));
+            // TrainingScreenStrings — recombine column positions with "Average" into one null-terminated string
+            for (var i = 0; i < TrainingScreenStrings.Length; i++)
+            {
+                if (TrainingScreenStrings[i] == "Average" && TrainingScreenColumnPositions.Length > 0)
+                {
+                    // Recombine: column position bytes + "Average" + null
+                    parts.AddRange(TrainingScreenColumnPositions);
+                    parts.AddRange(Encoding.ASCII.GetBytes("Average"));
+                    parts.Add(0);
+                }
+                else
+                {
+                    parts.AddRange(Encoding.ASCII.GetBytes(TrainingScreenStrings[i]));
+                    parts.Add(0);
+                }
+            }
 
             // Padding null + TrainingScreenColorWords
             parts.Add(0);
