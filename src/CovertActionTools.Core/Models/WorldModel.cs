@@ -67,8 +67,17 @@ namespace CovertActionTools.Core.Models
             /// </summary>
             public int Unknown3 { get; set; }
             /// <summary>
-            /// To identify the same organisation across multiple World instances
-            /// When set to 0xFF, mastermind is not allowed to join
+            /// Org alliance membership — packed 16-bit field at record offset +0x20.
+            /// High byte: org type bitmask (4 bits used: 0x01, 0x02, 0x04, 0x08) that controls
+            /// which mission sets this org is eligible for. FINAL.EXE FUN_1100_0734 ANDs this
+            /// against FinalMissionSetRecord.OrgTypeMask (shifted into the high byte of a word at
+            /// record +0x18) to filter org/mission compatibility.
+            /// Low byte: unique org ID (0-25) used to index per-org parameter records in FINAL.EXE
+            /// at DS+0x1CFC (stride 16). Shared across WORLD files to identify the same org.
+            /// Value 0xFFFF marks allied orgs (cops, CIA, MI6, Mossad, KGB) — rejected by the
+            /// mission selection loop and excluded from mastermind selection.
+            /// TODO: decode the 4 org type bits into named categories (see Ghidra disassembly
+            /// in scratch/ghidra/output/FINAL_mission_decompiled.json, FUN_1100_0734).
             /// </summary>
             public int UniqueId { get; set; }
 

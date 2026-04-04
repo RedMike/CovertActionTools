@@ -581,27 +581,29 @@ public class SelectedExecutableWindow : BaseWindow
                     var newName = ImGuiExtensions.Input("Name", ms.Name, FinalMissionSetRecord.NameLength, width: 200);
                     if (newName != null) { ms.Name = newName; _pendingState.RecordChange(); }
 
-                    if (ImGui.BeginTable($"MSFields", 2))
-                    {
-                        ImGui.TableNextRow();
-                        ImGui.TableNextColumn();
-                        var newU1 = ImGuiExtensions.Input("Unknown1", (int)ms.Unknown1, width: 80);
-                        if (newU1 != null) { ms.Unknown1 = (byte)newU1.Value; _pendingState.RecordChange(); }
-
-                        ImGui.TableNextColumn();
-                        var newFlag = ImGuiExtensions.Input("Flag Word", (int)ms.FlagWord, width: 80);
-                        if (newFlag != null) { ms.FlagWord = (ushort)newFlag.Value; _pendingState.RecordChange(); }
-
-                        ImGui.EndTable();
-                    }
+                    ImGui.Text("Org Alliances:");
+                    ImGui.SameLine();
+                    var orgMask = (int)ms.OrgTypeMask;
+                    var a1 = (orgMask & 0x01) != 0;
+                    var a2 = (orgMask & 0x02) != 0;
+                    var a3 = (orgMask & 0x04) != 0;
+                    var a4 = (orgMask & 0x08) != 0;
+                    if (ImGui.Checkbox("1##org", ref a1)) { ms.OrgTypeMask = (byte)((orgMask & ~0x01) | (a1 ? 0x01 : 0)); _pendingState.RecordChange(); }
+                    ImGui.SameLine();
+                    if (ImGui.Checkbox("2##org", ref a2)) { ms.OrgTypeMask = (byte)((orgMask & ~0x02) | (a2 ? 0x02 : 0)); _pendingState.RecordChange(); }
+                    ImGui.SameLine();
+                    if (ImGui.Checkbox("3##org", ref a3)) { ms.OrgTypeMask = (byte)((orgMask & ~0x04) | (a3 ? 0x04 : 0)); _pendingState.RecordChange(); }
+                    ImGui.SameLine();
+                    if (ImGui.Checkbox("4##org", ref a4)) { ms.OrgTypeMask = (byte)((orgMask & ~0x08) | (a4 ? 0x08 : 0)); _pendingState.RecordChange(); }
 
                     // TODO: The Crime editor window needs to be able to load these crime type
                     // names from here instead of using hardcoded names.
                     DrawMissionSetCrimeSlot("Crime 1", ms, 0, final.CrimeTypeNames);
                     DrawMissionSetCrimeSlot("Crime 2", ms, 1, final.CrimeTypeNames);
                     DrawMissionSetCrimeSlot("Crime 3", ms, 2, final.CrimeTypeNames);
-
-                    ImGui.Text($"Unused Crime Slots: {ms.UnusedCrimeSlots.Length} bytes (always 0xFF)");
+                    DrawMissionSetCrimeSlot("Crime 4", ms, 3, final.CrimeTypeNames);
+                    DrawMissionSetCrimeSlot("Crime 5", ms, 4, final.CrimeTypeNames);
+                    DrawMissionSetCrimeSlot("Crime 6", ms, 5, final.CrimeTypeNames);
 
                     if (ImGui.CollapsingHeader("Plot Strings"))
                     {
@@ -656,6 +658,9 @@ public class SelectedExecutableWindow : BaseWindow
             0 => ms.Crime1Id,
             1 => ms.Crime2Id,
             2 => ms.Crime3Id,
+            3 => ms.Crime4Id,
+            4 => ms.Crime5Id,
+            5 => ms.Crime6Id,
             _ => (ushort)0xFFFF
         };
 
@@ -696,6 +701,9 @@ public class SelectedExecutableWindow : BaseWindow
             case 0: ms.Crime1Id = value; break;
             case 1: ms.Crime2Id = value; break;
             case 2: ms.Crime3Id = value; break;
+            case 3: ms.Crime4Id = value; break;
+            case 4: ms.Crime5Id = value; break;
+            case 5: ms.Crime6Id = value; break;
         }
     }
 
