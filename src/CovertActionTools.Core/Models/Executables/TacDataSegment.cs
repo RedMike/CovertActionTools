@@ -358,6 +358,8 @@ namespace CovertActionTools.Core.Models.Executables
 
         #region PreCharNameData (between Equipment Slot Rects and Character Names)
 
+        // TODO: Clue relationship phrases are duplicated across multiple EXEs (TAC, FINAL, GAME, BUG).
+        // These should be merged into a shared data segment model so editing in one EXE updates all.
         /// <summary>40 clue relationship phrases used in evidence connections (e.g. " tied to ", " registered to ").</summary>
         public string[] ClueRelationshipPhrases { get; set; } = Array.Empty<string>();
         /// <summary>Original byte sizes for clue phrase slots.</summary>
@@ -368,6 +370,10 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>Original byte sizes for month abbreviation slots.</summary>
         public int[] MonthSizes { get; set; } = Array.Empty<int>();
 
+        // TODO: Investigate string identification for IntelHeaders -- the region from 0x24BC to
+        // 0x2542 is extracted as null-terminated strings, but some entries are empty or single-char
+        // filler values that may be binary data misidentified as strings. The boundary between
+        // headers and the clue phrase pointer table needs verification.
         /// <summary>Intel report headers and filler text fragments ("CODED MESSAGE:", "MEETING NOTES:", etc.).</summary>
         public string[] IntelHeaders { get; set; } = Array.Empty<string>();
         /// <summary>Original byte sizes for intel header slots.</summary>
@@ -385,6 +391,9 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>Padding bytes between month pointer table and intel report texts.</summary>
         public byte[] IntelMidPadding { get; set; } = Array.Empty<byte>();
 
+        // TODO: Investigate string identification for IntelReportTexts -- the region from 0x25DD to
+        // 0x274C is extracted as null-terminated strings, but some entries are empty or single-char
+        // values that may be binary data or format control codes rather than displayable text.
         /// <summary>Intel report text templates used in the clue/intel display system.</summary>
         public string[] IntelReportTexts { get; set; } = Array.Empty<string>();
         /// <summary>Original byte sizes for intel report text slots.</summary>
