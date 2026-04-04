@@ -197,12 +197,16 @@ namespace CovertActionTools.Core.Models.Executables
 
     /// <summary>
     /// Per-org character appearance template (16 bytes), indexed by org unique ID (0-25).
-    /// FUN_1100_11b7 packs these fields into a portrait layer descriptor. FUN_1100_7afe
-    /// renders the portrait by drawing 5 sprite layers from FACES (male) or FACESF (female)
-    /// images, plus clothing drawn below the face. Skin and hair colours are applied via
-    /// VGA palette colour replacement at draw time.
+    /// Used by the copyright screen: one org is selected and its portrait is rendered from
+    /// this table, alongside 14 randomised portraits. FUN_1100_11b7 packs these fields into
+    /// a portrait layer descriptor. FUN_1100_7afe renders the portrait by drawing 5 sprite
+    /// layers from FACES (male) or FACESF (female) images, plus clothing drawn below the
+    /// face. Skin and hair colours are applied via VGA palette colour replacement at draw time.
+    /// There is no assigned portrait per mission or campaign — all in-game suspect portraits
+    /// are generated at runtime.
+    /// TODO: relate sprite indices to FACES/FACESF images in the editor UI.
     /// </summary>
-    public class OrgAppearanceRecord
+    public class CopyrightOrgHeadRecord
     {
         public const int RecordSize = 16;
 
@@ -230,9 +234,9 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>Hair colour (0-3). Applied via palette colour replacement at draw time.</summary>
         public ushort HairColour { get; set; }
 
-        public OrgAppearanceRecord Clone()
+        public CopyrightOrgHeadRecord Clone()
         {
-            return new OrgAppearanceRecord
+            return new CopyrightOrgHeadRecord
             {
                 ClothingSprite = ClothingSprite,
                 Gender = Gender,
@@ -245,9 +249,9 @@ namespace CovertActionTools.Core.Models.Executables
             };
         }
 
-        public static OrgAppearanceRecord FromBytes(byte[] data, int offset)
+        public static CopyrightOrgHeadRecord FromBytes(byte[] data, int offset)
         {
-            return new OrgAppearanceRecord
+            return new CopyrightOrgHeadRecord
             {
                 ClothingSprite = BitConverter.ToUInt16(data, offset + 0x00),
                 Gender = BitConverter.ToUInt16(data, offset + 0x02),
@@ -286,10 +290,10 @@ namespace CovertActionTools.Core.Models.Executables
         public const int DsParagraph = 0x10D8;
 
         #region Layout Constants (DS-relative offsets)
-        private const int OrgAppearanceOffset = 0x1CFC;    // 0x012A7C - 0x10D80
-        private const int OrgAppearanceCount = 26;
-        private const int OrgAppearanceRecordSize = 16;
-        private const int OrgAppearanceSize = OrgAppearanceCount * OrgAppearanceRecordSize; // 416
+        private const int CopyrightOrgHeadOffset = 0x1CFC;    // 0x012A7C - 0x10D80
+        private const int CopyrightOrgHeadCount = 26;
+        private const int CopyrightOrgHeadRecordSize = 16;
+        private const int CopyrightOrgHeadSize = CopyrightOrgHeadCount * CopyrightOrgHeadRecordSize; // 416
         private const int MissionSetsOffset = 0x1E9E;      // 0x012C1E - 0x10D80
         private const int MissionSetCount = 16;
         private const int CrimeTypesOffset = 0x2AFC;        // 0x01387C - 0x10D80
@@ -312,10 +316,11 @@ namespace CovertActionTools.Core.Models.Executables
 
         /// <summary>
         /// 26 x 16-byte org appearance records, indexed by org unique ID (0-25).
-        /// FUN_1100_11b7 packs these fields into a portrait layer descriptor used by
-        /// FUN_1100_7afe to render layered character portraits from FACES/FACESF sprites.
+        /// Each record defines a portrait template used by the copyright screen.
+        /// FUN_1100_11b7 packs the fields into a portrait layer descriptor; FUN_1100_7afe
+        /// renders layered character portraits from FACES/FACESF sprites.
         /// </summary>
-        public OrgAppearanceRecord[] OrgAppearances { get; set; } = Array.Empty<OrgAppearanceRecord>();
+        public CopyrightOrgHeadRecord[] CopyrightOrgHeads { get; set; } = Array.Empty<CopyrightOrgHeadRecord>();
 
         /// <summary>2-byte gap between params and mission set records.</summary>
         public byte[] Unknown1 { get; set; } = Array.Empty<byte>();
@@ -396,7 +401,7 @@ namespace CovertActionTools.Core.Models.Executables
                 }
 
                 segment.PreStringTableData = DataSegmentHelper.Slice(dataSegment, 0, tableStart);
-                segment.PostStringTableData = DataSegmentHelper.Slice(dataSegment, tableEnd, OrgAppearanceOffset - tableEnd);
+                segment.PostStringTableData = DataSegmentHelper.Slice(dataSegment, tableEnd, CopyrightOrgHeadOffset - tableEnd);
 
                 // Compute trailing padding per record: null bytes between a record's last string
                 // and the next record's first string
@@ -439,17 +444,17 @@ namespace CovertActionTools.Core.Models.Executables
             }
             else
             {
-                segment.PreStringTableData = DataSegmentHelper.Slice(dataSegment, 0, OrgAppearanceOffset);
+                segment.PreStringTableData = DataSegmentHelper.Slice(dataSegment, 0, CopyrightOrgHeadOffset);
                 segment.PostStringTableData = Array.Empty<byte>();
             }
 
-            segment.OrgAppearances = new OrgAppearanceRecord[OrgAppearanceCount];
-            for (var i = 0; i < OrgAppearanceCount; i++)
+            segment.CopyrightOrgHeads = new CopyrightOrgHeadRecord[CopyrightOrgHeadCount];
+            for (var i = 0; i < CopyrightOrgHeadCount; i++)
             {
-                segment.OrgAppearances[i] = OrgAppearanceRecord.FromBytes(dataSegment, OrgAppearanceOffset + i * OrgAppearanceRecordSize);
+                segment.CopyrightOrgHeads[i] = CopyrightOrgHeadRecord.FromBytes(dataSegment, CopyrightOrgHeadOffset + i * CopyrightOrgHeadRecordSize);
             }
 
-            var missionSetsStart = OrgAppearanceOffset + OrgAppearanceSize;
+            var missionSetsStart = CopyrightOrgHeadOffset + CopyrightOrgHeadSize;
             segment.Unknown1 = DataSegmentHelper.Slice(dataSegment, missionSetsStart, MissionSetsOffset - missionSetsStart);
 
             var missionSetsEnd = MissionSetsOffset + MissionSetCount * FinalMissionSetRecord.RecordSize;
@@ -592,10 +597,10 @@ namespace CovertActionTools.Core.Models.Executables
             var charNamesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(CharacterNames);
 
             // Serialize org appearance records
-            var orgAppearanceBytes = new byte[OrgAppearanceSize];
-            for (var i = 0; i < OrgAppearances.Length; i++)
+            var orgAppearanceBytes = new byte[CopyrightOrgHeadSize];
+            for (var i = 0; i < CopyrightOrgHeads.Length; i++)
             {
-                Array.Copy(OrgAppearances[i].ToBytes(), 0, orgAppearanceBytes, i * OrgAppearanceRecordSize, OrgAppearanceRecordSize);
+                Array.Copy(CopyrightOrgHeads[i].ToBytes(), 0, orgAppearanceBytes, i * CopyrightOrgHeadRecordSize, CopyrightOrgHeadRecordSize);
             }
 
             // Compute character name pointer values
@@ -631,7 +636,7 @@ namespace CovertActionTools.Core.Models.Executables
             {
                 PreStringTableData = PreStringTableData.ToArray(),
                 PostStringTableData = PostStringTableData.ToArray(),
-                OrgAppearances = OrgAppearances.Select(o => o.Clone()).ToArray(),
+                CopyrightOrgHeads = CopyrightOrgHeads.Select(o => o.Clone()).ToArray(),
                 Unknown1 = Unknown1.ToArray(),
                 MissionSets = MissionSets.Select(m => m.Clone()).ToArray(),
                 PostMissionPreCrimeData = PostMissionPreCrimeData.ToArray(),

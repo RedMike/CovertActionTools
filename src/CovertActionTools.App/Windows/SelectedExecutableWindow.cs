@@ -632,12 +632,12 @@ public class SelectedExecutableWindow : BaseWindow
             DrawStringArray(final.OrganisationNames, "OrgName", final.OrganisationNameByteSizes);
         }
 
-        if (ImGui.CollapsingHeader("Org Appearances"))
+        if (ImGui.CollapsingHeader("Copyright Org Head Appearances"))
         {
-            for (var i = 0; i < final.OrgAppearances.Length; i++)
+            for (var i = 0; i < final.CopyrightOrgHeads.Length; i++)
             {
                 ImGui.PushID($"OrgApp_{i}");
-                var oa = final.OrgAppearances[i];
+                var oa = final.CopyrightOrgHeads[i];
                 var orgName = i < final.OrganisationNames.Length ? final.OrganisationNames[i] : $"Org {i}";
                 if (ImGui.CollapsingHeader($"Org {i}: {orgName}"))
                 {
