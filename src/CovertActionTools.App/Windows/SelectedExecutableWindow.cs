@@ -632,7 +632,52 @@ public class SelectedExecutableWindow : BaseWindow
             DrawStringArray(final.OrganisationNames, "OrgName", final.OrganisationNameByteSizes);
         }
 
-        DrawReadOnlyInfo("Mission Set Parameters", $"{final.MissionSetParameters.Length} bytes (read-only)");
+        if (ImGui.CollapsingHeader("Org Appearances"))
+        {
+            for (var i = 0; i < final.OrgAppearances.Length; i++)
+            {
+                ImGui.PushID($"OrgApp_{i}");
+                var oa = final.OrgAppearances[i];
+                if (ImGui.CollapsingHeader($"Org {i}"))
+                {
+                    if (ImGui.BeginTable($"OrgAppFields", 4))
+                    {
+                        ImGui.TableNextRow();
+                        ImGui.TableNextColumn();
+                        var g = ImGuiExtensions.Input("Gender", (int)oa.Gender, width: 40);
+                        if (g != null) { oa.Gender = (ushort)g.Value; _pendingState.RecordChange(); }
+                        ImGui.TableNextColumn();
+                        var sk = ImGuiExtensions.Input("Skin", (int)oa.SkinColour, width: 40);
+                        if (sk != null) { oa.SkinColour = (ushort)sk.Value; _pendingState.RecordChange(); }
+                        ImGui.TableNextColumn();
+                        var cl = ImGuiExtensions.Input("Clothing", (int)oa.ClothingSprite, width: 40);
+                        if (cl != null) { oa.ClothingSprite = (ushort)cl.Value; _pendingState.RecordChange(); }
+                        ImGui.TableNextColumn();
+                        var hc = ImGuiExtensions.Input("Hair Colour", (int)oa.HairColour, width: 40);
+                        if (hc != null) { oa.HairColour = (ushort)hc.Value; _pendingState.RecordChange(); }
+                        ImGui.EndTable();
+                    }
+                    if (ImGui.BeginTable($"OrgAppFace", 4))
+                    {
+                        ImGui.TableNextRow();
+                        ImGui.TableNextColumn();
+                        var mo = ImGuiExtensions.Input("Mouth", (int)oa.Mouth, width: 40);
+                        if (mo != null) { oa.Mouth = (ushort)mo.Value; _pendingState.RecordChange(); }
+                        ImGui.TableNextColumn();
+                        var no = ImGuiExtensions.Input("Nose", (int)oa.Nose, width: 40);
+                        if (no != null) { oa.Nose = (ushort)no.Value; _pendingState.RecordChange(); }
+                        ImGui.TableNextColumn();
+                        var ey = ImGuiExtensions.Input("Eyes", (int)oa.Eyes, width: 40);
+                        if (ey != null) { oa.Eyes = (ushort)ey.Value; _pendingState.RecordChange(); }
+                        ImGui.TableNextColumn();
+                        var ha = ImGuiExtensions.Input("Hair", (int)oa.Hair, width: 40);
+                        if (ha != null) { oa.Hair = (ushort)ha.Value; _pendingState.RecordChange(); }
+                        ImGui.EndTable();
+                    }
+                }
+                ImGui.PopID();
+            }
+        }
         if (ImGui.CollapsingHeader("Character Names"))
         {
             DrawStringArray(final.CharacterNames, "CharName");

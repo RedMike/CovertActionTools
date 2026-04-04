@@ -196,6 +196,86 @@ namespace CovertActionTools.Core.Models.Executables
     }
 
     /// <summary>
+    /// Per-org character appearance template (16 bytes), indexed by org unique ID (0-25).
+    /// FUN_1100_11b7 packs these fields into a portrait layer descriptor. FUN_1100_7afe
+    /// renders the portrait by drawing 5 sprite layers from FACES (male) or FACESF (female)
+    /// images, plus clothing drawn below the face. Skin and hair colours are applied via
+    /// VGA palette colour replacement at draw time.
+    /// </summary>
+    public class OrgAppearanceRecord
+    {
+        public const int RecordSize = 16;
+
+        /// <summary>Clothing sprite index (0-3). Drawn below the face by FUN_1100_1214.</summary>
+        public ushort ClothingSprite { get; set; }
+
+        /// <summary>Gender: 0 = female (FACESF), 1 = male (FACES).</summary>
+        public ushort Gender { get; set; }
+
+        /// <summary>Skin colour (0-1). Selects head shape variant and skin palette replacement.</summary>
+        public ushort SkinColour { get; set; }
+
+        /// <summary>Mouth sprite variant (1-8). Packed into bits 4-6 of the portrait descriptor.</summary>
+        public ushort Mouth { get; set; }
+
+        /// <summary>Nose sprite variant (1-8). Packed into bits 7-9 of the portrait descriptor.</summary>
+        public ushort Nose { get; set; }
+
+        /// <summary>Eyes sprite variant (1-8). Packed into bits 10-12 of the portrait descriptor.</summary>
+        public ushort Eyes { get; set; }
+
+        /// <summary>Hair sprite variant (1-8). Packed into bits 13-15 of the portrait descriptor.</summary>
+        public ushort Hair { get; set; }
+
+        /// <summary>Hair colour (0-3). Applied via palette colour replacement at draw time.</summary>
+        public ushort HairColour { get; set; }
+
+        public OrgAppearanceRecord Clone()
+        {
+            return new OrgAppearanceRecord
+            {
+                ClothingSprite = ClothingSprite,
+                Gender = Gender,
+                SkinColour = SkinColour,
+                Mouth = Mouth,
+                Nose = Nose,
+                Eyes = Eyes,
+                Hair = Hair,
+                HairColour = HairColour
+            };
+        }
+
+        public static OrgAppearanceRecord FromBytes(byte[] data, int offset)
+        {
+            return new OrgAppearanceRecord
+            {
+                ClothingSprite = BitConverter.ToUInt16(data, offset + 0x00),
+                Gender = BitConverter.ToUInt16(data, offset + 0x02),
+                SkinColour = BitConverter.ToUInt16(data, offset + 0x04),
+                Mouth = BitConverter.ToUInt16(data, offset + 0x06),
+                Nose = BitConverter.ToUInt16(data, offset + 0x08),
+                Eyes = BitConverter.ToUInt16(data, offset + 0x0A),
+                Hair = BitConverter.ToUInt16(data, offset + 0x0C),
+                HairColour = BitConverter.ToUInt16(data, offset + 0x0E)
+            };
+        }
+
+        public byte[] ToBytes()
+        {
+            var result = new byte[RecordSize];
+            result[0x00] = (byte)(ClothingSprite & 0xFF); result[0x01] = (byte)((ClothingSprite >> 8) & 0xFF);
+            result[0x02] = (byte)(Gender & 0xFF); result[0x03] = (byte)((Gender >> 8) & 0xFF);
+            result[0x04] = (byte)(SkinColour & 0xFF); result[0x05] = (byte)((SkinColour >> 8) & 0xFF);
+            result[0x06] = (byte)(Mouth & 0xFF); result[0x07] = (byte)((Mouth >> 8) & 0xFF);
+            result[0x08] = (byte)(Nose & 0xFF); result[0x09] = (byte)((Nose >> 8) & 0xFF);
+            result[0x0A] = (byte)(Eyes & 0xFF); result[0x0B] = (byte)((Eyes >> 8) & 0xFF);
+            result[0x0C] = (byte)(Hair & 0xFF); result[0x0D] = (byte)((Hair >> 8) & 0xFF);
+            result[0x0E] = (byte)(HairColour & 0xFF); result[0x0F] = (byte)((HairColour >> 8) & 0xFF);
+            return result;
+        }
+    }
+
+    /// <summary>
     /// Structured data segment for FINAL.EXE.
     /// Field boundaries and interpretations are based on reverse engineering and may not
     /// be fully accurate. Unknown regions are preserved as raw byte arrays.
@@ -206,10 +286,10 @@ namespace CovertActionTools.Core.Models.Executables
         public const int DsParagraph = 0x10D8;
 
         #region Layout Constants (DS-relative offsets)
-        private const int MissionParamsOffset = 0x1CFC;    // 0x012A7C - 0x10D80
-        private const int MissionParamCount = 16;
-        private const int MissionParamRecordSize = 26;
-        private const int MissionParamsSize = MissionParamCount * MissionParamRecordSize; // 416
+        private const int OrgAppearanceOffset = 0x1CFC;    // 0x012A7C - 0x10D80
+        private const int OrgAppearanceCount = 26;
+        private const int OrgAppearanceRecordSize = 16;
+        private const int OrgAppearanceSize = OrgAppearanceCount * OrgAppearanceRecordSize; // 416
         private const int MissionSetsOffset = 0x1E9E;      // 0x012C1E - 0x10D80
         private const int MissionSetCount = 16;
         private const int CrimeTypesOffset = 0x2AFC;        // 0x01387C - 0x10D80
@@ -230,8 +310,12 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>Data between string table and mission params.</summary>
         public byte[] PostStringTableData { get; set; } = Array.Empty<byte>();
 
-        /// <summary>16 x 26-byte mission set parameter records (values 0-8, partially understood).</summary>
-        public byte[] MissionSetParameters { get; set; } = Array.Empty<byte>();
+        /// <summary>
+        /// 26 x 16-byte org appearance records, indexed by org unique ID (0-25).
+        /// FUN_1100_11b7 packs these fields into a portrait layer descriptor used by
+        /// FUN_1100_7afe to render layered character portraits from FACES/FACESF sprites.
+        /// </summary>
+        public OrgAppearanceRecord[] OrgAppearances { get; set; } = Array.Empty<OrgAppearanceRecord>();
 
         /// <summary>2-byte gap between params and mission set records.</summary>
         public byte[] Unknown1 { get; set; } = Array.Empty<byte>();
@@ -312,7 +396,7 @@ namespace CovertActionTools.Core.Models.Executables
                 }
 
                 segment.PreStringTableData = DataSegmentHelper.Slice(dataSegment, 0, tableStart);
-                segment.PostStringTableData = DataSegmentHelper.Slice(dataSegment, tableEnd, MissionParamsOffset - tableEnd);
+                segment.PostStringTableData = DataSegmentHelper.Slice(dataSegment, tableEnd, OrgAppearanceOffset - tableEnd);
 
                 // Compute trailing padding per record: null bytes between a record's last string
                 // and the next record's first string
@@ -355,13 +439,17 @@ namespace CovertActionTools.Core.Models.Executables
             }
             else
             {
-                segment.PreStringTableData = DataSegmentHelper.Slice(dataSegment, 0, MissionParamsOffset);
+                segment.PreStringTableData = DataSegmentHelper.Slice(dataSegment, 0, OrgAppearanceOffset);
                 segment.PostStringTableData = Array.Empty<byte>();
             }
 
-            segment.MissionSetParameters = DataSegmentHelper.Slice(dataSegment, MissionParamsOffset, MissionParamsSize);
+            segment.OrgAppearances = new OrgAppearanceRecord[OrgAppearanceCount];
+            for (var i = 0; i < OrgAppearanceCount; i++)
+            {
+                segment.OrgAppearances[i] = OrgAppearanceRecord.FromBytes(dataSegment, OrgAppearanceOffset + i * OrgAppearanceRecordSize);
+            }
 
-            var missionSetsStart = MissionParamsOffset + MissionParamsSize;
+            var missionSetsStart = OrgAppearanceOffset + OrgAppearanceSize;
             segment.Unknown1 = DataSegmentHelper.Slice(dataSegment, missionSetsStart, MissionSetsOffset - missionSetsStart);
 
             var missionSetsEnd = MissionSetsOffset + MissionSetCount * FinalMissionSetRecord.RecordSize;
@@ -503,9 +591,16 @@ namespace CovertActionTools.Core.Models.Executables
             var orgBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(OrganisationNames, OrganisationNameByteSizes);
             var charNamesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(CharacterNames);
 
+            // Serialize org appearance records
+            var orgAppearanceBytes = new byte[OrgAppearanceSize];
+            for (var i = 0; i < OrgAppearances.Length; i++)
+            {
+                Array.Copy(OrgAppearances[i].ToBytes(), 0, orgAppearanceBytes, i * OrgAppearanceRecordSize, OrgAppearanceRecordSize);
+            }
+
             // Compute character name pointer values
             var charNamesBaseOffset = PreStringTableData.Length + stringTableBytes.Length
-                + PostStringTableData.Length + MissionSetParameters.Length
+                + PostStringTableData.Length + orgAppearanceBytes.Length
                 + Unknown1.Length + missionSetBytes.Length + PostMissionPreCrimeData.Length
                 + crimeBytes.Length + Unknown2.Length + orgBytes.Length
                 + PostOrgPreCharNameData.Length;
@@ -515,7 +610,7 @@ namespace CovertActionTools.Core.Models.Executables
                 PreStringTableData,
                 stringTableBytes,
                 PostStringTableData,
-                MissionSetParameters,
+                orgAppearanceBytes,
                 Unknown1,
                 missionSetBytes,
                 PostMissionPreCrimeData,
@@ -536,7 +631,7 @@ namespace CovertActionTools.Core.Models.Executables
             {
                 PreStringTableData = PreStringTableData.ToArray(),
                 PostStringTableData = PostStringTableData.ToArray(),
-                MissionSetParameters = MissionSetParameters.ToArray(),
+                OrgAppearances = OrgAppearances.Select(o => o.Clone()).ToArray(),
                 Unknown1 = Unknown1.ToArray(),
                 MissionSets = MissionSets.Select(m => m.Clone()).ToArray(),
                 PostMissionPreCrimeData = PostMissionPreCrimeData.ToArray(),
