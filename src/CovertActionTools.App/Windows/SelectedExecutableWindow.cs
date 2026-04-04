@@ -121,17 +121,25 @@ public class SelectedExecutableWindow : BaseWindow
                     if (newSurvQuality != null) { room.SurveillanceQuality = (ushort)newSurvQuality.Value; _pendingState.RecordChange(); }
 
                     ImGui.TableNextColumn();
-                    // Bitfield matched against building room grid area: bit 0 (1) = small
-                    // (area <= 40), bit 1 (2) = medium (41-72), bit 2 (4) = large (> 72).
-                    // Only large rooms (bit 2) are valid as the local agent spawn room.
-                    var newSize = ImGuiExtensions.Input("##Size", (int)room.SizeConstraint, width: 80);
-                    if (newSize != null) { room.SizeConstraint = (ushort)newSize.Value; _pendingState.RecordChange(); }
+                    var sizeIdx = room.SizeConstraint == 1 ? 0 : room.SizeConstraint == 2 ? 1 :
+                        room.SizeConstraint == 4 ? 2 : room.SizeConstraint == 3 ? 3 :
+                        room.SizeConstraint == 5 ? 4 : room.SizeConstraint == 6 ? 5 :
+                        room.SizeConstraint == 7 ? 6 : 0;
+                    ImGui.SetNextItemWidth(120);
+                    if (ImGui.Combo("##Size", ref sizeIdx, "Small\0Medium\0Large\0Small+Medium\0Small+Large\0Medium+Large\0All\0"))
+                    {
+                        var sizeValues = new ushort[] { 1, 2, 4, 3, 5, 6, 7 };
+                        room.SizeConstraint = sizeValues[sizeIdx];
+                        _pendingState.RecordChange();
+                    }
 
                     ImGui.TableNextColumn();
-                    // Only bit 0 is checked at runtime (mask hardcoded to 1), so effectively boolean.
-                    // Vanilla uses 7 for enabled, 0 for disabled.
-                    var newEnabled = ImGuiExtensions.Input("##Enabled", (int)room.Enabled, width: 80);
-                    if (newEnabled != null) { room.Enabled = (ushort)newEnabled.Value; _pendingState.RecordChange(); }
+                    var enabled = room.Enabled != 0;
+                    if (ImGui.Checkbox("##Enabled", ref enabled))
+                    {
+                        room.Enabled = (ushort)(enabled ? 7 : 0);
+                        _pendingState.RecordChange();
+                    }
 
                     ImGui.PopID();
                 }
@@ -381,29 +389,17 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Movement Pixel DX/DY"))
         {
-            ImGui.Text("Walking pixel offsets per direction (9 entries: stationary + 8 compass)");
-            ImGui.Text("DX:"); ImGui.SameLine();
-            DrawShortArray(tac.MovementPixelDX, "MpxDX", 9);
-            ImGui.Text("DY:"); ImGui.SameLine();
-            DrawShortArray(tac.MovementPixelDY, "MpxDY", 9);
+            DrawDirectionTable("MvPx", CompassLabels9, tac.MovementPixelDX, tac.MovementPixelDY, "Walking pixel offsets per direction");
         }
 
         if (ImGui.CollapsingHeader("Jumping Tile DX/DY"))
         {
-            ImGui.Text("Jumping tile offsets per direction (9 entries: stationary + 8 compass)");
-            ImGui.Text("DX:"); ImGui.SameLine();
-            DrawShortArray(tac.JumpingTileDX, "JtDX", 9);
-            ImGui.Text("DY:"); ImGui.SameLine();
-            DrawShortArray(tac.JumpingTileDY, "JtDY", 9);
+            DrawDirectionTable("JpTl", CompassLabels9, tac.JumpingTileDX, tac.JumpingTileDY, "Jumping tile offsets per direction");
         }
 
         if (ImGui.CollapsingHeader("Tile Adjacency DX/DY"))
         {
-            ImGui.Text("Cardinal tile adjacency (4 entries: N/E/S/W)");
-            ImGui.Text("DX:"); ImGui.SameLine();
-            DrawShortArray(tac.TileAdjacencyDX, "TaDX", 4);
-            ImGui.Text("DY:"); ImGui.SameLine();
-            DrawShortArray(tac.TileAdjacencyDY, "TaDY", 4);
+            DrawDirectionTable("TlAd", CardinalLabels4, tac.TileAdjacencyDX, tac.TileAdjacencyDY, "Cardinal tile adjacency for map generation and doors");
         }
 
         if (ImGui.CollapsingHeader("Clue Relationship Phrases"))
@@ -894,6 +890,9 @@ public class SelectedExecutableWindow : BaseWindow
 
     #endregion
 
+    private static readonly string[] CompassLabels9 = { "None", "N", "NE", "E", "SE", "S", "SW", "W", "NW" };
+    private static readonly string[] CardinalLabels4 = { "N", "E", "S", "W" };
+
     #region Shared Drawing Helpers
 
     // TODO: Allow different string lengths after pointer recalculation is implemented.
@@ -960,6 +959,40 @@ public class SelectedExecutableWindow : BaseWindow
                     if (newVal != null) { values[idx] = (ushort)newVal.Value; _pendingState.RecordChange(); }
                     ImGui.PopID();
                 }
+            }
+
+            ImGui.EndTable();
+        }
+    }
+
+    private void DrawDirectionTable(string idPrefix, string[] labels, short[] dx, short[] dy, string description)
+    {
+        ImGui.Text(description);
+        if (ImGui.BeginTable($"{idPrefix}_table", 3, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+        {
+            ImGui.TableSetupColumn("Direction");
+            ImGui.TableSetupColumn("DX");
+            ImGui.TableSetupColumn("DY");
+            ImGui.TableHeadersRow();
+
+            var count = Math.Min(labels.Length, Math.Min(dx.Length, dy.Length));
+            for (var i = 0; i < count; i++)
+            {
+                ImGui.TableNextRow();
+                ImGui.TableNextColumn();
+                ImGui.Text(labels[i]);
+
+                ImGui.TableNextColumn();
+                ImGui.PushID($"{idPrefix}_dx_{i}");
+                var newDx = ImGuiExtensions.Input("##v", (int)dx[i], width: 80);
+                if (newDx != null) { dx[i] = (short)newDx.Value; _pendingState.RecordChange(); }
+                ImGui.PopID();
+
+                ImGui.TableNextColumn();
+                ImGui.PushID($"{idPrefix}_dy_{i}");
+                var newDy = ImGuiExtensions.Input("##v", (int)dy[i], width: 80);
+                if (newDy != null) { dy[i] = (short)newDy.Value; _pendingState.RecordChange(); }
+                ImGui.PopID();
             }
 
             ImGui.EndTable();
