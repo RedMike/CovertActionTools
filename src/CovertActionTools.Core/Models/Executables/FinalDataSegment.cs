@@ -333,6 +333,7 @@ namespace CovertActionTools.Core.Models.Executables
         private const int IntelMidPaddingSize = 3;
         private const int EvidenceRankPointerTableSize = 160;  // (skipped, recomputed)
         private const int SceneFilenameCount = 4;              // "lau", "off", "bch", "cas"
+        private const int GameStateDataSize = 1242;            // TR section: DS:0x46A6-0x4B7F
         #endregion
 
         #region Fields (in binary order)
@@ -598,7 +599,16 @@ namespace CovertActionTools.Core.Models.Executables
 
         // CharacterNamePointers are computed at serialization time from CharacterNames positions.
 
-        /// <summary>Everything after character name pointers: game state, file management, runtime, BSS.</summary>
+        /// <summary>
+        /// Game state and file management data (1,242 bytes). Contains status labels, chronology
+        /// phrases, save/load UI, difficulty suffixes, EXE chain refs, disk prompts, PANI markers,
+        /// RastPort blocks, and palette data — interleaved strings and binary.
+        /// TODO: split into typed sub-sections when the interleaved binary regions are understood.
+        /// </summary>
+        public byte[] GameStateData { get; set; } = Array.Empty<byte>();
+
+        /// <summary>MSC overlay/error strings, game state buffers, C runtime internals, BSS.
+        /// Not editable — preserved for binary roundtrip fidelity only.</summary>
         public byte[] TrailingData { get; set; } = Array.Empty<byte>();
 
         #endregion
@@ -732,7 +742,9 @@ namespace CovertActionTools.Core.Models.Executables
                 : Array.Empty<byte>();
 
             var charPtrsEnd = charPtrTableOffset + CharNamePointerCount * 2;
-            segment.TrailingData = DataSegmentHelper.Slice(dataSegment, charPtrsEnd, dataSegment.Length - charPtrsEnd);
+            segment.GameStateData = DataSegmentHelper.Slice(dataSegment, charPtrsEnd, GameStateDataSize);
+            var trailingStart = charPtrsEnd + GameStateDataSize;
+            segment.TrailingData = DataSegmentHelper.Slice(dataSegment, trailingStart, dataSegment.Length - trailingStart);
 
             return segment;
         }
@@ -873,6 +885,7 @@ namespace CovertActionTools.Core.Models.Executables
                 charNamesBytes,
                 PostCharNameData,
                 DataSegmentHelper.UInt16ArrayToBytes(charNamePointers),
+                GameStateData,
                 TrailingData
             );
 
@@ -958,6 +971,7 @@ namespace CovertActionTools.Core.Models.Executables
                 ClueSystemData = ClueSystemData.ToArray(),
                 CharacterNames = CharacterNames.Select(s => s).ToArray(),
                 PostCharNameData = PostCharNameData.ToArray(),
+                GameStateData = GameStateData.ToArray(),
                 TrailingData = TrailingData.ToArray()
             };
         }

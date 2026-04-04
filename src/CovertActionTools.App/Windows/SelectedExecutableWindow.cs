@@ -972,7 +972,7 @@ public class SelectedExecutableWindow : BaseWindow
             ("PreStringTableData", final.PreStringTableData.Length),
             ("PostStringTableData", final.PostStringTableData.Length),
             ("ClueSystemData", final.ClueSystemData.Length),
-            ("TrailingData", final.TrailingData.Length)
+            ("GameStateData", final.GameStateData.Length)
         });
     }
 
