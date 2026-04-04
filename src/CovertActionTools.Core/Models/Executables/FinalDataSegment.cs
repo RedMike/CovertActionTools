@@ -416,12 +416,31 @@ namespace CovertActionTools.Core.Models.Executables
         public byte[] PlotFileBuffer { get; set; } = Array.Empty<byte>();
 
         /// <summary>
-        /// Game event strings: chronology event phrases (sent message to, arrested, hiding, etc.),
-        /// time/date format templates, and efficiency report labels (At Large, ARRESTED, EP scores, etc.).
-        /// Contains 0x89 bytes which are a game text rendering formatting character (likely newline/separator).
-        /// Also contains empty strings from null-byte separators between string groups.
+        /// Chronology format strings used to build case event text. Format tokens (" (", ") ", "/", "^"),
+        /// event phrases ("sent message to", "You arrested", etc.), and status phrases ("Mission completed.",
+        /// " went into hiding.", etc.). Accessed by unrecognized code in FUN_1100_1da2.
+        /// Includes intentional empty strings used as format placeholders.
         /// </summary>
-        public string[] GameEventStrings { get; set; } = Array.Empty<string>();
+        public string[] ChronologyFormatStrings { get; set; } = Array.Empty<string>();
+
+        /// <summary>
+        /// Time/date display template "HH:MM AM Mon DD" with fixed separator characters.
+        /// Digits and month name are overwritten at runtime by FUN_1100_2c94; the fixed
+        /// characters (":", " ", "M", " ", " ") are preserved from the template.
+        /// </summary>
+        public string TimeTemplateBuffer { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Short strings used in time formatting: " " separator (FUN_27cc) and " 10" suffix (FUN_2c94).
+        /// </summary>
+        public string[] TimeFormatStrings { get; set; } = Array.Empty<string>();
+
+        /// <summary>
+        /// Efficiency report display strings: "Efficiency Report", status labels (At Large, ARRESTED, TURNED,
+        /// CONFISCATED), EP score formatting, Double Agent text, Efficiency Rating, formatting delimiters.
+        /// Contains 0x89 bytes — a non-printable game text formatting character (likely line break/separator).
+        /// </summary>
+        public string[] EfficiencyReportStrings { get; set; } = Array.Empty<string>();
 
         #endregion
 
@@ -765,7 +784,10 @@ namespace CovertActionTools.Core.Models.Executables
                 RastPortBPP = RastPortBPP,
                 RastPortReserved = RastPortReserved,
                 PlotFileBuffer = PlotFileBuffer.ToArray(),
-                GameEventStrings = GameEventStrings.Select(s => s).ToArray(),
+                ChronologyFormatStrings = ChronologyFormatStrings.Select(s => s).ToArray(),
+                TimeFormatStrings = TimeFormatStrings.Select(s => s).ToArray(),
+                TimeTemplateBuffer = TimeTemplateBuffer,
+                EfficiencyReportStrings = EfficiencyReportStrings.Select(s => s).ToArray(),
                 CrimeTypeNames = CrimeTypeNames.Select(s => s).ToArray(),
                 CrimeTypeNameByteSizes = CrimeTypeNameByteSizes.ToArray(),
                 Unknown2 = Unknown2.ToArray(),
@@ -892,17 +914,43 @@ namespace CovertActionTools.Core.Models.Executables
             segment.PlotFileBuffer = DataSegmentHelper.Slice(data, pos, PlotFileBufferSize);
             pos += PlotFileBufferSize;
 
-            // GameEventStrings: all remaining null-terminated strings to end of region
-            var eventStrings = new List<string>();
+            // ChronologyFormatStrings: strings until "You turned " (last chronology entry)
+            var chronStrings = new List<string>();
             while (pos < end)
             {
                 var strEnd = pos;
                 while (strEnd < end && data[strEnd] != 0) strEnd++;
                 var s = Encoding.ASCII.GetString(data, pos, strEnd - pos);
+                chronStrings.Add(s);
                 pos = strEnd + 1;
-                eventStrings.Add(s);
+                if (s == "You turned ")
+                    break;
             }
-            segment.GameEventStrings = eventStrings.ToArray();
+            segment.ChronologyFormatStrings = chronStrings.ToArray();
+
+            // TimeFormatStrings: " " and " 10" (2 short strings before the time template)
+            segment.TimeFormatStrings = ReadStrings(data, ref pos, 2);
+
+            // Null separator + TimeTemplateBuffer: "00:00 AM Jun 00"
+            if (pos < end && data[pos] == 0) pos++; // skip null separator
+            var tmplEnd = pos;
+            while (tmplEnd < end && data[tmplEnd] != 0) tmplEnd++;
+            segment.TimeTemplateBuffer = Encoding.ASCII.GetString(data, pos, tmplEnd - pos);
+            pos = tmplEnd + 1;
+
+            // EfficiencyReportStrings: all remaining strings to end of region
+            var effStrings = new List<string>();
+            while (pos < end)
+            {
+                var strEnd = pos;
+                while (strEnd < end && data[strEnd] != 0) strEnd++;
+                // Use Latin-1 to preserve 0x89 bytes faithfully
+                var bytes = DataSegmentHelper.Slice(data, pos, strEnd - pos);
+                var s = new string(Array.ConvertAll(bytes, b => (char)b));
+                pos = strEnd + 1;
+                effStrings.Add(s);
+            }
+            segment.EfficiencyReportStrings = effStrings.ToArray();
         }
 
         /// <summary>
@@ -993,8 +1041,24 @@ namespace CovertActionTools.Core.Models.Executables
             // PlotFileBuffer
             parts.AddRange(DataSegmentHelper.PadToSize(PlotFileBuffer, PlotFileBufferSize));
 
-            // GameEventStrings
-            parts.AddRange(DataSegmentHelper.NullTerminatedStringsToBytes(GameEventStrings));
+            // ChronologyFormatStrings
+            parts.AddRange(DataSegmentHelper.NullTerminatedStringsToBytes(ChronologyFormatStrings));
+
+            // TimeFormatStrings
+            parts.AddRange(DataSegmentHelper.NullTerminatedStringsToBytes(TimeFormatStrings));
+
+            // Null separator + TimeTemplateBuffer
+            parts.Add(0);
+            parts.AddRange(Encoding.ASCII.GetBytes(TimeTemplateBuffer));
+            parts.Add(0);
+
+            // EfficiencyReportStrings — encode chars > 0x7F as raw bytes
+            foreach (var s in EfficiencyReportStrings)
+            {
+                foreach (var c in s)
+                    parts.Add((byte)c);
+                parts.Add(0);
+            }
 
             var result = parts.ToArray();
 

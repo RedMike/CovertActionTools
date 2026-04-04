@@ -801,10 +801,43 @@ public class SelectedExecutableWindow : BaseWindow
             }
         }
 
-        if (ImGui.CollapsingHeader("Game Event Strings (tentative)"))
+        if (ImGui.CollapsingHeader("Chronology Format Strings (tentative)"))
         {
-            ImGui.TextWrapped("Chronology event phrases, time/date templates, efficiency report labels. Note: some strings contain 0x89 bytes (game text rendering formatting character). Empty entries are null-byte separators between string groups.");
-            DrawStringArray(final.GameEventStrings, "GameEvt");
+            ImGui.TextWrapped("Format tokens and event phrases for building case chronology text. Empty entries are intentional format placeholders.");
+            DrawStringArray(final.ChronologyFormatStrings, "ChronStr");
+        }
+
+        if (ImGui.CollapsingHeader("Time Template (tentative)"))
+        {
+            ImGui.TextWrapped("Time/date display template. Digits and month are overwritten at runtime; fixed separator characters (:, spaces, M) are preserved.");
+            ImGui.Text("Format strings:");
+            DrawStringArray(final.TimeFormatStrings, "TimeFmt");
+            ImGui.Separator();
+            ImGui.Text("Template (HH:MM AM Mon DD):");
+            var tmpl = final.TimeTemplateBuffer;
+            var contentSize = ImGui.GetContentRegionAvail();
+            var newTmpl = ImGuiExtensions.Input("##TimeTemplate", tmpl, 32, width: (int)contentSize.X - 80);
+            if (newTmpl != null)
+            {
+                final.TimeTemplateBuffer = newTmpl;
+                _pendingState.RecordChange();
+            }
+        }
+
+        if (ImGui.CollapsingHeader("Efficiency Report Strings (tentative)"))
+        {
+            ImGui.TextWrapped("Efficiency report display strings. Contains 0x89 (shown as \\x89) — a non-printable game text formatting character.");
+            for (var i = 0; i < final.EfficiencyReportStrings.Length; i++)
+            {
+                ImGui.PushID($"EffRpt_{i}");
+                var s = final.EfficiencyReportStrings[i];
+                // Display with 0x89 shown as \x89 for readability
+                var display = s.Replace("\x89", "\\x89");
+                ImGui.TextDisabled($"[{i}]");
+                ImGui.SameLine();
+                ImGui.Text(display);
+                ImGui.PopID();
+            }
         }
 
         if (ImGui.CollapsingHeader("Character Names"))
