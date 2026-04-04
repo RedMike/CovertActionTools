@@ -13,7 +13,7 @@ namespace CovertActionTools.Core.Models.Executables
     {
         public const int RecordSize = 74;
         public const int NameLength = 25;
-        public const int UnusedSlotCount = 8;
+        public const int UnusedSlotCount = 2;
         public const int StringPointerCount = 16;
         public const int CrimeSlotCount = 7;
         public const int StringsPerSlot = 2;
@@ -22,8 +22,17 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>Mission set name, null-padded to 25 bytes.</summary>
         public string Name { get; set; } = string.Empty;
 
-        /// <summary>Unknown bitfield at offset 0x19. Possibly encodes world area eligibility.</summary>
-        public byte Unknown1 { get; set; }
+        /// <summary>
+        /// Org type eligibility bitmask at offset 0x19. The game reads a 16-bit word at
+        /// record +0x18 (low byte is always 0x00 from name null-padding, high byte is this
+        /// field). FINAL.EXE FUN_1100_0734 ANDs this word against the org's alliance
+        /// membership field (WorldModel.Organisation.UniqueId high byte) to determine which
+        /// criminal organisations can appear in this mission set.
+        /// 4 bits used: 0x01, 0x02, 0x04, 0x08 — each bit represents an org type category.
+        /// Value 0x0F (tutorial) matches all org types.
+        /// TODO: decode the 4 bits into named org type categories.
+        /// </summary>
+        public byte OrgTypeMask { get; set; }
 
         /// <summary>First crime type ID (index into crime type names).</summary>
         public ushort Crime1Id { get; set; }
@@ -34,11 +43,33 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>Third crime type ID.</summary>
         public ushort Crime3Id { get; set; }
 
-        /// <summary>Unused crime slots (8 bytes, always 0xFF). Reserved for additional crimes.</summary>
+        /// <summary>Fourth crime type ID (slot 3). 0xFFFF = unused.</summary>
+        public ushort Crime4Id { get; set; } = 0xFFFF;
+
+        /// <summary>Fifth crime type ID (slot 4). 0xFFFF = unused.</summary>
+        public ushort Crime5Id { get; set; } = 0xFFFF;
+
+        /// <summary>Sixth crime type ID (slot 5). 0xFFFF = unused.</summary>
+        public ushort Crime6Id { get; set; } = 0xFFFF;
+
+        /// <summary>Crime slot 6 at offset +0x26 (2 bytes, always 0xFFFF). Not reachable by the RNG.</summary>
         public byte[] UnusedCrimeSlots { get; set; } = Array.Empty<byte>();
 
-        /// <summary>Flag word: 0x0001 for records 0-8, 0xFFFF for records 9-14. Purpose unknown.</summary>
-        public ushort FlagWord { get; set; }
+        /// <summary>
+        /// Vestigial 8th crime slot at offset +0x28. Structurally occupies crime slot index 7
+        /// in the crime ID array (+0x1A through +0x28). Records 1-9 have value 0x0001 (crime
+        /// type "Theft"), records 0+10-15 have 0xFFFF (empty sentinel).
+        /// FUN_1100_0906's crime selection has a "last crime guard": a slot is only selectable
+        /// as the final crime once all earlier slots are used. The guard checks slot[N+1]==-1
+        /// to identify the last slot. For slot 6, slot[7] is this FlagWord — so 0x0001 (not -1)
+        /// means slot 6 is NOT the finale, and the hardcoded slot 7 with plot strings
+        /// "Max Remington's apartment" / "a mattress full of cash" (at DS+0x235C/0x2376) would
+        /// be the climax. 0xFFFF means slot 6 is the finale instead.
+        /// However, the RNG call c169(6) only generates indices 0-5, so slots 6-7 are never
+        /// reached at runtime. No per-record string pointers exist for slot 7 either (trailing
+        /// pointer words 14-15 point to null padding).
+        /// </summary>
+        public ushort VestigialCrimeSlot7 { get; set; }
 
         /// <summary>
         /// 14 crime slot string pointers stored as 7 pairs of (victim, item/location).
@@ -58,12 +89,15 @@ namespace CovertActionTools.Core.Models.Executables
             return new FinalMissionSetRecord
             {
                 Name = Name,
-                Unknown1 = Unknown1,
+                OrgTypeMask = OrgTypeMask,
                 Crime1Id = Crime1Id,
                 Crime2Id = Crime2Id,
                 Crime3Id = Crime3Id,
+                Crime4Id = Crime4Id,
+                Crime5Id = Crime5Id,
+                Crime6Id = Crime6Id,
                 UnusedCrimeSlots = UnusedCrimeSlots.ToArray(),
-                FlagWord = FlagWord,
+                VestigialCrimeSlot7 = VestigialCrimeSlot7,
                 SlotStrings = SlotStrings.Select(s => s).ToArray(),
                 TrailingPadding = TrailingPadding
             };
@@ -97,12 +131,15 @@ namespace CovertActionTools.Core.Models.Executables
             return new FinalMissionSetRecord
             {
                 Name = name,
-                Unknown1 = data[offset + 0x19],
+                OrgTypeMask = data[offset + 0x19],
                 Crime1Id = BitConverter.ToUInt16(data, offset + 0x1A),
                 Crime2Id = BitConverter.ToUInt16(data, offset + 0x1C),
                 Crime3Id = BitConverter.ToUInt16(data, offset + 0x1E),
-                UnusedCrimeSlots = DataSegmentHelper.Slice(data, offset + 0x20, UnusedSlotCount),
-                FlagWord = BitConverter.ToUInt16(data, offset + 0x28),
+                Crime4Id = BitConverter.ToUInt16(data, offset + 0x20),
+                Crime5Id = BitConverter.ToUInt16(data, offset + 0x22),
+                Crime6Id = BitConverter.ToUInt16(data, offset + 0x24),
+                UnusedCrimeSlots = DataSegmentHelper.Slice(data, offset + 0x26, UnusedSlotCount),
+                VestigialCrimeSlot7 = BitConverter.ToUInt16(data, offset + 0x28),
                 SlotStrings = slotStrings
             };
         }
@@ -123,12 +160,15 @@ namespace CovertActionTools.Core.Models.Executables
             var result = new byte[RecordSize];
             var nameBytes = Encoding.ASCII.GetBytes(Name);
             Array.Copy(nameBytes, 0, result, 0, Math.Min(nameBytes.Length, NameLength));
-            result[0x19] = Unknown1;
+            result[0x19] = OrgTypeMask;
             result[0x1A] = (byte)(Crime1Id & 0xFF); result[0x1B] = (byte)((Crime1Id >> 8) & 0xFF);
             result[0x1C] = (byte)(Crime2Id & 0xFF); result[0x1D] = (byte)((Crime2Id >> 8) & 0xFF);
             result[0x1E] = (byte)(Crime3Id & 0xFF); result[0x1F] = (byte)((Crime3Id >> 8) & 0xFF);
-            Array.Copy(UnusedCrimeSlots, 0, result, 0x20, Math.Min(UnusedCrimeSlots.Length, UnusedSlotCount));
-            result[0x28] = (byte)(FlagWord & 0xFF); result[0x29] = (byte)((FlagWord >> 8) & 0xFF);
+            result[0x20] = (byte)(Crime4Id & 0xFF); result[0x21] = (byte)((Crime4Id >> 8) & 0xFF);
+            result[0x22] = (byte)(Crime5Id & 0xFF); result[0x23] = (byte)((Crime5Id >> 8) & 0xFF);
+            result[0x24] = (byte)(Crime6Id & 0xFF); result[0x25] = (byte)((Crime6Id >> 8) & 0xFF);
+            Array.Copy(UnusedCrimeSlots, 0, result, 0x26, Math.Min(UnusedCrimeSlots.Length, UnusedSlotCount));
+            result[0x28] = (byte)(VestigialCrimeSlot7 & 0xFF); result[0x29] = (byte)((VestigialCrimeSlot7 >> 8) & 0xFF);
 
             // Build 16 pointer words: 14 string pointers + 2 trailing fill
             var words = new ushort[StringPointerCount];
