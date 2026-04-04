@@ -809,10 +809,7 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Time Template (tentative)"))
         {
-            ImGui.TextWrapped("Time/date display template. Digits and month are overwritten at runtime; fixed separator characters (:, spaces, M) are preserved.");
-            ImGui.Text("Format strings:");
-            DrawStringArray(final.TimeFormatStrings, "TimeFmt");
-            ImGui.Separator();
+            ImGui.TextWrapped("Time/date display template. Digits and month are overwritten at runtime. Only month+day portion is shown in-game (e.g. 'Jan 08'). Fixed separator characters (:, spaces, M) are preserved.");
             ImGui.Text("Template (HH:MM AM Mon DD):");
             var tmpl = final.TimeTemplateBuffer;
             var contentSize = ImGui.GetContentRegionAvail();

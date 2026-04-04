@@ -426,14 +426,11 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>
         /// Time/date display template "HH:MM AM Mon DD" with fixed separator characters.
         /// Digits and month name are overwritten at runtime by FUN_1100_2c94; the fixed
-        /// characters (":", " ", "M", " ", " ") are preserved from the template.
+        /// characters (":", " ", "M") are preserved from the template. Only the month+day
+        /// portion is displayed in-game (e.g. "Jan 08"). FUN_2c94 also strcat's " 10" onto
+        /// the end of this buffer at runtime, but it is never displayed.
         /// </summary>
         public string TimeTemplateBuffer { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Short strings used in time formatting: " " separator (FUN_27cc) and " 10" suffix (FUN_2c94).
-        /// </summary>
-        public string[] TimeFormatStrings { get; set; } = Array.Empty<string>();
 
         /// <summary>
         /// Efficiency report display strings: "Efficiency Report", status labels (At Large, ARRESTED, TURNED,
@@ -788,7 +785,6 @@ namespace CovertActionTools.Core.Models.Executables
                 RastPortReserved = RastPortReserved,
                 PlotFileBuffer = PlotFileBuffer.ToArray(),
                 ChronologyFormatStrings = ChronologyFormatStrings.Select(s => s).ToArray(),
-                TimeFormatStrings = TimeFormatStrings.Select(s => s).ToArray(),
                 TimeTemplateBuffer = TimeTemplateBuffer,
                 EfficiencyReportStrings = EfficiencyReportStrings.Select(s => s).ToArray(),
                 CrimeTypeNames = CrimeTypeNames.Select(s => s).ToArray(),
@@ -917,7 +913,8 @@ namespace CovertActionTools.Core.Models.Executables
             segment.PlotFileBuffer = DataSegmentHelper.Slice(data, pos, PlotFileBufferSize);
             pos += PlotFileBufferSize;
 
-            // ChronologyFormatStrings: strings until "You turned " (last chronology entry)
+            // ChronologyFormatStrings: strings until " 10" (the last string before the time template).
+            // Includes "You turned ", " " separator, and " 10" suffix used by FUN_2c94.
             var chronStrings = new List<string>();
             while (pos < end)
             {
@@ -926,13 +923,10 @@ namespace CovertActionTools.Core.Models.Executables
                 var s = Encoding.ASCII.GetString(data, pos, strEnd - pos);
                 chronStrings.Add(s);
                 pos = strEnd + 1;
-                if (s == "You turned ")
+                if (s == " 10")
                     break;
             }
             segment.ChronologyFormatStrings = chronStrings.ToArray();
-
-            // TimeFormatStrings: " " and " 10" (2 short strings before the time template)
-            segment.TimeFormatStrings = ReadStrings(data, ref pos, 2);
 
             // Null separator + TimeTemplateBuffer: "00:00 AM Jun 00"
             if (pos < end && data[pos] == 0) pos++; // skip null separator
@@ -1046,9 +1040,6 @@ namespace CovertActionTools.Core.Models.Executables
 
             // ChronologyFormatStrings
             parts.AddRange(DataSegmentHelper.NullTerminatedStringsToBytes(ChronologyFormatStrings));
-
-            // TimeFormatStrings
-            parts.AddRange(DataSegmentHelper.NullTerminatedStringsToBytes(TimeFormatStrings));
 
             // Null separator + TimeTemplateBuffer
             parts.Add(0);
