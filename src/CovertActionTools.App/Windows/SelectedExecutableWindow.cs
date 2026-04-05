@@ -1163,7 +1163,7 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("CGA Animation Data"))
         {
-            ImGui.TextColored(new System.Numerics.Vector4(0.4f, 0.6f, 1f, 1f), $"{game.CgaAnimationData.Length} bytes — sprite + nibble tables + palette");
+            ImGui.TextColored(new System.Numerics.Vector4(0.4f, 0.6f, 1f, 1f), $"{game.CgaAnimationData.Length} bytes — 2bpp sprite + nibble tables + VGA palette remap");
             var hexDump = string.Join(" ", game.CgaAnimationData.Take(64).Select(b => b.ToString("X2")));
             ImGui.InputTextMultiline("##CgaHex", ref hexDump, (uint)hexDump.Length + 1,
                 new System.Numerics.Vector2(-1, ImGui.GetTextLineHeight() * 3),
