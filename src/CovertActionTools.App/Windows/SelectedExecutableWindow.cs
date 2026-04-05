@@ -1211,12 +1211,12 @@ public class SelectedExecutableWindow : BaseWindow
             if (game.ScreenLayoutData.Length >= 12 && ImGui.BeginTable("ScreenLayout", 7, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY, new System.Numerics.Vector2(0, 300)))
             {
                 ImGui.TableSetupColumn("#", ImGuiTableColumnFlags.WidthFixed, 30);
-                ImGui.TableSetupColumn("Flag", ImGuiTableColumnFlags.WidthFixed, 60);
-                ImGui.TableSetupColumn("X1", ImGuiTableColumnFlags.WidthFixed, 60);
-                ImGui.TableSetupColumn("Y1", ImGuiTableColumnFlags.WidthFixed, 60);
-                ImGui.TableSetupColumn("X2", ImGuiTableColumnFlags.WidthFixed, 60);
-                ImGui.TableSetupColumn("Y2", ImGuiTableColumnFlags.WidthFixed, 60);
-                ImGui.TableSetupColumn("Color", ImGuiTableColumnFlags.WidthFixed, 60);
+                ImGui.TableSetupColumn("Flag", ImGuiTableColumnFlags.WidthFixed, 80);
+                ImGui.TableSetupColumn("X1", ImGuiTableColumnFlags.WidthFixed, 80);
+                ImGui.TableSetupColumn("Y1", ImGuiTableColumnFlags.WidthFixed, 80);
+                ImGui.TableSetupColumn("X2", ImGuiTableColumnFlags.WidthFixed, 80);
+                ImGui.TableSetupColumn("Y2", ImGuiTableColumnFlags.WidthFixed, 80);
+                ImGui.TableSetupColumn("Color", ImGuiTableColumnFlags.WidthFixed, 80);
                 ImGui.TableHeadersRow();
 
                 var recordCount = game.ScreenLayoutData.Length / 12;
@@ -1232,7 +1232,7 @@ public class SelectedExecutableWindow : BaseWindow
                         ImGui.TableNextColumn();
                         var off = i * 12 + f * 2;
                         var val = (int)BitConverter.ToUInt16(game.ScreenLayoutData, off);
-                        var newVal = ImGuiExtensions.Input($"##{f}", val, width: 55);
+                        var newVal = ImGuiExtensions.Input($"##{f}", val, width: 75);
                         if (newVal != null)
                         {
                             BitConverter.GetBytes((ushort)newVal.Value).CopyTo(game.ScreenLayoutData, off);
