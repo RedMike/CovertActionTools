@@ -1024,10 +1024,97 @@ public class SelectedExecutableWindow : BaseWindow
             }
         }
 
-        DrawRawSectionSizes("Raw Sections", new[]
+        if (ImGui.CollapsingHeader("Status Labels"))
         {
-            ("GameStateData", final.GameStateData.Length)
-        });
+            ImGui.TextWrapped("Master Plan, status indicators, UI labels used by personnel/intel screens.");
+            DrawStringArray(final.GameStateStatusLabels, "StatusLabel");
+        }
+
+        if (ImGui.CollapsingHeader("Chronology Strings"))
+        {
+            DrawStringArray(final.GameStateChronologyStrings, "Chronology");
+        }
+
+        if (ImGui.CollapsingHeader("Loading Message"))
+        {
+            var contentSize = ImGui.GetContentRegionAvail();
+            var msg = final.GameStateLoadingMessage;
+            var newVal = ImGuiExtensions.Input("##LoadingMsg", msg, 256, width: (int)contentSize.X - 80);
+            if (newVal != null) { final.GameStateLoadingMessage = newVal; _pendingState.RecordChange(); }
+        }
+
+        if (ImGui.CollapsingHeader("Quit Menu"))
+        {
+            ImGui.TextWrapped("Menu format: \\n = line separator, leading space = selectable item.");
+            var contentSize = ImGui.GetContentRegionAvail();
+            var val = final.GameStateQuitMenu;
+            var origVal = val;
+            ImGui.InputTextMultiline("##QuitMenu", ref val, 512,
+                new System.Numerics.Vector2(contentSize.X - 80, 80.0f));
+            if (val != origVal) { final.GameStateQuitMenu = val; _pendingState.RecordChange(); }
+        }
+
+        if (ImGui.CollapsingHeader("Scene Init Palettes"))
+        {
+            ImGui.TextWrapped("Scene initialisation: display flags and two palette remap tables.");
+            if (final.GameStateSceneInitFlags.Length >= 4)
+            {
+                var width = BitConverter.ToUInt16(final.GameStateSceneInitFlags, 0);
+                var flag = BitConverter.ToUInt16(final.GameStateSceneInitFlags, 2);
+                var w = ImGuiExtensions.Input("Width", (int)width, width: 60);
+                if (w != null) { BitConverter.GetBytes((ushort)w.Value).CopyTo(final.GameStateSceneInitFlags, 0); _pendingState.RecordChange(); }
+                ImGui.SameLine();
+                var fl = ImGuiExtensions.Input("Flag", (int)flag, width: 60);
+                if (fl != null) { BitConverter.GetBytes((ushort)fl.Value).CopyTo(final.GameStateSceneInitFlags, 2); _pendingState.RecordChange(); }
+            }
+            ImGui.Text("Palette Remap 1:");
+            DrawByteArrayEditable(final.GameStatePaletteRemap1, "PalRemap1");
+            ImGui.Text("Palette Remap 2:");
+            DrawByteArrayEditable(final.GameStatePaletteRemap2, "PalRemap2");
+        }
+
+        if (ImGui.CollapsingHeader("OK String"))
+        {
+            var contentSize = ImGui.GetContentRegionAvail();
+            var val = final.GameStateOkString;
+            var newVal = ImGuiExtensions.Input("##OkStr", val, 256, width: (int)contentSize.X - 80);
+            if (newVal != null) { final.GameStateOkString = newVal; _pendingState.RecordChange(); }
+        }
+
+        if (ImGui.CollapsingHeader("Save/Load UI Strings"))
+        {
+            ImGui.TextWrapped("Save/load prompts, rank templates, difficulty suffixes, error messages, disk swap prompts.");
+            DrawStringArray(final.GameStateSaveLoadStrings, "SaveLoad");
+        }
+
+        if (ImGui.CollapsingHeader("RastPort Blocks (Game State)"))
+        {
+            ImGui.TextWrapped($"6 RastPort display config blocks + config pointers ({final.GameStateRastPortData.Length} bytes).");
+            if (final.GameStateRastPortData.Length > 0)
+            {
+                var hexLines = new System.Text.StringBuilder();
+                for (var i = 0; i < final.GameStateRastPortData.Length; i += 16)
+                {
+                    var lineLen = Math.Min(16, final.GameStateRastPortData.Length - i);
+                    hexLines.Append($"{i:X4}: ");
+                    for (var j = 0; j < lineLen; j++)
+                        hexLines.Append($"{final.GameStateRastPortData[i + j]:X2} ");
+                    for (var j = lineLen; j < 16; j++)
+                        hexLines.Append("   ");
+                    hexLines.Append(" ");
+                    for (var j = 0; j < lineLen; j++)
+                    {
+                        var b = final.GameStateRastPortData[i + j];
+                        hexLines.Append(b >= 0x20 && b <= 0x7E ? (char)b : '.');
+                    }
+                    hexLines.AppendLine();
+                }
+                var hexText = hexLines.ToString();
+                ImGui.InputTextMultiline("##RastPortHex", ref hexText, (uint)hexText.Length + 1,
+                    new System.Numerics.Vector2(ImGui.GetContentRegionAvail().X - 20, 150.0f),
+                    ImGuiInputTextFlags.ReadOnly);
+            }
+        }
     }
 
     private void DrawMissionSetCrimeSlot(string label, FinalMissionSetRecord ms, int slotIndex, string[] crimeTypeNames)
@@ -1317,6 +1404,35 @@ public class SelectedExecutableWindow : BaseWindow
                 }
             }
             ImGui.PopID();
+        }
+    }
+
+    private void DrawByteArrayEditable(byte[] data, string idPrefix)
+    {
+        if (data.Length == 0) return;
+        var columns = Math.Min(16, data.Length);
+        if (ImGui.BeginTable($"{idPrefix}_table", columns, ImGuiTableFlags.Borders))
+        {
+            for (var i = 0; i < columns; i++)
+                ImGui.TableSetupColumn($"{i}", ImGuiTableColumnFlags.WidthFixed, 30);
+            ImGui.TableHeadersRow();
+
+            ImGui.TableNextRow();
+            for (var i = 0; i < data.Length; i++)
+            {
+                if (i > 0 && i % columns == 0) ImGui.TableNextRow();
+                ImGui.TableNextColumn();
+                ImGui.PushID($"{idPrefix}_{i}");
+                var val = (int)data[i];
+                ImGui.SetNextItemWidth(30);
+                if (ImGui.InputInt("", ref val, 0, 0) && val >= 0 && val <= 255)
+                {
+                    data[i] = (byte)val;
+                    _pendingState.RecordChange();
+                }
+                ImGui.PopID();
+            }
+            ImGui.EndTable();
         }
     }
 

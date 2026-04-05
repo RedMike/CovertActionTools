@@ -356,6 +356,33 @@ namespace CovertActionTools.Core.Models.Executables
         // ClueSystemData sub-section sizes (relative to ClueSystemData start)
         private const int ClueSubstitutionDataSize = 99;       // substitution buffers (15+51 spaces) + pointer tables + "rt"
         private const int ClueFormatStringsSize = 23;          // 3x "%[^\n]\n" + " " separator
+
+        // GameStateData sub-section layout (DS-relative offsets within original binary)
+        private const int GsStatusLabelsOffset = 0x46A6;       // DS:0x46A6: "Master Plan", status labels, UI labels
+        private const int GsNsynOffset = 0x470F;               // DS:0x470F: null + "NSYN Overflow\n\0"
+        private const int GsChronologyOffset = 0x471F;         // DS:0x471F: chronology UI strings
+        private const int GsLoadingMsgOffset = 0x4778;         // DS:0x4778: "One moment please..."
+        private const int GsQuitMenuOffset = 0x478D;           // DS:0x478D: "Are you sure\nyou want to Quit?\n No\n Yes\n"
+        private const int GsSceneInitOffset = 0x47B6;          // DS:0x47B6: PANI header (10 bytes)
+        private const int GsSceneInitPaniSize = 10;            // "PANI" + 2 null + 4x FF
+        private const int GsSceneInitFlagsSize = 4;            // uint16 width + uint16 flag
+        private const int GsPaletteRemap1Size = 16;            // palette remap 1
+        private const int GsPaletteSeparator1Size = 2;         // 2 zero bytes
+        private const int GsPaletteRemap2Size = 16;            // palette remap 2
+        private const int GsPaletteSeparator2Size = 1;         // 1 zero byte
+        private const int GsOkStringOffset = 0x47E7;           // DS:0x47E7: "OK"
+        private const int GsBriefingFilenamesOffset = 0x47EA;  // DS:0x47EA: "briefing.pan" + "bld" + 3 nulls
+        private const int GsAnimBufferOffset = 0x47FE;         // DS:0x47FE: animation.pan buffer (14 bytes)
+        private const int GsAnimBufferSize = 14;               // "animation.pan\0"
+        private const int GsJoystickTableOffset = 0x480C;      // DS:0x480C: 9x uint16 joystick direction lookup
+        private const int GsJoystickTableSize = 18;            // 9 entries x 2 bytes
+        private const int GsSaveLoadOffset = 0x481E;           // DS:0x481E: save/load UI strings
+        private const int GsExeChainOffset = 0x4A50;           // DS:0x4A50: final.exe/game.exe/tac.exe/hq.pan
+        private const int GsExeChainPointerOffset = 0x4AC8;    // DS:0x4AC8: 5x uint16 pointer table
+        private const int GsExeChainPointerCount = 5;          // 4 valid + 1 padding
+        private const int GsPaniTag2Offset = 0x4AD2;           // DS:0x4AD2: second "PANI" tag
+        private const int GsRastPortGroupOffset = 0x4AD6;      // DS:0x4AD6: 6x RastPort blocks + config
+        private const int GsTrailingZerosOffset = 0x4B5B;      // DS:0x4B5B: zero fill to end
         #endregion
 
         #region Fields (in binary order)
@@ -692,13 +719,70 @@ namespace CovertActionTools.Core.Models.Executables
 
         // CharacterNamePointers are computed at serialization time from CharacterNames positions.
 
-        /// <summary>
-        /// Game state and file management data (1,242 bytes). Contains status labels, chronology
-        /// phrases, save/load UI, difficulty suffixes, EXE chain refs, disk prompts, PANI markers,
-        /// RastPort blocks, and palette data — interleaved strings and binary.
-        /// TODO: split into typed sub-sections when the interleaved binary regions are understood.
-        /// </summary>
-        public byte[] GameStateData { get; set; } = Array.Empty<byte>();
+        #region GameStateData sub-sections (DS:0x46A6-0x4B7F, 1242 bytes total)
+
+        /// <summary>Status/UI label strings: "Master Plan", "--SECRET--", "ARRESTED", "IN HIDING",
+        /// " TURNED", "Personnel File", " Action Team", ", ", "(No activity)", "00:00:00".</summary>
+        public string[] GameStateStatusLabels { get; set; } = Array.Empty<string>();
+
+        /// <summary>Binary data between status labels and chronology: null + "NSYN Overflow\n\0".</summary>
+        public byte[] GameStateNsynData { get; set; } = Array.Empty<byte>();
+
+        /// <summary>Chronology UI strings: "Chronology", "News", " sent msg to ", etc.</summary>
+        public string[] GameStateChronologyStrings { get; set; } = Array.Empty<string>();
+
+        /// <summary>"One moment please..." loading message.</summary>
+        public string GameStateLoadingMessage { get; set; } = string.Empty;
+
+        /// <summary>Quit confirmation menu: "Are you sure\nyou want to Quit?\n No\n Yes\n".
+        /// Menu format: \n separators, leading space = selectable item.</summary>
+        public string GameStateQuitMenu { get; set; } = string.Empty;
+
+        /// <summary>Scene init PANI header: "PANI" + 2 nulls + 4x 0xFF (10 bytes, not editable).</summary>
+        public byte[] GameStateSceneInitPani { get; set; } = Array.Empty<byte>();
+
+        /// <summary>Scene init flags: uint16 screen width (320) + uint16 flag (1). 4 bytes.</summary>
+        public byte[] GameStateSceneInitFlags { get; set; } = Array.Empty<byte>();
+
+        /// <summary>Scene init palette remap 1 (16 bytes). Maps VGA palette indices.</summary>
+        public byte[] GameStatePaletteRemap1 { get; set; } = Array.Empty<byte>();
+
+        /// <summary>2 zero separator bytes between palette remaps.</summary>
+        public byte[] GameStatePaletteSeparator1 { get; set; } = Array.Empty<byte>();
+
+        /// <summary>Scene init palette remap 2 (16 bytes). Indices 5→0, 12→6 differ from remap 1.</summary>
+        public byte[] GameStatePaletteRemap2 { get; set; } = Array.Empty<byte>();
+
+        /// <summary>1 zero separator byte after palette remap 2.</summary>
+        public byte[] GameStatePaletteSeparator2 { get; set; } = Array.Empty<byte>();
+
+        /// <summary>"OK" string — standalone menu/confirmation string.</summary>
+        public string GameStateOkString { get; set; } = string.Empty;
+
+        /// <summary>Briefing filenames: "briefing.pan" + "bld" + 3 null padding. Not shown in editor.</summary>
+        public byte[] GameStateBriefingFilenames { get; set; } = Array.Empty<byte>();
+
+        /// <summary>Animation.pan buffer (14 bytes, overwritten at runtime) — not shown in editor.</summary>
+        public byte[] GameStateAnimBuffer { get; set; } = Array.Empty<byte>();
+
+        /// <summary>Joystick direction lookup table: 9x uint16 (3x3 grid mapping joystick positions
+        /// to direction IDs). Centre = 0xFFFF. Not shown in editor.</summary>
+        public byte[] GameStateJoystickTable { get; set; } = Array.Empty<byte>();
+
+        /// <summary>Save/load UI + disk swap strings. Includes save prompts, rank display templates,
+        /// difficulty suffixes, error messages, disk swap prompts, etc.</summary>
+        public string[] GameStateSaveLoadStrings { get; set; } = Array.Empty<string>();
+
+        /// <summary>EXE chain filenames + pointer table + PANI tag. Contains final.exe, game.exe,
+        /// tac.exe, hq.pan, disk swap prompts, pointer table, second PANI header.
+        /// Not shown in editor — accessed by overlay dispatch via pointer table.</summary>
+        public byte[] GameStateExeChainData { get; set; } = Array.Empty<byte>();
+
+        /// <summary>6x RastPort blocks (20 bytes each) + config pointers + active config pointer.
+        /// DS:0x4AD6-0x4B5A. The active config pointer at DS:0x4B58 has 115 code references.</summary>
+        public byte[] GameStateRastPortData { get; set; } = Array.Empty<byte>();
+
+        #endregion
 
         /// <summary>MSC overlay/error strings, game state buffers, C runtime internals, BSS.
         /// Not editable — preserved for binary roundtrip fidelity only.</summary>
@@ -838,7 +922,7 @@ namespace CovertActionTools.Core.Models.Executables
                 : Array.Empty<byte>();
 
             var charPtrsEnd = charPtrTableOffset + CharNamePointerCount * 2;
-            segment.GameStateData = DataSegmentHelper.Slice(dataSegment, charPtrsEnd, GameStateDataSize);
+            ParseGameStateData(dataSegment, charPtrsEnd, charPtrsEnd + GameStateDataSize, segment);
             var trailingStart = charPtrsEnd + GameStateDataSize;
             segment.TrailingData = DataSegmentHelper.Slice(dataSegment, trailingStart, dataSegment.Length - trailingStart);
 
@@ -998,7 +1082,7 @@ namespace CovertActionTools.Core.Models.Executables
                 charNamesBytes,
                 PostCharNameData,
                 DataSegmentHelper.UInt16ArrayToBytes(charNamePointers),
-                GameStateData,
+                BuildGameStateData(),
                 TrailingData
             );
 
@@ -1098,7 +1182,24 @@ namespace CovertActionTools.Core.Models.Executables
                 ClueTagFilenamePairData = ClueTagFilenamePairData.ToArray(),
                 CharacterNames = CharacterNames.Select(s => s).ToArray(),
                 PostCharNameData = PostCharNameData.ToArray(),
-                GameStateData = GameStateData.ToArray(),
+                GameStateStatusLabels = GameStateStatusLabels.Select(s => s).ToArray(),
+                GameStateNsynData = GameStateNsynData.ToArray(),
+                GameStateChronologyStrings = GameStateChronologyStrings.Select(s => s).ToArray(),
+                GameStateLoadingMessage = GameStateLoadingMessage,
+                GameStateQuitMenu = GameStateQuitMenu,
+                GameStateSceneInitPani = GameStateSceneInitPani.ToArray(),
+                GameStateSceneInitFlags = GameStateSceneInitFlags.ToArray(),
+                GameStatePaletteRemap1 = GameStatePaletteRemap1.ToArray(),
+                GameStatePaletteSeparator1 = GameStatePaletteSeparator1.ToArray(),
+                GameStatePaletteRemap2 = GameStatePaletteRemap2.ToArray(),
+                GameStatePaletteSeparator2 = GameStatePaletteSeparator2.ToArray(),
+                GameStateOkString = GameStateOkString,
+                GameStateBriefingFilenames = GameStateBriefingFilenames.ToArray(),
+                GameStateAnimBuffer = GameStateAnimBuffer.ToArray(),
+                GameStateJoystickTable = GameStateJoystickTable.ToArray(),
+                GameStateSaveLoadStrings = GameStateSaveLoadStrings.Select(s => s).ToArray(),
+                GameStateExeChainData = GameStateExeChainData.ToArray(),
+                GameStateRastPortData = GameStateRastPortData.ToArray(),
                 TrailingData = TrailingData.ToArray()
             };
         }
@@ -1717,6 +1818,193 @@ namespace CovertActionTools.Core.Models.Executables
 
             // Tag+filename pair data — everything remaining (contains embedded uint16 values)
             segment.ClueTagFilenamePairData = DataSegmentHelper.Slice(data, padStart, end - padStart);
+        }
+
+        /// <summary>
+        /// Parses the GameStateData region (1242 bytes) into named sub-sections.
+        /// String sections are variable-length; the trailing zero fill absorbs size changes.
+        /// </summary>
+        private static void ParseGameStateData(byte[] data, int gsStart, int gsEnd, FinalDataSegment segment)
+        {
+            // The GameStateData region uses fixed DS offsets for binary structures
+            // but we parse relative to gsStart for portability.
+            // The original DS offset of the start = GsStatusLabelsOffset.
+            var dsBase = GsStatusLabelsOffset;
+
+            // Helper: read all null-terminated strings from a byte range
+            (string[] strs, int totalBytes) ReadAllStrings(int from, int to)
+            {
+                var strings = new List<string>();
+                var pos = from;
+                while (pos < to)
+                {
+                    if (data[pos] == 0) { pos++; continue; }
+                    var strStart = pos;
+                    while (pos < to && data[pos] != 0) pos++;
+                    strings.Add(Encoding.ASCII.GetString(data, strStart, pos - strStart));
+                    pos++; // skip null
+                }
+                return (strings.ToArray(), to - from);
+            }
+
+            // Helper: convert DS offset to data array index
+            int Idx(int dsOffset) => gsStart + (dsOffset - dsBase);
+
+            // Status labels (DS:0x46A6 to DS:0x470F)
+            var (statusStrs, _) = ReadAllStrings(Idx(GsStatusLabelsOffset), Idx(GsNsynOffset));
+            segment.GameStateStatusLabels = statusStrs;
+
+            // NSYN data (DS:0x470F to DS:0x471F) — binary blob
+            segment.GameStateNsynData = DataSegmentHelper.Slice(data, Idx(GsNsynOffset), GsChronologyOffset - GsNsynOffset);
+
+            // Chronology strings (DS:0x471F to DS:0x4778)
+            var (chronStrs, _2) = ReadAllStrings(Idx(GsChronologyOffset), Idx(GsLoadingMsgOffset));
+            segment.GameStateChronologyStrings = chronStrs;
+
+            // Loading message — single null-terminated string
+            var loadIdx = Idx(GsLoadingMsgOffset);
+            var loadEnd = loadIdx;
+            while (loadEnd < gsEnd && data[loadEnd] != 0) loadEnd++;
+            segment.GameStateLoadingMessage = Encoding.ASCII.GetString(data, loadIdx, loadEnd - loadIdx);
+
+            // Quit menu — single null-terminated string (contains \n bytes)
+            var quitIdx = Idx(GsQuitMenuOffset);
+            var quitEnd = quitIdx;
+            while (quitEnd < gsEnd && data[quitEnd] != 0) quitEnd++;
+            segment.GameStateQuitMenu = Encoding.ASCII.GetString(data, quitIdx, quitEnd - quitIdx);
+
+            // Scene init PANI header (10 bytes)
+            segment.GameStateSceneInitPani = DataSegmentHelper.Slice(data, Idx(GsSceneInitOffset), GsSceneInitPaniSize);
+
+            // Scene init flags (4 bytes)
+            var flagsIdx = Idx(GsSceneInitOffset) + GsSceneInitPaniSize;
+            segment.GameStateSceneInitFlags = DataSegmentHelper.Slice(data, flagsIdx, GsSceneInitFlagsSize);
+
+            // Palette remap 1 (16 bytes)
+            var pal1Idx = flagsIdx + GsSceneInitFlagsSize;
+            segment.GameStatePaletteRemap1 = DataSegmentHelper.Slice(data, pal1Idx, GsPaletteRemap1Size);
+
+            // Separator 1 (2 bytes)
+            var sep1Idx = pal1Idx + GsPaletteRemap1Size;
+            segment.GameStatePaletteSeparator1 = DataSegmentHelper.Slice(data, sep1Idx, GsPaletteSeparator1Size);
+
+            // Palette remap 2 (16 bytes)
+            var pal2Idx = sep1Idx + GsPaletteSeparator1Size;
+            segment.GameStatePaletteRemap2 = DataSegmentHelper.Slice(data, pal2Idx, GsPaletteRemap2Size);
+
+            // Separator 2 (1 byte)
+            var sep2Idx = pal2Idx + GsPaletteRemap2Size;
+            segment.GameStatePaletteSeparator2 = DataSegmentHelper.Slice(data, sep2Idx, GsPaletteSeparator2Size);
+
+            // "OK" string
+            var okIdx = Idx(GsOkStringOffset);
+            var okEnd = okIdx;
+            while (okEnd < gsEnd && data[okEnd] != 0) okEnd++;
+            segment.GameStateOkString = Encoding.ASCII.GetString(data, okIdx, okEnd - okIdx);
+
+            // Briefing filenames (briefing.pan + bld + 3 null padding)
+            var bfIdx = Idx(GsBriefingFilenamesOffset);
+            segment.GameStateBriefingFilenames = DataSegmentHelper.Slice(data, bfIdx, GsAnimBufferOffset - GsBriefingFilenamesOffset);
+
+            // Animation.pan buffer (14 bytes)
+            segment.GameStateAnimBuffer = DataSegmentHelper.Slice(data, Idx(GsAnimBufferOffset), GsAnimBufferSize);
+
+            // Joystick direction table (18 bytes)
+            segment.GameStateJoystickTable = DataSegmentHelper.Slice(data, Idx(GsJoystickTableOffset), GsJoystickTableSize);
+
+            // Save/load UI strings (DS:0x481E to DS:0x4A50)
+            var (saveLoadStrs, _3) = ReadAllStrings(Idx(GsSaveLoadOffset), Idx(GsExeChainOffset));
+            segment.GameStateSaveLoadStrings = saveLoadStrs;
+
+            // EXE chain data: filenames + disk prompts + pointer table + PANI tag
+            // (DS:0x4A50 to DS:0x4AD6 — everything from exe chain to first RastPort)
+            segment.GameStateExeChainData = DataSegmentHelper.Slice(data, Idx(GsExeChainOffset),
+                GsRastPortGroupOffset - GsExeChainOffset);
+
+            // RastPort group: 6 blocks + config pointers + active config
+            // (DS:0x4AD6 to DS:0x4B5B)
+            segment.GameStateRastPortData = DataSegmentHelper.Slice(data, Idx(GsRastPortGroupOffset),
+                GsTrailingZerosOffset - GsRastPortGroupOffset);
+
+            // Trailing zeros are not stored — rebuilt in BuildGameStateData to fill to 1242 bytes
+        }
+
+        /// <summary>
+        /// Builds the GameStateData byte array from sub-section fields.
+        /// Variable-length string sections are concatenated; trailing zeros pad to 1242 bytes.
+        /// </summary>
+        private byte[] BuildGameStateData()
+        {
+            var parts = new List<byte>();
+
+            // Status labels
+            foreach (var s in GameStateStatusLabels)
+            {
+                parts.AddRange(Encoding.ASCII.GetBytes(s));
+                parts.Add(0);
+            }
+
+            // NSYN data
+            parts.AddRange(GameStateNsynData);
+
+            // Chronology strings
+            foreach (var s in GameStateChronologyStrings)
+            {
+                parts.AddRange(Encoding.ASCII.GetBytes(s));
+                parts.Add(0);
+            }
+
+            // Null byte before loading message (the original has a null at 0x4777)
+            parts.Add(0);
+
+            // Loading message
+            parts.AddRange(Encoding.ASCII.GetBytes(GameStateLoadingMessage));
+            parts.Add(0);
+
+            // Quit menu
+            parts.AddRange(Encoding.ASCII.GetBytes(GameStateQuitMenu));
+            parts.Add(0);
+
+            // Scene init: PANI header + flags + palettes
+            parts.AddRange(GameStateSceneInitPani);
+            parts.AddRange(GameStateSceneInitFlags);
+            parts.AddRange(GameStatePaletteRemap1);
+            parts.AddRange(GameStatePaletteSeparator1);
+            parts.AddRange(GameStatePaletteRemap2);
+            parts.AddRange(GameStatePaletteSeparator2);
+
+            // OK string
+            parts.AddRange(Encoding.ASCII.GetBytes(GameStateOkString));
+            parts.Add(0);
+
+            // Briefing filenames
+            parts.AddRange(GameStateBriefingFilenames);
+
+            // Animation buffer
+            parts.AddRange(GameStateAnimBuffer);
+
+            // Joystick table
+            parts.AddRange(GameStateJoystickTable);
+
+            // Save/load strings
+            foreach (var s in GameStateSaveLoadStrings)
+            {
+                parts.AddRange(Encoding.ASCII.GetBytes(s));
+                parts.Add(0);
+            }
+
+            // EXE chain data (filenames + pointer table + PANI tag)
+            parts.AddRange(GameStateExeChainData);
+
+            // RastPort group
+            parts.AddRange(GameStateRastPortData);
+
+            // Pad with zeros to maintain total size of 1242 bytes
+            var paddingNeeded = GameStateDataSize - parts.Count;
+            if (paddingNeeded > 0)
+                parts.AddRange(new byte[paddingNeeded]);
+
+            return parts.ToArray();
         }
 
         /// <summary>
