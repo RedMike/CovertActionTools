@@ -1163,11 +1163,31 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("CGA Animation Data"))
         {
-            ImGui.TextColored(new System.Numerics.Vector4(0.4f, 0.6f, 1f, 1f), $"{game.CgaAnimationData.Length} bytes — 2bpp sprite + nibble tables + VGA palette remap");
-            var hexDump = string.Join(" ", game.CgaAnimationData.Take(64).Select(b => b.ToString("X2")));
-            ImGui.InputTextMultiline("##CgaHex", ref hexDump, (uint)hexDump.Length + 1,
-                new System.Numerics.Vector2(-1, ImGui.GetTextLineHeight() * 3),
-                ImGuiInputTextFlags.ReadOnly);
+            ImGui.TextWrapped($"2bpp CGA sprite data + CGA-to-VGA palette ({game.CgaAnimationData.Length} bytes).");
+            if (game.CgaAnimationData.Length > 0)
+            {
+                var hexLines = new System.Text.StringBuilder();
+                for (var i = 0; i < game.CgaAnimationData.Length; i += 16)
+                {
+                    var lineLen = Math.Min(16, game.CgaAnimationData.Length - i);
+                    hexLines.Append($"{i:X4}: ");
+                    for (var j = 0; j < lineLen; j++)
+                        hexLines.Append($"{game.CgaAnimationData[i + j]:X2} ");
+                    for (var j = lineLen; j < 16; j++)
+                        hexLines.Append("   ");
+                    hexLines.Append(" ");
+                    for (var j = 0; j < lineLen; j++)
+                    {
+                        var b = game.CgaAnimationData[i + j];
+                        hexLines.Append(b >= 0x20 && b <= 0x7E ? (char)b : '.');
+                    }
+                    hexLines.AppendLine();
+                }
+                var hexText = hexLines.ToString();
+                ImGui.InputTextMultiline("##GameCgaHex", ref hexText, (uint)hexText.Length + 1,
+                    new System.Numerics.Vector2(ImGui.GetContentRegionAvail().X - 20, 200.0f),
+                    ImGuiInputTextFlags.ReadOnly);
+            }
         }
 
         if (ImGui.CollapsingHeader("HQ Display Strings"))
@@ -1185,14 +1205,56 @@ public class SelectedExecutableWindow : BaseWindow
             DrawStringArray(game.GameStatusLabels, "StatusLbl", game.GameStatusLabelSizes);
         }
 
-        DrawReadOnlyInfo("Screen Layout Data", $"{game.ScreenLayoutData.Length} bytes (rect draw records)");
+        if (ImGui.CollapsingHeader("Screen Layout Data"))
+        {
+            ImGui.TextWrapped($"Draw commands for the city/HQ screen UI ({game.ScreenLayoutData.Length} bytes). Flag: 0=line, 1=filled rect, 2=special, 0xFFFF=terminator.");
+            if (game.ScreenLayoutData.Length >= 12 && ImGui.BeginTable("ScreenLayout", 7, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY, new System.Numerics.Vector2(0, 300)))
+            {
+                ImGui.TableSetupColumn("#", ImGuiTableColumnFlags.WidthFixed, 30);
+                ImGui.TableSetupColumn("Flag", ImGuiTableColumnFlags.WidthFixed, 60);
+                ImGui.TableSetupColumn("X1", ImGuiTableColumnFlags.WidthFixed, 60);
+                ImGui.TableSetupColumn("Y1", ImGuiTableColumnFlags.WidthFixed, 60);
+                ImGui.TableSetupColumn("X2", ImGuiTableColumnFlags.WidthFixed, 60);
+                ImGui.TableSetupColumn("Y2", ImGuiTableColumnFlags.WidthFixed, 60);
+                ImGui.TableSetupColumn("Color", ImGuiTableColumnFlags.WidthFixed, 60);
+                ImGui.TableHeadersRow();
+
+                var recordCount = game.ScreenLayoutData.Length / 12;
+                for (var i = 0; i < recordCount; i++)
+                {
+                    ImGui.PushID($"SL_{i}");
+                    ImGui.TableNextRow();
+                    ImGui.TableNextColumn();
+                    ImGui.Text($"{i}");
+
+                    for (var f = 0; f < 6; f++)
+                    {
+                        ImGui.TableNextColumn();
+                        var off = i * 12 + f * 2;
+                        var val = (int)BitConverter.ToUInt16(game.ScreenLayoutData, off);
+                        var newVal = ImGuiExtensions.Input($"##{f}", val, width: 55);
+                        if (newVal != null)
+                        {
+                            BitConverter.GetBytes((ushort)newVal.Value).CopyTo(game.ScreenLayoutData, off);
+                            _pendingState.RecordChange();
+                        }
+                    }
+                    ImGui.PopID();
+                }
+                ImGui.EndTable();
+            }
+        }
 
         if (ImGui.CollapsingHeader("Gameplay Event Strings"))
         {
             DrawStringArray(game.GameplayEventStrings, "GE1", game.GameplayEventStringSizes);
         }
 
-        DrawReadOnlyInfo("Gameplay Binary Lookup", $"{game.GameplayBinaryLookup.Length} bytes");
+        if (ImGui.CollapsingHeader("Gameplay Binary Lookup"))
+        {
+            ImGui.TextWrapped($"{game.GameplayBinaryLookup.Length} bytes — between travel menu and guard alertness strings.");
+            DrawByteArrayEditable(game.GameplayBinaryLookup, "GameBinLookup");
+        }
 
         if (ImGui.CollapsingHeader("Gameplay Event Strings (Part 2)"))
         {
