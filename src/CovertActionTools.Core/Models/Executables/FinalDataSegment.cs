@@ -558,7 +558,6 @@ namespace CovertActionTools.Core.Models.Executables
         /// </summary>
         public string[] EfficiencyReportStrings { get; set; } = Array.Empty<string>();
         /// <summary>Original byte sizes for EfficiencyReportStrings slots.</summary>
-        public int[] EfficiencyReportStringSizes { get; set; } = Array.Empty<int>();
 
         #endregion
 
@@ -1135,7 +1134,6 @@ namespace CovertActionTools.Core.Models.Executables
                 ChronologyFormatStrings = ChronologyFormatStrings.Select(s => s).ToArray(),
                 TimeTemplateBuffer = TimeTemplateBuffer,
                 EfficiencyReportStrings = EfficiencyReportStrings.Select(s => s).ToArray(),
-                EfficiencyReportStringSizes = EfficiencyReportStringSizes.ToArray(),
                 CrimeTypeNames = CrimeTypeNames.Select(s => s).ToArray(),
                 CrimeTypeNameByteSizes = CrimeTypeNameByteSizes.ToArray(),
                 Unknown2 = Unknown2.ToArray(),
@@ -1335,7 +1333,6 @@ namespace CovertActionTools.Core.Models.Executables
             var effSize = end - pos;
             var (effStrs, effSzs) = DataSegmentHelper.ControlStringsFromBytes(data, pos, effSize);
             segment.EfficiencyReportStrings = effStrs;
-            segment.EfficiencyReportStringSizes = effSzs;
         }
 
         /// <summary>
