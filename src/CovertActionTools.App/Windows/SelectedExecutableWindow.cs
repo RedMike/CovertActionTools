@@ -1414,14 +1414,15 @@ public class SelectedExecutableWindow : BaseWindow
             var bpp = BitConverter.ToUInt16(data, off + 16);
             var reserved = BitConverter.ToUInt16(data, off + 18);
 
-            if (ImGui.CollapsingHeader($"Block {bi}: DO={dataOffset}, Page={page}, Flag={flag}"))
+            var doLabel = dataOffset == 0xFFFF ? "uninit" : dataOffset == 0 ? "none" : $"0x{dataOffset:X4}";
+            if (ImGui.CollapsingHeader($"Block {bi}: Page={page}, Flag={flag}, DO={doLabel}"))
             {
                 if (ImGui.BeginTable($"fields", 4))
                 {
                     ImGui.TableNextRow();
                     ImGui.TableNextColumn();
-                    var dov = ImGuiExtensions.Input("DataOffset", (int)dataOffset, width: 80);
-                    if (dov != null) { BitConverter.GetBytes((ushort)dov.Value).CopyTo(data, off); _pendingState.RecordChange(); }
+                    // TODO: replace with a dropdown of what to point to
+                    ImGui.TextDisabled($"DataOffset: {doLabel}");
                     ImGui.TableNextColumn();
                     var pv = ImGuiExtensions.Input("Page", (int)page, width: 80);
                     if (pv != null) { BitConverter.GetBytes((ushort)pv.Value).CopyTo(data, off + 2); _pendingState.RecordChange(); }
