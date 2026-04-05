@@ -622,6 +622,47 @@ public class SelectedExecutableWindow : BaseWindow
             }
         }
 
+        if (ImGui.CollapsingHeader("Initial Game Strings"))
+        {
+            ImGui.TextWrapped("Startup strings: env.sve sentinels, joystick prompts, main menu, file references.");
+            DrawStringArray(final.InitialGameStrings, "InitGame", final.InitialGameStringSizes);
+        }
+
+        if (ImGui.CollapsingHeader("CGA Animation Data"))
+        {
+            ImGui.TextWrapped($"2bpp CGA sprite data + CGA-to-VGA palette ({final.CgaAnimationData.Length} bytes). Shared across FINAL/TAC/GAME.");
+            if (final.CgaAnimationData.Length > 0)
+            {
+                var hexLines = new System.Text.StringBuilder();
+                for (var i = 0; i < final.CgaAnimationData.Length; i += 16)
+                {
+                    var lineLen = Math.Min(16, final.CgaAnimationData.Length - i);
+                    hexLines.Append($"{i:X4}: ");
+                    for (var j = 0; j < lineLen; j++)
+                        hexLines.Append($"{final.CgaAnimationData[i + j]:X2} ");
+                    for (var j = lineLen; j < 16; j++)
+                        hexLines.Append("   ");
+                    hexLines.Append(" ");
+                    for (var j = 0; j < lineLen; j++)
+                    {
+                        var b = final.CgaAnimationData[i + j];
+                        hexLines.Append(b >= 0x20 && b <= 0x7E ? (char)b : '.');
+                    }
+                    hexLines.AppendLine();
+                }
+                var hexText = hexLines.ToString();
+                ImGui.InputTextMultiline("##CgaHex", ref hexText, (uint)hexText.Length + 1,
+                    new System.Numerics.Vector2(ImGui.GetContentRegionAvail().X - 20, 200.0f),
+                    ImGuiInputTextFlags.ReadOnly);
+            }
+        }
+
+        if (ImGui.CollapsingHeader("Text Lookup Tag Pairs"))
+        {
+            ImGui.TextWrapped("Tag+filename pairs for text.dta lookups. Tags have digits patched at runtime (e.g. *SLOC00 -> *SLOC03).");
+            DrawStringArray(final.TextLookupTagPairs, "TagPair", final.TextLookupTagPairSizes);
+        }
+
         if (ImGui.CollapsingHeader("Crime Type Names"))
         {
             DrawStringArray(final.CrimeTypeNames, "CrimeType", final.CrimeTypeNameByteSizes);
@@ -687,7 +728,10 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Character Creation Strings"))
         {
-            ImGui.TextWrapped("TODO: difficulty menu options may need splitting into individual strings.");
+            ImGui.TextWrapped("Character setup: gender image, name/difficulty selection menus (\\n = line separator, leading space = selectable item).");
+            DrawStringArray(final.CharacterSetupStrings, "CharSetup", final.CharacterSetupStringSizes);
+            ImGui.Separator();
+            ImGui.TextWrapped("Code name prompt and skill selection (from plot/briefing data):");
             DrawStringArray(final.CharacterCreationStrings, "CharCreate");
         }
 
@@ -967,11 +1011,21 @@ public class SelectedExecutableWindow : BaseWindow
             DrawStringArray(final.InvestigationMethods, "InvMethod", final.InvestigationMethodSizes);
         }
 
+        if (ImGui.CollapsingHeader("Clue Not Found Message"))
+        {
+            var contentSize = ImGui.GetContentRegionAvail();
+            var maxLen = final.ClueNotFoundMessageSize > 0 ? final.ClueNotFoundMessageSize - 1 : 256;
+            var msg = final.ClueNotFoundMessage;
+            var newVal = ImGuiExtensions.Input("##ClueNotFound", msg, maxLen, width: (int)contentSize.X - 80);
+            if (newVal != null)
+            {
+                final.ClueNotFoundMessage = newVal;
+                _pendingState.RecordChange();
+            }
+        }
+
         DrawRawSectionSizes("Raw Sections", new[]
         {
-            ("PreStringTableData", final.PreStringTableData.Length),
-            ("PostStringTableData", final.PostStringTableData.Length),
-            ("ClueSystemData", final.ClueSystemData.Length),
             ("GameStateData", final.GameStateData.Length)
         });
     }
