@@ -1386,8 +1386,6 @@ public class SelectedExecutableWindow : BaseWindow
             ("ChronologyStatusData", game.ChronologyStatusData.Length),
             ("ResearchAssistantData", game.ResearchAssistantData.Length),
             ("SaveLoadData", game.SaveLoadData.Length),
-            ("ExeChainData", game.ExeChainData.Length),
-            ("RuntimeTrailingData", game.RuntimeTrailingData.Length)
         });
     }
 
