@@ -1580,18 +1580,16 @@ public class SelectedExecutableWindow : BaseWindow
         {
             ImGui.PushID($"{idPrefix}_{i}");
             var contentSize = ImGui.GetContentRegionAvail();
-            // Max editable length = original byte size minus null terminator
-            var maxLen = byteSizes != null && i < byteSizes.Length ? byteSizes[i] - 1 : 256;
-            if (maxLen < 1) maxLen = 1;
+            // Buffer size for ImGui (must be larger than current string to allow typing)
+            var bufSize = Math.Max(strings[i].Length + 128, 512);
 
             if (strings[i].Contains('\n'))
             {
-                // Multiline for strings with newlines
                 var val = strings[i];
                 var origVal = val;
-                ImGui.InputTextMultiline($"[{i}]", ref val, (uint)maxLen + 1,
+                ImGui.InputTextMultiline($"[{i}]", ref val, (uint)bufSize,
                     new Vector2(contentSize.X - 80, 80.0f));
-                if (val != origVal && val.Length <= maxLen)
+                if (val != origVal)
                 {
                     strings[i] = val;
                     _pendingState.RecordChange();
@@ -1599,7 +1597,7 @@ public class SelectedExecutableWindow : BaseWindow
             }
             else
             {
-                var newVal = ImGuiExtensions.Input($"[{i}]", strings[i], maxLen, width: (int)contentSize.X - 80);
+                var newVal = ImGuiExtensions.Input($"[{i}]", strings[i], bufSize, width: (int)contentSize.X - 80);
                 if (newVal != null)
                 {
                     strings[i] = newVal;

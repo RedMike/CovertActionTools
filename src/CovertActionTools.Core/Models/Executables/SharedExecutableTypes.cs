@@ -371,6 +371,20 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>
         /// Serialize control-byte-aware strings back to bytes with fixed slot sizes.
         /// </summary>
+        /// <summary>
+        /// Serialize control-byte-aware strings to variable-size bytes (no slot padding).
+        /// </summary>
+        public static byte[] ControlStringsToBytes(string[] strings)
+        {
+            var parts = new List<byte>();
+            foreach (var s in strings)
+            {
+                parts.AddRange(EncodeControlString(s));
+                parts.Add(0);
+            }
+            return parts.ToArray();
+        }
+
         public static byte[] ControlStringsToFixedBytes(string[] strings, int[] originalByteSizes)
         {
             var parts = new List<byte>();

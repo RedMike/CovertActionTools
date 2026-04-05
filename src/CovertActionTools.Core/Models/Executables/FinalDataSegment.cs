@@ -1435,7 +1435,7 @@ namespace CovertActionTools.Core.Models.Executables
             parts.Add(0);
 
             // EfficiencyReportStrings — control-byte-aware encoding
-            parts.AddRange(DataSegmentHelper.ControlStringsToFixedBytes(EfficiencyReportStrings, EfficiencyReportStringSizes));
+            parts.AddRange(DataSegmentHelper.ControlStringsToBytes(EfficiencyReportStrings));
 
             var result = parts.ToArray();
 

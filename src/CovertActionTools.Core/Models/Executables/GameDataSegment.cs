@@ -810,7 +810,7 @@ namespace CovertActionTools.Core.Models.Executables
             var monthNameBytes = DataSegmentHelper.NullTerminatedStringsToBytes(MonthNames);
 
             // Serialize intel headers
-            var intelHeaderBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(IntelHeaders, IntelHeaderSizes);
+            var intelHeaderBytes = DataSegmentHelper.NullTerminatedStringsToBytes(IntelHeaders);
 
             // Compute clue and month pointer bases
             var clueBase = preCharNameBytes.Length + charNamesBytes.Length + PostCharNameData.Length
@@ -856,7 +856,7 @@ namespace CovertActionTools.Core.Models.Executables
             parts.AddRange(InitialGameRuntimePrefix);
 
             // Initial game strings
-            parts.AddRange(DataSegmentHelper.NullTerminatedStringsToFixedBytes(InitialGameStrings, InitialGameStringSizes));
+            parts.AddRange(DataSegmentHelper.NullTerminatedStringsToBytes(InitialGameStrings));
 
             // BSS zero fill: pad with zeros up to RastPort offset
             var zeroFillSize = PreStRastPortOffset - parts.Count;
@@ -881,7 +881,7 @@ namespace CovertActionTools.Core.Models.Executables
             parts.Add(0);
 
             // HQ display strings
-            parts.AddRange(DataSegmentHelper.NullTerminatedStringsToFixedBytes(HqDisplayStrings, HqDisplayStringSizes));
+            parts.AddRange(DataSegmentHelper.NullTerminatedStringsToBytes(HqDisplayStrings));
 
             return parts.ToArray();
         }
@@ -889,36 +889,36 @@ namespace CovertActionTools.Core.Models.Executables
         private byte[] BuildMidSectionPreClue()
         {
             return DataSegmentHelper.Concatenate(
-                DataSegmentHelper.NullTerminatedStringsToFixedBytes(GameStatusLabels, GameStatusLabelSizes),
+                DataSegmentHelper.NullTerminatedStringsToBytes(GameStatusLabels),
                 ScreenLayoutData,
-                DataSegmentHelper.NullTerminatedStringsToFixedBytes(GameplayEventStrings, GameplayEventStringSizes),
+                DataSegmentHelper.NullTerminatedStringsToBytes(GameplayEventStrings),
                 GameplayBinaryLookup,
-                DataSegmentHelper.NullTerminatedStringsToFixedBytes(GuardAlertnessLabels, GuardAlertnessLabelSizes),
-                DataSegmentHelper.NullTerminatedStringsToFixedBytes(GameplayEventStrings2, GameplayEventString2Sizes)
+                DataSegmentHelper.NullTerminatedStringsToBytes(GuardAlertnessLabels),
+                DataSegmentHelper.NullTerminatedStringsToBytes(GameplayEventStrings2)
             );
         }
 
         private byte[] BuildTrailingData()
         {
             // Serialize all string sections
-            var intelTxtBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(IntelReportTexts, IntelReportTextSizes);
-            var rankBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(RankNames, RankNameSizes);
-            var evTypeBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(EvidenceTypeAbbreviations, EvidenceTypeSizes);
-            var evItemBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(EvidenceItemNames, EvidenceItemSizes);
-            var invMethodBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(InvestigationMethods, InvestigationMethodSizes);
+            var intelTxtBytes = DataSegmentHelper.NullTerminatedStringsToBytes(IntelReportTexts);
+            var rankBytes = DataSegmentHelper.NullTerminatedStringsToBytes(RankNames);
+            var evTypeBytes = DataSegmentHelper.NullTerminatedStringsToBytes(EvidenceTypeAbbreviations);
+            var evItemBytes = DataSegmentHelper.NullTerminatedStringsToBytes(EvidenceItemNames);
+            var invMethodBytes = DataSegmentHelper.NullTerminatedStringsToBytes(InvestigationMethods);
 
             // Evidence/rank pointer table placeholder (patched after assembly)
             var evRankPtrPlaceholder = new byte[EvidenceRankPointerTableSize];
 
             // Serialize remaining sections
-            var msgLogBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(MessageLogStrings, MessageLogStringSizes);
-            var hotelBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(HotelMenuStrings, HotelMenuStringSizes);
-            var dfBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(DataFilesMenuStrings, DataFilesMenuStringSizes);
-            var ciaBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(CiaMenuStrings, CiaMenuStringSizes);
-            var actBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(ActivityWiretapStrings, ActivityWiretapStringSizes);
-            var codedBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(CodedMessageStrings, CodedMessageStringSizes);
-            var tokenBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(SubstitutionTokenStrings, SubstitutionTokenStringSizes);
-            var bulletinBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(BulletinStrings, BulletinStringSizes);
+            var msgLogBytes = DataSegmentHelper.NullTerminatedStringsToBytes(MessageLogStrings);
+            var hotelBytes = DataSegmentHelper.NullTerminatedStringsToBytes(HotelMenuStrings);
+            var dfBytes = DataSegmentHelper.NullTerminatedStringsToBytes(DataFilesMenuStrings);
+            var ciaBytes = DataSegmentHelper.NullTerminatedStringsToBytes(CiaMenuStrings);
+            var actBytes = DataSegmentHelper.NullTerminatedStringsToBytes(ActivityWiretapStrings);
+            var codedBytes = DataSegmentHelper.NullTerminatedStringsToBytes(CodedMessageStrings);
+            var tokenBytes = DataSegmentHelper.NullTerminatedStringsToBytes(SubstitutionTokenStrings);
+            var bulletinBytes = DataSegmentHelper.NullTerminatedStringsToBytes(BulletinStrings);
 
             return DataSegmentHelper.Concatenate(
                 new byte[IntelPaddingSize],        // 3 null bytes
@@ -929,23 +929,23 @@ namespace CovertActionTools.Core.Models.Executables
                 new byte[EvidenceEndPaddingSize],   // 1 null byte
                 evRankPtrPlaceholder,
                 invMethodBytes,
-                DataSegmentHelper.ControlStringsToFixedBytes(ClueFormattingStrings, ClueFormattingSizes),
+                DataSegmentHelper.ControlStringsToBytes(ClueFormattingStrings),
                 msgLogBytes,
                 hotelBytes,
                 dfBytes,
                 ciaBytes,
                 actBytes,
-                DataSegmentHelper.ControlStringsToFixedBytes(CitySuspectStrings, CitySuspectSizes),
+                DataSegmentHelper.ControlStringsToBytes(CitySuspectStrings),
                 codedBytes,
                 tokenBytes,
                 CluePreMessageData,
                 Encoding.ASCII.GetBytes(ClueNotFoundMessage),
                 new byte[] { 0 },
-                DataSegmentHelper.ControlStringsToFixedBytes(CluePostMessageStrings, CluePostMessageSizes),
+                DataSegmentHelper.ControlStringsToBytes(CluePostMessageStrings),
                 bulletinBytes,
-                DataSegmentHelper.ControlStringsToFixedBytes(ChronologyStatusStrings, ChronologyStatusSizes),
-                DataSegmentHelper.ControlStringsToFixedBytes(ResearchAssistantStrings, ResearchAssistantSizes),
-                DataSegmentHelper.ControlStringsToFixedBytes(SaveLoadStrings, SaveLoadSizes),
+                DataSegmentHelper.ControlStringsToBytes(ChronologyStatusStrings),
+                DataSegmentHelper.ControlStringsToBytes(ResearchAssistantStrings),
+                DataSegmentHelper.ControlStringsToBytes(SaveLoadStrings),
                 ExeChainData,
                 GameStateData,
                 RuntimeTrailingData
@@ -960,7 +960,7 @@ namespace CovertActionTools.Core.Models.Executables
             var midPreClueBytes = BuildMidSectionPreClue();
             var cluePhraseBytes = DataSegmentHelper.NullTerminatedStringsToBytes(ClueRelationshipPhrases);
             var monthNameBytes = DataSegmentHelper.NullTerminatedStringsToBytes(MonthNames);
-            var intelHeaderBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(IntelHeaders, IntelHeaderSizes);
+            var intelHeaderBytes = DataSegmentHelper.NullTerminatedStringsToBytes(IntelHeaders);
 
             var trailingStart = preCharNameBytes.Length + charNamesBytes.Length + PostCharNameData.Length
                 + CharNamePointerCount * 2 + midPreClueBytes.Length + cluePhraseBytes.Length
@@ -968,10 +968,10 @@ namespace CovertActionTools.Core.Models.Executables
                 + ClueCategoryDataSize + MonthNamePtrCount * 2;
 
             // Compute offsets within trailing data
-            var intelTxtBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(IntelReportTexts, IntelReportTextSizes);
-            var rankBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(RankNames, RankNameSizes);
-            var evTypeBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(EvidenceTypeAbbreviations, EvidenceTypeSizes);
-            var evItemBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(EvidenceItemNames, EvidenceItemSizes);
+            var intelTxtBytes = DataSegmentHelper.NullTerminatedStringsToBytes(IntelReportTexts);
+            var rankBytes = DataSegmentHelper.NullTerminatedStringsToBytes(RankNames);
+            var evTypeBytes = DataSegmentHelper.NullTerminatedStringsToBytes(EvidenceTypeAbbreviations);
+            var evItemBytes = DataSegmentHelper.NullTerminatedStringsToBytes(EvidenceItemNames);
 
             var rankStart = trailingStart + IntelPaddingSize + intelTxtBytes.Length;
             var evTypeStart = rankStart + rankBytes.Length;
