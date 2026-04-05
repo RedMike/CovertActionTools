@@ -1451,13 +1451,6 @@ public class SelectedExecutableWindow : BaseWindow
             ImGui.PopID();
         }
 
-        // Show remaining non-RastPort bytes count
-        var totalRpBytes = blockStarts.Count * 20;
-        var remaining = data.Length - totalRpBytes;
-        if (remaining > 0)
-        {
-            ImGui.TextDisabled($"+ {remaining} bytes of config pointers and padding");
-        }
     }
 
     private void DrawByteArrayEditable(byte[] data, string idPrefix)
