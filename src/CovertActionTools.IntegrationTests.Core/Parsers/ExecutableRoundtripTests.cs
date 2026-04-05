@@ -287,7 +287,8 @@ public class ExecutableRoundtripTests : IDisposable
         var rawExe = File.ReadAllBytes(Path.Combine(scratchDir, "GAME.EXE"));
         var mzHeader = CovertActionTools.Core.Compression.ExepackUtilities.ParseMzHeader(rawExe);
         var exepackHeader = CovertActionTools.Core.Compression.ExepackUtilities.DetectExepack(rawExe, mzHeader);
-        var decompResult = _decompression.Decompress(exepackHeader.PackedData, exepackHeader.DestLen);
+        var decompression = new ExepackDecompression(NullLogger<ExepackDecompression>.Instance);
+        var decompResult = decompression.Decompress(exepackHeader.PackedData, exepackHeader.DestLen);
         var deadZoneBoundary = decompResult.DeadZoneBoundary;
         if (deadZoneBoundary > 0)
             Array.Copy(exepackHeader.PackedData, 0, decompResult.Data, 0, deadZoneBoundary);
