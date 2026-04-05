@@ -353,7 +353,8 @@ namespace CovertActionTools.Core.Models.Executables
         private const int CharacterSetupOffset = 0x1C5B;       // DS:0x1C5B: gender.pic + name/difficulty menus
         private const int CharacterSetupCount = 3;             // gender.pic, name selection menu, difficulty selection menu
 
-        // ClueSystemData sub-section: find the not-found message by searching for its text
+        // ClueSystemData sub-section: find the not-found message by searching for its text.
+        // TODO: same fragility as FindMarkerString — replace with structural parsing.
         private static readonly byte[] ClueNotFoundMarker = Encoding.ASCII.GetBytes("This information");
 
         // GameStateData sub-section layout (DS-relative offsets within original binary)
@@ -1682,7 +1683,9 @@ namespace CovertActionTools.Core.Models.Executables
             ParseClueSystemData(data, pos, end, segment);
         }
 
-        /// <summary>Finds a marker string in the data segment by scanning for its ASCII bytes.</summary>
+        /// <summary>Finds a marker string in the data segment by scanning for its ASCII bytes.
+        /// TODO: this is fragile — if the marker text is edited, the parser breaks. Replace with
+        /// offset-based or structural parsing that doesn't depend on string content.</summary>
         private static int FindMarkerString(byte[] data, int start, int end, string marker)
         {
             var markerBytes = Encoding.ASCII.GetBytes(marker);
