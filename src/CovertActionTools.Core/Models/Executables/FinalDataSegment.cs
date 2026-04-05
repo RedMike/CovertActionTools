@@ -353,9 +353,8 @@ namespace CovertActionTools.Core.Models.Executables
         private const int CharacterSetupOffset = 0x1C5B;       // DS:0x1C5B: gender.pic + name/difficulty menus
         private const int CharacterSetupCount = 3;             // gender.pic, name selection menu, difficulty selection menu
 
-        // ClueSystemData sub-section sizes (relative to ClueSystemData start)
-        private const int ClueSubstitutionDataSize = 99;       // substitution buffers (15+51 spaces) + pointer tables + "rt"
-        private const int ClueFormatStringsSize = 23;          // 3x "%[^\n]\n" + " " separator
+        // ClueSystemData sub-section: find the not-found message by searching for its text
+        private static readonly byte[] ClueNotFoundMarker = Encoding.ASCII.GetBytes("This information");
 
         // GameStateData sub-section layout (DS-relative offsets within original binary)
         private const int GsStatusLabelsOffset = 0x46A6;       // DS:0x46A6: "Master Plan", status labels, UI labels
@@ -682,30 +681,21 @@ namespace CovertActionTools.Core.Models.Executables
 
         #region ClueSystemData sub-sections
 
-        /// <summary>Substitution target buffers (15+51 bytes of spaces, overwritten at runtime with
-        /// $VARIABLE values) + uint16 pointer tables (source/target, 28 bytes) + "rt" fopen mode
-        /// (99 bytes total).</summary>
-        public byte[] ClueSubstitutionData { get; set; } = Array.Empty<byte>();
-
-        /// <summary>Three fscanf format strings "%[^\n]\n" + " " separator (23 bytes).
-        /// Used by the text file lookup function FUN_1100_750d.</summary>
-        public byte[] ClueFormatStrings { get; set; } = Array.Empty<byte>();
+        /// <summary>Clue system data before the not-found message: UI labels (Source:, Method:,
+        /// Related Clues:), template variables ($KEY, $NAME, $ORG, $CITY, $ROLE), code names,
+        /// suspect info labels, status strings, message templates, $VARIABLE substitution markers,
+        /// substitution target buffers (spaces), pointer tables, fscanf format strings.
+        /// Contains 0x87 control bytes for text formatting.</summary>
+        public byte[] CluePreMessageData { get; set; } = Array.Empty<byte>();
 
         /// <summary>"This information requires security clearance: " — displayed when a
         /// text file lookup fails to find the requested header.</summary>
         public string ClueNotFoundMessage { get; set; } = string.Empty;
-        /// <summary>Original byte size for ClueNotFoundMessage slot (including null terminator).</summary>
-        public int ClueNotFoundMessageSize { get; set; }
 
-        /// <summary>Null + padding bytes between not-found message and tag pairs.</summary>
-        public byte[] ClueNotFoundPadding { get; set; } = Array.Empty<byte>();
-
-        /// <summary>Tag+filename pairs for text.dta lookups: *SLOC00/text.dta, *RLOC00/text.dta,
-        /// *SORG00/text.dta, *RORG00/text.dta, then 0x80+0x00 (uint16 128), text.dta, 0x8F+0x00
-        /// (uint16 143), *FLUF00/text.dta, *ALRT00/text.dta, *AIDD00/text.dta, text.dta, *MSG0000.
-        /// Note: contains two non-string uint16 values (0x80, 0x8F) embedded between tag pairs.
-        /// Preserved as raw bytes to maintain binary layout.</summary>
-        public byte[] ClueTagFilenamePairData { get; set; } = Array.Empty<byte>();
+        /// <summary>Data after the not-found message: null padding + tag+filename pairs for
+        /// text.dta lookups (*SLOC00/text.dta through *MSG0000), including embedded uint16 values
+        /// (0x80, 0x8F) between some pairs. Also contains facesf.pic/faces.pic refs.</summary>
+        public byte[] CluePostMessageData { get; set; } = Array.Empty<byte>();
 
         #endregion
 
@@ -1174,12 +1164,9 @@ namespace CovertActionTools.Core.Models.Executables
                 EvidenceItemSizes = EvidenceItemSizes.ToArray(),
                 InvestigationMethods = InvestigationMethods.ToArray(),
                 InvestigationMethodSizes = InvestigationMethodSizes.ToArray(),
-                ClueSubstitutionData = ClueSubstitutionData.ToArray(),
-                ClueFormatStrings = ClueFormatStrings.ToArray(),
+                CluePreMessageData = CluePreMessageData.ToArray(),
                 ClueNotFoundMessage = ClueNotFoundMessage,
-                ClueNotFoundMessageSize = ClueNotFoundMessageSize,
-                ClueNotFoundPadding = ClueNotFoundPadding.ToArray(),
-                ClueTagFilenamePairData = ClueTagFilenamePairData.ToArray(),
+                CluePostMessageData = CluePostMessageData.ToArray(),
                 CharacterNames = CharacterNames.Select(s => s).ToArray(),
                 PostCharNameData = PostCharNameData.ToArray(),
                 GameStateStatusLabels = GameStateStatusLabels.Select(s => s).ToArray(),
@@ -1786,38 +1773,43 @@ namespace CovertActionTools.Core.Models.Executables
         }
 
         /// <summary>
-        /// Parses the ClueSystemData region into substitution data, format strings,
-        /// not-found message, and tag+filename pair data.
+        /// Parses the ClueSystemData region into pre-message data, not-found message,
+        /// and post-message data. Finds the message by searching for its marker text.
         /// </summary>
         private static void ParseClueSystemData(byte[] data, int start, int end, FinalDataSegment segment)
         {
-            var totalSize = end - start;
+            // Find the "This information" marker to split the region
+            var msgStart = -1;
+            for (var i = start; i <= end - ClueNotFoundMarker.Length; i++)
+            {
+                var match = true;
+                for (var j = 0; j < ClueNotFoundMarker.Length; j++)
+                {
+                    if (data[i + j] != ClueNotFoundMarker[j]) { match = false; break; }
+                }
+                if (match) { msgStart = i; break; }
+            }
 
-            // Substitution data: target buffers + pointer tables + "rt" fopen mode
-            var substEnd = start + ClueSubstitutionDataSize;
-            if (substEnd > end) substEnd = end;
-            segment.ClueSubstitutionData = DataSegmentHelper.Slice(data, start, substEnd - start);
+            if (msgStart < 0)
+            {
+                // Marker not found — keep everything as pre-message data
+                segment.CluePreMessageData = DataSegmentHelper.Slice(data, start, end - start);
+                segment.ClueNotFoundMessage = string.Empty;
+                segment.CluePostMessageData = Array.Empty<byte>();
+                return;
+            }
 
-            // Format strings: 3x "%[^\n]\n" + " " separator
-            var fmtEnd = substEnd + ClueFormatStringsSize;
-            if (fmtEnd > end) fmtEnd = end;
-            segment.ClueFormatStrings = DataSegmentHelper.Slice(data, substEnd, fmtEnd - substEnd);
+            // Pre-message data
+            segment.CluePreMessageData = DataSegmentHelper.Slice(data, start, msgStart - start);
 
-            // Not-found message: single null-terminated string
-            var msgStart = fmtEnd;
+            // Not-found message: null-terminated string
             var msgEnd = msgStart;
             while (msgEnd < end && data[msgEnd] != 0) msgEnd++;
             segment.ClueNotFoundMessage = Encoding.ASCII.GetString(data, msgStart, msgEnd - msgStart);
-            segment.ClueNotFoundMessageSize = msgEnd - msgStart + 1; // include null terminator
-            msgEnd++; // skip null
+            msgEnd++; // skip null terminator
 
-            // Padding between message and tag pairs — scan for next non-zero or '*' character
-            var padStart = msgEnd;
-            while (padStart < end && data[padStart] == 0) padStart++;
-            segment.ClueNotFoundPadding = DataSegmentHelper.Slice(data, msgEnd, padStart - msgEnd);
-
-            // Tag+filename pair data — everything remaining (contains embedded uint16 values)
-            segment.ClueTagFilenamePairData = DataSegmentHelper.Slice(data, padStart, end - padStart);
+            // Post-message data: everything remaining
+            segment.CluePostMessageData = DataSegmentHelper.Slice(data, msgEnd, end - msgEnd);
         }
 
         /// <summary>
@@ -2101,12 +2093,10 @@ namespace CovertActionTools.Core.Models.Executables
         private byte[] BuildClueSystemData()
         {
             var parts = new List<byte>();
-            parts.AddRange(ClueSubstitutionData);
-            parts.AddRange(ClueFormatStrings);
+            parts.AddRange(CluePreMessageData);
             parts.AddRange(Encoding.ASCII.GetBytes(ClueNotFoundMessage));
             parts.Add(0); // null terminator
-            parts.AddRange(ClueNotFoundPadding);
-            parts.AddRange(ClueTagFilenamePairData);
+            parts.AddRange(CluePostMessageData);
             return parts.ToArray();
         }
 

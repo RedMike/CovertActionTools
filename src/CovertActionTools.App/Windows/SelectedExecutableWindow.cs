@@ -1013,10 +1013,10 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Clue Not Found Message"))
         {
+            ImGui.TextWrapped("Displayed when a text file lookup fails to find the requested header.");
             var contentSize = ImGui.GetContentRegionAvail();
-            var maxLen = final.ClueNotFoundMessageSize > 0 ? final.ClueNotFoundMessageSize - 1 : 256;
             var msg = final.ClueNotFoundMessage;
-            var newVal = ImGuiExtensions.Input("##ClueNotFound", msg, maxLen, width: (int)contentSize.X - 80);
+            var newVal = ImGuiExtensions.Input("##ClueNotFound", msg, 256, width: (int)contentSize.X - 80);
             if (newVal != null)
             {
                 final.ClueNotFoundMessage = newVal;
@@ -1061,10 +1061,10 @@ public class SelectedExecutableWindow : BaseWindow
             {
                 var width = BitConverter.ToUInt16(final.GameStateSceneInitFlags, 0);
                 var flag = BitConverter.ToUInt16(final.GameStateSceneInitFlags, 2);
-                var w = ImGuiExtensions.Input("Width", (int)width, width: 60);
+                var w = ImGuiExtensions.Input("Width", (int)width, width: 120);
                 if (w != null) { BitConverter.GetBytes((ushort)w.Value).CopyTo(final.GameStateSceneInitFlags, 0); _pendingState.RecordChange(); }
                 ImGui.SameLine();
-                var fl = ImGuiExtensions.Input("Flag", (int)flag, width: 60);
+                var fl = ImGuiExtensions.Input("Flag", (int)flag, width: 120);
                 if (fl != null) { BitConverter.GetBytes((ushort)fl.Value).CopyTo(final.GameStateSceneInitFlags, 2); _pendingState.RecordChange(); }
             }
             ImGui.Text("Palette Remap 1:");
@@ -1089,31 +1089,8 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("RastPort Blocks (Game State)"))
         {
-            ImGui.TextWrapped($"6 RastPort display config blocks + config pointers ({final.GameStateRastPortData.Length} bytes).");
-            if (final.GameStateRastPortData.Length > 0)
-            {
-                var hexLines = new System.Text.StringBuilder();
-                for (var i = 0; i < final.GameStateRastPortData.Length; i += 16)
-                {
-                    var lineLen = Math.Min(16, final.GameStateRastPortData.Length - i);
-                    hexLines.Append($"{i:X4}: ");
-                    for (var j = 0; j < lineLen; j++)
-                        hexLines.Append($"{final.GameStateRastPortData[i + j]:X2} ");
-                    for (var j = lineLen; j < 16; j++)
-                        hexLines.Append("   ");
-                    hexLines.Append(" ");
-                    for (var j = 0; j < lineLen; j++)
-                    {
-                        var b = final.GameStateRastPortData[i + j];
-                        hexLines.Append(b >= 0x20 && b <= 0x7E ? (char)b : '.');
-                    }
-                    hexLines.AppendLine();
-                }
-                var hexText = hexLines.ToString();
-                ImGui.InputTextMultiline("##RastPortHex", ref hexText, (uint)hexText.Length + 1,
-                    new System.Numerics.Vector2(ImGui.GetContentRegionAvail().X - 20, 150.0f),
-                    ImGuiInputTextFlags.ReadOnly);
-            }
+            ImGui.TextWrapped("6 display configuration blocks. Each: DataOffset, Page, OriginX/Y, ExtentX/Y, Flag, MaxColor, BPP, Reserved.");
+            DrawRastPortBlocks(final.GameStateRastPortData, "GsRastPort");
         }
     }
 
@@ -1404,6 +1381,81 @@ public class SelectedExecutableWindow : BaseWindow
                 }
             }
             ImGui.PopID();
+        }
+    }
+
+    private void DrawRastPortBlocks(byte[] data, string idPrefix)
+    {
+        // RastPort blocks are 20 bytes each, optionally followed by a 2-byte config pointer.
+        // Scan for the signature: OriginX=0, OriginY=0, ExtentX=319 (0x013F), ExtentY=199 (0x00C7)
+        // at offset +4 within each block. The block starts 4 bytes before the signature.
+        var blockStarts = new List<int>();
+        var sig = new byte[] { 0x00, 0x00, 0x00, 0x00, 0x3F, 0x01, 0xC7, 0x00 };
+        for (var i = 0; i <= data.Length - 8; i++)
+        {
+            var match = true;
+            for (var j = 0; j < sig.Length; j++)
+            {
+                if (data[i + j] != sig[j]) { match = false; break; }
+            }
+            if (match && i >= 4) blockStarts.Add(i - 4);
+        }
+
+        for (var bi = 0; bi < blockStarts.Count; bi++)
+        {
+            var off = blockStarts[bi];
+            if (off + 20 > data.Length) continue;
+            ImGui.PushID($"{idPrefix}_{bi}");
+
+            var dataOffset = BitConverter.ToUInt16(data, off);
+            var page = BitConverter.ToUInt16(data, off + 2);
+            var flag = BitConverter.ToUInt16(data, off + 12);
+            var maxColor = BitConverter.ToUInt16(data, off + 14);
+            var bpp = BitConverter.ToUInt16(data, off + 16);
+            var reserved = BitConverter.ToUInt16(data, off + 18);
+
+            if (ImGui.CollapsingHeader($"Block {bi}: DO={dataOffset}, Page={page}, Flag={flag}"))
+            {
+                if (ImGui.BeginTable($"fields", 4))
+                {
+                    ImGui.TableNextRow();
+                    ImGui.TableNextColumn();
+                    var dov = ImGuiExtensions.Input("DataOffset", (int)dataOffset, width: 80);
+                    if (dov != null) { BitConverter.GetBytes((ushort)dov.Value).CopyTo(data, off); _pendingState.RecordChange(); }
+                    ImGui.TableNextColumn();
+                    var pv = ImGuiExtensions.Input("Page", (int)page, width: 80);
+                    if (pv != null) { BitConverter.GetBytes((ushort)pv.Value).CopyTo(data, off + 2); _pendingState.RecordChange(); }
+                    ImGui.TableNextColumn();
+                    var fv = ImGuiExtensions.Input("Flag", (int)flag, width: 80);
+                    if (fv != null) { BitConverter.GetBytes((ushort)fv.Value).CopyTo(data, off + 12); _pendingState.RecordChange(); }
+                    ImGui.TableNextColumn();
+                    var mv = ImGuiExtensions.Input("MaxColor", (int)maxColor, width: 80);
+                    if (mv != null) { BitConverter.GetBytes((ushort)mv.Value).CopyTo(data, off + 14); _pendingState.RecordChange(); }
+                    ImGui.EndTable();
+                }
+                if (ImGui.BeginTable($"fields2", 4))
+                {
+                    ImGui.TableNextRow();
+                    ImGui.TableNextColumn();
+                    var bv = ImGuiExtensions.Input("BPP", (int)bpp, width: 80);
+                    if (bv != null) { BitConverter.GetBytes((ushort)bv.Value).CopyTo(data, off + 16); _pendingState.RecordChange(); }
+                    ImGui.TableNextColumn();
+                    var rv = ImGuiExtensions.Input("Reserved", (int)reserved, width: 80);
+                    if (rv != null) { BitConverter.GetBytes((ushort)rv.Value).CopyTo(data, off + 18); _pendingState.RecordChange(); }
+                    ImGui.TableNextColumn();
+                    ImGui.TableNextColumn();
+                    ImGui.EndTable();
+                }
+            }
+            ImGui.PopID();
+        }
+
+        // Show remaining non-RastPort bytes count
+        var totalRpBytes = blockStarts.Count * 20;
+        var remaining = data.Length - totalRpBytes;
+        if (remaining > 0)
+        {
+            ImGui.TextDisabled($"+ {remaining} bytes of config pointers and padding");
         }
     }
 
