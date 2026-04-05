@@ -1327,14 +1327,67 @@ public class SelectedExecutableWindow : BaseWindow
             DrawStringArray(game.InvestigationMethods, "InvMeth", game.InvestigationMethodSizes);
         }
 
+        if (ImGui.CollapsingHeader("Message Log Strings"))
+        {
+            DrawStringArray(game.MessageLogStrings, "MsgLog", game.MessageLogStringSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Hotel Menu"))
+        {
+            DrawStringArray(game.HotelMenuStrings, "Hotel", game.HotelMenuStringSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Data Files Menu"))
+        {
+            DrawStringArray(game.DataFilesMenuStrings, "DataFiles", game.DataFilesMenuStringSizes);
+        }
+
+        if (ImGui.CollapsingHeader("CIA Building Menus"))
+        {
+            DrawStringArray(game.CiaMenuStrings, "CIA", game.CiaMenuStringSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Activity/Wiretap Display"))
+        {
+            DrawStringArray(game.ActivityWiretapStrings, "ActWire", game.ActivityWiretapStringSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Coded Message Display"))
+        {
+            DrawStringArray(game.CodedMessageStrings, "Coded", game.CodedMessageStringSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Substitution Tokens"))
+        {
+            DrawStringArray(game.SubstitutionTokenStrings, "SubToken", game.SubstitutionTokenStringSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Bulletin/Surveillance Reports"))
+        {
+            DrawStringArray(game.BulletinStrings, "Bulletin", game.BulletinStringSizes);
+        }
+
         if (ImGui.CollapsingHeader("RastPort Blocks (Pre-String)"))
         {
             DrawRastPortBlocks(game.PreStringTableRastPortData, "GamePreRP");
         }
 
-        DrawRawSectionSizes("Raw Sections", new[]
+        if (ImGui.CollapsingHeader("Game State (PANI + RastPort)"))
         {
-            ("RemainingTrailingData", game.RemainingTrailingData.Length)
+            DrawRastPortBlocks(game.GameStateData, "GameStateRP");
+        }
+
+        DrawRawSectionSizes("Raw Sections (byte arrays with control codes)", new[]
+        {
+            ("ClueFormattingData", game.ClueFormattingData.Length),
+            ("ClueDetailData", game.ClueDetailData.Length),
+            ("CitySuspectData", game.CitySuspectData.Length),
+            ("ClueLookupData", game.ClueLookupData.Length),
+            ("ChronologyStatusData", game.ChronologyStatusData.Length),
+            ("ResearchAssistantData", game.ResearchAssistantData.Length),
+            ("SaveLoadData", game.SaveLoadData.Length),
+            ("ExeChainData", game.ExeChainData.Length),
+            ("RuntimeTrailingData", game.RuntimeTrailingData.Length)
         });
     }
 

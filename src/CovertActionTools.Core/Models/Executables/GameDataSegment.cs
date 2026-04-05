@@ -199,11 +199,81 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>Original byte sizes for InvestigationMethods slots.</summary>
         public int[] InvestigationMethodSizes { get; set; } = Array.Empty<int>();
 
-        /// <summary>Everything after investigation methods to end of data segment:
-        /// clue system data, gameplay strings (hotel/CIA/data menus), save/load UI,
-        /// exe chain data, RastPort blocks, overlay manager strings, C runtime error
-        /// messages, BSS zero fill.</summary>
-        public byte[] RemainingTrailingData { get; set; } = Array.Empty<byte>();
+        /// <summary>Clue display formatting: Source/Method/Related Clues labels with 0x87+ control
+        /// bytes, $KEY token, *C0000 tags, clues.txt reference. Contains non-ASCII control codes.</summary>
+        public byte[] ClueFormattingData { get; set; } = Array.Empty<byte>();
+
+        /// <summary>Clue detail strings: face descriptions, codenames (Valkerie, Thunderbolt),
+        /// Name/Rank/Org/City/Role labels, arrest/hiding/turned status. Contains non-ASCII control codes.</summary>
+        public byte[] ClueDetailData { get; set; } = Array.Empty<byte>();
+
+        /// <summary>Message log display: message decoding, Rcvd/Sent msg formatters.</summary>
+        public string[] MessageLogStrings { get; set; } = Array.Empty<string>();
+        public int[] MessageLogStringSizes { get; set; } = Array.Empty<int>();
+
+        /// <summary>Hotel menu: hotel.pic, hotel options (Leave/Lounge/Sleep/Save/Load), *lounge tag.</summary>
+        public string[] HotelMenuStrings { get; set; } = Array.Empty<string>();
+        public int[] HotelMenuStringSizes { get; set; } = Array.Empty<int>();
+
+        /// <summary>Data files menu: Clues/Suspects/Inside Information/News/Org/City/Activity.</summary>
+        public string[] DataFilesMenuStrings { get; set; } = Array.Empty<string>();
+        public int[] DataFilesMenuStringSizes { get; set; } = Array.Empty<int>();
+
+        /// <summary>CIA building menus: floor selection, Intelligence/Data/Crypto sections,
+        /// double agent accusation, local agent check results.</summary>
+        public string[] CiaMenuStrings { get; set; } = Array.Empty<string>();
+        public int[] CiaMenuStringSizes { get; set; } = Array.Empty<int>();
+
+        /// <summary>Activity/wiretap display: report summary, wiretap labels, org/allies formatters.</summary>
+        public string[] ActivityWiretapStrings { get; set; } = Array.Empty<string>();
+        public int[] ActivityWiretapStringSizes { get; set; } = Array.Empty<int>();
+
+        /// <summary>City/suspect display: city summaries, suspect files, locations, documents.
+        /// Contains 0x8C control bytes — stored as byte array.</summary>
+        public byte[] CitySuspectData { get; set; } = Array.Empty<byte>();
+
+        /// <summary>Coded message display: FROM/TO/MESSAGE headers, NSYN Overflow, Chronology, News.</summary>
+        public string[] CodedMessageStrings { get; set; } = Array.Empty<string>();
+        public int[] CodedMessageStringSizes { get; set; } = Array.Empty<int>();
+
+        /// <summary>Message substitution tokens: $VICTIM, $SNDORG, $RCVORG, $SNDLOC, $RCVLOC,
+        /// $HLPORG, $OBJECT + format buffers.</summary>
+        public string[] SubstitutionTokenStrings { get; set; } = Array.Empty<string>();
+        public int[] SubstitutionTokenStringSizes { get; set; } = Array.Empty<int>();
+
+        /// <summary>Clue lookup system: fscanf format strings, "This information requires..." message,
+        /// *SLOC00/*RLOC00/*SORG00/*RORG00 tag+filename pairs. Contains non-ASCII control codes.</summary>
+        public byte[] ClueLookupData { get; set; } = Array.Empty<byte>();
+
+        /// <summary>Bulletin/surveillance reports: bulletins, INTERPOL, satellite intercept,
+        /// wiretap reveals, airport surveillance, double agent reports.</summary>
+        public string[] BulletinStrings { get; set; } = Array.Empty<string>();
+        public int[] BulletinStringSizes { get; set; } = Array.Empty<int>();
+
+        /// <summary>Chronology/status display: time template, ARRESTED/TURNED status, clue review.
+        /// Contains non-ASCII control codes — stored as byte array.</summary>
+        public byte[] ChronologyStatusData { get; set; } = Array.Empty<byte>();
+
+        /// <summary>Research assistant: officem.pan/officef.pan, advice text, org/city suggestions,
+        /// arrest/investigate recommendations, *advicea-*advice5 tags.
+        /// Contains 0x8F control bytes — stored as byte array.</summary>
+        public byte[] ResearchAssistantData { get; set; } = Array.Empty<byte>();
+
+        /// <summary>Save/load system: Select Load/Save File, cv0.sve, rank display, difficulty
+        /// labels, disk prompts. Contains 0x8F control bytes — stored as byte array.</summary>
+        public byte[] SaveLoadData { get; set; } = Array.Empty<byte>();
+
+        /// <summary>Exe chain + disk swap: env.sve, final.exe/game.exe/tac.exe/hq.pan,
+        /// disk insert prompts. Contains non-ASCII bytes — stored as byte array.</summary>
+        public byte[] ExeChainData { get; set; } = Array.Empty<byte>();
+
+        /// <summary>PANI headers, scene init, palette remaps, OK string, briefing.pan,
+        /// animation.pan, joystick table, RastPort blocks. Binary game state data.</summary>
+        public byte[] GameStateData { get; set; } = Array.Empty<byte>();
+
+        /// <summary>Overlay manager strings, C runtime error messages, BSS zero fill.
+        /// Not editable — preserved for binary roundtrip fidelity.</summary>
+        public byte[] RuntimeTrailingData { get; set; } = Array.Empty<byte>();
 
         #endregion
 
@@ -454,9 +524,213 @@ namespace CovertActionTools.Core.Models.Executables
             segment.InvestigationMethodSizes = invMethodSzs;
             pos = invPos;
 
-            // Remaining trailing data (clue system, gameplay menus, save/load, exe chain,
-            // RastPort blocks, overlay/C runtime, BSS)
-            segment.RemainingTrailingData = DataSegmentHelper.Slice(dataSegment, pos, end - pos);
+            // --- Remaining trailing sections (marker-based parsing) ---
+            ParseRemainingTrailingData(dataSegment, pos, segment);
+        }
+
+        private static void ParseRemainingTrailingData(byte[] dataSegment, int start, GameDataSegment segment)
+        {
+            var end = dataSegment.Length;
+
+            // Clue formatting data (byte array, non-ASCII control codes): to "hotel.pic"
+            var hotelStart = FindMarkerString(dataSegment, start, end, "hotel.pic");
+            // Split clue formatting and clue details at the message log boundary
+            // Message log starts after clue details, before hotel. Find by scanning backwards
+            // from hotel for the message log section. Use "Rcvd msg" as marker.
+            var msgLogStart = FindMarkerString(dataSegment, start, hotelStart, "Rcvd msg");
+            // Walk msgLogStart backwards to find the true start of message log section
+            // (there are shorter strings before "Rcvd msg"). Find the first string after clue details.
+            // Use approach: clue details end where there's a run of strings without 0x80+ bytes.
+            // Simpler: find the boundary between non-ASCII and ASCII sections.
+            var asciiStart = start;
+            while (asciiStart < hotelStart)
+            {
+                // Scan forward looking for a string without non-ASCII bytes
+                var strStart = asciiStart;
+                while (strStart < hotelStart && dataSegment[strStart] == 0) strStart++;
+                if (strStart >= hotelStart) break;
+                var strEnd = strStart;
+                var hasNonAscii = false;
+                while (strEnd < hotelStart && dataSegment[strEnd] != 0)
+                {
+                    if (dataSegment[strEnd] >= 0x80) hasNonAscii = true;
+                    strEnd++;
+                }
+                if (!hasNonAscii && strEnd - strStart > 3)
+                {
+                    // Found first clean string > 3 chars. Check if previous region had non-ASCII.
+                    // This is the boundary between clue data and message log.
+                    // Back up to include any leading short clean strings that are part of message log.
+                    break;
+                }
+                asciiStart = strEnd + 1;
+            }
+            // asciiStart is now at the first clean string after the non-ASCII clue data.
+            // But we need to find the true section boundary. Use a simpler approach:
+            // Split at known marker. The clue detail section ends before the single-quote chars.
+            // After clue details: "'", "'", "(message not decoded)" - these are clean ASCII.
+            var messageDecodedPos = FindMarkerString(dataSegment, start, hotelStart, "(message not decoded)");
+            // The clean message log section starts a bit before "(message not decoded)"
+            // Walk back to find "'" chars
+            var quotePos = messageDecodedPos;
+            while (quotePos > start && dataSegment[quotePos - 1] == 0) quotePos--;
+            while (quotePos > start && dataSegment[quotePos - 1] != 0) quotePos--;
+            while (quotePos > start && dataSegment[quotePos - 1] == 0) quotePos--;
+            while (quotePos > start && dataSegment[quotePos - 1] != 0) quotePos--;
+
+            // ClueFormattingData + ClueDetailData stored as one blob (both have non-ASCII)
+            segment.ClueFormattingData = DataSegmentHelper.Slice(dataSegment, start, quotePos - start);
+
+            // ClueDetailData: from quotePos to hotelStart (clean ASCII: quotes, message log)
+            // Actually let's just split into clue data (byte[]) and message log (strings)
+            segment.ClueDetailData = Array.Empty<byte>(); // merged into ClueFormattingData above
+
+            // Message log strings: from quotePos to hotel.pic
+            var msgLogSize = hotelStart - quotePos;
+            var (msgStrs, msgSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+                dataSegment, quotePos, msgLogSize);
+            segment.MessageLogStrings = msgStrs;
+            segment.MessageLogStringSizes = msgSzs;
+
+            // Hotel menu: from "hotel.pic" to "Data Files"
+            var dataFilesStart = FindMarkerString(dataSegment, hotelStart, end, "Data Files");
+            var hotelSize = dataFilesStart - hotelStart;
+            var (hotelStrs, hotelSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+                dataSegment, hotelStart, hotelSize);
+            segment.HotelMenuStrings = hotelStrs;
+            segment.HotelMenuStringSizes = hotelSzs;
+
+            // Data files menu: to "You are in the CIA"
+            var ciaStart = FindMarkerString(dataSegment, dataFilesStart, end, "You are in the CIA");
+            var dfSize = ciaStart - dataFilesStart;
+            var (dfStrs, dfSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+                dataSegment, dataFilesStart, dfSize);
+            segment.DataFilesMenuStrings = dfStrs;
+            segment.DataFilesMenuStringSizes = dfSzs;
+
+            // CIA menus: to "Activity Report Summary"
+            var actStart = FindMarkerString(dataSegment, ciaStart, end, "Activity Report Summary");
+            var ciaSize = actStart - ciaStart;
+            var (ciaStrs, ciaSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+                dataSegment, ciaStart, ciaSize);
+            segment.CiaMenuStrings = ciaStrs;
+            segment.CiaMenuStringSizes = ciaSzs;
+
+            // Activity/wiretap display: to "Which city" or city suspect section
+            var cityStart = FindMarkerString(dataSegment, actStart, end, "Coded Messages");
+            // There's a city/suspect section between activity and coded messages
+            // Find it by looking for the transition
+            var citySuspectStart = actStart;
+            // Activity strings end before city/suspect data. Use a byte-count approach.
+            // Find "Which organization" as boundary after activity section
+            var whichOrgPos = FindMarkerString(dataSegment, actStart, cityStart, "Which organization");
+            // Activity ends a few strings before "Which organization"
+            // Actually "Which organization" IS an activity string. Let me use "Known Locations" instead
+            var knownLocStart = FindMarkerString(dataSegment, whichOrgPos, cityStart, "Known Locations");
+            // Go back further - the whole org/city/suspect display runs together.
+            // Simpler approach: activity section ends, city/suspect starts at "Which city"
+            var whichCityPos = FindMarkerString(dataSegment, actStart, cityStart, "Which city");
+
+            var actSize = whichCityPos - actStart;
+            var (actStrs, actSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+                dataSegment, actStart, actSize);
+            segment.ActivityWiretapStrings = actStrs;
+            segment.ActivityWiretapStringSizes = actSzs;
+
+            // City/suspect data (byte array, has 0x8C control bytes)
+            var codedMsgStart = FindMarkerString(dataSegment, whichCityPos, end, "Coded Messages");
+            segment.CitySuspectData = DataSegmentHelper.Slice(dataSegment, whichCityPos, codedMsgStart - whichCityPos);
+
+            // Coded messages: to "$VICTIM"
+            var tokensStart = FindMarkerString(dataSegment, codedMsgStart, end, "$VICTIM");
+            var codedSize = tokensStart - codedMsgStart;
+            var (codedStrs, codedSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+                dataSegment, codedMsgStart, codedSize);
+            segment.CodedMessageStrings = codedStrs;
+            segment.CodedMessageStringSizes = codedSzs;
+
+            // Substitution tokens: to clue lookup section (has non-ASCII, find "This information")
+            var clueInfoStart = FindMarkerString(dataSegment, tokensStart, end, "This information");
+            // Back up to include the fscanf format strings before "This information"
+            // The clue lookup section starts with format strings containing 0x80+ bytes
+            // Find the boundary by scanning backwards for non-ASCII
+            var clueLookupStart = clueInfoStart;
+            // Scan back past clean strings to find where tokens end
+            var scanBack = clueInfoStart - 1;
+            while (scanBack > tokensStart && dataSegment[scanBack] == 0) scanBack--;
+            while (scanBack > tokensStart && dataSegment[scanBack] != 0) scanBack--;
+            clueLookupStart = scanBack + 1;
+            // Actually just use the format string "%[^\n" as marker
+            var fmtStart = FindMarkerString(dataSegment, tokensStart, end, "%[^");
+            if (fmtStart < clueInfoStart)
+                clueLookupStart = fmtStart;
+
+            // Scan forward from tokens to find first non-ASCII byte (pointer table / control codes)
+            clueLookupStart = tokensStart;
+            while (clueLookupStart < end && dataSegment[clueLookupStart] < 0x80) clueLookupStart++;
+            // Back up to the preceding null terminator boundary
+            while (clueLookupStart > tokensStart && dataSegment[clueLookupStart - 1] != 0) clueLookupStart--;
+
+            var tokensSize = clueLookupStart - tokensStart;
+            var (tokenStrs, tokenSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+                dataSegment, tokensStart, tokensSize);
+            segment.SubstitutionTokenStrings = tokenStrs;
+            segment.SubstitutionTokenStringSizes = tokenSzs;
+
+            // Clue lookup data (byte array, non-ASCII): to "Bulletin: "
+            var bulletinStart = FindMarkerString(dataSegment, clueLookupStart, end, "Bulletin: ");
+            segment.ClueLookupData = DataSegmentHelper.Slice(dataSegment, clueLookupStart, bulletinStart - clueLookupStart);
+
+            // Bulletin/surveillance strings: to chronology section
+            // Find " 10" followed by "00:00 AM" as chronology marker
+            var chronoStart = FindMarkerString(dataSegment, bulletinStart, end, "00:00 AM");
+            // Back up to include the " 10" before it
+            while (chronoStart > bulletinStart && dataSegment[chronoStart - 1] != 0) chronoStart--;
+            while (chronoStart > bulletinStart && dataSegment[chronoStart - 1] == 0) chronoStart--;
+            while (chronoStart > bulletinStart && dataSegment[chronoStart - 1] != 0) chronoStart--;
+            chronoStart++; // include the " 10" string start... actually let me use simpler marker
+            chronoStart = FindMarkerString(dataSegment, bulletinStart, end, "00:00 AM");
+            // " 10\0" is 4 bytes before "00:00 AM"
+            chronoStart -= 4;
+
+            var bulletinSize = chronoStart - bulletinStart;
+            var (bulStrs, bulSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+                dataSegment, bulletinStart, bulletinSize);
+            segment.BulletinStrings = bulStrs;
+            segment.BulletinStringSizes = bulSzs;
+
+            // Chronology/status data (byte array, has control codes): to "officem.pan"
+            var researchStart = FindMarkerString(dataSegment, chronoStart, end, "officem.pan");
+            segment.ChronologyStatusData = DataSegmentHelper.Slice(dataSegment, chronoStart, researchStart - chronoStart);
+
+            // Research assistant data (byte array, has 0x8F): to "Select Load File"
+            var saveLoadStart = FindMarkerString(dataSegment, researchStart, end, "Select Load File");
+            segment.ResearchAssistantData = DataSegmentHelper.Slice(dataSegment, researchStart, saveLoadStart - researchStart);
+
+            // Save/load data (byte array, has 0x8F): to exe chain section
+            // Exe chain starts after save/load. Find "final.exe" as marker.
+            var exeChainStart = FindMarkerString(dataSegment, saveLoadStart, end, "final.exe");
+            // Back up to include "env.sve" and "File Error:" before final.exe
+            var fileErrorStart = FindMarkerString(dataSegment, saveLoadStart, exeChainStart + 1, "File Error:");
+            // There are two "File Error:" strings. The first is in save/load, second in exe chain.
+            // Find the second one
+            var secondFileError = FindMarkerString(dataSegment, fileErrorStart + 11, end, "File Error:");
+            // Exe chain starts before second "File Error:" - find "env.sve" near it
+            var envSvePos = FindMarkerString(dataSegment, secondFileError - 20, end, "env.sve");
+            exeChainStart = envSvePos;
+
+            segment.SaveLoadData = DataSegmentHelper.Slice(dataSegment, saveLoadStart, exeChainStart - saveLoadStart);
+
+            // Exe chain data (byte array): to "PANI"
+            var paniStart = FindMarkerString(dataSegment, exeChainStart, end, "PANI");
+            segment.ExeChainData = DataSegmentHelper.Slice(dataSegment, exeChainStart, paniStart - exeChainStart);
+
+            // Game state data (PANI + RastPort, byte array): to "Allocated"
+            var runtimeStart = FindMarkerString(dataSegment, paniStart, end, "Allocated");
+            segment.GameStateData = DataSegmentHelper.Slice(dataSegment, paniStart, runtimeStart - paniStart);
+
+            // Runtime/BSS trailing data (not editable)
+            segment.RuntimeTrailingData = DataSegmentHelper.Slice(dataSegment, runtimeStart, end - runtimeStart);
         }
 
         private static int FindMarkerString(byte[] data, int start, int end, string marker)
@@ -602,6 +876,16 @@ namespace CovertActionTools.Core.Models.Executables
             // Evidence/rank pointer table placeholder (patched after assembly)
             var evRankPtrPlaceholder = new byte[EvidenceRankPointerTableSize];
 
+            // Serialize remaining sections
+            var msgLogBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(MessageLogStrings, MessageLogStringSizes);
+            var hotelBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(HotelMenuStrings, HotelMenuStringSizes);
+            var dfBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(DataFilesMenuStrings, DataFilesMenuStringSizes);
+            var ciaBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(CiaMenuStrings, CiaMenuStringSizes);
+            var actBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(ActivityWiretapStrings, ActivityWiretapStringSizes);
+            var codedBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(CodedMessageStrings, CodedMessageStringSizes);
+            var tokenBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(SubstitutionTokenStrings, SubstitutionTokenStringSizes);
+            var bulletinBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(BulletinStrings, BulletinStringSizes);
+
             return DataSegmentHelper.Concatenate(
                 new byte[IntelPaddingSize],        // 3 null bytes
                 intelTxtBytes,
@@ -611,7 +895,24 @@ namespace CovertActionTools.Core.Models.Executables
                 new byte[EvidenceEndPaddingSize],   // 1 null byte
                 evRankPtrPlaceholder,
                 invMethodBytes,
-                RemainingTrailingData
+                ClueFormattingData,
+                ClueDetailData,
+                msgLogBytes,
+                hotelBytes,
+                dfBytes,
+                ciaBytes,
+                actBytes,
+                CitySuspectData,
+                codedBytes,
+                tokenBytes,
+                ClueLookupData,
+                bulletinBytes,
+                ChronologyStatusData,
+                ResearchAssistantData,
+                SaveLoadData,
+                ExeChainData,
+                GameStateData,
+                RuntimeTrailingData
             );
         }
 
@@ -697,7 +998,32 @@ namespace CovertActionTools.Core.Models.Executables
                 EvidenceItemSizes = EvidenceItemSizes.ToArray(),
                 InvestigationMethods = InvestigationMethods.Select(s => s).ToArray(),
                 InvestigationMethodSizes = InvestigationMethodSizes.ToArray(),
-                RemainingTrailingData = RemainingTrailingData.ToArray()
+                ClueFormattingData = ClueFormattingData.ToArray(),
+                ClueDetailData = ClueDetailData.ToArray(),
+                MessageLogStrings = MessageLogStrings.Select(s => s).ToArray(),
+                MessageLogStringSizes = MessageLogStringSizes.ToArray(),
+                HotelMenuStrings = HotelMenuStrings.Select(s => s).ToArray(),
+                HotelMenuStringSizes = HotelMenuStringSizes.ToArray(),
+                DataFilesMenuStrings = DataFilesMenuStrings.Select(s => s).ToArray(),
+                DataFilesMenuStringSizes = DataFilesMenuStringSizes.ToArray(),
+                CiaMenuStrings = CiaMenuStrings.Select(s => s).ToArray(),
+                CiaMenuStringSizes = CiaMenuStringSizes.ToArray(),
+                ActivityWiretapStrings = ActivityWiretapStrings.Select(s => s).ToArray(),
+                ActivityWiretapStringSizes = ActivityWiretapStringSizes.ToArray(),
+                CitySuspectData = CitySuspectData.ToArray(),
+                CodedMessageStrings = CodedMessageStrings.Select(s => s).ToArray(),
+                CodedMessageStringSizes = CodedMessageStringSizes.ToArray(),
+                SubstitutionTokenStrings = SubstitutionTokenStrings.Select(s => s).ToArray(),
+                SubstitutionTokenStringSizes = SubstitutionTokenStringSizes.ToArray(),
+                ClueLookupData = ClueLookupData.ToArray(),
+                BulletinStrings = BulletinStrings.Select(s => s).ToArray(),
+                BulletinStringSizes = BulletinStringSizes.ToArray(),
+                ChronologyStatusData = ChronologyStatusData.ToArray(),
+                ResearchAssistantData = ResearchAssistantData.ToArray(),
+                SaveLoadData = SaveLoadData.ToArray(),
+                ExeChainData = ExeChainData.ToArray(),
+                GameStateData = GameStateData.ToArray(),
+                RuntimeTrailingData = RuntimeTrailingData.ToArray()
             };
         }
     }
