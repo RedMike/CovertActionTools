@@ -47,6 +47,9 @@ namespace CovertActionTools.Core.Models.Executables
         private const int GameStatusLabelsByteSize = 120;      // DS:0x1DAA-0x1E21
         private const int ScreenLayoutDataByteSize = 588;      // DS:0x1E22-0x206D
 
+        // MidSectionPreClue: guard alertness
+        private const int GuardAlertnessLabelCount = 6;        // quiet, unsuspecting, cautious, suspicious, nervous, very nervous
+
         // TrailingData sub-section layout
         private const int IntelPaddingSize = 3;                // 3 null bytes at start
         private const int EvidenceEndPaddingSize = 1;          // 1 null byte after evidence items
@@ -125,8 +128,15 @@ namespace CovertActionTools.Core.Models.Executables
         /// string groups (26 bytes in original binary). Contains 0xFF bytes.</summary>
         public byte[] GameplayBinaryLookup { get; set; } = Array.Empty<byte>();
 
-        /// <summary>Gameplay event strings (part 2): guard alertness labels ("quiet",
-        /// "unsuspecting", etc.), briefing farewell text, ".pic", "cities.cat".</summary>
+        /// <summary>6 guard alertness level labels: quiet, unsuspecting, cautious,
+        /// suspicious, nervous, very nervous. Displayed on the city map for each
+        /// building's alert state.</summary>
+        public string[] GuardAlertnessLabels { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for GuardAlertnessLabels slots.</summary>
+        public int[] GuardAlertnessLabelSizes { get; set; } = Array.Empty<int>();
+
+        /// <summary>Gameplay event strings (part 2): briefing farewell text,
+        /// ".pic", "cities.cat".</summary>
         public string[] GameplayEventStrings2 { get; set; } = Array.Empty<string>();
         /// <summary>Original byte sizes for GameplayEventStrings2 slots.</summary>
         public int[] GameplayEventString2Sizes { get; set; } = Array.Empty<int>();
@@ -355,10 +365,22 @@ namespace CovertActionTools.Core.Models.Executables
 
                     segment.GameplayBinaryLookup = DataSegmentHelper.Slice(dataSegment, binaryStart, binarySize);
 
-                    var (eventStrs2, eventSzs2) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
-                        dataSegment, binaryEnd, part2Size);
-                    segment.GameplayEventStrings2 = eventStrs2;
-                    segment.GameplayEventString2Sizes = eventSzs2;
+                    // Part 2: first 6 strings are guard alertness labels, remainder is other strings
+                    var alertPos = binaryEnd;
+                    var (alertStrs, alertSzs) = DataSegmentHelper.NullTerminatedStringsWithSizesFromBytes(
+                        dataSegment, alertPos, GuardAlertnessLabelCount);
+                    segment.GuardAlertnessLabels = alertStrs;
+                    segment.GuardAlertnessLabelSizes = alertSzs;
+
+                    var alertEnd = alertPos + alertSzs.Sum();
+                    var remaining2Size = eventEnd - alertEnd;
+                    if (remaining2Size > 0)
+                    {
+                        var (eventStrs2, eventSzs2) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+                            dataSegment, alertEnd, remaining2Size);
+                        segment.GameplayEventStrings2 = eventStrs2;
+                        segment.GameplayEventString2Sizes = eventSzs2;
+                    }
                 }
                 else
                 {
@@ -563,6 +585,7 @@ namespace CovertActionTools.Core.Models.Executables
                 ScreenLayoutData,
                 DataSegmentHelper.NullTerminatedStringsToFixedBytes(GameplayEventStrings, GameplayEventStringSizes),
                 GameplayBinaryLookup,
+                DataSegmentHelper.NullTerminatedStringsToFixedBytes(GuardAlertnessLabels, GuardAlertnessLabelSizes),
                 DataSegmentHelper.NullTerminatedStringsToFixedBytes(GameplayEventStrings2, GameplayEventString2Sizes)
             );
         }
@@ -655,6 +678,8 @@ namespace CovertActionTools.Core.Models.Executables
                 GameplayEventStrings = GameplayEventStrings.Select(s => s).ToArray(),
                 GameplayEventStringSizes = GameplayEventStringSizes.ToArray(),
                 GameplayBinaryLookup = GameplayBinaryLookup.ToArray(),
+                GuardAlertnessLabels = GuardAlertnessLabels.Select(s => s).ToArray(),
+                GuardAlertnessLabelSizes = GuardAlertnessLabelSizes.ToArray(),
                 GameplayEventStrings2 = GameplayEventStrings2.Select(s => s).ToArray(),
                 GameplayEventString2Sizes = GameplayEventString2Sizes.ToArray(),
                 ClueRelationshipPhrases = ClueRelationshipPhrases.Select(s => s).ToArray(),

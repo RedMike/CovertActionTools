@@ -1256,6 +1256,11 @@ public class SelectedExecutableWindow : BaseWindow
             DrawByteArrayEditable(game.GameplayBinaryLookup, "GameBinLookup");
         }
 
+        if (ImGui.CollapsingHeader("Guard Alertness Labels"))
+        {
+            DrawStringArray(game.GuardAlertnessLabels, "Alert", game.GuardAlertnessLabelSizes);
+        }
+
         if (ImGui.CollapsingHeader("Gameplay Event Strings (Part 2)"))
         {
             DrawStringArray(game.GameplayEventStrings2, "GE2", game.GameplayEventString2Sizes);
