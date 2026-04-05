@@ -17,7 +17,8 @@ public class MainMenuWindow : BaseWindow
     private readonly EditorSettingsState _editorSettingsState;
     private readonly ConfirmDialogueState _confirmDialogueState;
     private readonly PublishPackageState _publishPackageState;
-    
+    private bool _showStringTagsHelp;
+
     public MainMenuWindow(ILogger<MainMenuWindow> logger, MainEditorState mainEditorState, ParsePublishedState parsePublishedState, LoadPackageState loadPackageState, SavePackageState savePackageState, EditorSettingsState editorSettingsState, ConfirmDialogueState confirmDialogueState, PublishPackageState publishPackageState)
     {
         _logger = logger;
@@ -47,7 +48,13 @@ public class MainMenuWindow : BaseWindow
         {
             DrawNotLoadedMenu();
         }
+        DrawHelpMenu();
         ImGui.EndMainMenuBar();
+
+        if (_showStringTagsHelp)
+        {
+            DrawStringTagsWindow();
+        }
     }
 
     private void DrawLoadedMenus()
@@ -183,6 +190,55 @@ public class MainMenuWindow : BaseWindow
             }
             ImGui.EndMenu();
         }
+    }
+
+    private void DrawHelpMenu()
+    {
+        if (ImGui.BeginMenu("Help"))
+        {
+            if (ImGui.MenuItem("String Tags", null, _showStringTagsHelp))
+            {
+                _showStringTagsHelp = !_showStringTagsHelp;
+            }
+            ImGui.EndMenu();
+        }
+    }
+
+    private void DrawStringTagsWindow()
+    {
+        ImGui.SetNextWindowPos(new System.Numerics.Vector2(ImGui.GetIO().DisplaySize.X - 280, 30), ImGuiCond.FirstUseEver);
+        ImGui.SetNextWindowSize(new System.Numerics.Vector2(260, 0), ImGuiCond.FirstUseEver);
+        if (ImGui.Begin("String Tags", ref _showStringTagsHelp))
+        {
+            ImGui.TextWrapped("Strings in executable data may contain special formatting tags. These are rendered by the game's text engine.");
+            ImGui.Separator();
+            if (ImGui.BeginTable("TagsTable", 2, ImGuiTableFlags.RowBg))
+            {
+                ImGui.TableSetupColumn("Tag", ImGuiTableColumnFlags.WidthFixed, 80);
+                ImGui.TableSetupColumn("Description");
+                ImGui.TableHeadersRow();
+                var tags = new[]
+                {
+                    ("[tab]", "Tab / field separator (0x80)"),
+                    ("[color]", "Color change / highlight (0x87)"),
+                    ("[ep]", "EP score separator (0x89)"),
+                    ("[hdr]", "Section header marker (0x8C)"),
+                    ("[prompt]", "Input prompt position (0x8F)"),
+                    ("[bullet]", "Bullet point character (0xAE)"),
+                    ("[0xNN]", "Arbitrary hex byte value"),
+                };
+                foreach (var (tag, desc) in tags)
+                {
+                    ImGui.TableNextRow();
+                    ImGui.TableNextColumn();
+                    ImGui.Text(tag);
+                    ImGui.TableNextColumn();
+                    ImGui.TextWrapped(desc);
+                }
+                ImGui.EndTable();
+            }
+        }
+        ImGui.End();
     }
 
     private void DrawLoadedInfo()

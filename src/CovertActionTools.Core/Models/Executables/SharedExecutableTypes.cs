@@ -243,14 +243,26 @@ namespace CovertActionTools.Core.Models.Executables
         /// Bytes >= 0x80 are special formatting codes; these provide human-readable
         /// display names for editing.
         /// </summary>
-        private static readonly (byte value, string token)[] ControlByteTokens =
+        /// <summary>
+        /// Returns the list of known control byte tokens with descriptions, for UI display.
+        /// </summary>
+        public static (string token, string description)[] GetControlByteTokenInfo()
         {
-            (0x80, "[tab]"),     // tab-to-column / field separator
-            (0x87, "[b]"),       // bold/highlight start
-            (0x89, "[ep]"),      // efficiency point separator
-            (0x8C, "[hdr]"),     // section header marker
-            (0x8F, "[prompt]"),  // input cursor / prompt position
-            (0xAE, "[bullet]"),  // bullet point character
+            var result = new (string, string)[ControlByteTokens.Length + 1];
+            for (var i = 0; i < ControlByteTokens.Length; i++)
+                result[i] = (ControlByteTokens[i].token, ControlByteTokens[i].description);
+            result[ControlByteTokens.Length] = ("[0xNN]", "Arbitrary hex byte value");
+            return result;
+        }
+
+        private static readonly (byte value, string token, string description)[] ControlByteTokens =
+        {
+            (0x80, "[tab]", "Tab / field separator (0x80)"),
+            (0x87, "[color]", "Color change / highlight (0x87)"),
+            (0x89, "[ep]", "EP score separator (0x89)"),
+            (0x8C, "[hdr]", "Section header marker (0x8C)"),
+            (0x8F, "[prompt]", "Input prompt position (0x8F)"),
+            (0xAE, "[bullet]", "Bullet point character (0xAE)"),
         };
 
         /// <summary>
@@ -281,6 +293,7 @@ namespace CovertActionTools.Core.Models.Executables
                             break;
                         }
                     }
+
                     if (!found) sb.Append($"[0x{b:X2}]");
                 }
             }

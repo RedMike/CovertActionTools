@@ -867,7 +867,7 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Efficiency Report Strings"))
         {
-            DrawControlStringArray(final.EfficiencyReportStrings, "EffRpt", final.EfficiencyReportStringSizes);
+            DrawStringArray(final.EfficiencyReportStrings, "EffRpt", final.EfficiencyReportStringSizes);
         }
 
         if (ImGui.CollapsingHeader("Character Names"))
@@ -1368,12 +1368,12 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Clue Formatting Strings"))
         {
-            DrawControlStringArray(game.ClueFormattingStrings, "ClueFmt", game.ClueFormattingSizes);
+            DrawStringArray(game.ClueFormattingStrings, "ClueFmt", game.ClueFormattingSizes);
         }
 
         if (ImGui.CollapsingHeader("City/Suspect Display"))
         {
-            DrawControlStringArray(game.CitySuspectStrings, "CitySus", game.CitySuspectSizes);
+            DrawStringArray(game.CitySuspectStrings, "CitySus", game.CitySuspectSizes);
         }
 
         if (ImGui.CollapsingHeader("Clue Not Found Message"))
@@ -1390,22 +1390,22 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Clue Tag+Filename Pairs"))
         {
-            DrawControlStringArray(game.CluePostMessageStrings, "CluePost", game.CluePostMessageSizes);
+            DrawStringArray(game.CluePostMessageStrings, "CluePost", game.CluePostMessageSizes);
         }
 
         if (ImGui.CollapsingHeader("Chronology/Status Display"))
         {
-            DrawControlStringArray(game.ChronologyStatusStrings, "Chrono", game.ChronologyStatusSizes);
+            DrawStringArray(game.ChronologyStatusStrings, "Chrono", game.ChronologyStatusSizes);
         }
 
         if (ImGui.CollapsingHeader("Research Assistant"))
         {
-            DrawControlStringArray(game.ResearchAssistantStrings, "Research", game.ResearchAssistantSizes);
+            DrawStringArray(game.ResearchAssistantStrings, "Research", game.ResearchAssistantSizes);
         }
 
         if (ImGui.CollapsingHeader("Save/Load System"))
         {
-            DrawControlStringArray(game.SaveLoadStrings, "SaveLoad", game.SaveLoadSizes);
+            DrawStringArray(game.SaveLoadStrings, "SaveLoad", game.SaveLoadSizes);
         }
     }
 
@@ -1608,26 +1608,6 @@ public class SelectedExecutableWindow : BaseWindow
             }
             ImGui.PopID();
         }
-    }
-
-    private void DrawControlStringArray(string[] strings, string idPrefix, int[]? byteSizes = null)
-    {
-        ImGui.SameLine();
-        ImGui.TextDisabled("(?)");
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.Text("Control code tokens:");
-            ImGui.BulletText("[tab]  = 0x80 — tab/field separator");
-            ImGui.BulletText("[b]    = 0x87 — bold/highlight");
-            ImGui.BulletText("[ep]   = 0x89 — EP score separator");
-            ImGui.BulletText("[hdr]  = 0x8C — section header");
-            ImGui.BulletText("[prompt] = 0x8F — input prompt");
-            ImGui.BulletText("[bullet] = 0xAE — bullet point");
-            ImGui.BulletText("[0xNN] = arbitrary hex byte");
-            ImGui.EndTooltip();
-        }
-        DrawStringArray(strings, idPrefix, byteSizes);
     }
 
     private void DrawRastPortBlocks(byte[] data, string idPrefix)
