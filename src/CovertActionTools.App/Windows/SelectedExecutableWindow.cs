@@ -1334,7 +1334,6 @@ public class SelectedExecutableWindow : BaseWindow
 
         DrawRawSectionSizes("Raw Sections", new[]
         {
-            ("PostCharNameData", game.PostCharNameData.Length),
             ("RemainingTrailingData", game.RemainingTrailingData.Length)
         });
     }
