@@ -274,4 +274,34 @@ public class ExecutableRoundtripTests : IDisposable
     }
 
     #endregion
+
+    #region GAME data segment roundtrip
+
+    [Fact]
+    public void Roundtrip_GAME_DataSegmentByteIdentical()
+    {
+        var scratchDir = ExecutableTestDataGenerator.FindScratchDirectory();
+        if (scratchDir == null) return;
+
+        // Decompress the EXE to get the raw data segment bytes
+        var rawExe = File.ReadAllBytes(Path.Combine(scratchDir, "GAME.EXE"));
+        var mzHeader = CovertActionTools.Core.Compression.ExepackUtilities.ParseMzHeader(rawExe);
+        var exepackHeader = CovertActionTools.Core.Compression.ExepackUtilities.DetectExepack(rawExe, mzHeader);
+        var decompResult = _decompression.Decompress(exepackHeader.PackedData, exepackHeader.DestLen);
+        var deadZoneBoundary = decompResult.DeadZoneBoundary;
+        if (deadZoneBoundary > 0)
+            Array.Copy(exepackHeader.PackedData, 0, decompResult.Data, 0, deadZoneBoundary);
+
+        var dsOffset = CovertActionTools.Core.Models.Executables.GameDataSegment.DsParagraph * 16;
+        var originalDataSegment = new byte[decompResult.Data.Length - dsOffset];
+        Array.Copy(decompResult.Data, dsOffset, originalDataSegment, 0, originalDataSegment.Length);
+
+        var reparsed = CovertActionTools.Core.Models.Executables.GameDataSegment.FromBytes(originalDataSegment);
+        var rebuilt = reparsed.ToBytes();
+
+        Assert.Equal(originalDataSegment.Length, rebuilt.Length);
+        Assert.Equal(originalDataSegment, rebuilt);
+    }
+
+    #endregion
 }

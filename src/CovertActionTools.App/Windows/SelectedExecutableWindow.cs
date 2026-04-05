@@ -1156,9 +1156,47 @@ public class SelectedExecutableWindow : BaseWindow
 
     private void DrawGameData(GameDataSegment game)
     {
+        if (ImGui.CollapsingHeader("Initial Game Strings"))
+        {
+            DrawStringArray(game.InitialGameStrings, "InitStr", game.InitialGameStringSizes);
+        }
+
+        if (ImGui.CollapsingHeader("CGA Animation Data"))
+        {
+            ImGui.TextColored(new System.Numerics.Vector4(0.4f, 0.6f, 1f, 1f), $"{game.CgaAnimationData.Length} bytes — sprite + nibble tables + palette");
+            var hexDump = string.Join(" ", game.CgaAnimationData.Take(64).Select(b => b.ToString("X2")));
+            ImGui.InputTextMultiline("##CgaHex", ref hexDump, (uint)hexDump.Length + 1,
+                new System.Numerics.Vector2(-1, ImGui.GetTextLineHeight() * 3),
+                ImGuiInputTextFlags.ReadOnly);
+        }
+
+        if (ImGui.CollapsingHeader("HQ Display Strings"))
+        {
+            DrawStringArray(game.HqDisplayStrings, "HqStr", game.HqDisplayStringSizes);
+        }
+
         if (ImGui.CollapsingHeader("Character Names"))
         {
             DrawStringArray(game.CharacterNames, "CharName");
+        }
+
+        if (ImGui.CollapsingHeader("Game Status Labels"))
+        {
+            DrawStringArray(game.GameStatusLabels, "StatusLbl", game.GameStatusLabelSizes);
+        }
+
+        DrawReadOnlyInfo("Screen Layout Data", $"{game.ScreenLayoutData.Length} bytes (rect draw records)");
+
+        if (ImGui.CollapsingHeader("Gameplay Event Strings"))
+        {
+            DrawStringArray(game.GameplayEventStrings, "GE1", game.GameplayEventStringSizes);
+        }
+
+        DrawReadOnlyInfo("Gameplay Binary Lookup", $"{game.GameplayBinaryLookup.Length} bytes");
+
+        if (ImGui.CollapsingHeader("Gameplay Event Strings (Part 2)"))
+        {
+            DrawStringArray(game.GameplayEventStrings2, "GE2", game.GameplayEventString2Sizes);
         }
 
         if (ImGui.CollapsingHeader("Clue Relationship Phrases"))
@@ -1166,20 +1204,52 @@ public class SelectedExecutableWindow : BaseWindow
             DrawStringArray(game.ClueRelationshipPhrases, "CluePhr");
         }
 
-        DrawReadOnlyInfo("Clue Category Data", $"{game.ClueCategoryData.Length} bytes (48-byte category flags + popcount lookup)");
-
         if (ImGui.CollapsingHeader("Month Names"))
         {
             DrawStringArray(game.MonthNames, "Month");
         }
 
+        if (ImGui.CollapsingHeader("Intel Headers"))
+        {
+            DrawStringArray(game.IntelHeaders, "IntelHdr", game.IntelHeaderSizes);
+        }
+
+        DrawReadOnlyInfo("Clue Category Data", $"{game.ClueCategoryData.Length} bytes (48-byte category flags + popcount lookup)");
+
+        if (ImGui.CollapsingHeader("Intel Report Texts"))
+        {
+            DrawStringArray(game.IntelReportTexts, "IntelTxt", game.IntelReportTextSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Rank Names"))
+        {
+            DrawStringArray(game.RankNames, "Rank", game.RankNameSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Evidence Type Abbreviations"))
+        {
+            DrawStringArray(game.EvidenceTypeAbbreviations, "EvType", game.EvidenceTypeSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Evidence Item Names"))
+        {
+            DrawStringArray(game.EvidenceItemNames, "EvItem", game.EvidenceItemSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Investigation Methods"))
+        {
+            DrawStringArray(game.InvestigationMethods, "InvMeth", game.InvestigationMethodSizes);
+        }
+
+        if (ImGui.CollapsingHeader("RastPort Blocks (Pre-String)"))
+        {
+            DrawRastPortBlocks(game.PreStringTableRastPortData, "GamePreRP");
+        }
+
         DrawRawSectionSizes("Raw Sections", new[]
         {
-            ("PreCharNameData", game.PreCharNameData.Length),
             ("PostCharNameData", game.PostCharNameData.Length),
-            ("MidSectionPreClue", game.MidSectionPreClue.Length),
-            ("MidSectionPostMonth", game.MidSectionPostMonth.Length),
-            ("TrailingData", game.TrailingData.Length)
+            ("RemainingTrailingData", game.RemainingTrailingData.Length)
         });
     }
 
