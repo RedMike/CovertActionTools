@@ -115,15 +115,31 @@ public class ExecutableRoundtripTests : IDisposable
     }
 
     [Fact]
-    public void Roundtrip_FINAL_SizeDifferenceWithin32Bytes()
+    public void Roundtrip_FINAL_DataSegmentPreserved()
     {
-        // FINAL is 16 bytes larger in round-trip due to compression decision differences
         var model = TryParseFromScratch();
         if (model == null) return;
 
-        var scratchDir = ExecutableTestDataGenerator.FindScratchDirectory();
-        var originalBytes = File.ReadAllBytes(Path.Combine(scratchDir, "FINAL.EXE"));
+        var originalExe = model.Executables["FINAL"];
+        var originalDataSegment = originalExe.GetDataSegmentBytes();
 
+        // Re-serialize and compare data segment bytes
+        var reparsed = CovertActionTools.Core.Models.Executables.FinalDataSegment.FromBytes(originalDataSegment);
+        var rebuilt = reparsed.ToBytes();
+
+        Assert.Equal(originalDataSegment.Length, rebuilt.Length);
+        Assert.Equal(originalDataSegment, rebuilt);
+    }
+
+    [Fact]
+    public void Roundtrip_FINAL_FullPipelinePayloadPreserved()
+    {
+        var model = TryParseFromScratch();
+        if (model == null) return;
+
+        var originalExe = model.Executables["FINAL"];
+
+        // Publish
         var publishModel = new PackageModel
         {
             Executables = model.Executables
@@ -135,10 +151,28 @@ public class ExecutableRoundtripTests : IDisposable
         _publisher.Start(_tempDir, publishModel);
         while (!_publisher.RunStep()) { }
 
-        var publishedBytes = File.ReadAllBytes(Path.Combine(_tempDir, "FINAL.EXE"));
+        // Re-parse from the published output
+        var decompression = new ExepackDecompression(NullLogger<ExepackDecompression>.Instance);
+        var parser2 = new LegacyExecutableParser(
+            NullLogger<LegacyExecutableParser>.Instance, decompression);
+        parser2.Start(_tempDir);
+        while (!parser2.RunStep()) { }
+        var model2 = new PackageModel();
+        parser2.SetResult(model2);
 
-        // Size should be close (within 32 bytes)
-        Assert.InRange(Math.Abs(originalBytes.Length - publishedBytes.Length), 0, 32);
+        var reparsedExe = model2.Executables["FINAL"];
+
+        // Data segment bytes must match
+        Assert.Equal(originalExe.GetDataSegmentBytes(), reparsedExe.GetDataSegmentBytes());
+
+        // Dead zone, code segment, entry point, relocations must match
+        Assert.Equal(originalExe.DeadZone, reparsedExe.DeadZone);
+        Assert.Equal(originalExe.CodeSegment, reparsedExe.CodeSegment);
+        Assert.Equal(originalExe.EntryCS, reparsedExe.EntryCS);
+        Assert.Equal(originalExe.EntryIP, reparsedExe.EntryIP);
+        Assert.Equal(originalExe.StackSS, reparsedExe.StackSS);
+        Assert.Equal(originalExe.StackSP, reparsedExe.StackSP);
+        Assert.Equal(originalExe.Relocations, reparsedExe.Relocations);
     }
 
     #endregion
@@ -200,6 +234,43 @@ public class ExecutableRoundtripTests : IDisposable
 
         // Relocations must match
         Assert.Equal(originalExe.Relocations, reparsedExe.Relocations);
+    }
+
+    #endregion
+
+    #region FINAL data segment diagnostic
+
+    [Fact]
+    public void Roundtrip_FINAL_DataSegmentDiagnostic()
+    {
+        var model = TryParseFromScratch();
+        if (model == null) return;
+
+        var originalExe = model.Executables["FINAL"];
+        var originalDataSegment = originalExe.GetDataSegmentBytes();
+        var reparsed = CovertActionTools.Core.Models.Executables.FinalDataSegment.FromBytes(originalDataSegment);
+        var rebuilt = reparsed.ToBytes();
+
+        var output = new System.Text.StringBuilder();
+        output.AppendLine($"Original length: {originalDataSegment.Length}");
+        output.AppendLine($"Rebuilt length: {rebuilt.Length}");
+
+        var diffs = 0;
+        var maxLen = Math.Max(originalDataSegment.Length, rebuilt.Length);
+        for (var i = 0; i < maxLen; i++)
+        {
+            var orig = i < originalDataSegment.Length ? originalDataSegment[i] : (byte)0xFF;
+            var reb = i < rebuilt.Length ? rebuilt[i] : (byte)0xFF;
+            if (orig != reb)
+            {
+                if (diffs < 50)
+                    output.AppendLine($"  DIFF DS:0x{i:X4}: orig=0x{orig:X2}({(orig >= 0x20 && orig <= 0x7E ? (char)orig : '.')}) rebuilt=0x{reb:X2}({(reb >= 0x20 && reb <= 0x7E ? (char)reb : '.')})");
+                diffs++;
+            }
+        }
+        output.AppendLine($"Total diffs: {diffs}");
+
+        Assert.True(diffs == 0, output.ToString());
     }
 
     #endregion

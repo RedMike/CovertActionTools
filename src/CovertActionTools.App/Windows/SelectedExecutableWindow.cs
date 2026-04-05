@@ -622,6 +622,47 @@ public class SelectedExecutableWindow : BaseWindow
             }
         }
 
+        if (ImGui.CollapsingHeader("Initial Game Strings"))
+        {
+            ImGui.TextWrapped("Startup strings: env.sve sentinels, joystick prompts, main menu, file references.");
+            DrawStringArray(final.InitialGameStrings, "InitGame", final.InitialGameStringSizes);
+        }
+
+        if (ImGui.CollapsingHeader("CGA Animation Data"))
+        {
+            ImGui.TextWrapped($"2bpp CGA sprite data + CGA-to-VGA palette ({final.CgaAnimationData.Length} bytes). Shared across FINAL/TAC/GAME.");
+            if (final.CgaAnimationData.Length > 0)
+            {
+                var hexLines = new System.Text.StringBuilder();
+                for (var i = 0; i < final.CgaAnimationData.Length; i += 16)
+                {
+                    var lineLen = Math.Min(16, final.CgaAnimationData.Length - i);
+                    hexLines.Append($"{i:X4}: ");
+                    for (var j = 0; j < lineLen; j++)
+                        hexLines.Append($"{final.CgaAnimationData[i + j]:X2} ");
+                    for (var j = lineLen; j < 16; j++)
+                        hexLines.Append("   ");
+                    hexLines.Append(" ");
+                    for (var j = 0; j < lineLen; j++)
+                    {
+                        var b = final.CgaAnimationData[i + j];
+                        hexLines.Append(b >= 0x20 && b <= 0x7E ? (char)b : '.');
+                    }
+                    hexLines.AppendLine();
+                }
+                var hexText = hexLines.ToString();
+                ImGui.InputTextMultiline("##CgaHex", ref hexText, (uint)hexText.Length + 1,
+                    new System.Numerics.Vector2(ImGui.GetContentRegionAvail().X - 20, 200.0f),
+                    ImGuiInputTextFlags.ReadOnly);
+            }
+        }
+
+        if (ImGui.CollapsingHeader("Text Lookup Tag Pairs"))
+        {
+            ImGui.TextWrapped("Tag+filename pairs for text.dta lookups. Tags have digits patched at runtime (e.g. *SLOC00 -> *SLOC03).");
+            DrawStringArray(final.TextLookupTagPairs, "TagPair", final.TextLookupTagPairSizes);
+        }
+
         if (ImGui.CollapsingHeader("Crime Type Names"))
         {
             DrawStringArray(final.CrimeTypeNames, "CrimeType", final.CrimeTypeNameByteSizes);
@@ -687,7 +728,10 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Character Creation Strings"))
         {
-            ImGui.TextWrapped("TODO: difficulty menu options may need splitting into individual strings.");
+            ImGui.TextWrapped("Character setup: gender image, name/difficulty selection menus (\\n = line separator, leading space = selectable item).");
+            DrawStringArray(final.CharacterSetupStrings, "CharSetup", final.CharacterSetupStringSizes);
+            ImGui.Separator();
+            ImGui.TextWrapped("Code name prompt and skill selection (from plot/briefing data):");
             DrawStringArray(final.CharacterCreationStrings, "CharCreate");
         }
 
@@ -967,13 +1011,87 @@ public class SelectedExecutableWindow : BaseWindow
             DrawStringArray(final.InvestigationMethods, "InvMethod", final.InvestigationMethodSizes);
         }
 
-        DrawRawSectionSizes("Raw Sections", new[]
+        if (ImGui.CollapsingHeader("Clue Not Found Message"))
         {
-            ("PreStringTableData", final.PreStringTableData.Length),
-            ("PostStringTableData", final.PostStringTableData.Length),
-            ("ClueSystemData", final.ClueSystemData.Length),
-            ("GameStateData", final.GameStateData.Length)
-        });
+            ImGui.TextWrapped("Displayed when a text file lookup fails to find the requested header.");
+            var contentSize = ImGui.GetContentRegionAvail();
+            var msg = final.ClueNotFoundMessage;
+            var newVal = ImGuiExtensions.Input("##ClueNotFound", msg, 256, width: (int)contentSize.X - 80);
+            if (newVal != null)
+            {
+                final.ClueNotFoundMessage = newVal;
+                _pendingState.RecordChange();
+            }
+        }
+
+        if (ImGui.CollapsingHeader("Status Labels"))
+        {
+            ImGui.TextWrapped("Master Plan, status indicators, UI labels used by personnel/intel screens.");
+            DrawStringArray(final.GameStateStatusLabels, "StatusLabel");
+        }
+
+        if (ImGui.CollapsingHeader("Chronology Strings"))
+        {
+            DrawStringArray(final.GameStateChronologyStrings, "Chronology");
+        }
+
+        if (ImGui.CollapsingHeader("Loading Message"))
+        {
+            var contentSize = ImGui.GetContentRegionAvail();
+            var msg = final.GameStateLoadingMessage;
+            var newVal = ImGuiExtensions.Input("##LoadingMsg", msg, 256, width: (int)contentSize.X - 80);
+            if (newVal != null) { final.GameStateLoadingMessage = newVal; _pendingState.RecordChange(); }
+        }
+
+        if (ImGui.CollapsingHeader("Quit Menu"))
+        {
+            ImGui.TextWrapped("Menu format: \\n = line separator, leading space = selectable item.");
+            var contentSize = ImGui.GetContentRegionAvail();
+            var val = final.GameStateQuitMenu;
+            var origVal = val;
+            ImGui.InputTextMultiline("##QuitMenu", ref val, 512,
+                new System.Numerics.Vector2(contentSize.X - 80, 80.0f));
+            if (val != origVal) { final.GameStateQuitMenu = val; _pendingState.RecordChange(); }
+        }
+
+        if (ImGui.CollapsingHeader("Scene Init Palettes"))
+        {
+            ImGui.TextWrapped("Scene initialisation: display flags and two palette remap tables.");
+            if (final.GameStateSceneInitFlags.Length >= 4)
+            {
+                var width = BitConverter.ToUInt16(final.GameStateSceneInitFlags, 0);
+                var flag = BitConverter.ToUInt16(final.GameStateSceneInitFlags, 2);
+                var w = ImGuiExtensions.Input("Width", (int)width, width: 120);
+                if (w != null) { BitConverter.GetBytes((ushort)w.Value).CopyTo(final.GameStateSceneInitFlags, 0); _pendingState.RecordChange(); }
+                ImGui.SameLine();
+                var fl = ImGuiExtensions.Input("Flag", (int)flag, width: 120);
+                if (fl != null) { BitConverter.GetBytes((ushort)fl.Value).CopyTo(final.GameStateSceneInitFlags, 2); _pendingState.RecordChange(); }
+            }
+            ImGui.Text("Palette Remap 1:");
+            DrawByteArrayEditable(final.GameStatePaletteRemap1, "PalRemap1");
+            ImGui.Text("Palette Remap 2:");
+            DrawByteArrayEditable(final.GameStatePaletteRemap2, "PalRemap2");
+        }
+
+        if (ImGui.CollapsingHeader("OK String"))
+        {
+            var contentSize = ImGui.GetContentRegionAvail();
+            var val = final.GameStateOkString;
+            var newVal = ImGuiExtensions.Input("##OkStr", val, 256, width: (int)contentSize.X - 80);
+            if (newVal != null) { final.GameStateOkString = newVal; _pendingState.RecordChange(); }
+        }
+
+        if (ImGui.CollapsingHeader("Save/Load UI Strings"))
+        {
+            ImGui.TextWrapped("Save/load prompts, rank templates, difficulty suffixes, error messages, disk swap prompts.");
+            DrawStringArray(final.GameStateSaveLoadStrings, "SaveLoad");
+        }
+
+        if (ImGui.CollapsingHeader("RastPort Blocks (Game State)"))
+        {
+            ImGui.TextWrapped("6 display configuration blocks. Each: DataOffset, Page, OriginX/Y, ExtentX/Y, Flag, MaxColor, BPP, Reserved.");
+            DrawRastPortBlocks(final.GameStateRastPortData, "GsRastPort");
+        }
     }
 
     private void DrawMissionSetCrimeSlot(string label, FinalMissionSetRecord ms, int slotIndex, string[] crimeTypeNames)
@@ -1263,6 +1381,104 @@ public class SelectedExecutableWindow : BaseWindow
                 }
             }
             ImGui.PopID();
+        }
+    }
+
+    private void DrawRastPortBlocks(byte[] data, string idPrefix)
+    {
+        // RastPort blocks are 20 bytes each, optionally followed by a 2-byte config pointer.
+        // Scan for the signature: OriginX=0, OriginY=0, ExtentX=319 (0x013F), ExtentY=199 (0x00C7)
+        // at offset +4 within each block. The block starts 4 bytes before the signature.
+        var blockStarts = new List<int>();
+        var sig = new byte[] { 0x00, 0x00, 0x00, 0x00, 0x3F, 0x01, 0xC7, 0x00 };
+        for (var i = 0; i <= data.Length - 8; i++)
+        {
+            var match = true;
+            for (var j = 0; j < sig.Length; j++)
+            {
+                if (data[i + j] != sig[j]) { match = false; break; }
+            }
+            if (match && i >= 4) blockStarts.Add(i - 4);
+        }
+
+        for (var bi = 0; bi < blockStarts.Count; bi++)
+        {
+            var off = blockStarts[bi];
+            if (off + 20 > data.Length) continue;
+            ImGui.PushID($"{idPrefix}_{bi}");
+
+            var dataOffset = BitConverter.ToUInt16(data, off);
+            var page = BitConverter.ToUInt16(data, off + 2);
+            var flag = BitConverter.ToUInt16(data, off + 12);
+            var maxColor = BitConverter.ToUInt16(data, off + 14);
+            var bpp = BitConverter.ToUInt16(data, off + 16);
+            var reserved = BitConverter.ToUInt16(data, off + 18);
+
+            var doLabel = dataOffset == 0xFFFF ? "uninit" : dataOffset == 0 ? "none" : $"0x{dataOffset:X4}";
+            if (ImGui.CollapsingHeader($"Block {bi}: Page={page}, Flag={flag}, DO={doLabel}"))
+            {
+                if (ImGui.BeginTable($"fields", 4))
+                {
+                    ImGui.TableNextRow();
+                    ImGui.TableNextColumn();
+                    // TODO: replace with a dropdown of what to point to
+                    ImGui.TextDisabled($"DataOffset: {doLabel}");
+                    ImGui.TableNextColumn();
+                    var pv = ImGuiExtensions.Input("Page", (int)page, width: 80);
+                    if (pv != null) { BitConverter.GetBytes((ushort)pv.Value).CopyTo(data, off + 2); _pendingState.RecordChange(); }
+                    ImGui.TableNextColumn();
+                    var fv = ImGuiExtensions.Input("Flag", (int)flag, width: 80);
+                    if (fv != null) { BitConverter.GetBytes((ushort)fv.Value).CopyTo(data, off + 12); _pendingState.RecordChange(); }
+                    ImGui.TableNextColumn();
+                    var mv = ImGuiExtensions.Input("MaxColor", (int)maxColor, width: 80);
+                    if (mv != null) { BitConverter.GetBytes((ushort)mv.Value).CopyTo(data, off + 14); _pendingState.RecordChange(); }
+                    ImGui.EndTable();
+                }
+                if (ImGui.BeginTable($"fields2", 4))
+                {
+                    ImGui.TableNextRow();
+                    ImGui.TableNextColumn();
+                    var bv = ImGuiExtensions.Input("BPP", (int)bpp, width: 80);
+                    if (bv != null) { BitConverter.GetBytes((ushort)bv.Value).CopyTo(data, off + 16); _pendingState.RecordChange(); }
+                    ImGui.TableNextColumn();
+                    var rv = ImGuiExtensions.Input("Reserved", (int)reserved, width: 80);
+                    if (rv != null) { BitConverter.GetBytes((ushort)rv.Value).CopyTo(data, off + 18); _pendingState.RecordChange(); }
+                    ImGui.TableNextColumn();
+                    ImGui.TableNextColumn();
+                    ImGui.EndTable();
+                }
+            }
+            ImGui.PopID();
+        }
+
+    }
+
+    private void DrawByteArrayEditable(byte[] data, string idPrefix)
+    {
+        if (data.Length == 0) return;
+        var columns = Math.Min(16, data.Length);
+        if (ImGui.BeginTable($"{idPrefix}_table", columns, ImGuiTableFlags.Borders))
+        {
+            for (var i = 0; i < columns; i++)
+                ImGui.TableSetupColumn($"{i}", ImGuiTableColumnFlags.WidthFixed, 30);
+            ImGui.TableHeadersRow();
+
+            ImGui.TableNextRow();
+            for (var i = 0; i < data.Length; i++)
+            {
+                if (i > 0 && i % columns == 0) ImGui.TableNextRow();
+                ImGui.TableNextColumn();
+                ImGui.PushID($"{idPrefix}_{i}");
+                var val = (int)data[i];
+                ImGui.SetNextItemWidth(30);
+                if (ImGui.InputInt("", ref val, 0, 0) && val >= 0 && val <= 255)
+                {
+                    data[i] = (byte)val;
+                    _pendingState.RecordChange();
+                }
+                ImGui.PopID();
+            }
+            ImGui.EndTable();
         }
     }
 

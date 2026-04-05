@@ -334,18 +334,113 @@ namespace CovertActionTools.Core.Models.Executables
         private const int EvidenceRankPointerTableSize = 160;  // (skipped, recomputed)
         private const int SceneFilenameCount = 4;              // "lau", "off", "bch", "cas"
         private const int GameStateDataSize = 1242;            // TR section: DS:0x46A6-0x4B7F
+
+        // PreStringTableData sub-section layout (DS-relative offsets)
+        private const int PreStCRuntimeSize = 0x0070;          // DS:0x0000-0x006F: MS copyright + flags + template + zeros
+        private const int PreStInitialStringsOffset = 0x0070;  // DS:0x0070: first string (env.sve sentinel)
+        private const int PreStInitialStringsEnd = 0x0188;     // DS:0x0188: start of BSS zero fill
+        private const int PreStRastPortOffset = 0x1548;        // DS:0x1548: 2x RastPort blocks + config pointers
+        private const int PreStRastPortSize = 48;              // 2x20 + 2x4 bytes
+        private const int PreStCgaOffset = 0x1578;             // DS:0x1578: CGA pixel data + nibble tables
+        private const int PreStCgaSize = 236;                  // 236 bytes of 2bpp sprite + CGA->VGA palette
+        private const int PreStAnimInitOffset = 0x1664;        // DS:0x1664: uint16 + animation.pan buffer + env.sve sentinel
+        private const int PreStAnimInitPrefixSize = 2;         // uint16 before animation.pan buffer
+        private const int PreStAnimBufferSize = 14;            // "animation.pan\0" — 14-byte buffer overwritten at runtime
+        private const int PreStEnvSentinelSize = 8;            // "env.sve\0" — sentinel, never opened as a file
+        private const int PreStTagPairsOffset = 0x167D;        // DS:0x167D: *SLOC00/text.dta tag+filename pairs (preceded by null separator at 0x167C)
+
+        // PostStringTableData sub-section layout
+        private const int CharacterSetupOffset = 0x1C5B;       // DS:0x1C5B: gender.pic + name/difficulty menus
+        private const int CharacterSetupCount = 3;             // gender.pic, name selection menu, difficulty selection menu
+
+        // ClueSystemData sub-section: find the not-found message by searching for its text.
+        // TODO: same fragility as FindMarkerString — replace with structural parsing.
+        private static readonly byte[] ClueNotFoundMarker = Encoding.ASCII.GetBytes("This information");
+
+        // GameStateData sub-section layout (DS-relative offsets within original binary)
+        private const int GsStatusLabelsOffset = 0x46A6;       // DS:0x46A6: "Master Plan", status labels, UI labels
+        private const int GsNsynOffset = 0x470F;               // DS:0x470F: null + "NSYN Overflow\n\0"
+        private const int GsChronologyOffset = 0x471F;         // DS:0x471F: chronology UI strings
+        private const int GsLoadingMsgOffset = 0x4778;         // DS:0x4778: "One moment please..."
+        private const int GsQuitMenuOffset = 0x478D;           // DS:0x478D: "Are you sure\nyou want to Quit?\n No\n Yes\n"
+        private const int GsSceneInitOffset = 0x47B6;          // DS:0x47B6: PANI header (10 bytes)
+        private const int GsSceneInitPaniSize = 10;            // "PANI" + 2 null + 4x FF
+        private const int GsSceneInitFlagsSize = 4;            // uint16 width + uint16 flag
+        private const int GsPaletteRemap1Size = 16;            // palette remap 1
+        private const int GsPaletteSeparator1Size = 2;         // 2 zero bytes
+        private const int GsPaletteRemap2Size = 16;            // palette remap 2
+        private const int GsPaletteSeparator2Size = 1;         // 1 zero byte
+        private const int GsOkStringOffset = 0x47E7;           // DS:0x47E7: "OK"
+        private const int GsBriefingFilenamesOffset = 0x47EA;  // DS:0x47EA: "briefing.pan" + "bld" + 3 nulls
+        private const int GsAnimBufferOffset = 0x47FE;         // DS:0x47FE: animation.pan buffer (14 bytes)
+        private const int GsAnimBufferSize = 14;               // "animation.pan\0"
+        private const int GsJoystickTableOffset = 0x480C;      // DS:0x480C: 9x uint16 joystick direction lookup
+        private const int GsJoystickTableSize = 18;            // 9 entries x 2 bytes
+        private const int GsSaveLoadOffset = 0x481E;           // DS:0x481E: save/load UI strings
+        private const int GsExeChainOffset = 0x4A50;           // DS:0x4A50: final.exe/game.exe/tac.exe/hq.pan
+        private const int GsExeChainPointerOffset = 0x4AC8;    // DS:0x4AC8: 5x uint16 pointer table
+        private const int GsExeChainPointerCount = 5;          // 4 valid + 1 padding
+        private const int GsPaniTag2Offset = 0x4AD2;           // DS:0x4AD2: second "PANI" tag
+        private const int GsRastPortGroupOffset = 0x4AD6;      // DS:0x4AD6: 6x RastPort blocks + config
+        private const int GsTrailingZerosOffset = 0x4B5B;      // DS:0x4B5B: zero fill to end
         #endregion
 
         #region Fields (in binary order)
 
-        /// <summary>Data before the mission set string table.</summary>
-        public byte[] PreStringTableData { get; set; } = Array.Empty<byte>();
+        #region PreStringTableData sub-sections (DS:0x0000 to string table start)
+
+        /// <summary>C runtime copyright, flags, filename template, zeros (DS:0x0000-0x006F, 112 bytes).</summary>
+        public byte[] PreStringTableCRuntimeData { get; set; } = Array.Empty<byte>();
+
+        /// <summary>Initial game strings: env.sve sentinels, joystick prompts, main menu, filenames
+        /// (DS:0x0070-0x0187). Includes env.sve sentinel strings (never opened as files — see
+        /// filename-io-analysis.md) and file references (labs.pic, title2.pan, credits.pan).</summary>
+        public string[] InitialGameStrings { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for InitialGameStrings slots.</summary>
+        public int[] InitialGameStringSizes { get; set; } = Array.Empty<int>();
+
+        // BSS zero fill (DS:0x0188 to PreStRastPortOffset) is not stored — emitted as zeros in ToBytes().
+
+        /// <summary>2x RastPort config blocks + 2x uint16 config pointers (DS:0x1548-0x1577, 48 bytes).</summary>
+        public byte[] PreStringTableRastPortData { get; set; } = Array.Empty<byte>();
+
+        /// <summary>CGA animation pixel data: 2bpp sprite + nibble tables + CGA-to-VGA palette
+        /// (DS:0x1578-0x1663, 236 bytes). Shared across FINAL/TAC/GAME EXEs.</summary>
+        public byte[] CgaAnimationData { get; set; } = Array.Empty<byte>();
+
+        /// <summary>2-byte prefix before animation.pan buffer (DS:0x1664-0x1665).</summary>
+        public byte[] AnimationInitPrefix { get; set; } = Array.Empty<byte>();
+
+        // animation.pan buffer (14 bytes at DS:0x1666): overwritten at runtime with actual PAN filename.
+        // "animation" violates DOS 8.3 naming — always a placeholder, never a real file.
+        // env.sve sentinel (8 bytes at DS:0x1674): sentinel string, never opened as a file.
+        // Both are emitted as fixed strings in ToBytes().
+
+        /// <summary>Text lookup tag+filename pairs: *SLOC00/text.dta, *RLOC00/text.dta, etc.
+        /// (DS:0x167D-0x16D1). Tags have their digits patched at runtime to form lookup keys.</summary>
+        public string[] TextLookupTagPairs { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for TextLookupTagPairs slots.</summary>
+        public int[] TextLookupTagPairSizes { get; set; } = Array.Empty<int>();
+
+        #endregion
 
         // Mission set slot strings are stored per-record in FinalMissionSetRecord.SlotStrings.
         // The string table is rebuilt from these in ToBytes().
 
-        /// <summary>Data between string table and mission params.</summary>
-        public byte[] PostStringTableData { get; set; } = Array.Empty<byte>();
+        #region PostStringTableData sub-sections (string table end to CopyrightOrgHeadOffset)
+
+        /// <summary>Character setup strings: gender.pic filename, character name selection menu,
+        /// difficulty selection menu (DS:0x1C5B). Menu strings use \n line separators with leading
+        /// space marking selectable items (see menu-system.md).</summary>
+        public string[] CharacterSetupStrings { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for CharacterSetupStrings slots.</summary>
+        public int[] CharacterSetupStringSizes { get; set; } = Array.Empty<int>();
+
+        /// <summary>Trailing bytes between character setup strings and CopyrightOrgHeads
+        /// (typically 3-4 bytes at the end of PostStringTableData).</summary>
+        public byte[] PostStringTableTrailing { get; set; } = Array.Empty<byte>();
+
+        #endregion
 
         /// <summary>
         /// 26 x 16-byte org appearance records, indexed by org unique ID (0-25).
@@ -585,9 +680,25 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>Original byte sizes for investigation method slots.</summary>
         public int[] InvestigationMethodSizes { get; set; } = Array.Empty<int>();
 
-        /// <summary>Remaining clue system data: UI text, template variables, file references,
-        /// suspect labels, message templates. Preserved as raw blob (same pattern as TAC).</summary>
-        public byte[] ClueSystemData { get; set; } = Array.Empty<byte>();
+        #region ClueSystemData sub-sections
+
+        /// <summary>Clue system data before the not-found message: UI labels (Source:, Method:,
+        /// Related Clues:), template variables ($KEY, $NAME, $ORG, $CITY, $ROLE), code names,
+        /// suspect info labels, status strings, message templates, $VARIABLE substitution markers,
+        /// substitution target buffers (spaces), pointer tables, fscanf format strings.
+        /// Contains 0x87 control bytes for text formatting.</summary>
+        public byte[] CluePreMessageData { get; set; } = Array.Empty<byte>();
+
+        /// <summary>"This information requires security clearance: " — displayed when a
+        /// text file lookup fails to find the requested header.</summary>
+        public string ClueNotFoundMessage { get; set; } = string.Empty;
+
+        /// <summary>Data after the not-found message: null padding + tag+filename pairs for
+        /// text.dta lookups (*SLOC00/text.dta through *MSG0000), including embedded uint16 values
+        /// (0x80, 0x8F) between some pairs. Also contains facesf.pic/faces.pic refs.</summary>
+        public byte[] CluePostMessageData { get; set; } = Array.Empty<byte>();
+
+        #endregion
 
         #endregion
 
@@ -599,13 +710,70 @@ namespace CovertActionTools.Core.Models.Executables
 
         // CharacterNamePointers are computed at serialization time from CharacterNames positions.
 
-        /// <summary>
-        /// Game state and file management data (1,242 bytes). Contains status labels, chronology
-        /// phrases, save/load UI, difficulty suffixes, EXE chain refs, disk prompts, PANI markers,
-        /// RastPort blocks, and palette data — interleaved strings and binary.
-        /// TODO: split into typed sub-sections when the interleaved binary regions are understood.
-        /// </summary>
-        public byte[] GameStateData { get; set; } = Array.Empty<byte>();
+        #region GameStateData sub-sections (DS:0x46A6-0x4B7F, 1242 bytes total)
+
+        /// <summary>Status/UI label strings: "Master Plan", "--SECRET--", "ARRESTED", "IN HIDING",
+        /// " TURNED", "Personnel File", " Action Team", ", ", "(No activity)", "00:00:00".</summary>
+        public string[] GameStateStatusLabels { get; set; } = Array.Empty<string>();
+
+        /// <summary>Binary data between status labels and chronology: null + "NSYN Overflow\n\0".</summary>
+        public byte[] GameStateNsynData { get; set; } = Array.Empty<byte>();
+
+        /// <summary>Chronology UI strings: "Chronology", "News", " sent msg to ", etc.</summary>
+        public string[] GameStateChronologyStrings { get; set; } = Array.Empty<string>();
+
+        /// <summary>"One moment please..." loading message.</summary>
+        public string GameStateLoadingMessage { get; set; } = string.Empty;
+
+        /// <summary>Quit confirmation menu: "Are you sure\nyou want to Quit?\n No\n Yes\n".
+        /// Menu format: \n separators, leading space = selectable item.</summary>
+        public string GameStateQuitMenu { get; set; } = string.Empty;
+
+        /// <summary>Scene init PANI header: "PANI" + 2 nulls + 4x 0xFF (10 bytes, not editable).</summary>
+        public byte[] GameStateSceneInitPani { get; set; } = Array.Empty<byte>();
+
+        /// <summary>Scene init flags: uint16 screen width (320) + uint16 flag (1). 4 bytes.</summary>
+        public byte[] GameStateSceneInitFlags { get; set; } = Array.Empty<byte>();
+
+        /// <summary>Scene init palette remap 1 (16 bytes). Maps VGA palette indices.</summary>
+        public byte[] GameStatePaletteRemap1 { get; set; } = Array.Empty<byte>();
+
+        /// <summary>2 zero separator bytes between palette remaps.</summary>
+        public byte[] GameStatePaletteSeparator1 { get; set; } = Array.Empty<byte>();
+
+        /// <summary>Scene init palette remap 2 (16 bytes). Indices 5→0, 12→6 differ from remap 1.</summary>
+        public byte[] GameStatePaletteRemap2 { get; set; } = Array.Empty<byte>();
+
+        /// <summary>1 zero separator byte after palette remap 2.</summary>
+        public byte[] GameStatePaletteSeparator2 { get; set; } = Array.Empty<byte>();
+
+        /// <summary>"OK" string — standalone menu/confirmation string.</summary>
+        public string GameStateOkString { get; set; } = string.Empty;
+
+        /// <summary>Briefing filenames: "briefing.pan" + "bld" + 3 null padding. Not shown in editor.</summary>
+        public byte[] GameStateBriefingFilenames { get; set; } = Array.Empty<byte>();
+
+        /// <summary>Animation.pan buffer (14 bytes, overwritten at runtime) — not shown in editor.</summary>
+        public byte[] GameStateAnimBuffer { get; set; } = Array.Empty<byte>();
+
+        /// <summary>Joystick direction lookup table: 9x uint16 (3x3 grid mapping joystick positions
+        /// to direction IDs). Centre = 0xFFFF. Not shown in editor.</summary>
+        public byte[] GameStateJoystickTable { get; set; } = Array.Empty<byte>();
+
+        /// <summary>Save/load UI + disk swap strings. Includes save prompts, rank display templates,
+        /// difficulty suffixes, error messages, disk swap prompts, etc.</summary>
+        public string[] GameStateSaveLoadStrings { get; set; } = Array.Empty<string>();
+
+        /// <summary>EXE chain filenames + pointer table + PANI tag. Contains final.exe, game.exe,
+        /// tac.exe, hq.pan, disk swap prompts, pointer table, second PANI header.
+        /// Not shown in editor — accessed by overlay dispatch via pointer table.</summary>
+        public byte[] GameStateExeChainData { get; set; } = Array.Empty<byte>();
+
+        /// <summary>6x RastPort blocks (20 bytes each) + config pointers + active config pointer.
+        /// DS:0x4AD6-0x4B5A. The active config pointer at DS:0x4B58 has 115 code references.</summary>
+        public byte[] GameStateRastPortData { get; set; } = Array.Empty<byte>();
+
+        #endregion
 
         /// <summary>MSC overlay/error strings, game state buffers, C runtime internals, BSS.
         /// Not editable — preserved for binary roundtrip fidelity only.</summary>
@@ -651,8 +819,8 @@ namespace CovertActionTools.Core.Models.Executables
                     if (e > tableEnd) tableEnd = e;
                 }
 
-                segment.PreStringTableData = DataSegmentHelper.Slice(dataSegment, 0, tableStart);
-                segment.PostStringTableData = DataSegmentHelper.Slice(dataSegment, tableEnd, CopyrightOrgHeadOffset - tableEnd);
+                ParsePreStringTableData(dataSegment, tableStart, segment);
+                ParsePostStringTableData(dataSegment, tableEnd, segment);
 
                 // Compute trailing padding per record: null bytes between a record's last string
                 // and the next record's first string
@@ -695,8 +863,11 @@ namespace CovertActionTools.Core.Models.Executables
             }
             else
             {
-                segment.PreStringTableData = DataSegmentHelper.Slice(dataSegment, 0, CopyrightOrgHeadOffset);
-                segment.PostStringTableData = Array.Empty<byte>();
+                ParsePreStringTableData(dataSegment, CopyrightOrgHeadOffset, segment);
+                // No string table found — no PostStringTableData to parse
+                segment.CharacterSetupStrings = Array.Empty<string>();
+                segment.CharacterSetupStringSizes = Array.Empty<int>();
+                segment.PostStringTableTrailing = Array.Empty<byte>();
             }
 
             segment.CopyrightOrgHeads = new CopyrightOrgHeadRecord[CopyrightOrgHeadCount];
@@ -742,7 +913,7 @@ namespace CovertActionTools.Core.Models.Executables
                 : Array.Empty<byte>();
 
             var charPtrsEnd = charPtrTableOffset + CharNamePointerCount * 2;
-            segment.GameStateData = DataSegmentHelper.Slice(dataSegment, charPtrsEnd, GameStateDataSize);
+            ParseGameStateData(dataSegment, charPtrsEnd, charPtrsEnd + GameStateDataSize, segment);
             var trailingStart = charPtrsEnd + GameStateDataSize;
             segment.TrailingData = DataSegmentHelper.Slice(dataSegment, trailingStart, dataSegment.Length - trailingStart);
 
@@ -751,8 +922,17 @@ namespace CovertActionTools.Core.Models.Executables
 
         public byte[] ToBytes()
         {
+            // Build pre-string-table data from sub-sections
+            var preStringTableBytes = BuildPreStringTableData();
+
+            // Build post-string-table data from sub-sections
+            var postStringTableBytes = BuildPostStringTableData();
+
+            // Build clue system data from sub-sections
+            var clueSystemBytes = BuildClueSystemData();
+
             // Build the string table from all records' slot strings
-            var tableBase = PreStringTableData.Length;
+            var tableBase = preStringTableBytes.Length;
             var tableParts = new List<byte>();
             var perRecordStringOffsets = new List<int[]>();
             var perRecordNullPadStart = new List<int>();
@@ -860,20 +1040,28 @@ namespace CovertActionTools.Core.Models.Executables
             var postMissionBytes = BuildPostMissionPreCrimeData();
 
             // Build PostOrgPreCharNameData from sub-sections with recomputed pointer tables
-            var postOrgBytes = BuildPostOrgPreCharNameData();
+            var postOrgBytes = BuildPostOrgPreCharNameData(clueSystemBytes);
+
+            // Compute zero padding between string table and post-string-table data.
+            // The total of preStringTable + stringTable + padding + postStringTable must equal CopyrightOrgHeadOffset.
+            var postStringPaddingSize = CopyrightOrgHeadOffset
+                - preStringTableBytes.Length - stringTableBytes.Length - postStringTableBytes.Length;
+            if (postStringPaddingSize < 0) postStringPaddingSize = 0;
+            var postStringPadding = new byte[postStringPaddingSize];
 
             // Compute character name pointer values
-            var charNamesBaseOffset = PreStringTableData.Length + stringTableBytes.Length
-                + PostStringTableData.Length + orgAppearanceBytes.Length
+            var charNamesBaseOffset = preStringTableBytes.Length + stringTableBytes.Length
+                + postStringPaddingSize + postStringTableBytes.Length + orgAppearanceBytes.Length
                 + Unknown1.Length + missionSetBytes.Length + postMissionBytes.Length
                 + crimeBytes.Length + Unknown2.Length + orgBytes.Length
                 + postOrgBytes.Length;
             var charNamePointers = DataSegmentHelper.ComputeStringPointers(CharacterNames, charNamesBaseOffset);
 
             var result = DataSegmentHelper.Concatenate(
-                PreStringTableData,
+                preStringTableBytes,
                 stringTableBytes,
-                PostStringTableData,
+                postStringPadding,
+                postStringTableBytes,
                 orgAppearanceBytes,
                 Unknown1,
                 missionSetBytes,
@@ -885,17 +1073,17 @@ namespace CovertActionTools.Core.Models.Executables
                 charNamesBytes,
                 PostCharNameData,
                 DataSegmentHelper.UInt16ArrayToBytes(charNamePointers),
-                GameStateData,
+                BuildGameStateData(),
                 TrailingData
             );
 
-            // Patch the RastPort config pointer now that we know the full layout
-            var postMissionStart = PreStringTableData.Length + stringTableBytes.Length
-                + PostStringTableData.Length + orgAppearanceBytes.Length
-                + Unknown1.Length + missionSetBytes.Length;
-            PatchRastPortConfigPointer(result, postMissionStart, postMissionBytes);
+            // Patch all RastPort pointer values (CfgPtr and DataOffset cross-references)
+            PatchAllRastPortPointers(result);
 
             // Patch all pointer tables in PostOrgPreCharNameData
+            var postMissionStart = preStringTableBytes.Length + stringTableBytes.Length
+                + postStringPaddingSize + postStringTableBytes.Length + orgAppearanceBytes.Length
+                + Unknown1.Length + missionSetBytes.Length;
             var postOrgStart = postMissionStart + postMissionBytes.Length
                 + crimeBytes.Length + Unknown2.Length + orgBytes.Length;
             PatchPostOrgPointers(result, postOrgStart);
@@ -907,8 +1095,17 @@ namespace CovertActionTools.Core.Models.Executables
         {
             return new FinalDataSegment
             {
-                PreStringTableData = PreStringTableData.ToArray(),
-                PostStringTableData = PostStringTableData.ToArray(),
+                PreStringTableCRuntimeData = PreStringTableCRuntimeData.ToArray(),
+                InitialGameStrings = InitialGameStrings.Select(s => s).ToArray(),
+                InitialGameStringSizes = InitialGameStringSizes.ToArray(),
+                PreStringTableRastPortData = PreStringTableRastPortData.ToArray(),
+                CgaAnimationData = CgaAnimationData.ToArray(),
+                AnimationInitPrefix = AnimationInitPrefix.ToArray(),
+                TextLookupTagPairs = TextLookupTagPairs.Select(s => s).ToArray(),
+                TextLookupTagPairSizes = TextLookupTagPairSizes.ToArray(),
+                CharacterSetupStrings = CharacterSetupStrings.Select(s => s).ToArray(),
+                CharacterSetupStringSizes = CharacterSetupStringSizes.ToArray(),
+                PostStringTableTrailing = PostStringTableTrailing.ToArray(),
                 CopyrightOrgHeads = CopyrightOrgHeads.Select(o => o.Clone()).ToArray(),
                 Unknown1 = Unknown1.ToArray(),
                 MissionSets = MissionSets.Select(m => m.Clone()).ToArray(),
@@ -968,10 +1165,29 @@ namespace CovertActionTools.Core.Models.Executables
                 EvidenceItemSizes = EvidenceItemSizes.ToArray(),
                 InvestigationMethods = InvestigationMethods.ToArray(),
                 InvestigationMethodSizes = InvestigationMethodSizes.ToArray(),
-                ClueSystemData = ClueSystemData.ToArray(),
+                CluePreMessageData = CluePreMessageData.ToArray(),
+                ClueNotFoundMessage = ClueNotFoundMessage,
+                CluePostMessageData = CluePostMessageData.ToArray(),
                 CharacterNames = CharacterNames.Select(s => s).ToArray(),
                 PostCharNameData = PostCharNameData.ToArray(),
-                GameStateData = GameStateData.ToArray(),
+                GameStateStatusLabels = GameStateStatusLabels.Select(s => s).ToArray(),
+                GameStateNsynData = GameStateNsynData.ToArray(),
+                GameStateChronologyStrings = GameStateChronologyStrings.Select(s => s).ToArray(),
+                GameStateLoadingMessage = GameStateLoadingMessage,
+                GameStateQuitMenu = GameStateQuitMenu,
+                GameStateSceneInitPani = GameStateSceneInitPani.ToArray(),
+                GameStateSceneInitFlags = GameStateSceneInitFlags.ToArray(),
+                GameStatePaletteRemap1 = GameStatePaletteRemap1.ToArray(),
+                GameStatePaletteSeparator1 = GameStatePaletteSeparator1.ToArray(),
+                GameStatePaletteRemap2 = GameStatePaletteRemap2.ToArray(),
+                GameStatePaletteSeparator2 = GameStatePaletteSeparator2.ToArray(),
+                GameStateOkString = GameStateOkString,
+                GameStateBriefingFilenames = GameStateBriefingFilenames.ToArray(),
+                GameStateAnimBuffer = GameStateAnimBuffer.ToArray(),
+                GameStateJoystickTable = GameStateJoystickTable.ToArray(),
+                GameStateSaveLoadStrings = GameStateSaveLoadStrings.Select(s => s).ToArray(),
+                GameStateExeChainData = GameStateExeChainData.ToArray(),
+                GameStateRastPortData = GameStateRastPortData.ToArray(),
                 TrailingData = TrailingData.ToArray()
             };
         }
@@ -1245,23 +1461,122 @@ namespace CovertActionTools.Core.Models.Executables
         }
 
         /// <summary>
-        /// Patches the RastPort config pointer in the serialized data segment.
-        /// Called after the full data segment layout is known.
+        /// Finds ALL RastPort blocks in the full data segment and patches their
+        /// CfgPtr and DataOffset values to correct DS-absolute addresses.
+        ///
+        /// The raw byte arrays storing RastPort blocks preserve the ORIGINAL DS-absolute
+        /// pointer values from when the data was first parsed. After the data segment is
+        /// reassembled (potentially at different offsets), these pointers are stale.
+        ///
+        /// Strategy: find all blocks, build an old→new address mapping from any pointer
+        /// that still resolves to a known block+2, then patch all remaining stale pointers.
+        /// Literal values (0, 1, 2, 4, 0xFFFF) are left unchanged.
         /// </summary>
-        private static void PatchRastPortConfigPointer(byte[] fullDataSegment, int postMissionStart, byte[] postMissionBytes)
+        private static void PatchAllRastPortPointers(byte[] fullDataSegment)
         {
-            // Find the RastPort signature within postMissionBytes
-            var rpLocalOffset = FindRastPortInRegion(postMissionBytes, 0, postMissionBytes.Length);
-            if (rpLocalOffset < 0) return;
+            // Find all RastPort block positions in the rebuilt data segment
+            var blocks = new List<int>();
+            for (var i = 0; i + RastPortSize + 2 <= fullDataSegment.Length; i++)
+            {
+                if (FindRastPortInRegion(fullDataSegment, i, i + RastPortSize + 2) == i)
+                {
+                    blocks.Add(i);
+                }
+            }
 
-            // The config pointer is at RastPort + 20 bytes
-            var configPtrLocalOffset = rpLocalOffset + RastPortSize;
-            if (configPtrLocalOffset + 1 >= postMissionBytes.Length) return;
+            if (blocks.Count == 0) return;
 
-            // Compute the DS-relative offset of the RastPort + 2 (config portion)
-            var rastPortDsOffset = postMissionStart + rpLocalOffset + 2;
-            fullDataSegment[postMissionStart + configPtrLocalOffset] = (byte)(rastPortDsOffset & 0xFF);
-            fullDataSegment[postMissionStart + configPtrLocalOffset + 1] = (byte)((rastPortDsOffset >> 8) & 0xFF);
+            // Build lookup of new block+2 addresses
+            var newBlockConfigSet = new HashSet<int>(blocks.Select(b => b + 2));
+
+            // Helper: write a uint16 at an offset in the data segment
+            void WriteU16(int offset, ushort value)
+            {
+                fullDataSegment[offset] = (byte)(value & 0xFF);
+                fullDataSegment[offset + 1] = (byte)((value >> 8) & 0xFF);
+            }
+
+            // Helper: check if a value is a literal (not a DS pointer)
+            bool IsLiteral(ushort value) => value <= 4 || value == 0xFFFF;
+
+            foreach (var blockStart in blocks)
+            {
+                // --- Patch CfgPtr (at blockStart + 20) ---
+                var cfgPtrOffset = blockStart + RastPortSize;
+                if (cfgPtrOffset + 1 >= fullDataSegment.Length) continue;
+                var cfgPtr = BitConverter.ToUInt16(fullDataSegment, cfgPtrOffset);
+
+                if (!IsLiteral(cfgPtr))
+                {
+                    if (newBlockConfigSet.Contains(cfgPtr))
+                    {
+                        // Already points to a valid block+2 in the new layout — correct
+                    }
+                    else
+                    {
+                        // Stale DS-absolute pointer. Recalculate as self+2.
+                        // This handles the most common case. For cross-references,
+                        // the target block is in the same raw byte array and at the
+                        // same relative offset, so its new absolute address = its
+                        // position in the assembled segment. But since the old value
+                        // is stale, we can't resolve it. Default to self+2.
+                        WriteU16(cfgPtrOffset, (ushort)(blockStart + 2));
+                    }
+                }
+
+                // --- Patch DataOffset (at blockStart + 0) ---
+                var dataOffset = BitConverter.ToUInt16(fullDataSegment, blockStart);
+
+                if (!IsLiteral(dataOffset))
+                {
+                    if (newBlockConfigSet.Contains(dataOffset))
+                    {
+                        // Already points to a valid block+2 — correct
+                    }
+                    else
+                    {
+                        // Stale DS-absolute pointer to another block's config.
+                        // Find which block it targets by searching for a block whose
+                        // relative position within its storage region matches.
+                        // Since blocks within the same raw byte array maintain their
+                        // relative order, we can match by finding the block at the
+                        // same relative offset from the start of the group.
+
+                        // Find the group (contiguous run of blocks within ~256 bytes)
+                        var groupBlocks = blocks.Where(b =>
+                            Math.Abs(b - blockStart) < 512).OrderBy(b => b).ToList();
+
+                        // Find this block's index in the group
+                        var myIdx = groupBlocks.IndexOf(blockStart);
+
+                        // The DataOffset pointed to another block's config.
+                        // Find which group member it pointed to by checking which
+                        // block+2 was closest to the old value.
+                        var bestMatch = -1;
+                        var bestDist = int.MaxValue;
+                        for (var gi = 0; gi < groupBlocks.Count; gi++)
+                        {
+                            if (gi == myIdx) continue;
+                            var candidateConfig = groupBlocks[gi] + 2;
+                            // The old DataOffset should be close to the candidate's
+                            // old position. Since relative order is preserved, check
+                            // if the candidate was before/after this block in the same way.
+                            var dist = Math.Abs(dataOffset - candidateConfig);
+                            if (dist < bestDist)
+                            {
+                                bestDist = dist;
+                                bestMatch = gi;
+                            }
+                        }
+
+                        if (bestMatch >= 0 && bestDist < 256)
+                        {
+                            WriteU16(blockStart, (ushort)(groupBlocks[bestMatch] + 2));
+                        }
+                        // else: can't resolve, leave as-is
+                    }
+                }
+            }
         }
 
         /// <summary>Finds the start of a RastPort block by scanning for the OriginX=0, OriginY=0, ExtentX=319, ExtentY=199 signature.</summary>
@@ -1463,11 +1778,13 @@ namespace CovertActionTools.Core.Models.Executables
             segment.InvestigationMethodSizes = invMethodSzs;
             pos = invPos;
 
-            // TO: Clue system data — everything remaining
-            segment.ClueSystemData = DataSegmentHelper.Slice(data, pos, end - pos);
+            // TO: Clue system data — parse into sub-sections
+            ParseClueSystemData(data, pos, end, segment);
         }
 
-        /// <summary>Finds a marker string in the data segment by scanning for its ASCII bytes.</summary>
+        /// <summary>Finds a marker string in the data segment by scanning for its ASCII bytes.
+        /// TODO: this is fragile — if the marker text is edited, the parser breaks. Replace with
+        /// offset-based or structural parsing that doesn't depend on string content.</summary>
         private static int FindMarkerString(byte[] data, int start, int end, string marker)
         {
             var markerBytes = Encoding.ASCII.GetBytes(marker);
@@ -1488,10 +1805,443 @@ namespace CovertActionTools.Core.Models.Executables
         }
 
         /// <summary>
+        /// Parses the PreStringTableData region (DS:0x0000 to string table start) into named sub-sections.
+        /// </summary>
+        private static void ParsePreStringTableData(byte[] dataSegment, int tableStart, FinalDataSegment segment)
+        {
+            // CRuntime header (DS:0x0000-0x006F)
+            segment.PreStringTableCRuntimeData = DataSegmentHelper.Slice(dataSegment, 0, PreStCRuntimeSize);
+
+            // Initial game strings (DS:0x0070-0x0187): null-terminated strings
+            var initStrSize = PreStInitialStringsEnd - PreStInitialStringsOffset;
+            var (initStrs, initSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+                dataSegment, PreStInitialStringsOffset, initStrSize);
+            segment.InitialGameStrings = initStrs;
+            segment.InitialGameStringSizes = initSzs;
+
+            // BSS zero fill is not stored — computed during serialization
+
+            // RastPort blocks (DS:0x1548-0x1577)
+            var rastPortEnd = PreStRastPortOffset + PreStRastPortSize;
+            if (rastPortEnd <= tableStart)
+                segment.PreStringTableRastPortData = DataSegmentHelper.Slice(dataSegment, PreStRastPortOffset, PreStRastPortSize);
+
+            // CGA animation data (DS:0x1578-0x1663)
+            var cgaEnd = PreStCgaOffset + PreStCgaSize;
+            if (cgaEnd <= tableStart)
+                segment.CgaAnimationData = DataSegmentHelper.Slice(dataSegment, PreStCgaOffset, PreStCgaSize);
+
+            // Animation init prefix (DS:0x1664-0x1665, 2 bytes)
+            if (PreStAnimInitOffset + PreStAnimInitPrefixSize <= tableStart)
+                segment.AnimationInitPrefix = DataSegmentHelper.Slice(dataSegment, PreStAnimInitOffset, PreStAnimInitPrefixSize);
+
+            // animation.pan buffer (14 bytes) and env.sve sentinel (8 bytes) are fixed — not stored as fields
+            // Tag+filename pairs (DS:0x167D to tableStart)
+            if (PreStTagPairsOffset < tableStart)
+            {
+                var tagPairSize = tableStart - PreStTagPairsOffset;
+                var (tagStrs, tagSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+                    dataSegment, PreStTagPairsOffset, tagPairSize);
+                segment.TextLookupTagPairs = tagStrs;
+                segment.TextLookupTagPairSizes = tagSzs;
+            }
+        }
+
+        /// <summary>
+        /// Parses the PostStringTableData region (string table end to CopyrightOrgHeadOffset)
+        /// into character setup strings and trailing bytes.
+        /// </summary>
+        private static void ParsePostStringTableData(byte[] dataSegment, int tableEnd, FinalDataSegment segment)
+        {
+            // Character setup strings are at a fixed DS offset
+            if (CharacterSetupOffset < CopyrightOrgHeadOffset)
+            {
+                var (setupStrs, setupSzs) = DataSegmentHelper.NullTerminatedStringsWithSizesFromBytes(
+                    dataSegment, CharacterSetupOffset, CharacterSetupCount);
+                segment.CharacterSetupStrings = setupStrs;
+                segment.CharacterSetupStringSizes = setupSzs;
+
+                // Trailing bytes between setup strings and CopyrightOrgHeads.
+                // Note: the last string's null terminator may abut CopyrightOrgHeadOffset directly,
+                // in which case there are no trailing bytes. Clamp to avoid negative sizes.
+                var setupEnd = CharacterSetupOffset + setupSzs.Sum();
+                var trailingSize = CopyrightOrgHeadOffset - setupEnd;
+                segment.PostStringTableTrailing = trailingSize > 0
+                    ? DataSegmentHelper.Slice(dataSegment, setupEnd, trailingSize)
+                    : Array.Empty<byte>();
+                // If the strings overshot by 1 (last null shares boundary), trim the last size
+                if (trailingSize < 0 && setupSzs.Length > 0)
+                {
+                    setupSzs[setupSzs.Length - 1] += trailingSize; // subtract the overshoot
+                }
+            }
+            else
+            {
+                segment.CharacterSetupStrings = Array.Empty<string>();
+                segment.CharacterSetupStringSizes = Array.Empty<int>();
+                segment.PostStringTableTrailing = Array.Empty<byte>();
+            }
+        }
+
+        /// <summary>
+        /// Parses the ClueSystemData region into pre-message data, not-found message,
+        /// and post-message data. Finds the message by searching for its marker text.
+        /// </summary>
+        private static void ParseClueSystemData(byte[] data, int start, int end, FinalDataSegment segment)
+        {
+            // Find the "This information" marker to split the region
+            var msgStart = -1;
+            for (var i = start; i <= end - ClueNotFoundMarker.Length; i++)
+            {
+                var match = true;
+                for (var j = 0; j < ClueNotFoundMarker.Length; j++)
+                {
+                    if (data[i + j] != ClueNotFoundMarker[j]) { match = false; break; }
+                }
+                if (match) { msgStart = i; break; }
+            }
+
+            if (msgStart < 0)
+            {
+                // Marker not found — keep everything as pre-message data
+                segment.CluePreMessageData = DataSegmentHelper.Slice(data, start, end - start);
+                segment.ClueNotFoundMessage = string.Empty;
+                segment.CluePostMessageData = Array.Empty<byte>();
+                return;
+            }
+
+            // Pre-message data
+            segment.CluePreMessageData = DataSegmentHelper.Slice(data, start, msgStart - start);
+
+            // Not-found message: null-terminated string
+            var msgEnd = msgStart;
+            while (msgEnd < end && data[msgEnd] != 0) msgEnd++;
+            segment.ClueNotFoundMessage = Encoding.ASCII.GetString(data, msgStart, msgEnd - msgStart);
+            msgEnd++; // skip null terminator
+
+            // Post-message data: everything remaining
+            segment.CluePostMessageData = DataSegmentHelper.Slice(data, msgEnd, end - msgEnd);
+        }
+
+        /// <summary>
+        /// Parses the GameStateData region sequentially into named sub-sections.
+        /// Uses string counting and binary signature detection — no fixed DS offsets.
+        /// </summary>
+        private static void ParseGameStateData(byte[] data, int gsStart, int gsEnd, FinalDataSegment segment)
+        {
+            var pos = gsStart;
+
+            // Helper: read N null-terminated strings sequentially
+            string[] ReadNStrings(int count)
+            {
+                var strings = new string[count];
+                for (var i = 0; i < count; i++)
+                {
+                    var strEnd = pos;
+                    while (strEnd < gsEnd && data[strEnd] != 0) strEnd++;
+                    strings[i] = Encoding.ASCII.GetString(data, pos, strEnd - pos);
+                    pos = strEnd + 1;
+                }
+                return strings;
+            }
+
+            // Helper: read all strings until a specific byte count from start
+            string[] ReadAllStringsForBytes(int byteCount)
+            {
+                var strings = new List<string>();
+                var end = pos + byteCount;
+                while (pos < end)
+                {
+                    var strEnd = pos;
+                    while (strEnd < end && data[strEnd] != 0) strEnd++;
+                    strings.Add(Encoding.ASCII.GetString(data, pos, strEnd - pos));
+                    pos = strEnd + 1;
+                }
+                return strings.ToArray();
+            }
+
+            // Helper: read a fixed-size binary blob
+            byte[] ReadBlob(int size)
+            {
+                var blob = DataSegmentHelper.Slice(data, pos, size);
+                pos += size;
+                return blob;
+            }
+
+            // Helper: read a single null-terminated string
+            string ReadString()
+            {
+                var strEnd = pos;
+                while (strEnd < gsEnd && data[strEnd] != 0) strEnd++;
+                var s = Encoding.ASCII.GetString(data, pos, strEnd - pos);
+                pos = strEnd + 1;
+                return s;
+            }
+
+            // Status labels: 10 strings + 1 empty string (null separator) = 11 strings total
+            // "Master Plan", "--SECRET--", "ARRESTED", "IN HIDING", " TURNED",
+            // "Personnel File", " Action Team", ", ", "(No activity)", "", "00:00:00"
+            segment.GameStateStatusLabels = ReadNStrings(11);
+
+            // NSYN data: 16 bytes (null + "NSYN Overflow\n\0")
+            segment.GameStateNsynData = ReadBlob(16);
+
+            // Chronology strings: 12 strings (including trailing empty string as null separator)
+            // "Chronology", "News", " sent msg to ", " met with ", "'", "'",
+            // "Meeting Noted", "...more", "Chronology", "News", "none", ""
+            segment.GameStateChronologyStrings = ReadNStrings(12);
+
+            // Loading message: 1 string
+            segment.GameStateLoadingMessage = ReadString();
+
+            // Quit menu: 1 string (contains \n bytes)
+            segment.GameStateQuitMenu = ReadString();
+
+            // Scene init PANI header: 10 bytes ("PANI" + 2 nulls + 4x 0xFF)
+            segment.GameStateSceneInitPani = ReadBlob(GsSceneInitPaniSize);
+
+            // Scene init flags: 4 bytes (uint16 width + uint16 flag)
+            segment.GameStateSceneInitFlags = ReadBlob(GsSceneInitFlagsSize);
+
+            // Palette remap 1: 16 bytes
+            segment.GameStatePaletteRemap1 = ReadBlob(GsPaletteRemap1Size);
+
+            // Palette separator 1: 2 bytes
+            segment.GameStatePaletteSeparator1 = ReadBlob(GsPaletteSeparator1Size);
+
+            // Palette remap 2: 16 bytes
+            segment.GameStatePaletteRemap2 = ReadBlob(GsPaletteRemap2Size);
+
+            // Palette separator 2: 1 byte
+            segment.GameStatePaletteSeparator2 = ReadBlob(GsPaletteSeparator2Size);
+
+            // "OK" string: 1 string
+            segment.GameStateOkString = ReadString();
+
+            // Briefing filenames: 20 bytes ("briefing.pan\0" + "bld\0\0\0\0")
+            segment.GameStateBriefingFilenames = ReadBlob(20);
+
+            // Animation.pan buffer: 14 bytes
+            segment.GameStateAnimBuffer = ReadBlob(GsAnimBufferSize);
+
+            // Joystick direction table: 18 bytes (9x uint16)
+            segment.GameStateJoystickTable = ReadBlob(GsJoystickTableSize);
+
+            // Save/load UI strings: read until we hit "final.exe" (start of EXE chain)
+            var saveLoadStrings = new List<string>();
+            while (pos < gsEnd)
+            {
+                var strEnd = pos;
+                while (strEnd < gsEnd && data[strEnd] != 0) strEnd++;
+                var s = Encoding.ASCII.GetString(data, pos, strEnd - pos);
+                if (s == "final.exe")
+                    break; // don't consume — EXE chain starts here
+                saveLoadStrings.Add(s);
+                pos = strEnd + 1;
+            }
+            segment.GameStateSaveLoadStrings = saveLoadStrings.ToArray();
+
+            // EXE chain data: read until we find the RastPort signature
+            // (00 00 00 00 3F 01 C7 00 at offset +4 within a 20-byte block)
+            var exeChainStart = pos;
+            var rastPortSig = new byte[] { 0x00, 0x00, 0x00, 0x00, 0x3F, 0x01, 0xC7, 0x00 };
+            var firstRastPort = -1;
+            for (var i = pos; i <= gsEnd - 8; i++)
+            {
+                var match = true;
+                for (var j = 0; j < rastPortSig.Length; j++)
+                {
+                    if (data[i + j] != rastPortSig[j]) { match = false; break; }
+                }
+                if (match && i >= pos + 4)
+                {
+                    firstRastPort = i - 4; // block starts 4 bytes before signature
+                    break;
+                }
+            }
+
+            if (firstRastPort > exeChainStart)
+            {
+                segment.GameStateExeChainData = DataSegmentHelper.Slice(data, exeChainStart, firstRastPort - exeChainStart);
+                pos = firstRastPort;
+            }
+            else
+            {
+                segment.GameStateExeChainData = DataSegmentHelper.Slice(data, exeChainStart, gsEnd - exeChainStart);
+                pos = gsEnd;
+            }
+
+            // RastPort group + trailing: everything from first RastPort to end of meaningful data
+            // Find where trailing zeros begin (scan backwards from gsEnd)
+            var trailingStart = gsEnd;
+            while (trailingStart > pos && data[trailingStart - 1] == 0) trailingStart--;
+            // Include at least 2 bytes after the last non-zero (for the active config pointer's trailing null)
+            trailingStart = Math.Min(trailingStart + 2, gsEnd);
+
+            segment.GameStateRastPortData = DataSegmentHelper.Slice(data, pos, trailingStart - pos);
+        }
+
+        /// <summary>
+        /// Builds the GameStateData byte array from sub-section fields.
+        /// Sections are emitted sequentially. Trailing zeros pad to GameStateDataSize.
+        /// </summary>
+        private byte[] BuildGameStateData()
+        {
+            var parts = new List<byte>();
+
+            // Helper: emit strings with null terminators
+            void EmitStrings(string[] strings)
+            {
+                foreach (var s in strings)
+                {
+                    parts.AddRange(Encoding.ASCII.GetBytes(s));
+                    parts.Add(0);
+                }
+            }
+
+            // Helper: emit a single string with null terminator
+            void EmitString(string s)
+            {
+                parts.AddRange(Encoding.ASCII.GetBytes(s));
+                parts.Add(0);
+            }
+
+            EmitStrings(GameStateStatusLabels);
+            parts.AddRange(GameStateNsynData);
+            EmitStrings(GameStateChronologyStrings);
+            EmitString(GameStateLoadingMessage);
+            EmitString(GameStateQuitMenu);
+            parts.AddRange(GameStateSceneInitPani);
+            parts.AddRange(GameStateSceneInitFlags);
+            parts.AddRange(GameStatePaletteRemap1);
+            parts.AddRange(GameStatePaletteSeparator1);
+            parts.AddRange(GameStatePaletteRemap2);
+            parts.AddRange(GameStatePaletteSeparator2);
+            EmitString(GameStateOkString);
+            parts.AddRange(GameStateBriefingFilenames);
+            parts.AddRange(GameStateAnimBuffer);
+            parts.AddRange(GameStateJoystickTable);
+            EmitStrings(GameStateSaveLoadStrings);
+            parts.AddRange(GameStateExeChainData);
+            parts.AddRange(GameStateRastPortData);
+
+            // Pad with trailing zeros to maintain total size
+            var paddingNeeded = GameStateDataSize - parts.Count;
+            if (paddingNeeded > 0)
+                parts.AddRange(new byte[paddingNeeded]);
+
+            return parts.ToArray();
+        }
+
+        /// <summary>
+        /// Builds the PreStringTableData byte array from sub-section fields.
+        /// </summary>
+        private byte[] BuildPreStringTableData()
+        {
+            var parts = new List<byte>();
+
+            // CRuntime header
+            parts.AddRange(PreStringTableCRuntimeData);
+
+            // Initial game strings
+            parts.AddRange(DataSegmentHelper.NullTerminatedStringsToFixedBytes(InitialGameStrings, InitialGameStringSizes));
+
+            // BSS zero fill: pad with zeros up to RastPort offset
+            var zeroFillSize = PreStRastPortOffset - parts.Count;
+            if (zeroFillSize > 0)
+                parts.AddRange(new byte[zeroFillSize]);
+
+            // RastPort blocks
+            parts.AddRange(PreStringTableRastPortData);
+
+            // CGA animation data
+            parts.AddRange(CgaAnimationData);
+
+            // Animation init prefix (2 bytes)
+            parts.AddRange(AnimationInitPrefix);
+
+            // animation.pan buffer (14 bytes) — emit fixed placeholder
+            parts.AddRange(Encoding.ASCII.GetBytes("animation.pan"));
+            parts.Add(0);
+
+            // env.sve sentinel (8 bytes) — emit fixed sentinel
+            parts.AddRange(Encoding.ASCII.GetBytes("env.sve"));
+            parts.Add(0);
+
+            // Null separator byte between sentinel and tag pairs (DS:0x167C)
+            parts.Add(0);
+
+            // Tag+filename pairs
+            parts.AddRange(DataSegmentHelper.NullTerminatedStringsToFixedBytes(TextLookupTagPairs, TextLookupTagPairSizes));
+
+            return parts.ToArray();
+        }
+
+        /// <summary>
+        /// Builds the PostStringTableData byte array from sub-section fields.
+        /// </summary>
+        private byte[] BuildPostStringTableData()
+        {
+            var parts = new List<byte>();
+
+            // Leading padding: zeros from string table end to CharacterSetupOffset
+            // The string table end varies, so compute the padding needed.
+            // In the original binary, CharacterSetupOffset is a fixed DS offset.
+            // We emit enough zeros to reach that offset.
+            // NOTE: The caller places this after the string table, so the string table end
+            // is already accounted for. We need to emit zeros for the gap.
+            // CharacterSetupOffset - (preStringTableBytes.Length + stringTableBytes.Length) = gap
+            // But we don't have access to those lengths here. Instead, just compute the gap
+            // based on what the original PostStringTableData contained.
+            // Original: tableEnd to CopyrightOrgHeadOffset. Character setup starts at fixed offset.
+            // The padding is CharacterSetupOffset - tableEnd bytes. We don't know tableEnd here,
+            // so we store the gap size implicitly: setup strings start at a fixed offset,
+            // and the total PostStringTableData must end at CopyrightOrgHeadOffset.
+            // Total size = CopyrightOrgHeadOffset - tableEnd.
+            // We'll compute the padding from the known field sizes and the target total.
+
+            // Character setup strings
+            var setupBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(CharacterSetupStrings, CharacterSetupStringSizes);
+
+            // Trailing bytes
+            var trailingBytes = PostStringTableTrailing;
+
+            // Total PostStringTableData must bring us to CopyrightOrgHeadOffset.
+            // The padding fills the gap before the setup strings.
+            // We can't know the exact padding here without knowing the string table size,
+            // but the caller handles the positioning. Just emit setup + trailing.
+            // The padding zeros between string table end and setup strings are implicit
+            // in the overall layout.
+
+            // Actually: the caller concatenates preStringTable + stringTable + postStringTable.
+            // postStringTable needs to be: padding(variable) + setupStrings + trailing.
+            // The total (preStringTable + stringTable + postStringTable) must equal CopyrightOrgHeadOffset.
+            // So padding = CopyrightOrgHeadOffset - preStringTable.Length - stringTable.Length - setupBytes.Length - trailing.Length.
+            // We can't compute this here. Instead, return setup + trailing and let the caller add padding.
+
+            parts.AddRange(setupBytes);
+            parts.AddRange(trailingBytes);
+            return parts.ToArray();
+        }
+
+        /// <summary>
+        /// Builds the ClueSystemData byte array from sub-section fields.
+        /// </summary>
+        private byte[] BuildClueSystemData()
+        {
+            var parts = new List<byte>();
+            parts.AddRange(CluePreMessageData);
+            parts.AddRange(Encoding.ASCII.GetBytes(ClueNotFoundMessage));
+            parts.Add(0); // null terminator
+            parts.AddRange(CluePostMessageData);
+            return parts.ToArray();
+        }
+
+        /// <summary>
         /// Builds the PostOrgPreCharNameData byte array from sub-section fields,
         /// recomputing all pointer tables from string positions.
         /// </summary>
-        private byte[] BuildPostOrgPreCharNameData()
+        private byte[] BuildPostOrgPreCharNameData(byte[] clueSystemBytes)
         {
             // Serialize all string sections with fixed sizes for roundtrip fidelity
             var careerReviewBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(CareerReviewStrings, CareerReviewStringSizes);
@@ -1547,7 +2297,7 @@ namespace CovertActionTools.Core.Models.Executables
                 evItemBytes,
                 evRankPtrPlaceholder,
                 invMethodBytes,
-                ClueSystemData
+                clueSystemBytes
             );
 
             return result;
