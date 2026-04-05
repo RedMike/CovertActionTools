@@ -557,6 +557,8 @@ namespace CovertActionTools.Core.Models.Executables
         /// See scratch/exe-investigation/FINAL.efficiency-report-0x89.md for full investigation notes.
         /// </summary>
         public string[] EfficiencyReportStrings { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for EfficiencyReportStrings slots.</summary>
+        public int[] EfficiencyReportStringSizes { get; set; } = Array.Empty<int>();
 
         #endregion
 
@@ -1133,6 +1135,7 @@ namespace CovertActionTools.Core.Models.Executables
                 ChronologyFormatStrings = ChronologyFormatStrings.Select(s => s).ToArray(),
                 TimeTemplateBuffer = TimeTemplateBuffer,
                 EfficiencyReportStrings = EfficiencyReportStrings.Select(s => s).ToArray(),
+                EfficiencyReportStringSizes = EfficiencyReportStringSizes.ToArray(),
                 CrimeTypeNames = CrimeTypeNames.Select(s => s).ToArray(),
                 CrimeTypeNameByteSizes = CrimeTypeNameByteSizes.ToArray(),
                 Unknown2 = Unknown2.ToArray(),
@@ -1328,19 +1331,11 @@ namespace CovertActionTools.Core.Models.Executables
             segment.TimeTemplateBuffer = Encoding.ASCII.GetString(data, pos, tmplEnd - pos);
             pos = tmplEnd + 1;
 
-            // EfficiencyReportStrings: all remaining strings to end of region
-            var effStrings = new List<string>();
-            while (pos < end)
-            {
-                var strEnd = pos;
-                while (strEnd < end && data[strEnd] != 0) strEnd++;
-                // Use Latin-1 to preserve 0x89 bytes faithfully
-                var bytes = DataSegmentHelper.Slice(data, pos, strEnd - pos);
-                var s = new string(Array.ConvertAll(bytes, b => (char)b));
-                pos = strEnd + 1;
-                effStrings.Add(s);
-            }
-            segment.EfficiencyReportStrings = effStrings.ToArray();
+            // EfficiencyReportStrings: control-byte-aware parsing
+            var effSize = end - pos;
+            var (effStrs, effSzs) = DataSegmentHelper.ControlStringsFromBytes(data, pos, effSize);
+            segment.EfficiencyReportStrings = effStrs;
+            segment.EfficiencyReportStringSizes = effSzs;
         }
 
         /// <summary>
@@ -1439,13 +1434,8 @@ namespace CovertActionTools.Core.Models.Executables
             parts.AddRange(Encoding.ASCII.GetBytes(TimeTemplateBuffer));
             parts.Add(0);
 
-            // EfficiencyReportStrings — encode chars > 0x7F as raw bytes
-            foreach (var s in EfficiencyReportStrings)
-            {
-                foreach (var c in s)
-                    parts.Add((byte)c);
-                parts.Add(0);
-            }
+            // EfficiencyReportStrings — control-byte-aware encoding
+            parts.AddRange(DataSegmentHelper.ControlStringsToFixedBytes(EfficiencyReportStrings, EfficiencyReportStringSizes));
 
             var result = parts.ToArray();
 

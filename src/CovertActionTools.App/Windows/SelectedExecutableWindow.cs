@@ -865,20 +865,9 @@ public class SelectedExecutableWindow : BaseWindow
             }
         }
 
-        if (ImGui.CollapsingHeader("Efficiency Report Strings (tentative)"))
+        if (ImGui.CollapsingHeader("Efficiency Report Strings"))
         {
-            ImGui.TextWrapped("Efficiency report display strings. Contains 0x89 bytes whose purpose is unconfirmed — the text renderer stops at bytes >= 0x80 but the full call chain is not yet traced. See scratch docs for investigation notes.");
-            for (var i = 0; i < final.EfficiencyReportStrings.Length; i++)
-            {
-                ImGui.PushID($"EffRpt_{i}");
-                var s = final.EfficiencyReportStrings[i];
-                // Display with 0x89 shown as \x89 for readability
-                var display = s.Replace("\x89", "\\x89");
-                ImGui.TextDisabled($"[{i}]");
-                ImGui.SameLine();
-                ImGui.Text(display);
-                ImGui.PopID();
-            }
+            DrawControlStringArray(final.EfficiencyReportStrings, "EffRpt", final.EfficiencyReportStringSizes);
         }
 
         if (ImGui.CollapsingHeader("Character Names"))
@@ -1377,16 +1366,47 @@ public class SelectedExecutableWindow : BaseWindow
             DrawRastPortBlocks(game.GameStateData, "GameStateRP");
         }
 
-        DrawRawSectionSizes("Raw Sections (byte arrays with control codes)", new[]
+        if (ImGui.CollapsingHeader("Clue Formatting Strings"))
         {
-            ("ClueFormattingData", game.ClueFormattingData.Length),
-            ("ClueDetailData", game.ClueDetailData.Length),
-            ("CitySuspectData", game.CitySuspectData.Length),
-            ("ClueLookupData", game.ClueLookupData.Length),
-            ("ChronologyStatusData", game.ChronologyStatusData.Length),
-            ("ResearchAssistantData", game.ResearchAssistantData.Length),
-            ("SaveLoadData", game.SaveLoadData.Length),
-        });
+            DrawControlStringArray(game.ClueFormattingStrings, "ClueFmt", game.ClueFormattingSizes);
+        }
+
+        if (ImGui.CollapsingHeader("City/Suspect Display"))
+        {
+            DrawControlStringArray(game.CitySuspectStrings, "CitySus", game.CitySuspectSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Clue Not Found Message"))
+        {
+            var msg = game.ClueNotFoundMessage;
+            var newMsg = ImGuiExtensions.Input("##ClueNotFound", msg, 256);
+            if (newMsg != null)
+            {
+                game.ClueNotFoundMessage = newMsg;
+                _pendingState.RecordChange();
+            }
+            ImGui.TextDisabled("Displayed when a text file lookup fails.");
+        }
+
+        if (ImGui.CollapsingHeader("Clue Tag+Filename Pairs"))
+        {
+            DrawControlStringArray(game.CluePostMessageStrings, "CluePost", game.CluePostMessageSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Chronology/Status Display"))
+        {
+            DrawControlStringArray(game.ChronologyStatusStrings, "Chrono", game.ChronologyStatusSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Research Assistant"))
+        {
+            DrawControlStringArray(game.ResearchAssistantStrings, "Research", game.ResearchAssistantSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Save/Load System"))
+        {
+            DrawControlStringArray(game.SaveLoadStrings, "SaveLoad", game.SaveLoadSizes);
+        }
     }
 
     #endregion
@@ -1588,6 +1608,26 @@ public class SelectedExecutableWindow : BaseWindow
             }
             ImGui.PopID();
         }
+    }
+
+    private void DrawControlStringArray(string[] strings, string idPrefix, int[]? byteSizes = null)
+    {
+        ImGui.SameLine();
+        ImGui.TextDisabled("(?)");
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.Text("Control code tokens:");
+            ImGui.BulletText("[tab]  = 0x80 — tab/field separator");
+            ImGui.BulletText("[b]    = 0x87 — bold/highlight");
+            ImGui.BulletText("[ep]   = 0x89 — EP score separator");
+            ImGui.BulletText("[hdr]  = 0x8C — section header");
+            ImGui.BulletText("[prompt] = 0x8F — input prompt");
+            ImGui.BulletText("[bullet] = 0xAE — bullet point");
+            ImGui.BulletText("[0xNN] = arbitrary hex byte");
+            ImGui.EndTooltip();
+        }
+        DrawStringArray(strings, idPrefix, byteSizes);
     }
 
     private void DrawRastPortBlocks(byte[] data, string idPrefix)

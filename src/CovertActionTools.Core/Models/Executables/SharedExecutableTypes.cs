@@ -235,6 +235,144 @@ namespace CovertActionTools.Core.Models.Executables
             }
             return result;
         }
+
+        #region Control-byte string encoding
+
+        /// <summary>
+        /// Named control byte tokens used in the game's text rendering engine.
+        /// Bytes >= 0x80 are special formatting codes; these provide human-readable
+        /// display names for editing.
+        /// </summary>
+        private static readonly (byte value, string token)[] ControlByteTokens =
+        {
+            (0x80, "[tab]"),     // tab-to-column / field separator
+            (0x87, "[b]"),       // bold/highlight start
+            (0x89, "[ep]"),      // efficiency point separator
+            (0x8C, "[hdr]"),     // section header marker
+            (0x8F, "[prompt]"),  // input cursor / prompt position
+            (0xAE, "[bullet]"),  // bullet point character
+        };
+
+        /// <summary>
+        /// Decode a byte array containing control bytes (0x80+) into a string with
+        /// human-readable tokens (e.g. [tab], [b]). Preserves all bytes faithfully
+        /// for round-trip via EncodeControlString.
+        /// </summary>
+        public static string DecodeControlString(byte[] data, int offset, int length)
+        {
+            var sb = new StringBuilder();
+            for (var i = offset; i < offset + length; i++)
+            {
+                var b = data[i];
+                if (b == 0) break;
+                if (b < 0x80)
+                {
+                    sb.Append((char)b);
+                }
+                else
+                {
+                    var found = false;
+                    for (var t = 0; t < ControlByteTokens.Length; t++)
+                    {
+                        if (ControlByteTokens[t].value == b)
+                        {
+                            sb.Append(ControlByteTokens[t].token);
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) sb.Append($"[0x{b:X2}]");
+                }
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Encode a string containing control tokens (e.g. [tab], [b], [0xAB]) back
+        /// into a byte array. Inverse of DecodeControlString.
+        /// </summary>
+        public static byte[] EncodeControlString(string text)
+        {
+            var result = new List<byte>();
+            var i = 0;
+            while (i < text.Length)
+            {
+                if (text[i] == '[')
+                {
+                    var end = text.IndexOf(']', i);
+                    if (end > i)
+                    {
+                        var token = text.Substring(i, end - i + 1);
+                        var matched = false;
+                        for (var t = 0; t < ControlByteTokens.Length; t++)
+                        {
+                            if (ControlByteTokens[t].token == token)
+                            {
+                                result.Add(ControlByteTokens[t].value);
+                                matched = true;
+                                break;
+                            }
+                        }
+                        if (!matched && token.StartsWith("[0x") && token.Length == 6)
+                        {
+                            if (byte.TryParse(token.Substring(3, 2), System.Globalization.NumberStyles.HexNumber, null, out var val))
+                            {
+                                result.Add(val);
+                                matched = true;
+                            }
+                        }
+                        if (matched)
+                        {
+                            i = end + 1;
+                            continue;
+                        }
+                    }
+                }
+                result.Add((byte)text[i]);
+                i++;
+            }
+            return result.ToArray();
+        }
+
+        /// <summary>
+        /// Parse a byte region as control-byte-aware null-terminated strings.
+        /// Returns strings with control tokens and their original byte sizes.
+        /// </summary>
+        public static (string[] strings, int[] byteSizes) ControlStringsFromBytes(byte[] data, int offset, int length)
+        {
+            var strings = new List<string>();
+            var sizes = new List<int>();
+            var pos = offset;
+            var end = offset + length;
+            while (pos < end)
+            {
+                var strEnd = pos;
+                while (strEnd < end && data[strEnd] != 0) strEnd++;
+                strings.Add(DecodeControlString(data, pos, strEnd - pos));
+                sizes.Add(strEnd - pos + 1);
+                pos = strEnd + 1;
+            }
+            return (strings.ToArray(), sizes.ToArray());
+        }
+
+        /// <summary>
+        /// Serialize control-byte-aware strings back to bytes with fixed slot sizes.
+        /// </summary>
+        public static byte[] ControlStringsToFixedBytes(string[] strings, int[] originalByteSizes)
+        {
+            var parts = new List<byte>();
+            for (var i = 0; i < strings.Length; i++)
+            {
+                var encoded = EncodeControlString(strings[i]);
+                var slotSize = i < originalByteSizes.Length ? originalByteSizes[i] : encoded.Length + 1;
+                var slot = new byte[slotSize];
+                Array.Copy(encoded, 0, slot, 0, Math.Min(encoded.Length, slotSize - 1));
+                parts.AddRange(slot);
+            }
+            return parts.ToArray();
+        }
+
+        #endregion
     }
 
     /// <summary>
