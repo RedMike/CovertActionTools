@@ -867,7 +867,7 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Efficiency Report Strings"))
         {
-            DrawStringArray(final.EfficiencyReportStrings, "EffRpt");
+            DrawStringArray(final.EfficiencyReportStrings, "EffRpt", final.EfficiencyReportStringSizes);
         }
 
         if (ImGui.CollapsingHeader("Character Names"))
@@ -1147,7 +1147,7 @@ public class SelectedExecutableWindow : BaseWindow
     {
         if (ImGui.CollapsingHeader("Initial Game Strings"))
         {
-            DrawStringArray(game.InitialGameStrings, "InitStr");
+            DrawStringArray(game.InitialGameStrings, "InitStr", game.InitialGameStringSizes);
         }
 
         if (ImGui.CollapsingHeader("CGA Animation Data"))
@@ -1181,7 +1181,7 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("HQ Display Strings"))
         {
-            DrawStringArray(game.HqDisplayStrings, "HqStr");
+            DrawStringArray(game.HqDisplayStrings, "HqStr", game.HqDisplayStringSizes);
         }
 
         if (ImGui.CollapsingHeader("Character Names"))
@@ -1191,7 +1191,7 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Game Status Labels"))
         {
-            DrawStringArray(game.GameStatusLabels, "StatusLbl");
+            DrawStringArray(game.GameStatusLabels, "StatusLbl", game.GameStatusLabelSizes);
         }
 
         if (ImGui.CollapsingHeader("Screen Layout Data"))
@@ -1236,7 +1236,7 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Gameplay Event Strings"))
         {
-            DrawStringArray(game.GameplayEventStrings, "GE1");
+            DrawStringArray(game.GameplayEventStrings, "GE1", game.GameplayEventStringSizes);
         }
 
         if (ImGui.CollapsingHeader("Gameplay Binary Lookup"))
@@ -1247,12 +1247,12 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Guard Alertness Labels"))
         {
-            DrawStringArray(game.GuardAlertnessLabels, "Alert");
+            DrawStringArray(game.GuardAlertnessLabels, "Alert", game.GuardAlertnessLabelSizes);
         }
 
         if (ImGui.CollapsingHeader("Gameplay Event Strings (Part 2)"))
         {
-            DrawStringArray(game.GameplayEventStrings2, "GE2");
+            DrawStringArray(game.GameplayEventStrings2, "GE2", game.GameplayEventString2Sizes);
         }
 
         if (ImGui.CollapsingHeader("Clue Relationship Phrases"))
@@ -1267,7 +1267,7 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Intel Headers"))
         {
-            DrawStringArray(game.IntelHeaders, "IntelHdr");
+            DrawStringArray(game.IntelHeaders, "IntelHdr", game.IntelHeaderSizes);
         }
 
         if (ImGui.CollapsingHeader("Clue Category Data"))
@@ -1293,67 +1293,67 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Intel Report Texts"))
         {
-            DrawStringArray(game.IntelReportTexts, "IntelTxt");
+            DrawStringArray(game.IntelReportTexts, "IntelTxt", game.IntelReportTextSizes);
         }
 
         if (ImGui.CollapsingHeader("Rank Names"))
         {
-            DrawStringArray(game.RankNames, "Rank");
+            DrawStringArray(game.RankNames, "Rank", game.RankNameSizes);
         }
 
         if (ImGui.CollapsingHeader("Evidence Type Abbreviations"))
         {
-            DrawStringArray(game.EvidenceTypeAbbreviations, "EvType");
+            DrawStringArray(game.EvidenceTypeAbbreviations, "EvType", game.EvidenceTypeSizes);
         }
 
         if (ImGui.CollapsingHeader("Evidence Item Names"))
         {
-            DrawStringArray(game.EvidenceItemNames, "EvItem");
+            DrawStringArray(game.EvidenceItemNames, "EvItem", game.EvidenceItemSizes);
         }
 
         if (ImGui.CollapsingHeader("Investigation Methods"))
         {
-            DrawStringArray(game.InvestigationMethods, "InvMeth");
+            DrawStringArray(game.InvestigationMethods, "InvMeth", game.InvestigationMethodSizes);
         }
 
         if (ImGui.CollapsingHeader("Message Log Strings"))
         {
-            DrawStringArray(game.MessageLogStrings, "MsgLog");
+            DrawStringArray(game.MessageLogStrings, "MsgLog", game.MessageLogStringSizes);
         }
 
         if (ImGui.CollapsingHeader("Hotel Menu"))
         {
-            DrawStringArray(game.HotelMenuStrings, "Hotel");
+            DrawStringArray(game.HotelMenuStrings, "Hotel", game.HotelMenuStringSizes);
         }
 
         if (ImGui.CollapsingHeader("Data Files Menu"))
         {
-            DrawStringArray(game.DataFilesMenuStrings, "DataFiles");
+            DrawStringArray(game.DataFilesMenuStrings, "DataFiles", game.DataFilesMenuStringSizes);
         }
 
         if (ImGui.CollapsingHeader("CIA Building Menus"))
         {
-            DrawStringArray(game.CiaMenuStrings, "CIA");
+            DrawStringArray(game.CiaMenuStrings, "CIA", game.CiaMenuStringSizes);
         }
 
         if (ImGui.CollapsingHeader("Activity/Wiretap Display"))
         {
-            DrawStringArray(game.ActivityWiretapStrings, "ActWire");
+            DrawStringArray(game.ActivityWiretapStrings, "ActWire", game.ActivityWiretapStringSizes);
         }
 
         if (ImGui.CollapsingHeader("Coded Message Display"))
         {
-            DrawStringArray(game.CodedMessageStrings, "Coded");
+            DrawStringArray(game.CodedMessageStrings, "Coded", game.CodedMessageStringSizes);
         }
 
         if (ImGui.CollapsingHeader("Substitution Tokens"))
         {
-            DrawStringArray(game.SubstitutionTokenStrings, "SubToken");
+            DrawStringArray(game.SubstitutionTokenStrings, "SubToken", game.SubstitutionTokenStringSizes);
         }
 
         if (ImGui.CollapsingHeader("Bulletin/Surveillance Reports"))
         {
-            DrawStringArray(game.BulletinStrings, "Bulletin");
+            DrawStringArray(game.BulletinStrings, "Bulletin", game.BulletinStringSizes);
         }
 
         if (ImGui.CollapsingHeader("RastPort Blocks (Pre-String)"))
@@ -1368,12 +1368,12 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Clue Formatting Strings"))
         {
-            DrawStringArray(game.ClueFormattingStrings, "ClueFmt");
+            DrawStringArray(game.ClueFormattingStrings, "ClueFmt", game.ClueFormattingSizes);
         }
 
         if (ImGui.CollapsingHeader("City/Suspect Display"))
         {
-            DrawStringArray(game.CitySuspectStrings, "CitySus");
+            DrawStringArray(game.CitySuspectStrings, "CitySus", game.CitySuspectSizes);
         }
 
         if (ImGui.CollapsingHeader("Clue Not Found Message"))
@@ -1390,22 +1390,22 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Clue Tag+Filename Pairs"))
         {
-            DrawStringArray(game.CluePostMessageStrings, "CluePost");
+            DrawStringArray(game.CluePostMessageStrings, "CluePost", game.CluePostMessageSizes);
         }
 
         if (ImGui.CollapsingHeader("Chronology/Status Display"))
         {
-            DrawStringArray(game.ChronologyStatusStrings, "Chrono");
+            DrawStringArray(game.ChronologyStatusStrings, "Chrono", game.ChronologyStatusSizes);
         }
 
         if (ImGui.CollapsingHeader("Research Assistant"))
         {
-            DrawStringArray(game.ResearchAssistantStrings, "Research");
+            DrawStringArray(game.ResearchAssistantStrings, "Research", game.ResearchAssistantSizes);
         }
 
         if (ImGui.CollapsingHeader("Save/Load System"))
         {
-            DrawStringArray(game.SaveLoadStrings, "SaveLoad");
+            DrawStringArray(game.SaveLoadStrings, "SaveLoad", game.SaveLoadSizes);
         }
     }
 
@@ -1580,16 +1580,23 @@ public class SelectedExecutableWindow : BaseWindow
         {
             ImGui.PushID($"{idPrefix}_{i}");
             var contentSize = ImGui.GetContentRegionAvail();
-            // Buffer size for ImGui (must be larger than current string to allow typing)
-            var bufSize = Math.Max(strings[i].Length + 128, 512);
+            // Max character count = byte slot size minus null terminator
+            var maxChars = byteSizes != null && i < byteSizes.Length ? byteSizes[i] - 1 : 256;
+            if (maxChars < 1) maxChars = 1;
+            // ImGui buffer size = max chars + null terminator
+            var bufSize = maxChars + 1;
+
+            var label = byteSizes != null && i < byteSizes.Length
+                ? $"[{i}] (max {maxChars})"
+                : $"[{i}]";
 
             if (strings[i].Contains('\n'))
             {
                 var val = strings[i];
                 var origVal = val;
-                ImGui.InputTextMultiline($"[{i}]", ref val, (uint)bufSize,
+                ImGui.InputTextMultiline(label, ref val, (uint)bufSize,
                     new Vector2(contentSize.X - 80, 80.0f));
-                if (val != origVal)
+                if (val != origVal && val.Length <= maxChars)
                 {
                     strings[i] = val;
                     _pendingState.RecordChange();
@@ -1597,8 +1604,8 @@ public class SelectedExecutableWindow : BaseWindow
             }
             else
             {
-                var newVal = ImGuiExtensions.Input($"[{i}]", strings[i], bufSize, width: (int)contentSize.X - 80);
-                if (newVal != null)
+                var newVal = ImGuiExtensions.Input(label, strings[i], bufSize, width: (int)contentSize.X - 80);
+                if (newVal != null && newVal.Length <= maxChars)
                 {
                     strings[i] = newVal;
                     _pendingState.RecordChange();

@@ -69,6 +69,8 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>Initial game strings: env.sve sentinel, "One moment please..." loading message
         /// (DS:0x0076-0x0093).</summary>
         public string[] InitialGameStrings { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for InitialGameStrings slots.</summary>
+        public int[] InitialGameStringSizes { get; set; } = Array.Empty<int>();
 
         // BSS zero fill (DS:0x0094 to PreStRastPortOffset) is not stored — emitted as zeros in ToBytes().
 
@@ -89,6 +91,8 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>HQ screen display strings: ad.pic filename, location type labels, default agent name
         /// (DS:0x16D8 to character names start). Used by the main game HQ display.</summary>
         public string[] HqDisplayStrings { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for HqDisplayStrings slots.</summary>
+        public int[] HqDisplayStringSizes { get; set; } = Array.Empty<int>();
 
         #endregion
 
@@ -106,6 +110,8 @@ namespace CovertActionTools.Core.Models.Executables
         /// " TURNED", "Personnel File", " Action Team", ", ", "(No activity)", "00:00:00",
         /// "Incoming Msg" (120 bytes in original binary).</summary>
         public string[] GameStatusLabels { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for GameStatusLabels slots.</summary>
+        public int[] GameStatusLabelSizes { get; set; } = Array.Empty<int>();
 
         /// <summary>Screen layout rect draw data: coordinates and attributes for game UI regions
         /// (588 bytes in original binary). Binary data, not directly editable.</summary>
@@ -115,6 +121,8 @@ namespace CovertActionTools.Core.Models.Executables
         /// interrogation, briefing text, travel menus, city map filenames.
         /// Core gameplay text strings up to the binary lookup table.</summary>
         public string[] GameplayEventStrings { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for GameplayEventStrings slots.</summary>
+        public int[] GameplayEventStringSizes { get; set; } = Array.Empty<int>();
 
         /// <summary>Binary gameplay lookup table: difficulty/guard data between gameplay
         /// string groups (26 bytes in original binary). Contains 0xFF bytes.</summary>
@@ -124,10 +132,14 @@ namespace CovertActionTools.Core.Models.Executables
         /// suspicious, nervous, very nervous. Displayed on the city map for each
         /// building's alert state.</summary>
         public string[] GuardAlertnessLabels { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for GuardAlertnessLabels slots.</summary>
+        public int[] GuardAlertnessLabelSizes { get; set; } = Array.Empty<int>();
 
         /// <summary>Gameplay event strings (part 2): briefing farewell text,
         /// ".pic", "cities.cat".</summary>
         public string[] GameplayEventStrings2 { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for GameplayEventStrings2 slots.</summary>
+        public int[] GameplayEventString2Sizes { get; set; } = Array.Empty<int>();
 
         #endregion
 
@@ -140,6 +152,8 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>Intel report header strings: "CODED MESSAGE:", "MEETING NOTES:", etc.
         /// Formatting strings used in intelligence report display (134 bytes in original binary).</summary>
         public string[] IntelHeaders { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for IntelHeaders slots.</summary>
+        public int[] IntelHeaderSizes { get; set; } = Array.Empty<int>();
 
         // ClueRelationshipPointers (40) and MonthNamePointers (12) are computed at serialization time.
 
@@ -156,17 +170,25 @@ namespace CovertActionTools.Core.Models.Executables
         /// spotted in city, member of org, additional information, rank determination,
         /// recruiting information (370 bytes in original binary).</summary>
         public string[] IntelReportTexts { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for IntelReportTexts slots.</summary>
+        public int[] IntelReportTextSizes { get; set; } = Array.Empty<int>();
 
         /// <summary>8 agent rank names: Recruit, Operative, Technician, Agent, Organizer,
         /// Special Agent, Group Leader, MasterMind.</summary>
         public string[] RankNames { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for RankNames slots.</summary>
+        public int[] RankNameSizes { get; set; } = Array.Empty<int>();
 
         /// <summary>8 evidence type abbreviations: CAR, WPN, ADR, TKT, MSG, $, $, FCE.</summary>
         public string[] EvidenceTypeAbbreviations { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for EvidenceTypeAbbreviations slots.</summary>
+        public int[] EvidenceTypeSizes { get; set; } = Array.Empty<int>();
 
         /// <summary>64 evidence item names: 8 cars, 8 weapons, 8 addresses, 8 airline tickets,
         /// 8 messages, 16 face descriptor placeholders ($), 8 passports.</summary>
         public string[] EvidenceItemNames { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for EvidenceItemNames slots.</summary>
+        public int[] EvidenceItemSizes { get; set; } = Array.Empty<int>();
 
         // EvidenceRankPointerTable (80 uint16) is computed at serialization time.
 
@@ -174,38 +196,49 @@ namespace CovertActionTools.Core.Models.Executables
         /// Electronic WireTap, Covert Surveillance, File Record Search, Local Informant,
         /// INTERPOL Data Base, Local Authorities, + 1 label.</summary>
         public string[] InvestigationMethods { get; set; } = Array.Empty<string>();
+        /// <summary>Original byte sizes for InvestigationMethods slots.</summary>
+        public int[] InvestigationMethodSizes { get; set; } = Array.Empty<int>();
 
         /// <summary>Clue display formatting and detail strings: Source/Method/Related Clues labels,
         /// $KEY/$NAME/$ORG/$CITY/$ROLE tokens, *C0000 tags, codenames, suspect info labels.
         /// Contains control bytes: [b]=bold, [tab]=field separator, [hdr]=section header.</summary>
         public string[] ClueFormattingStrings { get; set; } = Array.Empty<string>();
+        public int[] ClueFormattingSizes { get; set; } = Array.Empty<int>();
 
         /// <summary>Message log display: message decoding, Rcvd/Sent msg formatters.</summary>
         public string[] MessageLogStrings { get; set; } = Array.Empty<string>();
+        public int[] MessageLogStringSizes { get; set; } = Array.Empty<int>();
 
         /// <summary>Hotel menu: hotel.pic, hotel options (Leave/Lounge/Sleep/Save/Load), *lounge tag.</summary>
         public string[] HotelMenuStrings { get; set; } = Array.Empty<string>();
+        public int[] HotelMenuStringSizes { get; set; } = Array.Empty<int>();
 
         /// <summary>Data files menu: Clues/Suspects/Inside Information/News/Org/City/Activity.</summary>
         public string[] DataFilesMenuStrings { get; set; } = Array.Empty<string>();
+        public int[] DataFilesMenuStringSizes { get; set; } = Array.Empty<int>();
 
         /// <summary>CIA building menus: floor selection, Intelligence/Data/Crypto sections,
         /// double agent accusation, local agent check results.</summary>
         public string[] CiaMenuStrings { get; set; } = Array.Empty<string>();
+        public int[] CiaMenuStringSizes { get; set; } = Array.Empty<int>();
 
         /// <summary>Activity/wiretap display: report summary, wiretap labels, org/allies formatters.</summary>
         public string[] ActivityWiretapStrings { get; set; } = Array.Empty<string>();
+        public int[] ActivityWiretapStringSizes { get; set; } = Array.Empty<int>();
 
         /// <summary>City/suspect display: city summaries, suspect files, locations, documents.
         /// Contains [hdr] control bytes for section formatting.</summary>
         public string[] CitySuspectStrings { get; set; } = Array.Empty<string>();
+        public int[] CitySuspectSizes { get; set; } = Array.Empty<int>();
 
         /// <summary>Coded message display: FROM/TO/MESSAGE headers, NSYN Overflow, Chronology, News.</summary>
         public string[] CodedMessageStrings { get; set; } = Array.Empty<string>();
+        public int[] CodedMessageStringSizes { get; set; } = Array.Empty<int>();
 
         /// <summary>Message substitution tokens: $VICTIM, $SNDORG, $RCVORG, $SNDLOC, $RCVLOC,
         /// $HLPORG, $OBJECT + format buffers.</summary>
         public string[] SubstitutionTokenStrings { get; set; } = Array.Empty<string>();
+        public int[] SubstitutionTokenStringSizes { get; set; } = Array.Empty<int>();
 
         /// <summary>Clue lookup pointer table and format strings before the not-found message.
         /// Contains embedded DS-relative pointer values — stored as byte array.</summary>
@@ -218,23 +251,28 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>Tag+filename pairs for text.dta lookups (*SLOC00/text.dta through *MSG0000),
         /// facesf.pic/faces.pic references. Contains [tab]/[prompt] control bytes.</summary>
         public string[] CluePostMessageStrings { get; set; } = Array.Empty<string>();
+        public int[] CluePostMessageSizes { get; set; } = Array.Empty<int>();
 
         /// <summary>Bulletin/surveillance reports: bulletins, INTERPOL, satellite intercept,
         /// wiretap reveals, airport surveillance, double agent reports.</summary>
         public string[] BulletinStrings { get; set; } = Array.Empty<string>();
+        public int[] BulletinStringSizes { get; set; } = Array.Empty<int>();
 
         /// <summary>Chronology/status display: time template, ARRESTED/TURNED status, clue review.
         /// Contains [b]/[bullet] control bytes.</summary>
         public string[] ChronologyStatusStrings { get; set; } = Array.Empty<string>();
+        public int[] ChronologyStatusSizes { get; set; } = Array.Empty<int>();
 
         /// <summary>Research assistant: officem.pan/officef.pan, advice text, org/city suggestions,
         /// arrest/investigate recommendations, *advicea-*advice5 tags.
         /// Contains [prompt] control bytes.</summary>
         public string[] ResearchAssistantStrings { get; set; } = Array.Empty<string>();
+        public int[] ResearchAssistantSizes { get; set; } = Array.Empty<int>();
 
         /// <summary>Save/load system: Select Load/Save File, cv0.sve, rank display, difficulty
         /// labels, disk prompts. Contains [prompt] control bytes.</summary>
         public string[] SaveLoadStrings { get; set; } = Array.Empty<string>();
+        public int[] SaveLoadSizes { get; set; } = Array.Empty<int>();
 
         /// <summary>Exe chain + disk swap: env.sve, final.exe/game.exe/tac.exe/hq.pan,
         /// disk insert prompts. Contains non-ASCII bytes — stored as byte array.</summary>
@@ -293,6 +331,7 @@ namespace CovertActionTools.Core.Models.Executables
             var (intelHdrs, intelHdrSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
                 dataSegment, intelHeaderStart, intelHeaderSize);
             segment.IntelHeaders = intelHdrs;
+            segment.IntelHeaderSizes = intelHdrSzs;
 
             // --- ClueCategoryData ---
             segment.ClueCategoryData = DataSegmentHelper.Slice(dataSegment, ClueCategoryDataOffset, ClueCategoryDataSize);
@@ -318,6 +357,7 @@ namespace CovertActionTools.Core.Models.Executables
             var (initStrs, initSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
                 dataSegment, initStrStart, initStrSize);
             segment.InitialGameStrings = initStrs;
+            segment.InitialGameStringSizes = initSzs;
 
             // BSS zero fill is not stored
 
@@ -345,6 +385,7 @@ namespace CovertActionTools.Core.Models.Executables
                 var (hqStrs, hqSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
                     dataSegment, hqStringsOff, hqStringsSize);
                 segment.HqDisplayStrings = hqStrs;
+                segment.HqDisplayStringSizes = hqSzs;
             }
         }
 
@@ -355,6 +396,7 @@ namespace CovertActionTools.Core.Models.Executables
             var (statusStrs, statusSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
                 dataSegment, start, statusSize);
             segment.GameStatusLabels = statusStrs;
+            segment.GameStatusLabelSizes = statusSzs;
 
             // Screen layout binary data (588 bytes in original binary)
             var layoutStart = start + statusSize;
@@ -400,6 +442,7 @@ namespace CovertActionTools.Core.Models.Executables
                     var (eventStrs1, eventSzs1) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
                         dataSegment, eventStart, part1Size);
                     segment.GameplayEventStrings = eventStrs1;
+                    segment.GameplayEventStringSizes = eventSzs1;
 
                     segment.GameplayBinaryLookup = DataSegmentHelper.Slice(dataSegment, binaryStart, binarySize);
 
@@ -408,6 +451,7 @@ namespace CovertActionTools.Core.Models.Executables
                     var (alertStrs, alertSzs) = DataSegmentHelper.NullTerminatedStringsWithSizesFromBytes(
                         dataSegment, alertPos, GuardAlertnessLabelCount);
                     segment.GuardAlertnessLabels = alertStrs;
+                    segment.GuardAlertnessLabelSizes = alertSzs;
 
                     var alertEnd = alertPos + alertSzs.Sum();
                     var remaining2Size = eventEnd - alertEnd;
@@ -416,6 +460,7 @@ namespace CovertActionTools.Core.Models.Executables
                         var (eventStrs2, eventSzs2) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
                             dataSegment, alertEnd, remaining2Size);
                         segment.GameplayEventStrings2 = eventStrs2;
+                        segment.GameplayEventString2Sizes = eventSzs2;
                     }
                 }
                 else
@@ -424,6 +469,7 @@ namespace CovertActionTools.Core.Models.Executables
                     var (eventStrs, eventSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
                         dataSegment, eventStart, eventSize);
                     segment.GameplayEventStrings = eventStrs;
+                    segment.GameplayEventStringSizes = eventSzs;
                 }
             }
         }
@@ -442,6 +488,7 @@ namespace CovertActionTools.Core.Models.Executables
             var (intelTexts, intelTextSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
                 dataSegment, pos, intelTextsSize);
             segment.IntelReportTexts = intelTexts;
+            segment.IntelReportTextSizes = intelTextSzs;
             pos = rankStart;
 
             // Rank names: 8 strings, ending before "CAR\0"
@@ -450,6 +497,7 @@ namespace CovertActionTools.Core.Models.Executables
             var (ranks, rankSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
                 dataSegment, pos, rankSize);
             segment.RankNames = ranks;
+            segment.RankNameSizes = rankSzs;
             pos = evTypesStart;
 
             // Evidence type abbreviations: 8 strings, ending before "Ford Escort"
@@ -458,6 +506,7 @@ namespace CovertActionTools.Core.Models.Executables
             var (evTypes, evTypeSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
                 dataSegment, pos, evTypesSize);
             segment.EvidenceTypeAbbreviations = evTypes;
+            segment.EvidenceTypeSizes = evTypeSzs;
             pos = evItemsStart;
 
             // Evidence item names: strings until pointer table.
@@ -469,6 +518,7 @@ namespace CovertActionTools.Core.Models.Executables
             var (evItems, evItemSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
                 dataSegment, pos, evItemsSize);
             segment.EvidenceItemNames = evItems;
+            segment.EvidenceItemSizes = evItemSzs;
             pos = invMethodsStart; // skip padding + pointer table
 
             // Investigation methods: 8 strings
@@ -482,6 +532,7 @@ namespace CovertActionTools.Core.Models.Executables
             var (invMethods, invMethodSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
                 dataSegment, pos, invSize);
             segment.InvestigationMethods = invMethods;
+            segment.InvestigationMethodSizes = invMethodSzs;
             pos = invPos;
 
             // --- Remaining trailing sections (marker-based parsing) ---
@@ -542,12 +593,14 @@ namespace CovertActionTools.Core.Models.Executables
             var (clueFmtStrs, clueFmtSzs) = DataSegmentHelper.ControlStringsFromBytes(
                 dataSegment, start, quotePos - start);
             segment.ClueFormattingStrings = clueFmtStrs;
+            segment.ClueFormattingSizes = clueFmtSzs;
 
             // Message log strings: from quotePos to hotel.pic
             var msgLogSize = hotelStart - quotePos;
             var (msgStrs, msgSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
                 dataSegment, quotePos, msgLogSize);
             segment.MessageLogStrings = msgStrs;
+            segment.MessageLogStringSizes = msgSzs;
 
             // Hotel menu: from "hotel.pic" to "Data Files"
             var dataFilesStart = FindMarkerString(dataSegment, hotelStart, end, "Data Files");
@@ -555,6 +608,7 @@ namespace CovertActionTools.Core.Models.Executables
             var (hotelStrs, hotelSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
                 dataSegment, hotelStart, hotelSize);
             segment.HotelMenuStrings = hotelStrs;
+            segment.HotelMenuStringSizes = hotelSzs;
 
             // Data files menu: to "You are in the CIA"
             var ciaStart = FindMarkerString(dataSegment, dataFilesStart, end, "You are in the CIA");
@@ -562,6 +616,7 @@ namespace CovertActionTools.Core.Models.Executables
             var (dfStrs, dfSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
                 dataSegment, dataFilesStart, dfSize);
             segment.DataFilesMenuStrings = dfStrs;
+            segment.DataFilesMenuStringSizes = dfSzs;
 
             // CIA menus: to "Activity Report Summary"
             var actStart = FindMarkerString(dataSegment, ciaStart, end, "Activity Report Summary");
@@ -569,6 +624,7 @@ namespace CovertActionTools.Core.Models.Executables
             var (ciaStrs, ciaSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
                 dataSegment, ciaStart, ciaSize);
             segment.CiaMenuStrings = ciaStrs;
+            segment.CiaMenuStringSizes = ciaSzs;
 
             // Activity/wiretap display: to "Which city" or city suspect section
             var cityStart = FindMarkerString(dataSegment, actStart, end, "Coded Messages");
@@ -589,12 +645,14 @@ namespace CovertActionTools.Core.Models.Executables
             var (actStrs, actSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
                 dataSegment, actStart, actSize);
             segment.ActivityWiretapStrings = actStrs;
+            segment.ActivityWiretapStringSizes = actSzs;
 
             // City/suspect data (byte array, has 0x8C control bytes)
             var codedMsgStart = FindMarkerString(dataSegment, whichCityPos, end, "Coded Messages");
             var (citySusStrs, citySusSzs) = DataSegmentHelper.ControlStringsFromBytes(
                 dataSegment, whichCityPos, codedMsgStart - whichCityPos);
             segment.CitySuspectStrings = citySusStrs;
+            segment.CitySuspectSizes = citySusSzs;
 
             // Coded messages: to "$VICTIM"
             var tokensStart = FindMarkerString(dataSegment, codedMsgStart, end, "$VICTIM");
@@ -602,6 +660,7 @@ namespace CovertActionTools.Core.Models.Executables
             var (codedStrs, codedSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
                 dataSegment, codedMsgStart, codedSize);
             segment.CodedMessageStrings = codedStrs;
+            segment.CodedMessageStringSizes = codedSzs;
 
             // Substitution tokens: to clue lookup section (has non-ASCII, find "This information")
             var clueInfoStart = FindMarkerString(dataSegment, tokensStart, end, "This information");
@@ -629,6 +688,7 @@ namespace CovertActionTools.Core.Models.Executables
             var (tokenStrs, tokenSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
                 dataSegment, tokensStart, tokensSize);
             segment.SubstitutionTokenStrings = tokenStrs;
+            segment.SubstitutionTokenStringSizes = tokenSzs;
 
             // Clue lookup data (byte array, non-ASCII): to "Bulletin: "
             var bulletinStart = FindMarkerString(dataSegment, clueLookupStart, end, "Bulletin: ");
@@ -644,6 +704,7 @@ namespace CovertActionTools.Core.Models.Executables
             var (cluePostStrs, cluePostSzs) = DataSegmentHelper.ControlStringsFromBytes(
                 dataSegment, postMessageStart, bulletinStart - postMessageStart);
             segment.CluePostMessageStrings = cluePostStrs;
+            segment.CluePostMessageSizes = cluePostSzs;
 
             // Bulletin/surveillance strings: to chronology section
             // Find " 10" followed by "00:00 AM" as chronology marker
@@ -661,18 +722,21 @@ namespace CovertActionTools.Core.Models.Executables
             var (bulStrs, bulSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
                 dataSegment, bulletinStart, bulletinSize);
             segment.BulletinStrings = bulStrs;
+            segment.BulletinStringSizes = bulSzs;
 
             // Chronology/status data (byte array, has control codes): to "officem.pan"
             var researchStart = FindMarkerString(dataSegment, chronoStart, end, "officem.pan");
             var (chronoStrs, chronoSzs) = DataSegmentHelper.ControlStringsFromBytes(
                 dataSegment, chronoStart, researchStart - chronoStart);
             segment.ChronologyStatusStrings = chronoStrs;
+            segment.ChronologyStatusSizes = chronoSzs;
 
             // Research assistant strings (control-byte-aware): to "Select Load File"
             var saveLoadStart = FindMarkerString(dataSegment, researchStart, end, "Select Load File");
             var (resStrs, resSzs) = DataSegmentHelper.ControlStringsFromBytes(
                 dataSegment, researchStart, saveLoadStart - researchStart);
             segment.ResearchAssistantStrings = resStrs;
+            segment.ResearchAssistantSizes = resSzs;
 
             // Save/load data (byte array, has 0x8F): to exe chain section
             // Exe chain starts after save/load. Find "final.exe" as marker.
@@ -689,6 +753,7 @@ namespace CovertActionTools.Core.Models.Executables
             var (slStrs, slSzs) = DataSegmentHelper.ControlStringsFromBytes(
                 dataSegment, saveLoadStart, exeChainStart - saveLoadStart);
             segment.SaveLoadStrings = slStrs;
+            segment.SaveLoadSizes = slSzs;
 
             // Exe chain data (byte array): to "PANI"
             var paniStart = FindMarkerString(dataSegment, exeChainStart, end, "PANI");
@@ -745,7 +810,7 @@ namespace CovertActionTools.Core.Models.Executables
             var monthNameBytes = DataSegmentHelper.NullTerminatedStringsToBytes(MonthNames);
 
             // Serialize intel headers
-            var intelHeaderBytes = DataSegmentHelper.NullTerminatedStringsToBytes(IntelHeaders);
+            var intelHeaderBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(IntelHeaders, IntelHeaderSizes);
 
             // Compute clue and month pointer bases
             var clueBase = preCharNameBytes.Length + charNamesBytes.Length + PostCharNameData.Length
@@ -791,7 +856,7 @@ namespace CovertActionTools.Core.Models.Executables
             parts.AddRange(InitialGameRuntimePrefix);
 
             // Initial game strings
-            parts.AddRange(DataSegmentHelper.NullTerminatedStringsToBytes(InitialGameStrings));
+            parts.AddRange(DataSegmentHelper.NullTerminatedStringsToFixedBytes(InitialGameStrings, InitialGameStringSizes));
 
             // BSS zero fill: pad with zeros up to RastPort offset
             var zeroFillSize = PreStRastPortOffset - parts.Count;
@@ -816,7 +881,7 @@ namespace CovertActionTools.Core.Models.Executables
             parts.Add(0);
 
             // HQ display strings
-            parts.AddRange(DataSegmentHelper.NullTerminatedStringsToBytes(HqDisplayStrings));
+            parts.AddRange(DataSegmentHelper.NullTerminatedStringsToFixedBytes(HqDisplayStrings, HqDisplayStringSizes));
 
             return parts.ToArray();
         }
@@ -824,36 +889,36 @@ namespace CovertActionTools.Core.Models.Executables
         private byte[] BuildMidSectionPreClue()
         {
             return DataSegmentHelper.Concatenate(
-                DataSegmentHelper.NullTerminatedStringsToBytes(GameStatusLabels),
+                DataSegmentHelper.NullTerminatedStringsToFixedBytes(GameStatusLabels, GameStatusLabelSizes),
                 ScreenLayoutData,
-                DataSegmentHelper.NullTerminatedStringsToBytes(GameplayEventStrings),
+                DataSegmentHelper.NullTerminatedStringsToFixedBytes(GameplayEventStrings, GameplayEventStringSizes),
                 GameplayBinaryLookup,
-                DataSegmentHelper.NullTerminatedStringsToBytes(GuardAlertnessLabels),
-                DataSegmentHelper.NullTerminatedStringsToBytes(GameplayEventStrings2)
+                DataSegmentHelper.NullTerminatedStringsToFixedBytes(GuardAlertnessLabels, GuardAlertnessLabelSizes),
+                DataSegmentHelper.NullTerminatedStringsToFixedBytes(GameplayEventStrings2, GameplayEventString2Sizes)
             );
         }
 
         private byte[] BuildTrailingData()
         {
             // Serialize all string sections
-            var intelTxtBytes = DataSegmentHelper.NullTerminatedStringsToBytes(IntelReportTexts);
-            var rankBytes = DataSegmentHelper.NullTerminatedStringsToBytes(RankNames);
-            var evTypeBytes = DataSegmentHelper.NullTerminatedStringsToBytes(EvidenceTypeAbbreviations);
-            var evItemBytes = DataSegmentHelper.NullTerminatedStringsToBytes(EvidenceItemNames);
-            var invMethodBytes = DataSegmentHelper.NullTerminatedStringsToBytes(InvestigationMethods);
+            var intelTxtBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(IntelReportTexts, IntelReportTextSizes);
+            var rankBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(RankNames, RankNameSizes);
+            var evTypeBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(EvidenceTypeAbbreviations, EvidenceTypeSizes);
+            var evItemBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(EvidenceItemNames, EvidenceItemSizes);
+            var invMethodBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(InvestigationMethods, InvestigationMethodSizes);
 
             // Evidence/rank pointer table placeholder (patched after assembly)
             var evRankPtrPlaceholder = new byte[EvidenceRankPointerTableSize];
 
             // Serialize remaining sections
-            var msgLogBytes = DataSegmentHelper.NullTerminatedStringsToBytes(MessageLogStrings);
-            var hotelBytes = DataSegmentHelper.NullTerminatedStringsToBytes(HotelMenuStrings);
-            var dfBytes = DataSegmentHelper.NullTerminatedStringsToBytes(DataFilesMenuStrings);
-            var ciaBytes = DataSegmentHelper.NullTerminatedStringsToBytes(CiaMenuStrings);
-            var actBytes = DataSegmentHelper.NullTerminatedStringsToBytes(ActivityWiretapStrings);
-            var codedBytes = DataSegmentHelper.NullTerminatedStringsToBytes(CodedMessageStrings);
-            var tokenBytes = DataSegmentHelper.NullTerminatedStringsToBytes(SubstitutionTokenStrings);
-            var bulletinBytes = DataSegmentHelper.NullTerminatedStringsToBytes(BulletinStrings);
+            var msgLogBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(MessageLogStrings, MessageLogStringSizes);
+            var hotelBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(HotelMenuStrings, HotelMenuStringSizes);
+            var dfBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(DataFilesMenuStrings, DataFilesMenuStringSizes);
+            var ciaBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(CiaMenuStrings, CiaMenuStringSizes);
+            var actBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(ActivityWiretapStrings, ActivityWiretapStringSizes);
+            var codedBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(CodedMessageStrings, CodedMessageStringSizes);
+            var tokenBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(SubstitutionTokenStrings, SubstitutionTokenStringSizes);
+            var bulletinBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(BulletinStrings, BulletinStringSizes);
 
             return DataSegmentHelper.Concatenate(
                 new byte[IntelPaddingSize],        // 3 null bytes
@@ -864,23 +929,23 @@ namespace CovertActionTools.Core.Models.Executables
                 new byte[EvidenceEndPaddingSize],   // 1 null byte
                 evRankPtrPlaceholder,
                 invMethodBytes,
-                DataSegmentHelper.ControlStringsToBytes(ClueFormattingStrings),
+                DataSegmentHelper.ControlStringsToFixedBytes(ClueFormattingStrings, ClueFormattingSizes),
                 msgLogBytes,
                 hotelBytes,
                 dfBytes,
                 ciaBytes,
                 actBytes,
-                DataSegmentHelper.ControlStringsToBytes(CitySuspectStrings),
+                DataSegmentHelper.ControlStringsToFixedBytes(CitySuspectStrings, CitySuspectSizes),
                 codedBytes,
                 tokenBytes,
                 CluePreMessageData,
                 Encoding.ASCII.GetBytes(ClueNotFoundMessage),
                 new byte[] { 0 },
-                DataSegmentHelper.ControlStringsToBytes(CluePostMessageStrings),
+                DataSegmentHelper.ControlStringsToFixedBytes(CluePostMessageStrings, CluePostMessageSizes),
                 bulletinBytes,
-                DataSegmentHelper.ControlStringsToBytes(ChronologyStatusStrings),
-                DataSegmentHelper.ControlStringsToBytes(ResearchAssistantStrings),
-                DataSegmentHelper.ControlStringsToBytes(SaveLoadStrings),
+                DataSegmentHelper.ControlStringsToFixedBytes(ChronologyStatusStrings, ChronologyStatusSizes),
+                DataSegmentHelper.ControlStringsToFixedBytes(ResearchAssistantStrings, ResearchAssistantSizes),
+                DataSegmentHelper.ControlStringsToFixedBytes(SaveLoadStrings, SaveLoadSizes),
                 ExeChainData,
                 GameStateData,
                 RuntimeTrailingData
@@ -895,7 +960,7 @@ namespace CovertActionTools.Core.Models.Executables
             var midPreClueBytes = BuildMidSectionPreClue();
             var cluePhraseBytes = DataSegmentHelper.NullTerminatedStringsToBytes(ClueRelationshipPhrases);
             var monthNameBytes = DataSegmentHelper.NullTerminatedStringsToBytes(MonthNames);
-            var intelHeaderBytes = DataSegmentHelper.NullTerminatedStringsToBytes(IntelHeaders);
+            var intelHeaderBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(IntelHeaders, IntelHeaderSizes);
 
             var trailingStart = preCharNameBytes.Length + charNamesBytes.Length + PostCharNameData.Length
                 + CharNamePointerCount * 2 + midPreClueBytes.Length + cluePhraseBytes.Length
@@ -903,10 +968,10 @@ namespace CovertActionTools.Core.Models.Executables
                 + ClueCategoryDataSize + MonthNamePtrCount * 2;
 
             // Compute offsets within trailing data
-            var intelTxtBytes = DataSegmentHelper.NullTerminatedStringsToBytes(IntelReportTexts);
-            var rankBytes = DataSegmentHelper.NullTerminatedStringsToBytes(RankNames);
-            var evTypeBytes = DataSegmentHelper.NullTerminatedStringsToBytes(EvidenceTypeAbbreviations);
-            var evItemBytes = DataSegmentHelper.NullTerminatedStringsToBytes(EvidenceItemNames);
+            var intelTxtBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(IntelReportTexts, IntelReportTextSizes);
+            var rankBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(RankNames, RankNameSizes);
+            var evTypeBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(EvidenceTypeAbbreviations, EvidenceTypeSizes);
+            var evItemBytes = DataSegmentHelper.NullTerminatedStringsToFixedBytes(EvidenceItemNames, EvidenceItemSizes);
 
             var rankStart = trailingStart + IntelPaddingSize + intelTxtBytes.Length;
             var evTypeStart = rankStart + rankBytes.Length;
@@ -936,43 +1001,69 @@ namespace CovertActionTools.Core.Models.Executables
                 PreStringTableCRuntimeData = PreStringTableCRuntimeData.ToArray(),
                 InitialGameRuntimePrefix = InitialGameRuntimePrefix.ToArray(),
                 InitialGameStrings = InitialGameStrings.Select(s => s).ToArray(),
+                InitialGameStringSizes = InitialGameStringSizes.ToArray(),
                 PreStringTableRastPortData = PreStringTableRastPortData.ToArray(),
                 CgaAnimationData = CgaAnimationData.ToArray(),
                 AnimationInitPrefix = AnimationInitPrefix.ToArray(),
                 HqDisplayStrings = HqDisplayStrings.Select(s => s).ToArray(),
+                HqDisplayStringSizes = HqDisplayStringSizes.ToArray(),
                 CharacterNames = CharacterNames.Select(s => s).ToArray(),
                 PostCharNameData = PostCharNameData.ToArray(),
                 GameStatusLabels = GameStatusLabels.Select(s => s).ToArray(),
+                GameStatusLabelSizes = GameStatusLabelSizes.ToArray(),
                 ScreenLayoutData = ScreenLayoutData.ToArray(),
                 GameplayEventStrings = GameplayEventStrings.Select(s => s).ToArray(),
+                GameplayEventStringSizes = GameplayEventStringSizes.ToArray(),
                 GameplayBinaryLookup = GameplayBinaryLookup.ToArray(),
                 GuardAlertnessLabels = GuardAlertnessLabels.Select(s => s).ToArray(),
+                GuardAlertnessLabelSizes = GuardAlertnessLabelSizes.ToArray(),
                 GameplayEventStrings2 = GameplayEventStrings2.Select(s => s).ToArray(),
+                GameplayEventString2Sizes = GameplayEventString2Sizes.ToArray(),
                 ClueRelationshipPhrases = ClueRelationshipPhrases.Select(s => s).ToArray(),
                 MonthNames = MonthNames.Select(s => s).ToArray(),
                 IntelHeaders = IntelHeaders.Select(s => s).ToArray(),
+                IntelHeaderSizes = IntelHeaderSizes.ToArray(),
                 ClueCategoryData = ClueCategoryData.ToArray(),
                 IntelReportTexts = IntelReportTexts.Select(s => s).ToArray(),
+                IntelReportTextSizes = IntelReportTextSizes.ToArray(),
                 RankNames = RankNames.Select(s => s).ToArray(),
+                RankNameSizes = RankNameSizes.ToArray(),
                 EvidenceTypeAbbreviations = EvidenceTypeAbbreviations.Select(s => s).ToArray(),
+                EvidenceTypeSizes = EvidenceTypeSizes.ToArray(),
                 EvidenceItemNames = EvidenceItemNames.Select(s => s).ToArray(),
+                EvidenceItemSizes = EvidenceItemSizes.ToArray(),
                 InvestigationMethods = InvestigationMethods.Select(s => s).ToArray(),
+                InvestigationMethodSizes = InvestigationMethodSizes.ToArray(),
                 ClueFormattingStrings = ClueFormattingStrings.Select(s => s).ToArray(),
+                ClueFormattingSizes = ClueFormattingSizes.ToArray(),
                 MessageLogStrings = MessageLogStrings.Select(s => s).ToArray(),
+                MessageLogStringSizes = MessageLogStringSizes.ToArray(),
                 HotelMenuStrings = HotelMenuStrings.Select(s => s).ToArray(),
+                HotelMenuStringSizes = HotelMenuStringSizes.ToArray(),
                 DataFilesMenuStrings = DataFilesMenuStrings.Select(s => s).ToArray(),
+                DataFilesMenuStringSizes = DataFilesMenuStringSizes.ToArray(),
                 CiaMenuStrings = CiaMenuStrings.Select(s => s).ToArray(),
+                CiaMenuStringSizes = CiaMenuStringSizes.ToArray(),
                 ActivityWiretapStrings = ActivityWiretapStrings.Select(s => s).ToArray(),
+                ActivityWiretapStringSizes = ActivityWiretapStringSizes.ToArray(),
                 CitySuspectStrings = CitySuspectStrings.Select(s => s).ToArray(),
+                CitySuspectSizes = CitySuspectSizes.ToArray(),
                 CodedMessageStrings = CodedMessageStrings.Select(s => s).ToArray(),
+                CodedMessageStringSizes = CodedMessageStringSizes.ToArray(),
                 SubstitutionTokenStrings = SubstitutionTokenStrings.Select(s => s).ToArray(),
+                SubstitutionTokenStringSizes = SubstitutionTokenStringSizes.ToArray(),
                 CluePreMessageData = CluePreMessageData.ToArray(),
                 ClueNotFoundMessage = ClueNotFoundMessage,
                 CluePostMessageStrings = CluePostMessageStrings.Select(s => s).ToArray(),
+                CluePostMessageSizes = CluePostMessageSizes.ToArray(),
                 BulletinStrings = BulletinStrings.Select(s => s).ToArray(),
+                BulletinStringSizes = BulletinStringSizes.ToArray(),
                 ChronologyStatusStrings = ChronologyStatusStrings.Select(s => s).ToArray(),
+                ChronologyStatusSizes = ChronologyStatusSizes.ToArray(),
                 ResearchAssistantStrings = ResearchAssistantStrings.Select(s => s).ToArray(),
+                ResearchAssistantSizes = ResearchAssistantSizes.ToArray(),
                 SaveLoadStrings = SaveLoadStrings.Select(s => s).ToArray(),
+                SaveLoadSizes = SaveLoadSizes.ToArray(),
                 ExeChainData = ExeChainData.ToArray(),
                 GameStateData = GameStateData.ToArray(),
                 RuntimeTrailingData = RuntimeTrailingData.ToArray()

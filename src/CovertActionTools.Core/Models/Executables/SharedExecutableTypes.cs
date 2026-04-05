@@ -85,6 +85,17 @@ namespace CovertActionTools.Core.Models.Executables
             return strings.ToArray();
         }
 
+        // TODO: Variable-size string serialization requires patching ALL DS-relative references
+        // in the code segment (hardcoded immediate values in MOV/LEA/PUSH instructions).
+        // Without code segment relocation, changing string sizes shifts downstream data and
+        // crashes the game. For now, all non-pointer-table strings use fixed-size slots.
+        // To implement properly:
+        //   1. Scan code segment for instructions with DS-relative immediate operands
+        //   2. Build a relocation map (code offset -> DS offset referenced)
+        //   3. After data segment rebuild, compute deltas and patch code references
+        // Pointer-table-backed strings (CharacterNames, ClueRelPhrases, MonthNames,
+        // RankNames/EvidenceTypes/EvidenceItems) can already resize freely.
+
         public static byte[] NullTerminatedStringsToBytes(string[] strings)
         {
             var parts = new List<byte>();
@@ -371,20 +382,6 @@ namespace CovertActionTools.Core.Models.Executables
         /// <summary>
         /// Serialize control-byte-aware strings back to bytes with fixed slot sizes.
         /// </summary>
-        /// <summary>
-        /// Serialize control-byte-aware strings to variable-size bytes (no slot padding).
-        /// </summary>
-        public static byte[] ControlStringsToBytes(string[] strings)
-        {
-            var parts = new List<byte>();
-            foreach (var s in strings)
-            {
-                parts.AddRange(EncodeControlString(s));
-                parts.Add(0);
-            }
-            return parts.ToArray();
-        }
-
         public static byte[] ControlStringsToFixedBytes(string[] strings, int[] originalByteSizes)
         {
             var parts = new List<byte>();
