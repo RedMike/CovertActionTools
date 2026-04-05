@@ -1077,13 +1077,13 @@ namespace CovertActionTools.Core.Models.Executables
                 TrailingData
             );
 
-            // Patch the RastPort config pointer now that we know the full layout
+            // Patch all RastPort pointer values (CfgPtr and DataOffset cross-references)
+            PatchAllRastPortPointers(result);
+
+            // Patch all pointer tables in PostOrgPreCharNameData
             var postMissionStart = preStringTableBytes.Length + stringTableBytes.Length
                 + postStringPaddingSize + postStringTableBytes.Length + orgAppearanceBytes.Length
                 + Unknown1.Length + missionSetBytes.Length;
-            PatchRastPortConfigPointer(result, postMissionStart, postMissionBytes);
-
-            // Patch all pointer tables in PostOrgPreCharNameData
             var postOrgStart = postMissionStart + postMissionBytes.Length
                 + crimeBytes.Length + Unknown2.Length + orgBytes.Length;
             PatchPostOrgPointers(result, postOrgStart);
@@ -1461,23 +1461,122 @@ namespace CovertActionTools.Core.Models.Executables
         }
 
         /// <summary>
-        /// Patches the RastPort config pointer in the serialized data segment.
-        /// Called after the full data segment layout is known.
+        /// Finds ALL RastPort blocks in the full data segment and patches their
+        /// CfgPtr and DataOffset values to correct DS-absolute addresses.
+        ///
+        /// The raw byte arrays storing RastPort blocks preserve the ORIGINAL DS-absolute
+        /// pointer values from when the data was first parsed. After the data segment is
+        /// reassembled (potentially at different offsets), these pointers are stale.
+        ///
+        /// Strategy: find all blocks, build an old→new address mapping from any pointer
+        /// that still resolves to a known block+2, then patch all remaining stale pointers.
+        /// Literal values (0, 1, 2, 4, 0xFFFF) are left unchanged.
         /// </summary>
-        private static void PatchRastPortConfigPointer(byte[] fullDataSegment, int postMissionStart, byte[] postMissionBytes)
+        private static void PatchAllRastPortPointers(byte[] fullDataSegment)
         {
-            // Find the RastPort signature within postMissionBytes
-            var rpLocalOffset = FindRastPortInRegion(postMissionBytes, 0, postMissionBytes.Length);
-            if (rpLocalOffset < 0) return;
+            // Find all RastPort block positions in the rebuilt data segment
+            var blocks = new List<int>();
+            for (var i = 0; i + RastPortSize + 2 <= fullDataSegment.Length; i++)
+            {
+                if (FindRastPortInRegion(fullDataSegment, i, i + RastPortSize + 2) == i)
+                {
+                    blocks.Add(i);
+                }
+            }
 
-            // The config pointer is at RastPort + 20 bytes
-            var configPtrLocalOffset = rpLocalOffset + RastPortSize;
-            if (configPtrLocalOffset + 1 >= postMissionBytes.Length) return;
+            if (blocks.Count == 0) return;
 
-            // Compute the DS-relative offset of the RastPort + 2 (config portion)
-            var rastPortDsOffset = postMissionStart + rpLocalOffset + 2;
-            fullDataSegment[postMissionStart + configPtrLocalOffset] = (byte)(rastPortDsOffset & 0xFF);
-            fullDataSegment[postMissionStart + configPtrLocalOffset + 1] = (byte)((rastPortDsOffset >> 8) & 0xFF);
+            // Build lookup of new block+2 addresses
+            var newBlockConfigSet = new HashSet<int>(blocks.Select(b => b + 2));
+
+            // Helper: write a uint16 at an offset in the data segment
+            void WriteU16(int offset, ushort value)
+            {
+                fullDataSegment[offset] = (byte)(value & 0xFF);
+                fullDataSegment[offset + 1] = (byte)((value >> 8) & 0xFF);
+            }
+
+            // Helper: check if a value is a literal (not a DS pointer)
+            bool IsLiteral(ushort value) => value <= 4 || value == 0xFFFF;
+
+            foreach (var blockStart in blocks)
+            {
+                // --- Patch CfgPtr (at blockStart + 20) ---
+                var cfgPtrOffset = blockStart + RastPortSize;
+                if (cfgPtrOffset + 1 >= fullDataSegment.Length) continue;
+                var cfgPtr = BitConverter.ToUInt16(fullDataSegment, cfgPtrOffset);
+
+                if (!IsLiteral(cfgPtr))
+                {
+                    if (newBlockConfigSet.Contains(cfgPtr))
+                    {
+                        // Already points to a valid block+2 in the new layout — correct
+                    }
+                    else
+                    {
+                        // Stale DS-absolute pointer. Recalculate as self+2.
+                        // This handles the most common case. For cross-references,
+                        // the target block is in the same raw byte array and at the
+                        // same relative offset, so its new absolute address = its
+                        // position in the assembled segment. But since the old value
+                        // is stale, we can't resolve it. Default to self+2.
+                        WriteU16(cfgPtrOffset, (ushort)(blockStart + 2));
+                    }
+                }
+
+                // --- Patch DataOffset (at blockStart + 0) ---
+                var dataOffset = BitConverter.ToUInt16(fullDataSegment, blockStart);
+
+                if (!IsLiteral(dataOffset))
+                {
+                    if (newBlockConfigSet.Contains(dataOffset))
+                    {
+                        // Already points to a valid block+2 — correct
+                    }
+                    else
+                    {
+                        // Stale DS-absolute pointer to another block's config.
+                        // Find which block it targets by searching for a block whose
+                        // relative position within its storage region matches.
+                        // Since blocks within the same raw byte array maintain their
+                        // relative order, we can match by finding the block at the
+                        // same relative offset from the start of the group.
+
+                        // Find the group (contiguous run of blocks within ~256 bytes)
+                        var groupBlocks = blocks.Where(b =>
+                            Math.Abs(b - blockStart) < 512).OrderBy(b => b).ToList();
+
+                        // Find this block's index in the group
+                        var myIdx = groupBlocks.IndexOf(blockStart);
+
+                        // The DataOffset pointed to another block's config.
+                        // Find which group member it pointed to by checking which
+                        // block+2 was closest to the old value.
+                        var bestMatch = -1;
+                        var bestDist = int.MaxValue;
+                        for (var gi = 0; gi < groupBlocks.Count; gi++)
+                        {
+                            if (gi == myIdx) continue;
+                            var candidateConfig = groupBlocks[gi] + 2;
+                            // The old DataOffset should be close to the candidate's
+                            // old position. Since relative order is preserved, check
+                            // if the candidate was before/after this block in the same way.
+                            var dist = Math.Abs(dataOffset - candidateConfig);
+                            if (dist < bestDist)
+                            {
+                                bestDist = dist;
+                                bestMatch = gi;
+                            }
+                        }
+
+                        if (bestMatch >= 0 && bestDist < 256)
+                        {
+                            WriteU16(blockStart, (ushort)(groupBlocks[bestMatch] + 2));
+                        }
+                        // else: can't resolve, leave as-is
+                    }
+                }
+            }
         }
 
         /// <summary>Finds the start of a RastPort block by scanning for the OriginX=0, OriginY=0, ExtentX=319, ExtentY=199 signature.</summary>
