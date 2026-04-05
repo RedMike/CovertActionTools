@@ -1276,7 +1276,26 @@ public class SelectedExecutableWindow : BaseWindow
             DrawStringArray(game.IntelHeaders, "IntelHdr", game.IntelHeaderSizes);
         }
 
-        DrawReadOnlyInfo("Clue Category Data", $"{game.ClueCategoryData.Length} bytes (48-byte category flags + popcount lookup)");
+        if (ImGui.CollapsingHeader("Clue Category Data"))
+        {
+            ImGui.TextWrapped("48-byte clue category and popcount lookup table (identical across FINAL/TAC/GAME). Bytes 0-15: category bit flags. Bytes 16-47: four 8-entry popcount lookup sub-tables with offsets +0, +1, +1, +2.");
+            for (var i = 0; i < game.ClueCategoryData.Length; i++)
+            {
+                if (i > 0 && i % 8 != 0) ImGui.SameLine();
+                if (i == 0) ImGui.Text("Bit flags:");
+                if (i == 16) ImGui.Text("Popcount +0:");
+                if (i == 24) ImGui.Text("Popcount +1:");
+                if (i == 32) ImGui.Text("Popcount +1:");
+                if (i == 40) ImGui.Text("Popcount +2:");
+                ImGui.SetNextItemWidth(60.0f);
+                var val = (int)game.ClueCategoryData[i];
+                if (ImGui.InputInt($"[{i}]##GameClueCat{i}", ref val))
+                {
+                    game.ClueCategoryData[i] = (byte)Math.Clamp(val, 0, 255);
+                    _pendingState.RecordChange();
+                }
+            }
+        }
 
         if (ImGui.CollapsingHeader("Intel Report Texts"))
         {
