@@ -266,14 +266,31 @@ namespace CovertActionTools.Core.Models.Executables
             return result;
         }
 
+        // All bytes >= 0x80 are color changes: low nibble (byte & 0x0F) = VGA palette index.
+        // High nibble is ignored by the renderer. Named tokens are provided for commonly
+        // used values; all others render as [0xNN] and work identically.
+        // VGA palette: 0=black, 1=blue, 2=green, 3=cyan, 4=red, 5=magenta, 6=brown,
+        //   7=light grey, 8=dark grey, 9=light blue, 10=light green, 11=light cyan,
+        //   12=light red, 13=light magenta*, 14=yellow*, 15=white
+        //   * Colors 13 and 14 are dynamically replaced by player/enemy clothing colors
         private static readonly (byte value, string token, string description)[] ControlByteTokens =
         {
-            (0x80, "[tab]", "Tab / field separator (0x80)"),
-            (0x87, "[color]", "Color change / highlight (0x87)"),
-            (0x89, "[ep]", "EP score separator (0x89)"),
-            (0x8C, "[hdr]", "Section header marker (0x8C)"),
-            (0x8F, "[prompt]", "Input prompt position (0x8F)"),
-            (0xAE, "[bullet]", "Bullet point character (0xAE)"),
+            (0x80, "[black]", "Color 0 — black"),
+            (0x81, "[blue]", "Color 1 — blue"),
+            (0x82, "[green]", "Color 2 — green"),
+            (0x83, "[cyan]", "Color 3 — cyan"),
+            (0x84, "[red]", "Color 4 — red"),
+            (0x85, "[magenta]", "Color 5 — magenta"),
+            (0x86, "[brown]", "Color 6 — brown"),
+            (0x87, "[grey]", "Color 7 — light grey"),
+            (0x88, "[dkgrey]", "Color 8 — dark grey"),
+            (0x89, "[ltblue]", "Color 9 — light blue"),
+            (0x8A, "[ltgreen]", "Color 10 — light green"),
+            (0x8B, "[ltcyan]", "Color 11 — light cyan"),
+            (0x8C, "[ltred]", "Color 12 — light red"),
+            (0x8D, "[ltmagenta]", "Color 13 — light magenta (player clothing color)"),
+            (0x8E, "[yellow]", "Color 14 — yellow (enemy clothing color)"),
+            (0x8F, "[white]", "Color 15 — white"),
         };
 
         /// <summary>
