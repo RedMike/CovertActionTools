@@ -51,14 +51,14 @@ namespace CovertActionTools.Core.Models.Executables
 
             segment.PreNarrativeData = DataSegmentHelper.Slice(dataSegment, 0, NarrativeTextOffset);
 
-            var (narrativeStrings, narrativeSizes) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(dataSegment, NarrativeTextOffset, NarrativeSize);
+            var (narrativeStrings, narrativeSizes) = DataSegmentHelper.ControlStringsFromBytes(dataSegment, NarrativeTextOffset, NarrativeSize);
             segment.ChaseNarrativeStrings = narrativeStrings;
             segment.ChaseNarrativeByteSizes = narrativeSizes;
 
             var narrativeEnd = NarrativeTextOffset + NarrativeSize;
             segment.MidSection = DataSegmentHelper.Slice(dataSegment, narrativeEnd, GameplayStringsOffset - narrativeEnd);
 
-            var (gameplayStrings, gameplaySizes) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(dataSegment, GameplayStringsOffset, GameplayStringsSize);
+            var (gameplayStrings, gameplaySizes) = DataSegmentHelper.ControlStringsFromBytes(dataSegment, GameplayStringsOffset, GameplayStringsSize);
             segment.ChaseGameplayStrings = gameplayStrings;
             segment.ChaseGameplayByteSizes = gameplaySizes;
 
@@ -73,11 +73,11 @@ namespace CovertActionTools.Core.Models.Executables
             return DataSegmentHelper.Concatenate(
                 PreNarrativeData,
                 DataSegmentHelper.PadToSize(
-                    DataSegmentHelper.NullTerminatedStringsToFixedBytes(ChaseNarrativeStrings, ChaseNarrativeByteSizes),
+                    DataSegmentHelper.ControlStringsToFixedBytes(ChaseNarrativeStrings, ChaseNarrativeByteSizes),
                     NarrativeSize),
                 MidSection,
                 DataSegmentHelper.PadToSize(
-                    DataSegmentHelper.NullTerminatedStringsToFixedBytes(ChaseGameplayStrings, ChaseGameplayByteSizes),
+                    DataSegmentHelper.ControlStringsToFixedBytes(ChaseGameplayStrings, ChaseGameplayByteSizes),
                     GameplayStringsSize),
                 TrailingData
             );
