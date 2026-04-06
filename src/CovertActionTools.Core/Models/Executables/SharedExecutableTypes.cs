@@ -380,6 +380,25 @@ namespace CovertActionTools.Core.Models.Executables
         }
 
         /// <summary>
+        /// Parse a fixed number of control-byte-aware null-terminated strings.
+        /// </summary>
+        public static (string[] strings, int[] byteSizes) ControlStringsFromBytes(byte[] data, int offset, int count, bool countBased)
+        {
+            var strings = new string[count];
+            var sizes = new int[count];
+            var pos = offset;
+            for (var i = 0; i < count; i++)
+            {
+                var end = pos;
+                while (end < data.Length && data[end] != 0) end++;
+                strings[i] = DecodeControlString(data, pos, end - pos);
+                sizes[i] = end - pos + 1;
+                pos = end + 1;
+            }
+            return (strings, sizes);
+        }
+
+        /// <summary>
         /// Serialize control-byte-aware strings back to bytes with fixed slot sizes.
         /// </summary>
         public static byte[] ControlStringsToFixedBytes(string[] strings, int[] originalByteSizes)
