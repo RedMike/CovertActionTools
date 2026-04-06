@@ -767,6 +767,9 @@ namespace CovertActionTools.Core.Models.Executables
             segment.RuntimeTrailingData = DataSegmentHelper.Slice(dataSegment, runtimeStart, end - runtimeStart);
         }
 
+        /// <summary>Finds a marker string in the data segment by scanning for its ASCII bytes.
+        /// TODO: this is fragile — if the marker text is edited, the parser breaks. Replace with
+        /// offset-based or structural parsing that doesn't depend on string content.</summary>
         private static int FindMarkerString(byte[] data, int start, int end, string marker)
         {
             var markerBytes = Encoding.ASCII.GetBytes(marker);
