@@ -51,9 +51,9 @@ namespace CovertActionTools.Core.Models.Executables
 
         public static TacRoomTypeRecord FromBytes(byte[] data, int offset)
         {
-            var nameBytes = new byte[NameLength];
-            Array.Copy(data, offset, nameBytes, 0, NameLength);
-            var name = Encoding.ASCII.GetString(nameBytes).TrimEnd('\0');
+            var nameLen = 0;
+            while (nameLen < NameLength && data[offset + nameLen] != 0) nameLen++;
+            var name = DataSegmentHelper.DecodeControlString(data, offset, nameLen);
 
             return new TacRoomTypeRecord
             {
@@ -67,7 +67,7 @@ namespace CovertActionTools.Core.Models.Executables
         public byte[] ToBytes()
         {
             var result = new byte[RecordSize];
-            var nameBytes = Encoding.ASCII.GetBytes(Name);
+            var nameBytes = DataSegmentHelper.EncodeControlString(Name);
             Array.Copy(nameBytes, 0, result, 0, Math.Min(nameBytes.Length, NameLength));
             result[NameLength] = (byte)(SurveillanceQuality & 0xFF);
             result[NameLength + 1] = (byte)((SurveillanceQuality >> 8) & 0xFF);
@@ -143,9 +143,9 @@ namespace CovertActionTools.Core.Models.Executables
 
         public static TacObjectRecord FromBytes(byte[] data, int offset)
         {
-            var nameBytes = new byte[NameLength];
-            Array.Copy(data, offset, nameBytes, 0, NameLength);
-            var name = Encoding.ASCII.GetString(nameBytes).TrimEnd('\0');
+            var nameLen = 0;
+            while (nameLen < NameLength && data[offset + nameLen] != 0) nameLen++;
+            var name = DataSegmentHelper.DecodeControlString(data, offset, nameLen);
 
             return new TacObjectRecord
             {
@@ -160,7 +160,7 @@ namespace CovertActionTools.Core.Models.Executables
         public byte[] ToBytes()
         {
             var result = new byte[RecordSize];
-            var nameBytes = Encoding.ASCII.GetBytes(Name);
+            var nameBytes = DataSegmentHelper.EncodeControlString(Name);
             Array.Copy(nameBytes, 0, result, 0, Math.Min(nameBytes.Length, NameLength));
             WriteUInt16(result, NameLength, SpriteOffset);
             WriteUInt16(result, NameLength + 2, SpritePage);
@@ -584,17 +584,17 @@ namespace CovertActionTools.Core.Models.Executables
 
             #region Parse PreCharNameData sub-sections
 
-            var (cluePhrases, clueSizes) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+            var (cluePhrases, clueSizes) = DataSegmentHelper.ControlStringsFromBytes(
                 dataSegment, CluePhrasesStart, MonthAbbrevsStart - CluePhrasesStart);
             segment.ClueRelationshipPhrases = cluePhrases;
             segment.CluePhraseSizes = clueSizes;
 
-            var (months, monthSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+            var (months, monthSzs) = DataSegmentHelper.ControlStringsFromBytes(
                 dataSegment, MonthAbbrevsStart, IntelHeadersStart - MonthAbbrevsStart);
             segment.MonthAbbreviations = months;
             segment.MonthSizes = monthSzs;
 
-            var (intelHdrs, intelHdrSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+            var (intelHdrs, intelHdrSzs) = DataSegmentHelper.ControlStringsFromBytes(
                 dataSegment, IntelHeadersStart, CluePhraseTableOffset - IntelHeadersStart);
             segment.IntelHeaders = intelHdrs;
             segment.IntelHeaderSizes = intelHdrSzs;
@@ -604,29 +604,29 @@ namespace CovertActionTools.Core.Models.Executables
             segment.MonthPointerTable = DataSegmentHelper.Slice(dataSegment, MonthTableOffset, MonthTableSize);
             segment.IntelMidPadding = DataSegmentHelper.Slice(dataSegment, IntelPaddingOffset, IntelPaddingSize);
 
-            var (intelTexts, intelTextSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+            var (intelTexts, intelTextSzs) = DataSegmentHelper.ControlStringsFromBytes(
                 dataSegment, IntelTextsStart, RankNamesStart - IntelTextsStart);
             segment.IntelReportTexts = intelTexts;
             segment.IntelReportTextSizes = intelTextSzs;
 
-            var (ranks, rankSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+            var (ranks, rankSzs) = DataSegmentHelper.ControlStringsFromBytes(
                 dataSegment, RankNamesStart, EvidenceTypesStart - RankNamesStart);
             segment.RankNames = ranks;
             segment.RankNameSizes = rankSzs;
 
-            var (evTypes, evTypeSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+            var (evTypes, evTypeSzs) = DataSegmentHelper.ControlStringsFromBytes(
                 dataSegment, EvidenceTypesStart, EvidenceItemsStart - EvidenceTypesStart);
             segment.EvidenceTypeAbbreviations = evTypes;
             segment.EvidenceTypeSizes = evTypeSzs;
 
-            var (evItems, evItemSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+            var (evItems, evItemSzs) = DataSegmentHelper.ControlStringsFromBytes(
                 dataSegment, EvidenceItemsStart, EvidenceTableOffset - EvidenceItemsStart);
             segment.EvidenceItemNames = evItems;
             segment.EvidenceItemSizes = evItemSzs;
 
             segment.EvidenceRankPointerTable = DataSegmentHelper.Slice(dataSegment, EvidenceTableOffset, EvidenceTableSize);
 
-            var (invMethods, invMethodSzs) = DataSegmentHelper.AllNullTerminatedStringsWithSizesFromBytes(
+            var (invMethods, invMethodSzs) = DataSegmentHelper.ControlStringsFromBytes(
                 dataSegment, InvestMethodsStart, ClueSystemStart - InvestMethodsStart);
             segment.InvestigationMethods = invMethods;
             segment.InvestigationMethodSizes = invMethodSzs;
@@ -700,19 +700,19 @@ namespace CovertActionTools.Core.Models.Executables
 
             // Serialize PreCharNameData sub-sections
             var preCharNameBytes = DataSegmentHelper.Concatenate(
-                DataSegmentHelper.NullTerminatedStringsToFixedBytes(ClueRelationshipPhrases, CluePhraseSizes),
-                DataSegmentHelper.NullTerminatedStringsToFixedBytes(MonthAbbreviations, MonthSizes),
-                DataSegmentHelper.NullTerminatedStringsToFixedBytes(IntelHeaders, IntelHeaderSizes),
+                DataSegmentHelper.ControlStringsToFixedBytes(ClueRelationshipPhrases, CluePhraseSizes),
+                DataSegmentHelper.ControlStringsToFixedBytes(MonthAbbreviations, MonthSizes),
+                DataSegmentHelper.ControlStringsToFixedBytes(IntelHeaders, IntelHeaderSizes),
                 CluePhrasePointerTable,
                 ClueCategoryData,
                 MonthPointerTable,
                 IntelMidPadding,
-                DataSegmentHelper.NullTerminatedStringsToFixedBytes(IntelReportTexts, IntelReportTextSizes),
-                DataSegmentHelper.NullTerminatedStringsToFixedBytes(RankNames, RankNameSizes),
-                DataSegmentHelper.NullTerminatedStringsToFixedBytes(EvidenceTypeAbbreviations, EvidenceTypeSizes),
-                DataSegmentHelper.NullTerminatedStringsToFixedBytes(EvidenceItemNames, EvidenceItemSizes),
+                DataSegmentHelper.ControlStringsToFixedBytes(IntelReportTexts, IntelReportTextSizes),
+                DataSegmentHelper.ControlStringsToFixedBytes(RankNames, RankNameSizes),
+                DataSegmentHelper.ControlStringsToFixedBytes(EvidenceTypeAbbreviations, EvidenceTypeSizes),
+                DataSegmentHelper.ControlStringsToFixedBytes(EvidenceItemNames, EvidenceItemSizes),
                 EvidenceRankPointerTable,
-                DataSegmentHelper.NullTerminatedStringsToFixedBytes(InvestigationMethods, InvestigationMethodSizes),
+                DataSegmentHelper.ControlStringsToFixedBytes(InvestigationMethods, InvestigationMethodSizes),
                 ClueSystemData
             );
 

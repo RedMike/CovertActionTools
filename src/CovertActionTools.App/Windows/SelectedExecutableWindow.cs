@@ -865,20 +865,9 @@ public class SelectedExecutableWindow : BaseWindow
             }
         }
 
-        if (ImGui.CollapsingHeader("Efficiency Report Strings (tentative)"))
+        if (ImGui.CollapsingHeader("Efficiency Report Strings"))
         {
-            ImGui.TextWrapped("Efficiency report display strings. Contains 0x89 bytes whose purpose is unconfirmed — the text renderer stops at bytes >= 0x80 but the full call chain is not yet traced. See scratch docs for investigation notes.");
-            for (var i = 0; i < final.EfficiencyReportStrings.Length; i++)
-            {
-                ImGui.PushID($"EffRpt_{i}");
-                var s = final.EfficiencyReportStrings[i];
-                // Display with 0x89 shown as \x89 for readability
-                var display = s.Replace("\x89", "\\x89");
-                ImGui.TextDisabled($"[{i}]");
-                ImGui.SameLine();
-                ImGui.Text(display);
-                ImGui.PopID();
-            }
+            DrawStringArray(final.EfficiencyReportStrings, "EffRpt", final.EfficiencyReportStringSizes);
         }
 
         if (ImGui.CollapsingHeader("Character Names"))
@@ -1156,9 +1145,114 @@ public class SelectedExecutableWindow : BaseWindow
 
     private void DrawGameData(GameDataSegment game)
     {
+        if (ImGui.CollapsingHeader("Initial Game Strings"))
+        {
+            DrawStringArray(game.InitialGameStrings, "InitStr", game.InitialGameStringSizes);
+        }
+
+        if (ImGui.CollapsingHeader("CGA Animation Data"))
+        {
+            ImGui.TextWrapped($"2bpp CGA sprite data + CGA-to-VGA palette ({game.CgaAnimationData.Length} bytes).");
+            if (game.CgaAnimationData.Length > 0)
+            {
+                var hexLines = new System.Text.StringBuilder();
+                for (var i = 0; i < game.CgaAnimationData.Length; i += 16)
+                {
+                    var lineLen = Math.Min(16, game.CgaAnimationData.Length - i);
+                    hexLines.Append($"{i:X4}: ");
+                    for (var j = 0; j < lineLen; j++)
+                        hexLines.Append($"{game.CgaAnimationData[i + j]:X2} ");
+                    for (var j = lineLen; j < 16; j++)
+                        hexLines.Append("   ");
+                    hexLines.Append(" ");
+                    for (var j = 0; j < lineLen; j++)
+                    {
+                        var b = game.CgaAnimationData[i + j];
+                        hexLines.Append(b >= 0x20 && b <= 0x7E ? (char)b : '.');
+                    }
+                    hexLines.AppendLine();
+                }
+                var hexText = hexLines.ToString();
+                ImGui.InputTextMultiline("##GameCgaHex", ref hexText, (uint)hexText.Length + 1,
+                    new System.Numerics.Vector2(ImGui.GetContentRegionAvail().X - 20, 200.0f),
+                    ImGuiInputTextFlags.ReadOnly);
+            }
+        }
+
+        if (ImGui.CollapsingHeader("HQ Display Strings"))
+        {
+            DrawStringArray(game.HqDisplayStrings, "HqStr", game.HqDisplayStringSizes);
+        }
+
         if (ImGui.CollapsingHeader("Character Names"))
         {
             DrawStringArray(game.CharacterNames, "CharName");
+        }
+
+        if (ImGui.CollapsingHeader("Game Status Labels"))
+        {
+            DrawStringArray(game.GameStatusLabels, "StatusLbl", game.GameStatusLabelSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Screen Layout Data"))
+        {
+            ImGui.TextWrapped($"Draw commands for the city/HQ screen UI ({game.ScreenLayoutData.Length} bytes). Flag: 0=line, 1=filled rect, 2=special, 0xFFFF=terminator.");
+            if (game.ScreenLayoutData.Length >= 12 && ImGui.BeginTable("ScreenLayout", 7, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY, new System.Numerics.Vector2(0, 300)))
+            {
+                ImGui.TableSetupColumn("#", ImGuiTableColumnFlags.WidthFixed, 30);
+                ImGui.TableSetupColumn("Flag", ImGuiTableColumnFlags.WidthFixed, 80);
+                ImGui.TableSetupColumn("X1", ImGuiTableColumnFlags.WidthFixed, 80);
+                ImGui.TableSetupColumn("Y1", ImGuiTableColumnFlags.WidthFixed, 80);
+                ImGui.TableSetupColumn("X2", ImGuiTableColumnFlags.WidthFixed, 80);
+                ImGui.TableSetupColumn("Y2", ImGuiTableColumnFlags.WidthFixed, 80);
+                ImGui.TableSetupColumn("Color", ImGuiTableColumnFlags.WidthFixed, 80);
+                ImGui.TableHeadersRow();
+
+                var recordCount = game.ScreenLayoutData.Length / 12;
+                for (var i = 0; i < recordCount; i++)
+                {
+                    ImGui.PushID($"SL_{i}");
+                    ImGui.TableNextRow();
+                    ImGui.TableNextColumn();
+                    ImGui.Text($"{i}");
+
+                    for (var f = 0; f < 6; f++)
+                    {
+                        ImGui.TableNextColumn();
+                        var off = i * 12 + f * 2;
+                        var val = (int)BitConverter.ToUInt16(game.ScreenLayoutData, off);
+                        var newVal = ImGuiExtensions.Input($"##{f}", val, width: 75);
+                        if (newVal != null)
+                        {
+                            BitConverter.GetBytes((ushort)newVal.Value).CopyTo(game.ScreenLayoutData, off);
+                            _pendingState.RecordChange();
+                        }
+                    }
+                    ImGui.PopID();
+                }
+                ImGui.EndTable();
+            }
+        }
+
+        if (ImGui.CollapsingHeader("Gameplay Event Strings"))
+        {
+            DrawStringArray(game.GameplayEventStrings, "GE1", game.GameplayEventStringSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Gameplay Binary Lookup"))
+        {
+            ImGui.TextWrapped($"{game.GameplayBinaryLookup.Length} bytes — between travel menu and guard alertness strings.");
+            DrawByteArrayEditable(game.GameplayBinaryLookup, "GameBinLookup");
+        }
+
+        if (ImGui.CollapsingHeader("Guard Alertness Labels"))
+        {
+            DrawStringArray(game.GuardAlertnessLabels, "Alert", game.GuardAlertnessLabelSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Gameplay Event Strings (Part 2)"))
+        {
+            DrawStringArray(game.GameplayEventStrings2, "GE2", game.GameplayEventString2Sizes);
         }
 
         if (ImGui.CollapsingHeader("Clue Relationship Phrases"))
@@ -1166,21 +1260,153 @@ public class SelectedExecutableWindow : BaseWindow
             DrawStringArray(game.ClueRelationshipPhrases, "CluePhr");
         }
 
-        DrawReadOnlyInfo("Clue Category Data", $"{game.ClueCategoryData.Length} bytes (48-byte category flags + popcount lookup)");
-
         if (ImGui.CollapsingHeader("Month Names"))
         {
             DrawStringArray(game.MonthNames, "Month");
         }
 
-        DrawRawSectionSizes("Raw Sections", new[]
+        if (ImGui.CollapsingHeader("Intel Headers"))
         {
-            ("PreCharNameData", game.PreCharNameData.Length),
-            ("PostCharNameData", game.PostCharNameData.Length),
-            ("MidSectionPreClue", game.MidSectionPreClue.Length),
-            ("MidSectionPostMonth", game.MidSectionPostMonth.Length),
-            ("TrailingData", game.TrailingData.Length)
-        });
+            DrawStringArray(game.IntelHeaders, "IntelHdr", game.IntelHeaderSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Clue Category Data"))
+        {
+            ImGui.TextWrapped("48-byte clue category and popcount lookup table (identical across FINAL/TAC/GAME). Bytes 0-15: category bit flags. Bytes 16-47: four 8-entry popcount lookup sub-tables with offsets +0, +1, +1, +2.");
+            for (var i = 0; i < game.ClueCategoryData.Length; i++)
+            {
+                if (i > 0 && i % 8 != 0) ImGui.SameLine();
+                if (i == 0) ImGui.Text("Bit flags:");
+                if (i == 16) ImGui.Text("Popcount +0:");
+                if (i == 24) ImGui.Text("Popcount +1:");
+                if (i == 32) ImGui.Text("Popcount +1:");
+                if (i == 40) ImGui.Text("Popcount +2:");
+                ImGui.SetNextItemWidth(60.0f);
+                var val = (int)game.ClueCategoryData[i];
+                if (ImGui.InputInt($"[{i}]##GameClueCat{i}", ref val))
+                {
+                    game.ClueCategoryData[i] = (byte)Math.Clamp(val, 0, 255);
+                    _pendingState.RecordChange();
+                }
+            }
+        }
+
+        if (ImGui.CollapsingHeader("Intel Report Texts"))
+        {
+            DrawStringArray(game.IntelReportTexts, "IntelTxt", game.IntelReportTextSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Rank Names"))
+        {
+            DrawStringArray(game.RankNames, "Rank", game.RankNameSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Evidence Type Abbreviations"))
+        {
+            DrawStringArray(game.EvidenceTypeAbbreviations, "EvType", game.EvidenceTypeSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Evidence Item Names"))
+        {
+            DrawStringArray(game.EvidenceItemNames, "EvItem", game.EvidenceItemSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Investigation Methods"))
+        {
+            DrawStringArray(game.InvestigationMethods, "InvMeth", game.InvestigationMethodSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Message Log Strings"))
+        {
+            DrawStringArray(game.MessageLogStrings, "MsgLog", game.MessageLogStringSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Hotel Menu"))
+        {
+            DrawStringArray(game.HotelMenuStrings, "Hotel", game.HotelMenuStringSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Data Files Menu"))
+        {
+            DrawStringArray(game.DataFilesMenuStrings, "DataFiles", game.DataFilesMenuStringSizes);
+        }
+
+        if (ImGui.CollapsingHeader("CIA Building Menus"))
+        {
+            DrawStringArray(game.CiaMenuStrings, "CIA", game.CiaMenuStringSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Activity/Wiretap Display"))
+        {
+            DrawStringArray(game.ActivityWiretapStrings, "ActWire", game.ActivityWiretapStringSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Coded Message Display"))
+        {
+            DrawStringArray(game.CodedMessageStrings, "Coded", game.CodedMessageStringSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Substitution Tokens"))
+        {
+            DrawStringArray(game.SubstitutionTokenStrings, "SubToken", game.SubstitutionTokenStringSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Bulletin/Surveillance Reports"))
+        {
+            DrawStringArray(game.BulletinStrings, "Bulletin", game.BulletinStringSizes);
+        }
+
+        if (ImGui.CollapsingHeader("RastPort Blocks (Pre-String)"))
+        {
+            DrawRastPortBlocks(game.PreStringTableRastPortData, "GamePreRP");
+        }
+
+        if (ImGui.CollapsingHeader("Game State (PANI + RastPort)"))
+        {
+            DrawRastPortBlocks(game.GameStateData, "GameStateRP");
+        }
+
+        if (ImGui.CollapsingHeader("Clue Formatting Strings"))
+        {
+            DrawStringArray(game.ClueFormattingStrings, "ClueFmt", game.ClueFormattingSizes);
+        }
+
+        if (ImGui.CollapsingHeader("City/Suspect Display"))
+        {
+            DrawStringArray(game.CitySuspectStrings, "CitySus", game.CitySuspectSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Clue Not Found Message"))
+        {
+            var msg = game.ClueNotFoundMessage;
+            var newMsg = ImGuiExtensions.Input("##ClueNotFound", msg, 256);
+            if (newMsg != null)
+            {
+                game.ClueNotFoundMessage = newMsg;
+                _pendingState.RecordChange();
+            }
+            ImGui.TextDisabled("Displayed when a text file lookup fails.");
+        }
+
+        if (ImGui.CollapsingHeader("Clue Tag+Filename Pairs"))
+        {
+            DrawStringArray(game.CluePostMessageStrings, "CluePost", game.CluePostMessageSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Chronology/Status Display"))
+        {
+            DrawStringArray(game.ChronologyStatusStrings, "Chrono", game.ChronologyStatusSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Research Assistant"))
+        {
+            DrawStringArray(game.ResearchAssistantStrings, "Research", game.ResearchAssistantSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Save/Load System"))
+        {
+            DrawStringArray(game.SaveLoadStrings, "SaveLoad", game.SaveLoadSizes);
+        }
     }
 
     #endregion
@@ -1354,18 +1580,23 @@ public class SelectedExecutableWindow : BaseWindow
         {
             ImGui.PushID($"{idPrefix}_{i}");
             var contentSize = ImGui.GetContentRegionAvail();
-            // Max editable length = original byte size minus null terminator
-            var maxLen = byteSizes != null && i < byteSizes.Length ? byteSizes[i] - 1 : 256;
-            if (maxLen < 1) maxLen = 1;
+            // Max character count = byte slot size minus null terminator
+            var maxChars = byteSizes != null && i < byteSizes.Length ? byteSizes[i] - 1 : 256;
+            if (maxChars < 1) maxChars = 1;
+            // ImGui buffer size = max chars + null terminator
+            var bufSize = maxChars + 1;
+
+            var label = byteSizes != null && i < byteSizes.Length
+                ? $"[{i}] (max {maxChars})"
+                : $"[{i}]";
 
             if (strings[i].Contains('\n'))
             {
-                // Multiline for strings with newlines
                 var val = strings[i];
                 var origVal = val;
-                ImGui.InputTextMultiline($"[{i}]", ref val, (uint)maxLen + 1,
+                ImGui.InputTextMultiline(label, ref val, (uint)bufSize,
                     new Vector2(contentSize.X - 80, 80.0f));
-                if (val != origVal && val.Length <= maxLen)
+                if (val != origVal && val.Length <= maxChars)
                 {
                     strings[i] = val;
                     _pendingState.RecordChange();
@@ -1373,8 +1604,8 @@ public class SelectedExecutableWindow : BaseWindow
             }
             else
             {
-                var newVal = ImGuiExtensions.Input($"[{i}]", strings[i], maxLen, width: (int)contentSize.X - 80);
-                if (newVal != null)
+                var newVal = ImGuiExtensions.Input(label, strings[i], bufSize, width: (int)contentSize.X - 80);
+                if (newVal != null && newVal.Length <= maxChars)
                 {
                     strings[i] = newVal;
                     _pendingState.RecordChange();

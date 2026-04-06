@@ -64,7 +64,7 @@ namespace CovertActionTools.Core.Models.Executables
             {
                 var end = pos;
                 while (end < data.Length && data[end] != 0) end++;
-                result[i] = Encoding.ASCII.GetString(data, pos, end - pos);
+                result[i] = DecodeControlString(data, pos, end - pos);
                 pos = end + 1; // skip null terminator
             }
             return result;
@@ -79,18 +79,29 @@ namespace CovertActionTools.Core.Models.Executables
             {
                 var strEnd = pos;
                 while (strEnd < end && data[strEnd] != 0) strEnd++;
-                strings.Add(Encoding.ASCII.GetString(data, pos, strEnd - pos));
+                strings.Add(DecodeControlString(data, pos, strEnd - pos));
                 pos = strEnd + 1;
             }
             return strings.ToArray();
         }
+
+        // TODO: Variable-size string serialization requires patching ALL DS-relative references
+        // in the code segment (hardcoded immediate values in MOV/LEA/PUSH instructions).
+        // Without code segment relocation, changing string sizes shifts downstream data and
+        // crashes the game. For now, all non-pointer-table strings use fixed-size slots.
+        // To implement properly:
+        //   1. Scan code segment for instructions with DS-relative immediate operands
+        //   2. Build a relocation map (code offset -> DS offset referenced)
+        //   3. After data segment rebuild, compute deltas and patch code references
+        // Pointer-table-backed strings (CharacterNames, ClueRelPhrases, MonthNames,
+        // RankNames/EvidenceTypes/EvidenceItems) can already resize freely.
 
         public static byte[] NullTerminatedStringsToBytes(string[] strings)
         {
             var parts = new List<byte>();
             foreach (var s in strings)
             {
-                parts.AddRange(Encoding.ASCII.GetBytes(s));
+                parts.AddRange(DataSegmentHelper.EncodeControlString(s));
                 parts.Add(0);
             }
             return parts.ToArray();
@@ -105,7 +116,7 @@ namespace CovertActionTools.Core.Models.Executables
             {
                 var end = pos;
                 while (end < data.Length && data[end] != 0) end++;
-                strings[i] = Encoding.ASCII.GetString(data, pos, end - pos);
+                strings[i] = DecodeControlString(data, pos, end - pos);
                 sizes[i] = end - pos + 1; // string length + null terminator
                 pos = end + 1;
             }
@@ -122,7 +133,7 @@ namespace CovertActionTools.Core.Models.Executables
             {
                 var strEnd = pos;
                 while (strEnd < end && data[strEnd] != 0) strEnd++;
-                strings.Add(Encoding.ASCII.GetString(data, pos, strEnd - pos));
+                strings.Add(DecodeControlString(data, pos, strEnd - pos));
                 sizes.Add(strEnd - pos + 1);
                 pos = strEnd + 1;
             }
@@ -136,7 +147,7 @@ namespace CovertActionTools.Core.Models.Executables
             {
                 var slotSize = i < originalByteSizes.Length ? originalByteSizes[i] : strings[i].Length + 1;
                 var slot = new byte[slotSize];
-                var strBytes = Encoding.ASCII.GetBytes(strings[i]);
+                var strBytes = EncodeControlString(strings[i]);
                 Array.Copy(strBytes, 0, slot, 0, Math.Min(strBytes.Length, slotSize - 1));
                 parts.AddRange(slot);
             }
@@ -157,7 +168,7 @@ namespace CovertActionTools.Core.Models.Executables
             var pos = 0;
             foreach (var s in strings)
             {
-                var bytes = Encoding.ASCII.GetBytes(s);
+                var bytes = EncodeControlString(s);
                 var toCopy = Math.Min(bytes.Length, size - pos);
                 if (toCopy > 0)
                 {
@@ -184,7 +195,7 @@ namespace CovertActionTools.Core.Models.Executables
             for (var i = 0; i < strings.Length; i++)
             {
                 pointers[i] = (ushort)pos;
-                pos += Encoding.ASCII.GetByteCount(strings[i]) + 1; // string + null terminator
+                pos += EncodeControlString(strings[i]).Length + 1; // string + null terminator
             }
             return pointers;
         }
@@ -231,10 +242,197 @@ namespace CovertActionTools.Core.Models.Executables
                 }
                 var end = (int)ptr;
                 while (end < dataSegment.Length && dataSegment[end] != 0) end++;
-                result[i] = Encoding.ASCII.GetString(dataSegment, ptr, end - ptr);
+                result[i] = DataSegmentHelper.DecodeControlString(dataSegment, (int)ptr, end - (int)ptr);
             }
             return result;
         }
+
+        #region Control-byte string encoding
+
+        /// <summary>
+        /// Named control byte tokens used in the game's text rendering engine.
+        /// Bytes >= 0x80 are special formatting codes; these provide human-readable
+        /// display names for editing.
+        /// </summary>
+        /// <summary>
+        /// Returns the list of known control byte tokens with descriptions, for UI display.
+        /// </summary>
+        public static (string token, string description)[] GetControlByteTokenInfo()
+        {
+            var result = new (string, string)[ControlByteTokens.Length + 1];
+            for (var i = 0; i < ControlByteTokens.Length; i++)
+                result[i] = (ControlByteTokens[i].token, ControlByteTokens[i].description);
+            result[ControlByteTokens.Length] = ("[0xNN]", "Arbitrary hex byte value");
+            return result;
+        }
+
+        // All bytes >= 0x80 are color changes: low nibble (byte & 0x0F) = VGA palette index.
+        // High nibble is ignored by the renderer. Named tokens are provided for commonly
+        // used values; all others render as [0xNN] and work identically.
+        // VGA palette: 0=black, 1=blue, 2=green, 3=cyan, 4=red, 5=magenta, 6=brown,
+        //   7=light grey, 8=dark grey, 9=light blue, 10=light green, 11=light cyan,
+        //   12=light red, 13=light magenta*, 14=yellow*, 15=white
+        //   * Colors 13 and 14 are dynamically replaced by player/enemy clothing colors
+        private static readonly (byte value, string token, string description)[] ControlByteTokens =
+        {
+            (0x80, "[black]", "Color 0 — black"),
+            (0x81, "[blue]", "Color 1 — blue"),
+            (0x82, "[green]", "Color 2 — green"),
+            (0x83, "[cyan]", "Color 3 — cyan"),
+            (0x84, "[red]", "Color 4 — red"),
+            (0x85, "[magenta]", "Color 5 — magenta"),
+            (0x86, "[brown]", "Color 6 — brown"),
+            (0x87, "[grey]", "Color 7 — light grey"),
+            (0x88, "[dkgrey]", "Color 8 — dark grey"),
+            (0x89, "[ltblue]", "Color 9 — light blue"),
+            (0x8A, "[ltgreen]", "Color 10 — light green"),
+            (0x8B, "[ltcyan]", "Color 11 — light cyan"),
+            (0x8C, "[ltred]", "Color 12 — light red"),
+            (0x8D, "[ltmagenta]", "Color 13 — light magenta (player clothing color)"),
+            (0x8E, "[yellow]", "Color 14 — yellow (enemy clothing color)"),
+            (0x8F, "[white]", "Color 15 — white"),
+        };
+
+        /// <summary>
+        /// Decode a byte array containing control bytes (0x80+) into a string with
+        /// human-readable tokens (e.g. [tab], [b]). Preserves all bytes faithfully
+        /// for round-trip via EncodeControlString.
+        /// </summary>
+        public static string DecodeControlString(byte[] data, int offset, int length)
+        {
+            var sb = new StringBuilder();
+            for (var i = offset; i < offset + length; i++)
+            {
+                var b = data[i];
+                if (b == 0) break;
+                if (b < 0x80)
+                {
+                    sb.Append((char)b);
+                }
+                else
+                {
+                    var found = false;
+                    for (var t = 0; t < ControlByteTokens.Length; t++)
+                    {
+                        if (ControlByteTokens[t].value == b)
+                        {
+                            sb.Append(ControlByteTokens[t].token);
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (!found) sb.Append($"[0x{b:X2}]");
+                }
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Encode a string containing control tokens (e.g. [tab], [b], [0xAB]) back
+        /// into a byte array. Inverse of DecodeControlString.
+        /// </summary>
+        public static byte[] EncodeControlString(string text)
+        {
+            var result = new List<byte>();
+            var i = 0;
+            while (i < text.Length)
+            {
+                if (text[i] == '[')
+                {
+                    var end = text.IndexOf(']', i);
+                    if (end > i)
+                    {
+                        var token = text.Substring(i, end - i + 1);
+                        var matched = false;
+                        for (var t = 0; t < ControlByteTokens.Length; t++)
+                        {
+                            if (ControlByteTokens[t].token == token)
+                            {
+                                result.Add(ControlByteTokens[t].value);
+                                matched = true;
+                                break;
+                            }
+                        }
+                        if (!matched && token.StartsWith("[0x") && token.Length == 6)
+                        {
+                            if (byte.TryParse(token.Substring(3, 2), System.Globalization.NumberStyles.HexNumber, null, out var val))
+                            {
+                                result.Add(val);
+                                matched = true;
+                            }
+                        }
+                        if (matched)
+                        {
+                            i = end + 1;
+                            continue;
+                        }
+                    }
+                }
+                result.Add((byte)text[i]);
+                i++;
+            }
+            return result.ToArray();
+        }
+
+        /// <summary>
+        /// Parse a byte region as control-byte-aware null-terminated strings.
+        /// Returns strings with control tokens and their original byte sizes.
+        /// </summary>
+        public static (string[] strings, int[] byteSizes) ControlStringsFromBytes(byte[] data, int offset, int length)
+        {
+            var strings = new List<string>();
+            var sizes = new List<int>();
+            var pos = offset;
+            var end = offset + length;
+            while (pos < end)
+            {
+                var strEnd = pos;
+                while (strEnd < end && data[strEnd] != 0) strEnd++;
+                strings.Add(DecodeControlString(data, pos, strEnd - pos));
+                sizes.Add(strEnd - pos + 1);
+                pos = strEnd + 1;
+            }
+            return (strings.ToArray(), sizes.ToArray());
+        }
+
+        /// <summary>
+        /// Parse a fixed number of control-byte-aware null-terminated strings.
+        /// </summary>
+        public static (string[] strings, int[] byteSizes) ControlStringsFromBytes(byte[] data, int offset, int count, bool countBased)
+        {
+            var strings = new string[count];
+            var sizes = new int[count];
+            var pos = offset;
+            for (var i = 0; i < count; i++)
+            {
+                var end = pos;
+                while (end < data.Length && data[end] != 0) end++;
+                strings[i] = DecodeControlString(data, pos, end - pos);
+                sizes[i] = end - pos + 1;
+                pos = end + 1;
+            }
+            return (strings, sizes);
+        }
+
+        /// <summary>
+        /// Serialize control-byte-aware strings back to bytes with fixed slot sizes.
+        /// </summary>
+        public static byte[] ControlStringsToFixedBytes(string[] strings, int[] originalByteSizes)
+        {
+            var parts = new List<byte>();
+            for (var i = 0; i < strings.Length; i++)
+            {
+                var encoded = EncodeControlString(strings[i]);
+                var slotSize = i < originalByteSizes.Length ? originalByteSizes[i] : encoded.Length + 1;
+                var slot = new byte[slotSize];
+                Array.Copy(encoded, 0, slot, 0, Math.Min(encoded.Length, slotSize - 1));
+                parts.AddRange(slot);
+            }
+            return parts.ToArray();
+        }
+
+        #endregion
     }
 
     /// <summary>

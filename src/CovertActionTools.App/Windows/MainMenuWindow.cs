@@ -17,7 +17,8 @@ public class MainMenuWindow : BaseWindow
     private readonly EditorSettingsState _editorSettingsState;
     private readonly ConfirmDialogueState _confirmDialogueState;
     private readonly PublishPackageState _publishPackageState;
-    
+    private bool _showStringTagsHelp;
+
     public MainMenuWindow(ILogger<MainMenuWindow> logger, MainEditorState mainEditorState, ParsePublishedState parsePublishedState, LoadPackageState loadPackageState, SavePackageState savePackageState, EditorSettingsState editorSettingsState, ConfirmDialogueState confirmDialogueState, PublishPackageState publishPackageState)
     {
         _logger = logger;
@@ -47,7 +48,13 @@ public class MainMenuWindow : BaseWindow
         {
             DrawNotLoadedMenu();
         }
+        DrawHelpMenu();
         ImGui.EndMainMenuBar();
+
+        if (_showStringTagsHelp)
+        {
+            DrawStringTagsWindow();
+        }
     }
 
     private void DrawLoadedMenus()
@@ -183,6 +190,63 @@ public class MainMenuWindow : BaseWindow
             }
             ImGui.EndMenu();
         }
+    }
+
+    private void DrawHelpMenu()
+    {
+        if (ImGui.BeginMenu("Help"))
+        {
+            if (ImGui.MenuItem("String Tags", null, _showStringTagsHelp))
+            {
+                _showStringTagsHelp = !_showStringTagsHelp;
+            }
+            ImGui.EndMenu();
+        }
+    }
+
+    private void DrawStringTagsWindow()
+    {
+        ImGui.SetNextWindowPos(new System.Numerics.Vector2(ImGui.GetIO().DisplaySize.X - 220, 30), ImGuiCond.FirstUseEver);
+        ImGui.SetNextWindowSize(new System.Numerics.Vector2(200, 0), ImGuiCond.FirstUseEver);
+        if (ImGui.Begin("String Tags", ref _showStringTagsHelp))
+        {
+            if (ImGui.BeginTable("TagsTable", 2, ImGuiTableFlags.RowBg))
+            {
+                ImGui.TableSetupColumn("Tag", ImGuiTableColumnFlags.WidthFixed, 90);
+                ImGui.TableSetupColumn("Color");
+                ImGui.TableHeadersRow();
+                var tags = new[]
+                {
+                    ("[black]", "Black"),
+                    ("[blue]", "Blue"),
+                    ("[green]", "Green"),
+                    ("[cyan]", "Cyan"),
+                    ("[red]", "Red"),
+                    ("[magenta]", "Magenta"),
+                    ("[brown]", "Brown"),
+                    ("[grey]", "Light grey"),
+                    ("[dkgrey]", "Dark grey"),
+                    ("[ltblue]", "Light blue"),
+                    ("[ltgreen]", "Light green"),
+                    ("[ltcyan]", "Light cyan"),
+                    ("[ltred]", "Light red"),
+                    ("[ltmagenta]", "Player replacement colour in TAC"),
+                    ("[yellow]", "Enemy replacement colour in TAC"),
+                    ("[white]", "White"),
+                    ("[0xNN]", "Hex byte"),
+                };
+                foreach (var (tag, desc) in tags)
+                {
+                    ImGui.TableNextRow();
+                    ImGui.TableNextColumn();
+                    ImGui.Text(tag);
+                    ImGui.TableNextColumn();
+                    ImGui.Text(desc);
+                }
+                ImGui.EndTable();
+            }
+        }
+        ImGui.End();
     }
 
     private void DrawLoadedInfo()
