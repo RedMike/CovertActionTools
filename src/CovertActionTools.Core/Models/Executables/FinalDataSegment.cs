@@ -109,7 +109,7 @@ namespace CovertActionTools.Core.Models.Executables
             Array.Copy(data, offset, nameBytes, 0, NameLength);
             var nameEnd = Array.IndexOf(nameBytes, (byte)0);
             if (nameEnd < 0) nameEnd = NameLength;
-            var name = Encoding.ASCII.GetString(nameBytes, 0, nameEnd);
+            var name = DataSegmentHelper.DecodeControlString(nameBytes, 0, nameEnd);
 
             // Extract 14 strings: 7 slots x 2 pointers each (victim + item/location)
             var slotStrings = new string[TotalSlotStrings];
@@ -120,7 +120,7 @@ namespace CovertActionTools.Core.Models.Executables
                 {
                     var strEnd = ptr;
                     while (strEnd < dataSegment.Length && dataSegment[strEnd] != 0) strEnd++;
-                    slotStrings[i] = Encoding.ASCII.GetString(dataSegment, ptr, strEnd - ptr);
+                    slotStrings[i] = DataSegmentHelper.DecodeControlString(dataSegment, ptr, strEnd - ptr);
                 }
                 else
                 {
@@ -158,7 +158,7 @@ namespace CovertActionTools.Core.Models.Executables
         public byte[] ToBytes(int[] stringOffsets, int nullPadStart)
         {
             var result = new byte[RecordSize];
-            var nameBytes = Encoding.ASCII.GetBytes(Name);
+            var nameBytes = DataSegmentHelper.EncodeControlString(Name);
             Array.Copy(nameBytes, 0, result, 0, Math.Min(nameBytes.Length, NameLength));
             result[0x19] = OrgTypeMask;
             result[0x1A] = (byte)(Crime1Id & 0xFF); result[0x1B] = (byte)((Crime1Id >> 8) & 0xFF);
@@ -975,14 +975,14 @@ namespace CovertActionTools.Core.Models.Executables
                     if (hasA)
                     {
                         stringOffsets[aIdx] = tableBase + tableParts.Count;
-                        tableParts.AddRange(Encoding.ASCII.GetBytes(ms.SlotStrings[aIdx]));
+                        tableParts.AddRange(DataSegmentHelper.EncodeControlString(ms.SlotStrings[aIdx]));
                         tableParts.Add(0); // null terminator
                     }
 
                     if (hasB)
                     {
                         stringOffsets[bIdx] = tableBase + tableParts.Count;
-                        tableParts.AddRange(Encoding.ASCII.GetBytes(ms.SlotStrings[bIdx]));
+                        tableParts.AddRange(DataSegmentHelper.EncodeControlString(ms.SlotStrings[bIdx]));
                         tableParts.Add(0);
                     }
                     else if (hasA)
@@ -1240,7 +1240,7 @@ namespace CovertActionTools.Core.Models.Executables
                     continue;
                 }
 
-                var s = Encoding.ASCII.GetString(data, pos, strEnd - pos);
+                var s = DataSegmentHelper.DecodeControlString(data, pos, strEnd - pos);
                 pos = strEnd + 1;
                 trainingStrings.Add(s);
 
@@ -1283,7 +1283,7 @@ namespace CovertActionTools.Core.Models.Executables
             {
                 var strEnd = pos;
                 while (strEnd < gameProgressEnd && data[strEnd] != 0) strEnd++;
-                var s = Encoding.ASCII.GetString(data, pos, strEnd - pos);
+                var s = DataSegmentHelper.DecodeControlString(data, pos, strEnd - pos);
                 pos = strEnd + 1;
                 gameProgressStrings.Add(s);
             }
@@ -1316,7 +1316,7 @@ namespace CovertActionTools.Core.Models.Executables
             {
                 var strEnd = pos;
                 while (strEnd < end && data[strEnd] != 0) strEnd++;
-                var s = Encoding.ASCII.GetString(data, pos, strEnd - pos);
+                var s = DataSegmentHelper.DecodeControlString(data, pos, strEnd - pos);
                 chronStrings.Add(s);
                 pos = strEnd + 1;
                 if (s == " 10")
@@ -1596,7 +1596,7 @@ namespace CovertActionTools.Core.Models.Executables
             {
                 var strEnd = pos;
                 while (strEnd < data.Length && data[strEnd] != 0) strEnd++;
-                result[i] = Encoding.ASCII.GetString(data, pos, strEnd - pos);
+                result[i] = DataSegmentHelper.DecodeControlString(data, pos, strEnd - pos);
                 pos = strEnd + 1;
             }
             return result;
@@ -1929,7 +1929,7 @@ namespace CovertActionTools.Core.Models.Executables
                 {
                     var strEnd = pos;
                     while (strEnd < gsEnd && data[strEnd] != 0) strEnd++;
-                    strings[i] = Encoding.ASCII.GetString(data, pos, strEnd - pos);
+                    strings[i] = DataSegmentHelper.DecodeControlString(data, pos, strEnd - pos);
                     pos = strEnd + 1;
                 }
                 return strings;
@@ -1944,7 +1944,7 @@ namespace CovertActionTools.Core.Models.Executables
                 {
                     var strEnd = pos;
                     while (strEnd < end && data[strEnd] != 0) strEnd++;
-                    strings.Add(Encoding.ASCII.GetString(data, pos, strEnd - pos));
+                    strings.Add(DataSegmentHelper.DecodeControlString(data, pos, strEnd - pos));
                     pos = strEnd + 1;
                 }
                 return strings.ToArray();
@@ -1963,7 +1963,7 @@ namespace CovertActionTools.Core.Models.Executables
             {
                 var strEnd = pos;
                 while (strEnd < gsEnd && data[strEnd] != 0) strEnd++;
-                var s = Encoding.ASCII.GetString(data, pos, strEnd - pos);
+                var s = DataSegmentHelper.DecodeControlString(data, pos, strEnd - pos);
                 pos = strEnd + 1;
                 return s;
             }
@@ -2023,7 +2023,7 @@ namespace CovertActionTools.Core.Models.Executables
             {
                 var strEnd = pos;
                 while (strEnd < gsEnd && data[strEnd] != 0) strEnd++;
-                var s = Encoding.ASCII.GetString(data, pos, strEnd - pos);
+                var s = DataSegmentHelper.DecodeControlString(data, pos, strEnd - pos);
                 if (s == "final.exe")
                     break; // don't consume — EXE chain starts here
                 saveLoadStrings.Add(s);
@@ -2084,7 +2084,7 @@ namespace CovertActionTools.Core.Models.Executables
             {
                 foreach (var s in strings)
                 {
-                    parts.AddRange(Encoding.ASCII.GetBytes(s));
+                    parts.AddRange(DataSegmentHelper.EncodeControlString(s));
                     parts.Add(0);
                 }
             }
@@ -2092,7 +2092,7 @@ namespace CovertActionTools.Core.Models.Executables
             // Helper: emit a single string with null terminator
             void EmitString(string s)
             {
-                parts.AddRange(Encoding.ASCII.GetBytes(s));
+                parts.AddRange(DataSegmentHelper.EncodeControlString(s));
                 parts.Add(0);
             }
 

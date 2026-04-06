@@ -206,37 +206,34 @@ public class MainMenuWindow : BaseWindow
 
     private void DrawStringTagsWindow()
     {
-        ImGui.SetNextWindowPos(new System.Numerics.Vector2(ImGui.GetIO().DisplaySize.X - 280, 30), ImGuiCond.FirstUseEver);
-        ImGui.SetNextWindowSize(new System.Numerics.Vector2(260, 0), ImGuiCond.FirstUseEver);
+        ImGui.SetNextWindowPos(new System.Numerics.Vector2(ImGui.GetIO().DisplaySize.X - 220, 30), ImGuiCond.FirstUseEver);
+        ImGui.SetNextWindowSize(new System.Numerics.Vector2(200, 0), ImGuiCond.FirstUseEver);
         if (ImGui.Begin("String Tags", ref _showStringTagsHelp))
         {
-            ImGui.TextWrapped("Bytes >= 0x80 in strings change the text color. The low nibble (byte & 0x0F) selects the VGA palette index. The high nibble is ignored.");
-            ImGui.Separator();
-            ImGui.TextWrapped("Named shortcuts:");
             if (ImGui.BeginTable("TagsTable", 2, ImGuiTableFlags.RowBg))
             {
-                ImGui.TableSetupColumn("Tag", ImGuiTableColumnFlags.WidthFixed, 80);
-                ImGui.TableSetupColumn("Description");
+                ImGui.TableSetupColumn("Tag", ImGuiTableColumnFlags.WidthFixed, 90);
+                ImGui.TableSetupColumn("Color");
                 ImGui.TableHeadersRow();
                 var tags = new[]
                 {
-                    ("[black]", "Color 0 — black"),
-                    ("[blue]", "Color 1 — blue"),
-                    ("[green]", "Color 2 — green"),
-                    ("[cyan]", "Color 3 — cyan"),
-                    ("[red]", "Color 4 — red"),
-                    ("[magenta]", "Color 5 — magenta"),
-                    ("[brown]", "Color 6 — brown"),
-                    ("[grey]", "Color 7 — light grey"),
-                    ("[dkgrey]", "Color 8 — dark grey"),
-                    ("[ltblue]", "Color 9 — light blue"),
-                    ("[ltgreen]", "Color 10 — light green"),
-                    ("[ltcyan]", "Color 11 — light cyan"),
-                    ("[ltred]", "Color 12 — light red"),
-                    ("[ltmagenta]", "Color 13 — light magenta*"),
-                    ("[yellow]", "Color 14 — yellow*"),
-                    ("[white]", "Color 15 — white"),
-                    ("[0xNN]", "Any hex byte (low nibble = color)"),
+                    ("[black]", "Black"),
+                    ("[blue]", "Blue"),
+                    ("[green]", "Green"),
+                    ("[cyan]", "Cyan"),
+                    ("[red]", "Red"),
+                    ("[magenta]", "Magenta"),
+                    ("[brown]", "Brown"),
+                    ("[grey]", "Light grey"),
+                    ("[dkgrey]", "Dark grey"),
+                    ("[ltblue]", "Light blue"),
+                    ("[ltgreen]", "Light green"),
+                    ("[ltcyan]", "Light cyan"),
+                    ("[ltred]", "Light red"),
+                    ("[ltmagenta]", "Light magenta"),
+                    ("[yellow]", "Yellow"),
+                    ("[white]", "White"),
+                    ("[0xNN]", "Hex byte"),
                 };
                 foreach (var (tag, desc) in tags)
                 {
@@ -244,37 +241,10 @@ public class MainMenuWindow : BaseWindow
                     ImGui.TableNextColumn();
                     ImGui.Text(tag);
                     ImGui.TableNextColumn();
-                    ImGui.TextWrapped(desc);
+                    ImGui.Text(desc);
                 }
                 ImGui.EndTable();
             }
-            ImGui.Separator();
-            ImGui.TextWrapped("VGA palette (low nibble):");
-            if (ImGui.BeginTable("PaletteTable", 4, ImGuiTableFlags.RowBg))
-            {
-                ImGui.TableSetupColumn("#", ImGuiTableColumnFlags.WidthFixed, 20);
-                ImGui.TableSetupColumn("Color", ImGuiTableColumnFlags.WidthFixed, 80);
-                ImGui.TableSetupColumn("#", ImGuiTableColumnFlags.WidthFixed, 20);
-                ImGui.TableSetupColumn("Color");
-                ImGui.TableHeadersRow();
-                var colors = new[]
-                {
-                    "Black", "Blue", "Green", "Cyan",
-                    "Red", "Magenta", "Brown", "Light grey",
-                    "Dark grey", "Light blue", "Light green", "Light cyan",
-                    "Light red", "Lt magenta*", "Yellow*", "White",
-                };
-                for (var c = 0; c < 8; c++)
-                {
-                    ImGui.TableNextRow();
-                    ImGui.TableNextColumn(); ImGui.Text($"{c}");
-                    ImGui.TableNextColumn(); ImGui.Text(colors[c]);
-                    ImGui.TableNextColumn(); ImGui.Text($"{c + 8}");
-                    ImGui.TableNextColumn(); ImGui.Text(colors[c + 8]);
-                }
-                ImGui.EndTable();
-            }
-            ImGui.TextDisabled("* Colors 13/14 are replaced by player/enemy clothing colors in sprites.");
         }
         ImGui.End();
     }

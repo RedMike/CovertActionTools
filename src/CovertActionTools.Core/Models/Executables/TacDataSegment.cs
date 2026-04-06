@@ -51,9 +51,9 @@ namespace CovertActionTools.Core.Models.Executables
 
         public static TacRoomTypeRecord FromBytes(byte[] data, int offset)
         {
-            var nameBytes = new byte[NameLength];
-            Array.Copy(data, offset, nameBytes, 0, NameLength);
-            var name = Encoding.ASCII.GetString(nameBytes).TrimEnd('\0');
+            var nameLen = 0;
+            while (nameLen < NameLength && data[offset + nameLen] != 0) nameLen++;
+            var name = DataSegmentHelper.DecodeControlString(data, offset, nameLen);
 
             return new TacRoomTypeRecord
             {
@@ -67,7 +67,7 @@ namespace CovertActionTools.Core.Models.Executables
         public byte[] ToBytes()
         {
             var result = new byte[RecordSize];
-            var nameBytes = Encoding.ASCII.GetBytes(Name);
+            var nameBytes = DataSegmentHelper.EncodeControlString(Name);
             Array.Copy(nameBytes, 0, result, 0, Math.Min(nameBytes.Length, NameLength));
             result[NameLength] = (byte)(SurveillanceQuality & 0xFF);
             result[NameLength + 1] = (byte)((SurveillanceQuality >> 8) & 0xFF);
@@ -143,9 +143,9 @@ namespace CovertActionTools.Core.Models.Executables
 
         public static TacObjectRecord FromBytes(byte[] data, int offset)
         {
-            var nameBytes = new byte[NameLength];
-            Array.Copy(data, offset, nameBytes, 0, NameLength);
-            var name = Encoding.ASCII.GetString(nameBytes).TrimEnd('\0');
+            var nameLen = 0;
+            while (nameLen < NameLength && data[offset + nameLen] != 0) nameLen++;
+            var name = DataSegmentHelper.DecodeControlString(data, offset, nameLen);
 
             return new TacObjectRecord
             {
@@ -160,7 +160,7 @@ namespace CovertActionTools.Core.Models.Executables
         public byte[] ToBytes()
         {
             var result = new byte[RecordSize];
-            var nameBytes = Encoding.ASCII.GetBytes(Name);
+            var nameBytes = DataSegmentHelper.EncodeControlString(Name);
             Array.Copy(nameBytes, 0, result, 0, Math.Min(nameBytes.Length, NameLength));
             WriteUInt16(result, NameLength, SpriteOffset);
             WriteUInt16(result, NameLength + 2, SpritePage);
