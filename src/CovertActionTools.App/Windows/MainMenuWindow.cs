@@ -230,8 +230,8 @@ public class MainMenuWindow : BaseWindow
                     ("[ltgreen]", "Light green"),
                     ("[ltcyan]", "Light cyan"),
                     ("[ltred]", "Light red"),
-                    ("[ltmagenta]", "Light magenta"),
-                    ("[yellow]", "Yellow"),
+                    ("[ltmagenta]", "Player replacement colour in TAC"),
+                    ("[yellow]", "Enemy replacement colour in TAC"),
                     ("[white]", "White"),
                     ("[0xNN]", "Hex byte"),
                 };
