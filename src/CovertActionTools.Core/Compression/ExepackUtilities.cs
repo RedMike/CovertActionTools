@@ -261,39 +261,18 @@ namespace CovertActionTools.Core.Compression
             segmentData[0x0F] = (byte)'B';
 
             // Build packed data region: [dead_zone] [compressed] [FF padding]
-            // The EXEPACK stub scans at most 16 bytes backward for 0xFF padding.
-            // Total trailing 0xFF (from compressor + our padding) must be ≤ 15,
-            // otherwise the stub can't find the last command byte.
-            var packedRegionLength = deadZone.Length + compressedPayload.Length;
-            var exepackCs = (packedRegionLength + 15) / 16;
-
-            // Try to match original CS from the MZ header
-            if (originalMzHeader != null && originalMzHeader.Length >= 24)
+            // Strip trailing 0xFF from the compressor output (it adds 1-2 padding bytes),
+            // then compute CS from the actual data. Paragraph-alignment padding provides
+            // the trailing 0xFF bytes that the EXEPACK stub scans for.
+            var trimmedLength = compressedPayload.Length;
+            while (trimmedLength > 0 && compressedPayload[trimmedLength - 1] == 0xFF)
             {
-                var origCs = BitConverter.ToUInt16(originalMzHeader, 22);
-                var targetPackedSize = origCs * 16;
-
-                if (packedRegionLength <= targetPackedSize)
-                {
-                    exepackCs = origCs;
-                }
-                else
-                {
-                    // Compressed data grew beyond original CS.
-                    // Strip trailing 0xFF from compressed data (the compressor adds 1-2),
-                    // then compute CS so that paragraph-alignment padding is the only
-                    // trailing 0xFF. This guarantees the last non-0xFF byte (a command)
-                    // is within the stub's 16-byte scan window.
-                    var trimmedLength = compressedPayload.Length;
-                    while (trimmedLength > 0 && compressedPayload[trimmedLength - 1] == 0xFF)
-                    {
-                        trimmedLength--;
-                    }
-
-                    var trimmedRegionLength = deadZone.Length + trimmedLength;
-                    exepackCs = (trimmedRegionLength + 15) / 16; // 0-15 bytes of padding
-                }
+                trimmedLength--;
             }
+
+            var trimmedRegionLength = deadZone.Length + trimmedLength;
+            var exepackCs = (trimmedRegionLength + 15) / 16;
+            var packedRegionLength = deadZone.Length + compressedPayload.Length;
 
             // Calculate FF padding. May be negative if the compressor's trailing 0xFF
             // extends past the CS boundary (trimmed region fit but untrimmed doesn't).

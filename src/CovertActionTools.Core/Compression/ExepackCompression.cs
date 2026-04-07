@@ -39,15 +39,17 @@ namespace CovertActionTools.Core.Compression
                     runLen++;
                 }
 
-                if (runLen >= MinRun)
+                if (runLen >= MinRun || (runLen >= 2 && pos + runLen == payloadLength))
                 {
-                    // Use fill command
+                    // Use fill command. At the end of the payload, emit a FILL for
+                    // any run of 2+ bytes — the original EXEPACK compressor does this.
                     commands.Add((0xB0, runLen, new[] { runByte }));
                     pos += runLen;
                 }
                 else
                 {
                     // Collect literal bytes until we hit a run >= MinRun
+                    // (or a run of 2+ that reaches the end of the payload)
                     var copyStart = pos;
                     while (pos < payloadLength)
                     {
@@ -61,6 +63,12 @@ namespace CovertActionTools.Core.Compression
                         }
 
                         if (rl >= MinRun)
+                        {
+                            break;
+                        }
+
+                        // End-of-payload trailing run: break so the outer loop emits a FILL
+                        if (rl >= 2 && pos + rl == payloadLength)
                         {
                             break;
                         }

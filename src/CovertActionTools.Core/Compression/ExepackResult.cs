@@ -12,13 +12,23 @@ namespace CovertActionTools.Core.Compression
         /// <summary>
         /// The lowest output position that was written by decompression commands.
         /// Bytes before this boundary are the "dead zone" (overlay manager stubs).
+        /// Note: may be inflated by paragraph rounding — use PackedDeadZoneSize
+        /// for the actual dead zone byte count in the packed data.
         /// </summary>
         public int DeadZoneBoundary { get; }
 
-        public ExepackDecompressionResult(byte[] data, int deadZoneBoundary)
+        /// <summary>
+        /// The actual number of dead zone bytes in the packed data, determined by
+        /// where the decompressor's read position ended (after the last command).
+        /// This is independent of paragraph rounding and gives the true dead zone size.
+        /// </summary>
+        public int PackedDeadZoneSize { get; }
+
+        public ExepackDecompressionResult(byte[] data, int deadZoneBoundary, int packedDeadZoneSize)
         {
             Data = data;
             DeadZoneBoundary = deadZoneBoundary;
+            PackedDeadZoneSize = packedDeadZoneSize;
         }
     }
 }

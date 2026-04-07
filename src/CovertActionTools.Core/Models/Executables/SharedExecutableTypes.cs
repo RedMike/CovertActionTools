@@ -426,7 +426,7 @@ namespace CovertActionTools.Core.Models.Executables
                 var encoded = EncodeControlString(strings[i]);
                 var slotSize = i < originalByteSizes.Length ? originalByteSizes[i] : encoded.Length + 1;
                 var slot = new byte[slotSize];
-                Array.Copy(encoded, 0, slot, 0, Math.Min(encoded.Length, slotSize - 1));
+                Array.Copy(encoded, 0, slot, 0, Math.Min(encoded.Length, slotSize));
                 parts.AddRange(slot);
             }
             return parts.ToArray();
