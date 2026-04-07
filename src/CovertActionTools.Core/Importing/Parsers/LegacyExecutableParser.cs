@@ -94,12 +94,22 @@ namespace CovertActionTools.Core.Importing.Parsers
             // Decompress
             var decompResult = _decompression.Decompress(exepackHeader.PackedData, exepackHeader.DestLen);
 
-            // Copy dead zone bytes from packed data into the decompressed output
-            var deadZoneBoundary = decompResult.DeadZoneBoundary;
+            // The decompressor's DeadZoneBoundary (output write position) may be inflated
+            // by EXEPACK paragraph rounding. PackedDeadZoneSize (input read position) gives
+            // the actual dead zone size. When they differ, shift the decompressed payload
+            // left so code+data starts at the correct position relative to dsOffset.
+            var deadZoneBoundary = decompResult.PackedDeadZoneSize;
+            var shift = decompResult.DeadZoneBoundary - deadZoneBoundary;
+            if (shift > 0)
+            {
+                Array.Copy(decompResult.Data, decompResult.DeadZoneBoundary,
+                           decompResult.Data, deadZoneBoundary,
+                           decompResult.Data.Length - decompResult.DeadZoneBoundary);
+            }
             if (deadZoneBoundary > 0)
             {
                 Array.Copy(exepackHeader.PackedData, 0, decompResult.Data, 0, deadZoneBoundary);
-                _logger.LogDebug("Dead zone: {Size} bytes copied from packed data", deadZoneBoundary);
+                _logger.LogDebug("Dead zone: {Size} bytes copied from packed data (shift={Shift})", deadZoneBoundary, shift);
             }
 
             // Split into dead zone and full payload (code + data)
@@ -118,7 +128,11 @@ namespace CovertActionTools.Core.Importing.Parsers
             var codeSegment = new byte[codeSegmentLength];
             Array.Copy(fullPayload, deadZoneBoundary, codeSegment, 0, codeSegmentLength);
 
-            var dataSegmentLength = fullPayload.Length - dsOffset;
+            // Compute actual payload length (dead zone + raw decompressed bytes) to
+            // exclude paragraph-rounding padding from the data segment.
+            var rawPayloadLength = decompResult.Data.Length - decompResult.DeadZoneBoundary;
+            var actualPayloadLength = deadZoneBoundary + rawPayloadLength;
+            var dataSegmentLength = actualPayloadLength - dsOffset;
             var dataSegmentBytes = new byte[dataSegmentLength];
             Array.Copy(fullPayload, dsOffset, dataSegmentBytes, 0, dataSegmentLength);
 

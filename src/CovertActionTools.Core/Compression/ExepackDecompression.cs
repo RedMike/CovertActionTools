@@ -111,11 +111,15 @@ namespace CovertActionTools.Core.Compression
                 }
             }
 
-            _logger.LogDebug(
-                "EXEPACK decompressed {PackedSize} bytes to {DestSize} bytes, dead zone boundary at {DeadZone}",
-                packedData.Length, destSize, outPos);
+            // pos is now at the byte just before the first compressed command's data.
+            // The actual dead zone in the packed data = bytes [0..pos] inclusive.
+            var packedDeadZoneSize = pos + 1;
 
-            return new ExepackDecompressionResult(output, outPos);
+            _logger.LogDebug(
+                "EXEPACK decompressed {PackedSize} bytes to {DestSize} bytes, dead zone boundary at {DeadZone}, packed dead zone {PackedDeadZone}",
+                packedData.Length, destSize, outPos, packedDeadZoneSize);
+
+            return new ExepackDecompressionResult(output, outPos, packedDeadZoneSize);
         }
     }
 }
