@@ -3,6 +3,7 @@ using System.Text;
 using CovertActionTools.App.ViewModels;
 using CovertActionTools.Core.Models;
 using CovertActionTools.Core.Models.Executables;
+using CovertActionTools.Core.Models.Executables.Records.Tac;
 using ImGuiNET;
 using Microsoft.Extensions.Logging;
 
@@ -106,10 +107,10 @@ public class SelectedExecutableWindow : BaseWindow
                 ImGui.TableSetupColumn("Enabled");
                 ImGui.TableHeadersRow();
 
-                for (var i = 0; i < tac.RoomTypes.Length; i++)
+                for (var i = 0; i < tac.RoomTypes.RoomTypes.Count; i++)
                 {
                     ImGui.PushID($"RoomType_{i}");
-                    var room = tac.RoomTypes[i];
+                    var room = tac.RoomTypes.RoomTypes[i];
                     ImGui.TableNextRow();
 
                     ImGui.TableNextColumn();
@@ -121,23 +122,20 @@ public class SelectedExecutableWindow : BaseWindow
                     if (newSurvQuality != null) { room.SurveillanceQuality = (ushort)newSurvQuality.Value; _pendingState.RecordChange(); }
 
                     ImGui.TableNextColumn();
-                    var sizeIdx = room.SizeConstraint == 1 ? 0 : room.SizeConstraint == 2 ? 1 :
-                        room.SizeConstraint == 4 ? 2 : room.SizeConstraint == 3 ? 3 :
-                        room.SizeConstraint == 5 ? 4 : room.SizeConstraint == 6 ? 5 :
-                        room.SizeConstraint == 7 ? 6 : 0;
+                    var sizeIdx = (int)room.SizeConstraint;
                     ImGui.SetNextItemWidth(120);
-                    if (ImGui.Combo("##Size", ref sizeIdx, "Small\0Medium\0Large\0Small+Medium\0Small+Large\0Medium+Large\0All\0"))
+                    if (ImGui.Combo("##Size", ref sizeIdx, "Small\0Medium\0Small+Medium\0Large\0Small+Large\0Medium+Large\0All\0"))
                     {
-                        var sizeValues = new ushort[] { 1, 2, 4, 3, 5, 6, 7 };
-                        room.SizeConstraint = sizeValues[sizeIdx];
+                        var sizeValues = new int[] { 1, 2, 3, 4, 5, 6, 7 };
+                        room.SizeConstraint = (RoomSizeConstraint)sizeValues[sizeIdx];
                         _pendingState.RecordChange();
                     }
 
                     ImGui.TableNextColumn();
-                    var enabled = room.Enabled != 0;
+                    var enabled = room.Enabled;
                     if (ImGui.Checkbox("##Enabled", ref enabled))
                     {
-                        room.Enabled = (ushort)(enabled ? 7 : 0);
+                        room.Enabled = enabled;
                         _pendingState.RecordChange();
                     }
 
@@ -151,7 +149,7 @@ public class SelectedExecutableWindow : BaseWindow
         if (ImGui.CollapsingHeader("Objects"))
         {
             // Build room type names for placement checkboxes (from the room type records + Target Room)
-            var roomTypeNames = tac.RoomTypes.Select(r => r.Name).ToList();
+            var roomTypeNames = tac.RoomTypes.RoomTypes.Select(r => r.Name).ToList();
             roomTypeNames.Add("Target Room");
 
             for (var i = 0; i < tac.Objects.Length; i++)
