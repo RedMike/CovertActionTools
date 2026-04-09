@@ -385,20 +385,20 @@ public class SelectedExecutableWindow : BaseWindow
             DrawStringArray(tac.CharacterNames, "CharName");
         }
 
-        if (ImGui.CollapsingHeader("Movement Pixel DX/DY"))
-        {
-            DrawDirectionTable("MvPx", CompassLabels9, tac.MovementPixelDX, tac.MovementPixelDY, "Walking pixel offsets per direction");
-        }
-
-        if (ImGui.CollapsingHeader("Jumping Tile DX/DY"))
-        {
-            DrawDirectionTable("JpTl", CompassLabels9, tac.JumpingTileDX, tac.JumpingTileDY, "Jumping tile offsets per direction");
-        }
-
-        if (ImGui.CollapsingHeader("Tile Adjacency DX/DY"))
-        {
-            DrawDirectionTable("TlAd", CardinalLabels4, tac.TileAdjacencyDX, tac.TileAdjacencyDY, "Cardinal tile adjacency for map generation and doors");
-        }
+        // if (ImGui.CollapsingHeader("Movement Pixel DX/DY"))
+        // {
+        //     DrawDirectionTable("MvPx", CompassLabels9, tac.MovementPixelDX, tac.MovementPixelDY, "Walking pixel offsets per direction");
+        // }
+        //
+        // if (ImGui.CollapsingHeader("Jumping Tile DX/DY"))
+        // {
+        //     DrawDirectionTable("JpTl", CompassLabels9, tac.JumpingTileDX, tac.JumpingTileDY, "Jumping tile offsets per direction");
+        // }
+        //
+        // if (ImGui.CollapsingHeader("Tile Adjacency DX/DY"))
+        // {
+        //     DrawDirectionTable("TlAd", CardinalLabels4, tac.TileAdjacencyDX, tac.TileAdjacencyDY, "Cardinal tile adjacency for map generation and doors");
+        // }
 
         if (ImGui.CollapsingHeader("Clue Relationship Phrases"))
         {
@@ -442,8 +442,8 @@ public class SelectedExecutableWindow : BaseWindow
 
         DrawRawSectionSizes("Raw Sections", new[]
         {
-            ("SpriteSheetConfigs", tac.SpriteSheetConfigs.Length),
-            ("BssBlock", tac.BssBlock.Length),
+            // ("SpriteSheetConfigs", tac.SpriteSheetConfigs.Length),
+            // ("BssBlock", tac.BssBlock.Length),
             ("GameplayData", tac.GameplayData.Length),
             ("MidSectionPostEquipNames", tac.MidSectionPostEquipNames.Length),
             ("RagdollRectPadding", tac.RagdollRectPadding.Length),
