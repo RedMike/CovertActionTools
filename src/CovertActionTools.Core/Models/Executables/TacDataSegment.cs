@@ -1,6 +1,8 @@
 using System;
 using System.Linq;
 using System.Text;
+using CovertActionTools.Core.Models.Executables.Sections.Shared;
+using CovertActionTools.Core.Models.Executables.Sections.Tac;
 
 namespace CovertActionTools.Core.Models.Executables
 {
@@ -303,7 +305,8 @@ namespace CovertActionTools.Core.Models.Executables
         #endregion
 
         #region Fields (in binary order)
-
+        public ExeFileHeaderSection Header { get; set; } = new();
+        public TacHeaderFilenamesSection HeaderFilenames { get; set; } = new();
         /// <summary>Data before room types: MSC runtime copyright, file refs, padding.</summary>
         public byte[] PreRoomData { get; set; } = Array.Empty<byte>();
 
@@ -490,7 +493,9 @@ namespace CovertActionTools.Core.Models.Executables
 
             var segment = new TacDataSegment();
 
-            segment.PreRoomData = DataSegmentHelper.Slice(dataSegment, 0, RoomTypesOffset);
+            var offset = 0;
+            offset += segment.Header.ReadBytes(dataSegment, offset);
+            offset += segment.HeaderFilenames.ReadBytes(dataSegment, offset);
 
             segment.RoomTypes = new TacRoomTypeRecord[RoomTypeCount];
             for (var i = 0; i < RoomTypeCount; i++)
@@ -693,8 +698,8 @@ namespace CovertActionTools.Core.Models.Executables
             );
 
             // Compute equipment name pointer values from actual string positions
-            var equipNamesBaseOffset = PreRoomData.Length + roomTypeBytes.Length
-                + objectBytes.Length + midSectionBytes.Length;
+            var equipNamesBaseOffset = RoomTypesOffset + roomTypeBytes.Length
+                                                       + objectBytes.Length + midSectionBytes.Length;
             var equipNamePointers = DataSegmentHelper.ComputeStringPointers(EquipmentNames, equipNamesBaseOffset);
             var equipNamesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(EquipmentNames);
 
@@ -727,7 +732,8 @@ namespace CovertActionTools.Core.Models.Executables
             var charNamesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(CharacterNames);
 
             return DataSegmentHelper.Concatenate(
-                PreRoomData,
+                Header.WriteBytes(),
+                HeaderFilenames.WriteBytes(),
                 roomTypeBytes,
                 objectBytes,
                 midSectionBytes,
@@ -761,7 +767,8 @@ namespace CovertActionTools.Core.Models.Executables
         {
             return new TacDataSegment
             {
-                PreRoomData = PreRoomData.ToArray(),
+                Header = Header.Clone(),
+                HeaderFilenames = HeaderFilenames.Clone(),
                 RoomTypes = RoomTypes.Select(r => r.Clone()).ToArray(),
                 Objects = Objects.Select(o => o.Clone()).ToArray(),
                 MovementPixelDX = MovementPixelDX.ToArray(),
