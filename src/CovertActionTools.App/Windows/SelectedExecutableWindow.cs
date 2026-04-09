@@ -444,7 +444,6 @@ public class SelectedExecutableWindow : BaseWindow
 
         DrawRawSectionSizes("Raw Sections", new[]
         {
-            ("PreRoomData", tac.PreRoomData.Length),
             ("SpriteSheetConfigs", tac.SpriteSheetConfigs.Length),
             ("BssBlock", tac.BssBlock.Length),
             ("GameplayData", tac.GameplayData.Length),
