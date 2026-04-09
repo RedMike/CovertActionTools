@@ -152,10 +152,10 @@ public class SelectedExecutableWindow : BaseWindow
             var roomTypeNames = tac.RoomTypes.RoomTypes.Select(r => r.Name).ToList();
             roomTypeNames.Add("Target Room");
 
-            for (var i = 0; i < tac.Objects.Length; i++)
+            for (var i = 0; i < tac.MapObjectTypes.MapObjectTypes.Count; i++)
             {
                 ImGui.PushID($"Object_{i}");
-                var obj = tac.Objects[i];
+                var obj = tac.MapObjectTypes.MapObjectTypes[i];
                 var label = string.IsNullOrEmpty(obj.Name) ? $"Object {i}" : $"Object {i}: {obj.Name}";
                 if (ImGui.CollapsingHeader(label))
                 {
@@ -168,12 +168,12 @@ public class SelectedExecutableWindow : BaseWindow
                         if (newName != null) { obj.Name = newName; _pendingState.RecordChange(); }
 
                         ImGui.TableNextColumn();
-                        var newX = ImGuiExtensions.Input("Sprite X", (int)obj.SpriteOffset, width: 80);
-                        if (newX != null) { obj.SpriteOffset = (ushort)newX.Value; _pendingState.RecordChange(); }
+                        var newX = ImGuiExtensions.Input("Sprite X", (int)obj.SpriteSheetOffsetX, width: 80);
+                        if (newX != null) { obj.SpriteSheetOffsetX = (ushort)newX.Value; _pendingState.RecordChange(); }
 
                         ImGui.TableNextColumn();
-                        var newY = ImGuiExtensions.Input("Sprite Y", (int)obj.SpritePage, width: 80);
-                        if (newY != null) { obj.SpritePage = (ushort)newY.Value; _pendingState.RecordChange(); }
+                        var newY = ImGuiExtensions.Input("Sprite Y", (int)obj.SpriteSheetOffsetY, width: 80);
+                        if (newY != null) { obj.SpriteSheetOffsetY = (ushort)newY.Value; _pendingState.RecordChange(); }
 
                         ImGui.EndTable();
                     }
@@ -457,54 +457,14 @@ public class SelectedExecutableWindow : BaseWindow
         });
     }
 
-    private void DrawBehaviourFlags(TacObjectRecord obj)
+    private void DrawBehaviourFlags(MapObjectTypeRecord obj)
     {
-        var flags = (int)obj.BehaviourFlags;
-        if (ImGui.BeginTable("BehavFlags", 5))
-        {
-            ImGui.TableNextRow();
-            DrawFlagCheckbox("Blocks Movement", ref flags, 0, obj);
-            // Openable objects use Sprite Y+1 (the row below) as the open sprite
-            DrawFlagCheckbox("Openable", ref flags, 1, obj);
-            DrawFlagCheckbox("Buggable", ref flags, 2, obj);
-            DrawFlagCheckbox("Photographable", ref flags, 3, obj);
-            DrawFlagCheckbox("Is Door", ref flags, 4, obj);
-
-            ImGui.TableNextRow();
-            DrawFlagCheckbox("Blocks LOS", ref flags, 5, obj);
-            DrawFlagCheckbox("Multi-tile", ref flags, 6, obj);
-            DrawFlagCheckbox("Wall-Adjacent", ref flags, 8, obj);
-            DrawFlagCheckbox("Password Terminal", ref flags, 9, obj);
-
-            ImGui.EndTable();
-        }
-
-        // Show remaining high bits (10-15) as raw value if any are set
-        var highBits = flags >> 10;
-        if (highBits != 0)
-        {
-            ImGui.Text($"  Unknown high bits: 0x{highBits:X}");
-        }
+        //TODO: implement behaviour
     }
 
-    private void DrawFlagCheckbox(string label, ref int flags, int bit, TacObjectRecord obj)
+    private void DrawRoomPlacement(MapObjectTypeRecord obj, List<string> roomTypeNames)
     {
-        ImGui.TableNextColumn();
-        var val = (flags & (1 << bit)) != 0;
-        var origVal = val;
-        ImGui.Checkbox(label, ref val);
-        if (val != origVal)
-        {
-            if (val) flags |= (1 << bit);
-            else flags &= ~(1 << bit);
-            obj.BehaviourFlags = (ushort)flags;
-            _pendingState.RecordChange();
-        }
-    }
-
-    private void DrawRoomPlacement(TacObjectRecord obj, List<string> roomTypeNames)
-    {
-        var flags = (int)obj.RoomPlacement;
+        var flags = (int)obj.RoomSizeConstraint;
         // Room placement bitfield: bit index = room type index
         var columns = Math.Min(roomTypeNames.Count, 6);
         if (ImGui.BeginTable("RoomPlace", columns))
@@ -520,7 +480,7 @@ public class SelectedExecutableWindow : BaseWindow
                 {
                     if (val) flags |= (1 << b);
                     else flags &= ~(1 << b);
-                    obj.RoomPlacement = (ushort)flags;
+                    obj.RoomSizeConstraint = (RoomSizeConstraint)flags;
                     _pendingState.RecordChange();
                 }
             }

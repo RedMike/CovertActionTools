@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Text;
+using CovertActionTools.Core.Models.Executables.Records.Tac;
 using CovertActionTools.Core.Models.Executables.Sections.Shared;
 using CovertActionTools.Core.Models.Executables.Sections.Tac;
 
@@ -308,9 +309,7 @@ namespace CovertActionTools.Core.Models.Executables
         public ExeFileHeaderSection Header { get; set; } = new();
         public TacHeaderFilenamesSection HeaderFilenames { get; set; } = new();
         public RoomTypeSection RoomTypes { get; set; } = new();
-
-        /// <summary>62 object/furniture records (20 bytes each).</summary>
-        public TacObjectRecord[] Objects { get; set; } = Array.Empty<TacObjectRecord>();
+        public MapObjectTypeSection MapObjectTypes { get; set; } = new();
 
         #region MidSection (between Objects and Equipment Name strings)
 
@@ -493,12 +492,7 @@ namespace CovertActionTools.Core.Models.Executables
             offset += segment.Header.ReadBytes(dataSegment, offset);
             offset += segment.HeaderFilenames.ReadBytes(dataSegment, offset);
             offset += segment.RoomTypes.ReadBytes(dataSegment, offset);
-
-            segment.Objects = new TacObjectRecord[ObjectCount];
-            for (var i = 0; i < ObjectCount; i++)
-            {
-                segment.Objects[i] = TacObjectRecord.FromBytes(dataSegment, ObjectsOffset + i * TacObjectRecord.RecordSize);
-            }
+            offset += segment.MapObjectTypes.ReadBytes(dataSegment, offset);
 
             // Read equipment name pointers to find and extract the strings from the mid section
             var equipPtrs = DataSegmentHelper.BytesToUInt16Array(dataSegment, EquipmentPointersOffset, EquipmentPointerCount);
@@ -649,12 +643,6 @@ namespace CovertActionTools.Core.Models.Executables
 
         public byte[] ToBytes()
         {
-            var objectBytes = new byte[ObjectCount * TacObjectRecord.RecordSize];
-            for (var i = 0; i < Objects.Length; i++)
-            {
-                Array.Copy(Objects[i].ToBytes(), 0, objectBytes, i * TacObjectRecord.RecordSize, TacObjectRecord.RecordSize);
-            }
-
             var ragdollBytes = new byte[RagdollCoordCount * TacScreenCoordinate.RecordSize];
             for (var i = 0; i < RagdollCoordinates.Length; i++)
             {
@@ -683,8 +671,8 @@ namespace CovertActionTools.Core.Models.Executables
             );
 
             // Compute equipment name pointer values from actual string positions
-            var equipNamesBaseOffset = ObjectsOffset
-                                                       + objectBytes.Length + midSectionBytes.Length;
+            var equipNamesBaseOffset = ObjectsOffset + 62 * 20 +
+                                       + midSectionBytes.Length;
             var equipNamePointers = DataSegmentHelper.ComputeStringPointers(EquipmentNames, equipNamesBaseOffset);
             var equipNamesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(EquipmentNames);
 
@@ -720,7 +708,7 @@ namespace CovertActionTools.Core.Models.Executables
                 Header.WriteBytes(),
                 HeaderFilenames.WriteBytes(),
                 RoomTypes.WriteBytes(),
-                objectBytes,
+                MapObjectTypes.WriteBytes(),
                 midSectionBytes,
                 equipNamesBytes,
                 MidSectionPostEquipNames,
@@ -755,7 +743,7 @@ namespace CovertActionTools.Core.Models.Executables
                 Header = Header.Clone(),
                 HeaderFilenames = HeaderFilenames.Clone(),
                 RoomTypes = RoomTypes.Clone(),
-                Objects = Objects.Select(o => o.Clone()).ToArray(),
+                MapObjectTypes = MapObjectTypes.Clone(),
                 MovementPixelDX = MovementPixelDX.ToArray(),
                 MovementPixelDY = MovementPixelDY.ToArray(),
                 JumpingTileDX = JumpingTileDX.ToArray(),
