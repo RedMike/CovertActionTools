@@ -103,6 +103,8 @@ public class SelectedExecutableWindow : BaseWindow
         var roomTypeNames = tac.RoomTypes.RoomTypes.Select(r => r.Name).ToList();
         roomTypeNames.Add("Target Room");
         TacImGuiHelpers.DrawMapObjectTypeSection(tac.MapObjectTypes, _pendingState, roomTypeNames);
+        TacImGuiHelpers.DrawMovementSection(tac.Movement, _pendingState);
+        TacImGuiHelpers.DrawRenderingSection(tac.Rendering, _pendingState);
 
         if (ImGui.CollapsingHeader("Equipment Names"))
         {
@@ -300,9 +302,6 @@ public class SelectedExecutableWindow : BaseWindow
         {
             DrawStringArray(tac.CharacterNames, "CharName");
         }
-
-        TacImGuiHelpers.DrawMovementSection(tac.Movement, _pendingState);
-        TacImGuiHelpers.DrawRenderingSection(tac.Rendering, _pendingState);
 
         if (ImGui.CollapsingHeader("Clue Relationship Phrases"))
         {

@@ -17,7 +17,7 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
         /// </summary>
         protected abstract int RecordCount { get; }
 
-        protected List<TRecord> Records { get; set; } = new();
+        public List<TRecord> Records { get; set; } = new();
 
         public abstract bool Viewable();
         public abstract bool Editable();

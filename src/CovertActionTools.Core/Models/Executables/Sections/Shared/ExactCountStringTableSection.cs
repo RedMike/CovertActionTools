@@ -19,7 +19,7 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
         /// </summary>
         protected abstract int? StringLength { get; }
 
-        protected List<string> Strings { get; set; } = new();
+        public List<string> Strings { get; set; } = new();
 
         public abstract bool Viewable();
         public abstract bool Editable();
