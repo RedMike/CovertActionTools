@@ -82,7 +82,9 @@ namespace CovertActionTools.App.Helpers
                 var label = string.IsNullOrEmpty(obj.Name) ? $"Object {i}" : $"Object {i}: {obj.Name}";
                 if (ImGui.CollapsingHeader(label))
                 {
+                    ImGui.Indent();
                     DrawMapObjectTypeRecord(i, obj, editable, pending, roomTypeNames);
+                    ImGui.Unindent();
                 }
                 ImGui.PopID();
             }
@@ -368,28 +370,28 @@ namespace CovertActionTools.App.Helpers
             ImGui.TableNextRow();
             ImGui.TableNextColumn(); ImGui.Text(name);
             ImGui.TableNextColumn();
-            var newPage = ImGuiExtensions.Input("##Page", record.Page, width: 60);
+            var newPage = ImGuiExtensions.Input("##Page", record.Page, width: 80);
             if (newPage != null) { record.Page = newPage.Value; pending.RecordChange(); }
             ImGui.TableNextColumn();
-            var newOx = ImGuiExtensions.Input("##OriginX", record.OriginX, width: 60);
+            var newOx = ImGuiExtensions.Input("##OriginX", record.OriginX, width: 80);
             if (newOx != null) { record.OriginX = newOx.Value; pending.RecordChange(); }
             ImGui.TableNextColumn();
-            var newOy = ImGuiExtensions.Input("##OriginY", record.OriginY, width: 60);
+            var newOy = ImGuiExtensions.Input("##OriginY", record.OriginY, width: 80);
             if (newOy != null) { record.OriginY = newOy.Value; pending.RecordChange(); }
             ImGui.TableNextColumn();
-            var newW = ImGuiExtensions.Input("##Width", record.WidthMinusOne, width: 60);
+            var newW = ImGuiExtensions.Input("##Width", record.WidthMinusOne, width: 80);
             if (newW != null) { record.WidthMinusOne = newW.Value; pending.RecordChange(); }
             ImGui.TableNextColumn();
-            var newH = ImGuiExtensions.Input("##Height", record.HeightMinusOne, width: 60);
+            var newH = ImGuiExtensions.Input("##Height", record.HeightMinusOne, width: 80);
             if (newH != null) { record.HeightMinusOne = newH.Value; pending.RecordChange(); }
             ImGui.TableNextColumn();
-            var newFlag = ImGuiExtensions.Input("##Flag", record.Flag, width: 60);
+            var newFlag = ImGuiExtensions.Input("##Flag", record.Flag, width: 80);
             if (newFlag != null) { record.Flag = newFlag.Value; pending.RecordChange(); }
             ImGui.TableNextColumn();
-            var newMc = ImGuiExtensions.Input("##MaxColor", record.MaxColor, width: 60);
+            var newMc = ImGuiExtensions.Input("##MaxColor", record.MaxColor, width: 80);
             if (newMc != null) { record.MaxColor = newMc.Value; pending.RecordChange(); }
             ImGui.TableNextColumn();
-            var newBpp = ImGuiExtensions.Input("##Bpp", record.BytesPerPixel, width: 60);
+            var newBpp = ImGuiExtensions.Input("##Bpp", record.BytesPerPixel, width: 80);
             if (newBpp != null) { record.BytesPerPixel = newBpp.Value; pending.RecordChange(); }
             ImGui.PopID();
         }
