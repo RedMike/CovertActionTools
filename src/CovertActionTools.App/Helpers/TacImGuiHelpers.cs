@@ -105,19 +105,40 @@ namespace CovertActionTools.App.Helpers
             if (!ImGui.CollapsingHeader("Rendering")) return;
 
             var editable = section.Editable();
+
             DrawBlobRecord("Padding 1", section.Padding1, editable, pending);
-            DrawRastPortRecord("RastPort 1", section.Record1, editable, pending);
-            DrawPointerRecord("Pointer 1", section.Pointer1);
-            DrawRastPortRecord("RastPort 2", section.Record2, editable, pending);
-            DrawPointerRecord("Pointer 2", section.Pointer2);
-            DrawRastPortRecord("RastPort 3", section.Record3, editable, pending);
-            DrawPointerRecord("Pointer 3", section.Pointer3);
-            // EnvironmentTransfer is intentionally not shown — always zeroed, not viewable or editable
             DrawBlobRecord("Padding 2", section.Padding2, editable, pending);
-            DrawRastPortRecord("RastPort 4", section.Record4, editable, pending);
-            DrawPointerRecord("Pointer 4", section.Pointer4);
-            DrawRastPortRecord("RastPort 5", section.Record5, editable, pending);
-            DrawPointerRecord("Pointer 5", section.Pointer5);
+
+            ImGui.Text($"Pointer 1: 0x{section.Pointer1.Pointer:X4}  " +
+                       $"Pointer 2: 0x{section.Pointer2.Pointer:X4}  " +
+                       $"Pointer 3: 0x{section.Pointer3.Pointer:X4}  " +
+                       $"Pointer 4: 0x{section.Pointer4.Pointer:X4}  " +
+                       $"Pointer 5: 0x{section.Pointer5.Pointer:X4}");
+
+            // EnvironmentTransfer is intentionally not shown — always zeroed, not viewable or editable
+            if (!editable) ImGui.BeginDisabled();
+            if (ImGui.BeginTable("RastPorts", 9, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+            {
+                ImGui.TableSetupColumn("Name");
+                ImGui.TableSetupColumn("Page");
+                ImGui.TableSetupColumn("Origin X");
+                ImGui.TableSetupColumn("Origin Y");
+                ImGui.TableSetupColumn("Width - 1");
+                ImGui.TableSetupColumn("Height - 1");
+                ImGui.TableSetupColumn("Flag");
+                ImGui.TableSetupColumn("Max Color");
+                ImGui.TableSetupColumn("Bytes/px");
+                ImGui.TableHeadersRow();
+
+                DrawRastPortRow("RastPort 1", section.Record1, pending);
+                DrawRastPortRow("RastPort 2", section.Record2, pending);
+                DrawRastPortRow("RastPort 3", section.Record3, pending);
+                DrawRastPortRow("RastPort 4", section.Record4, pending);
+                DrawRastPortRow("RastPort 5", section.Record5, pending);
+
+                ImGui.EndTable();
+            }
+            if (!editable) ImGui.EndDisabled();
         }
 
         #endregion
@@ -341,41 +362,36 @@ namespace CovertActionTools.App.Helpers
             ImGui.PopID();
         }
 
-        private static void DrawRastPortRecord(string subLabel, RastPortRecord record, bool editable, PendingEditorExecutableState pending)
+        private static void DrawRastPortRow(string name, RastPortRecord record, PendingEditorExecutableState pending)
         {
-            if (!ImGui.TreeNode(subLabel)) return;
-            if (!editable) ImGui.BeginDisabled();
-
-            if (ImGui.BeginTable($"rp_{subLabel}", 2))
-            {
-                DrawFieldRow("Page", record.Page, v => record.Page = v, pending);
-                DrawFieldRow("Origin X", record.OriginX, v => record.OriginX = v, pending);
-                DrawFieldRow("Origin Y", record.OriginY, v => record.OriginY = v, pending);
-                DrawFieldRow("Width - 1", record.WidthMinusOne, v => record.WidthMinusOne = v, pending);
-                DrawFieldRow("Height - 1", record.HeightMinusOne, v => record.HeightMinusOne = v, pending);
-                DrawFieldRow("Flag", record.Flag, v => record.Flag = v, pending);
-                DrawFieldRow("Max Color", record.MaxColor, v => record.MaxColor = v, pending);
-                DrawFieldRow("Bytes Per Pixel", record.BytesPerPixel, v => record.BytesPerPixel = v, pending);
-                ImGui.EndTable();
-            }
-
-            if (!editable) ImGui.EndDisabled();
-            ImGui.TreePop();
-        }
-
-        private static void DrawFieldRow(string label, int value, Action<int> set, PendingEditorExecutableState pending)
-        {
+            ImGui.PushID(name);
             ImGui.TableNextRow();
+            ImGui.TableNextColumn(); ImGui.Text(name);
             ImGui.TableNextColumn();
-            ImGui.Text(label);
+            var newPage = ImGuiExtensions.Input("##Page", record.Page, width: 60);
+            if (newPage != null) { record.Page = newPage.Value; pending.RecordChange(); }
             ImGui.TableNextColumn();
-            var newVal = ImGuiExtensions.Input($"##{label}", value, width: 100);
-            if (newVal != null) { set(newVal.Value); pending.RecordChange(); }
-        }
-
-        private static void DrawPointerRecord(string subLabel, PointerRecord record)
-        {
-            ImGui.Text($"{subLabel}: 0x{record.Pointer:X4}");
+            var newOx = ImGuiExtensions.Input("##OriginX", record.OriginX, width: 60);
+            if (newOx != null) { record.OriginX = newOx.Value; pending.RecordChange(); }
+            ImGui.TableNextColumn();
+            var newOy = ImGuiExtensions.Input("##OriginY", record.OriginY, width: 60);
+            if (newOy != null) { record.OriginY = newOy.Value; pending.RecordChange(); }
+            ImGui.TableNextColumn();
+            var newW = ImGuiExtensions.Input("##Width", record.WidthMinusOne, width: 60);
+            if (newW != null) { record.WidthMinusOne = newW.Value; pending.RecordChange(); }
+            ImGui.TableNextColumn();
+            var newH = ImGuiExtensions.Input("##Height", record.HeightMinusOne, width: 60);
+            if (newH != null) { record.HeightMinusOne = newH.Value; pending.RecordChange(); }
+            ImGui.TableNextColumn();
+            var newFlag = ImGuiExtensions.Input("##Flag", record.Flag, width: 60);
+            if (newFlag != null) { record.Flag = newFlag.Value; pending.RecordChange(); }
+            ImGui.TableNextColumn();
+            var newMc = ImGuiExtensions.Input("##MaxColor", record.MaxColor, width: 60);
+            if (newMc != null) { record.MaxColor = newMc.Value; pending.RecordChange(); }
+            ImGui.TableNextColumn();
+            var newBpp = ImGuiExtensions.Input("##Bpp", record.BytesPerPixel, width: 60);
+            if (newBpp != null) { record.BytesPerPixel = newBpp.Value; pending.RecordChange(); }
+            ImGui.PopID();
         }
 
         private static void DrawBlobRecord(string subLabel, BlobRecord record, bool editable, PendingEditorExecutableState pending)
@@ -388,7 +404,7 @@ namespace CovertActionTools.App.Helpers
                 if (i > 0) ImGui.SameLine();
                 ImGui.PushID($"blob_{i}");
                 var val = (int)record.Data[i];
-                var newVal = ImGuiExtensions.Input($"[{i}]", val, width: 50);
+                var newVal = ImGuiExtensions.Input($"[{i}]", val, width: 70);
                 if (newVal.HasValue && newVal.Value >= 0 && newVal.Value <= 255)
                 {
                     record.Data[i] = (byte)newVal.Value;
