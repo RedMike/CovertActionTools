@@ -6,16 +6,16 @@
     /// </summary>
     public class EnvironmentTransferRecord : IExecutableRecord
     {
-        private readonly int _size;
+        public int Size { get; }
 
         public EnvironmentTransferRecord(int size)
         {
-            _size = size;
+            Size = size;
         }
 
         public int ReadBytes(byte[] fullPayload, int startingOffset)
         {
-            for (var i = startingOffset; i < startingOffset + _size; i++)
+            for (var i = startingOffset; i < startingOffset + Size; i++)
             {
                 if (fullPayload[i] != 0)
                 {
@@ -23,17 +23,17 @@
                 }
             }
 
-            return _size;
+            return Size;
         }
 
         public byte[] WriteBytes()
         {
-            return new byte[_size];
+            return new byte[Size];
         }
 
         public EnvironmentTransferRecord Clone()
         {
-            return new EnvironmentTransferRecord(_size);
+            return new EnvironmentTransferRecord(Size);
         }
     }
 }
