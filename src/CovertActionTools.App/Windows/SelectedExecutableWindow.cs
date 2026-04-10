@@ -3,7 +3,7 @@ using System.Text;
 using CovertActionTools.App.ViewModels;
 using CovertActionTools.Core.Models;
 using CovertActionTools.Core.Models.Executables;
-using CovertActionTools.Core.Models.Executables.Records.Tac;
+using CovertActionTools.App.Helpers;
 using ImGuiNET;
 using Microsoft.Extensions.Logging;
 
@@ -97,96 +97,12 @@ public class SelectedExecutableWindow : BaseWindow
 
     private void DrawTacData(TacDataSegment tac)
     {
-        if (ImGui.CollapsingHeader("Room Types"))
-        {
-            if (ImGui.BeginTable("RoomTypes", 4, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
-            {
-                ImGui.TableSetupColumn("Name");
-                ImGui.TableSetupColumn("Surv. Quality");
-                ImGui.TableSetupColumn("Size Constraint");
-                ImGui.TableSetupColumn("Enabled");
-                ImGui.TableHeadersRow();
+        TacImGuiHelpers.DrawTacHeaderFilenamesSection(tac.HeaderFilenames);
+        TacImGuiHelpers.DrawRoomTypeSection(tac.RoomTypes, _pendingState);
 
-                for (var i = 0; i < tac.RoomTypes.RoomTypes.Count; i++)
-                {
-                    ImGui.PushID($"RoomType_{i}");
-                    var room = tac.RoomTypes.RoomTypes[i];
-                    ImGui.TableNextRow();
-
-                    ImGui.TableNextColumn();
-                    var newName = ImGuiExtensions.Input("##Name", room.Name, TacRoomTypeRecord.NameLength, width: 150);
-                    if (newName != null) { room.Name = newName; _pendingState.RecordChange(); }
-
-                    ImGui.TableNextColumn();
-                    var newSurvQuality = ImGuiExtensions.Input("##SurvQuality", (int)room.SurveillanceQuality, width: 80);
-                    if (newSurvQuality != null) { room.SurveillanceQuality = (ushort)newSurvQuality.Value; _pendingState.RecordChange(); }
-
-                    ImGui.TableNextColumn();
-                    var sizeIdx = (int)room.SizeConstraint;
-                    ImGui.SetNextItemWidth(120);
-                    if (ImGui.Combo("##Size", ref sizeIdx, "Small\0Medium\0Small+Medium\0Large\0Small+Large\0Medium+Large\0All\0"))
-                    {
-                        var sizeValues = new int[] { 1, 2, 3, 4, 5, 6, 7 };
-                        room.SizeConstraint = (RoomSizeConstraint)sizeValues[sizeIdx];
-                        _pendingState.RecordChange();
-                    }
-
-                    ImGui.TableNextColumn();
-                    var enabled = room.Enabled;
-                    if (ImGui.Checkbox("##Enabled", ref enabled))
-                    {
-                        room.Enabled = enabled;
-                        _pendingState.RecordChange();
-                    }
-
-                    ImGui.PopID();
-                }
-
-                ImGui.EndTable();
-            }
-        }
-
-        if (ImGui.CollapsingHeader("Objects"))
-        {
-            // Build room type names for placement checkboxes (from the room type records + Target Room)
-            var roomTypeNames = tac.RoomTypes.RoomTypes.Select(r => r.Name).ToList();
-            roomTypeNames.Add("Target Room");
-
-            for (var i = 0; i < tac.MapObjectTypes.MapObjectTypes.Count; i++)
-            {
-                ImGui.PushID($"Object_{i}");
-                var obj = tac.MapObjectTypes.MapObjectTypes[i];
-                var label = string.IsNullOrEmpty(obj.Name) ? $"Object {i}" : $"Object {i}: {obj.Name}";
-                if (ImGui.CollapsingHeader(label))
-                {
-                    // TODO: Sprite X/Y should come from/go to the sprite sheet on the GUYS2/GUYS3 images
-                    if (ImGui.BeginTable($"ObjBasic_{i}", 3))
-                    {
-                        ImGui.TableNextRow();
-                        ImGui.TableNextColumn();
-                        var newName = ImGuiExtensions.Input("Name", obj.Name, TacObjectRecord.NameLength, width: 120);
-                        if (newName != null) { obj.Name = newName; _pendingState.RecordChange(); }
-
-                        ImGui.TableNextColumn();
-                        var newX = ImGuiExtensions.Input("Sprite X", (int)obj.SpriteSheetOffsetX, width: 80);
-                        if (newX != null) { obj.SpriteSheetOffsetX = (ushort)newX.Value; _pendingState.RecordChange(); }
-
-                        ImGui.TableNextColumn();
-                        var newY = ImGuiExtensions.Input("Sprite Y", (int)obj.SpriteSheetOffsetY, width: 80);
-                        if (newY != null) { obj.SpriteSheetOffsetY = (ushort)newY.Value; _pendingState.RecordChange(); }
-
-                        ImGui.EndTable();
-                    }
-
-                    ImGui.Text("Behaviour Flags:");
-                    DrawBehaviourFlags(obj);
-
-                    ImGui.Text("Room Placement:");
-                    DrawRoomPlacement(obj, roomTypeNames);
-                }
-                ImGui.PopID();
-            }
-        }
+        var roomTypeNames = tac.RoomTypes.RoomTypes.Select(r => r.Name).ToList();
+        roomTypeNames.Add("Target Room");
+        TacImGuiHelpers.DrawMapObjectTypeSection(tac.MapObjectTypes, _pendingState, roomTypeNames);
 
         if (ImGui.CollapsingHeader("Equipment Names"))
         {
@@ -385,20 +301,8 @@ public class SelectedExecutableWindow : BaseWindow
             DrawStringArray(tac.CharacterNames, "CharName");
         }
 
-        // if (ImGui.CollapsingHeader("Movement Pixel DX/DY"))
-        // {
-        //     DrawDirectionTable("MvPx", CompassLabels9, tac.MovementPixelDX, tac.MovementPixelDY, "Walking pixel offsets per direction");
-        // }
-        //
-        // if (ImGui.CollapsingHeader("Jumping Tile DX/DY"))
-        // {
-        //     DrawDirectionTable("JpTl", CompassLabels9, tac.JumpingTileDX, tac.JumpingTileDY, "Jumping tile offsets per direction");
-        // }
-        //
-        // if (ImGui.CollapsingHeader("Tile Adjacency DX/DY"))
-        // {
-        //     DrawDirectionTable("TlAd", CardinalLabels4, tac.TileAdjacencyDX, tac.TileAdjacencyDY, "Cardinal tile adjacency for map generation and doors");
-        // }
+        TacImGuiHelpers.DrawMovementSection(tac.Movement, _pendingState);
+        TacImGuiHelpers.DrawRenderingSection(tac.Rendering, _pendingState);
 
         if (ImGui.CollapsingHeader("Clue Relationship Phrases"))
         {
@@ -455,46 +359,6 @@ public class SelectedExecutableWindow : BaseWindow
             ("PostCharNameData", tac.PostCharNameData.Length),
             ("TrailingData", tac.TrailingData.Length)
         });
-    }
-
-    private void DrawBehaviourFlags(MapObjectTypeRecord obj)
-    {
-        //TODO: implement behaviour
-    }
-
-    private void DrawRoomPlacement(MapObjectTypeRecord obj, List<string> roomTypeNames)
-    {
-        var flags = (int)obj.RoomSizeConstraint;
-        // Room placement bitfield: bit index = room type index
-        var columns = Math.Min(roomTypeNames.Count, 6);
-        if (ImGui.BeginTable("RoomPlace", columns))
-        {
-            for (var b = 0; b < roomTypeNames.Count; b++)
-            {
-                if (b % columns == 0) ImGui.TableNextRow();
-                ImGui.TableNextColumn();
-                var val = (flags & (1 << b)) != 0;
-                var origVal = val;
-                ImGui.Checkbox(roomTypeNames[b], ref val);
-                if (val != origVal)
-                {
-                    if (val) flags |= (1 << b);
-                    else flags &= ~(1 << b);
-                    obj.RoomSizeConstraint = (RoomSizeConstraint)flags;
-                    _pendingState.RecordChange();
-                }
-            }
-
-            ImGui.EndTable();
-        }
-
-        // Show remaining high bits as raw value if any are set
-        var usedBits = (1 << roomTypeNames.Count) - 1;
-        var highBits = flags & ~usedBits;
-        if (highBits != 0)
-        {
-            ImGui.Text($"  Unknown placement bits: 0x{highBits:X}");
-        }
     }
 
     // TODO: Are the hardcoded ones just hardcoded from game logic or is the entire list

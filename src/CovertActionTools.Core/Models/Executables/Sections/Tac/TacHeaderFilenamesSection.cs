@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using CovertActionTools.Core.Models.Executables.Sections.Shared;
 
 namespace CovertActionTools.Core.Models.Executables.Sections.Tac
@@ -10,7 +11,9 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Tac
     {
         protected override int StringCount => 7;
         protected override int? StringLength => null;
-        
+
+        public IReadOnlyList<string> Filenames => Strings;
+
         public override bool Viewable()
         {
             return true;
