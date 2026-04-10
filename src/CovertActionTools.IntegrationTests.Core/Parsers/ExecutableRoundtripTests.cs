@@ -279,4 +279,37 @@ public class ExecutableRoundtripTests : IDisposable
     }
 
     #endregion
+    
+    [Fact]
+    public void Roundtrip_TAC_DataSegmentDiagnostic()
+    {
+        var model = TryParseFromScratch();
+        if (model == null) return;
+
+        var originalExe = model.Executables["TAC"];
+        var originalDataSegment = originalExe.GetDataSegmentBytes();
+        var reparsed = CovertActionTools.Core.Models.Executables.TacDataSegment.FromBytes(originalDataSegment);
+        var rebuilt = reparsed.ToBytes();
+
+        var output = new System.Text.StringBuilder();
+        output.AppendLine($"Original length: {originalDataSegment.Length}");
+        output.AppendLine($"Rebuilt length: {rebuilt.Length}");
+
+        var diffs = 0;
+        var maxLen = Math.Max(originalDataSegment.Length, rebuilt.Length);
+        for (var i = 0; i < maxLen; i++)
+        {
+            var orig = i < originalDataSegment.Length ? originalDataSegment[i] : (byte)0xFF;
+            var reb = i < rebuilt.Length ? rebuilt[i] : (byte)0xFF;
+            if (orig != reb)
+            {
+                if (diffs < 50)
+                    output.AppendLine($"  DIFF DS:0x{i:X4}: orig=0x{orig:X2}({(orig >= 0x20 && orig <= 0x7E ? (char)orig : '.')}) rebuilt=0x{reb:X2}({(reb >= 0x20 && reb <= 0x7E ? (char)reb : '.')})");
+                diffs++;
+            }
+        }
+        output.AppendLine($"Total diffs: {diffs}");
+
+        Assert.True(diffs == 0, output.ToString());
+    }
 }

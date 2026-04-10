@@ -293,6 +293,14 @@ namespace CovertActionTools.Core.Models.Executables
             (0x8F, "[white]", "Color 15 — white"),
         };
 
+        public static int DecodeControlStringWithNullableTerminator(byte[] data, int offset, out string s)
+        {
+            var strLength = 0;
+            while (data[offset + strLength] != 0) strLength++;
+            s = DecodeControlString(data, offset, strLength);
+            return strLength + 1; // include null terminator in offset
+        }
+
         /// <summary>
         /// Decode a byte array containing control bytes (0x80+) into a string with
         /// human-readable tokens (e.g. [tab], [b]). Preserves all bytes faithfully
