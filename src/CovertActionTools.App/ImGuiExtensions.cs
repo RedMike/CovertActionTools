@@ -1,4 +1,5 @@
-﻿using System.Linq.Expressions;
+﻿using System;
+using System.Linq.Expressions;
 using System.Numerics;
 using System.Reflection;
 using CovertActionTools.App.ViewModels;
@@ -161,6 +162,26 @@ public static class ImGuiExtensions
         }
 
         return value;
+    }
+
+    public static bool DrawMenuStringRecord(
+        string label, CovertActionTools.Core.Models.Executables.Records.Shared.MenuStringRecord record,
+        Vector2 editorSize, Action onChanged)
+    {
+        var changed = false;
+        ImGui.PushID(label);
+
+        var newHeader = InputMultiline("Header", record.Header, 256, editorSize, id: $"{label}_hdr");
+        if (newHeader != null) { record.Header = newHeader; onChanged(); changed = true; }
+
+        for (var i = 0; i < record.Options.Length; i++)
+        {
+            var newOpt = InputMultiline($"Option {i + 1}", record.Options[i], 256, editorSize, id: $"{label}_opt{i}");
+            if (newOpt != null) { record.Options[i] = newOpt; onChanged(); changed = true; }
+        }
+
+        ImGui.PopID();
+        return changed;
     }
 
     public static bool? Input(string label, bool value, string? id = null, int? width = null)

@@ -111,6 +111,7 @@ public class SelectedExecutableWindow : BaseWindow
         TacImGuiHelpers.DrawTacMenuStringsSection(tac.MenuStrings, _pendingState);
         TacImGuiHelpers.DrawTacInputConfigSection(tac.InputConfig, _pendingState);
         TacImGuiHelpers.DrawTargetReticleColorsSection(tac.TargetReticleColors, _pendingState);
+        TacImGuiHelpers.DrawGameplayActionMenusSection(tac.GameplayActionMenus, _pendingState);
         TacImGuiHelpers.DrawTacGameplayStringsSection(tac.GameplayStrings);
 
         if (ImGui.CollapsingHeader("Equipment Names"))

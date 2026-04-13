@@ -154,6 +154,7 @@ namespace CovertActionTools.Core.Models.Executables
         public TacInputConfigSection InputConfig { get; set; } = new();
         public CombatAlertedFlagSection CombatAlertedFlag { get; set; } = new();
         public TargetReticleColorsSection TargetReticleColors { get; set; } = new();
+        public GameplayActionMenusSection GameplayActionMenus { get; set; } = new();
         public TacGameplayStringsSection GameplayStrings { get; set; } = new();
 
         /// <summary>
@@ -299,6 +300,7 @@ namespace CovertActionTools.Core.Models.Executables
             offset = ReadSectionWithPadding(segment.InputConfig, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.CombatAlertedFlag, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.TargetReticleColors, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.GameplayActionMenus, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.GameplayStrings, dataSegment, offset);
 
             // Read equipment name pointers to find and extract the strings from the mid section
@@ -461,6 +463,7 @@ namespace CovertActionTools.Core.Models.Executables
                 InputConfig,
                 CombatAlertedFlag,
                 TargetReticleColors,
+                GameplayActionMenus,
                 GameplayStrings
             );
 
@@ -523,6 +526,7 @@ namespace CovertActionTools.Core.Models.Executables
                 InputConfig = InputConfig.Clone(),
                 CombatAlertedFlag = CombatAlertedFlag.Clone(),
                 TargetReticleColors = TargetReticleColors.Clone(),
+                GameplayActionMenus = GameplayActionMenus.Clone(),
                 GameplayStrings = GameplayStrings.Clone(),
                 GameplayData = GameplayData.ToArray(),
                 EquipmentNames = EquipmentNames.Select(s => s).ToArray(),

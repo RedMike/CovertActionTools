@@ -19,9 +19,9 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Tac
     /// </summary>
     public class TacGameplayStringsSection : IExecutableSection
     {
-        // 0x1C91..0x1F35 inclusive — ends at the null terminator that follows the final
-        // "into a double agent!\n" message in the binary.
-        public const int SectionSize = 0x2A5;
+        // 0x1CE4..0x1F35 inclusive — starts after the action menus section, ends at the
+        // null terminator that follows the final "into a double agent!\n" message.
+        public const int SectionSize = 0x252;
 
         public string[] Strings { get; set; } = Array.Empty<string>();
         public int[] StringSizes { get; set; } = Array.Empty<int>();

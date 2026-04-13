@@ -354,6 +354,31 @@ namespace CovertActionTools.App.Helpers
             ImGui.PopID();
         }
 
+        public static void DrawGameplayActionMenusSection(GameplayActionMenusSection section, PendingEditorExecutableState pending)
+        {
+            if (!section.Viewable()) return;
+            if (!ImGui.CollapsingHeader("Action Menus (0x1C91..0x1CE3)")) return;
+
+            var editable = section.Editable();
+            if (!editable) ImGui.BeginDisabled();
+
+            var editorSize = new System.Numerics.Vector2(300, 48);
+
+            ImGui.Text("Set Trap Menu");
+            ImGuiExtensions.DrawMenuStringRecord("SetTrap", section.SetTrapMenuStrings, editorSize, () => pending.RecordChange());
+
+            ImGui.Separator();
+            ImGui.Text("Arrest Menu");
+
+            var newArrestHeader = ImGuiExtensions.InputMultiline(
+                "Arrest Header", section.ArrestHeaderString, 128, editorSize, id: "arrest_hdr");
+            if (newArrestHeader != null) { section.ArrestHeaderString = newArrestHeader; pending.RecordChange(); }
+
+            ImGuiExtensions.DrawMenuStringRecord("Arrest", section.ArrestMenuStrings, editorSize, () => pending.RecordChange());
+
+            if (!editable) ImGui.EndDisabled();
+        }
+
         public static void DrawTacGameplayStringsSection(TacGameplayStringsSection section)
         {
             if (!section.Viewable()) return;
