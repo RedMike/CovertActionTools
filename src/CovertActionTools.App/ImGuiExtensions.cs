@@ -156,6 +156,19 @@ public static class ImGuiExtensions
             ImGui.PopID();
         }
 
+        // ImGui.InputTextMultiline strips trailing newlines from the ref string.
+        // Restore them so that strings containing meaningful trailing \n roundtrip
+        // correctly through the editor without data corruption.
+        if (origValue.EndsWith("\n") && !value.EndsWith("\n"))
+        {
+            var stripped = origValue.TrimEnd('\n');
+            if (value == stripped)
+            {
+                return null;
+            }
+            value += origValue.Substring(stripped.Length);
+        }
+
         if (value == origValue)
         {
             return null;
