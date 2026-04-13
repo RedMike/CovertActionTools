@@ -22,7 +22,7 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Tac
     ///   - 0x1C3E <see cref="DoorSeparator"/>: "\n " — trailing newline + space between
     ///     door entries in the same loop.
     /// </summary>
-    public class TacMissionStateBlockSection : IExecutableSection, IPaddedToWord
+    public class DoorEntryStringsSection : IExecutableSection, IPaddedToWord
     {
         public const int EmptyStringSlot1Size = 1;
         public const int DoorPromptHeaderSlotSize = 16;
@@ -34,7 +34,7 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Tac
             DoorLabelSlotSize +
             DoorSeparatorSlotSize;
 
-        public byte EmptyStringSlot1 { get; set; }
+        private byte EmptyStringSlot1 { get; set; }
         public string DoorPromptHeader { get; set; } = string.Empty;
         public string DoorLabel { get; set; } = string.Empty;
         public string DoorSeparator { get; set; } = string.Empty;
@@ -77,9 +77,9 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Tac
             return result;
         }
 
-        public TacMissionStateBlockSection Clone()
+        public DoorEntryStringsSection Clone()
         {
-            return new TacMissionStateBlockSection
+            return new DoorEntryStringsSection
             {
                 EmptyStringSlot1 = EmptyStringSlot1,
                 DoorPromptHeader = DoorPromptHeader,
@@ -96,7 +96,7 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Tac
             if (end >= slotEnd)
             {
                 throw new InvalidOperationException(
-                    $"{nameof(TacMissionStateBlockSection)}.{fieldName}: fixed slot at offset 0x{offset:X4} " +
+                    $"{nameof(DoorEntryStringsSection)}.{fieldName}: fixed slot at offset 0x{offset:X4} " +
                     $"(size {slotSize}) has no null terminator within its bounds.");
             }
             return DataSegmentHelper.DecodeControlString(data, offset, end - offset);
@@ -109,7 +109,7 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Tac
             if (encoded.Length > maxContent)
             {
                 throw new InvalidOperationException(
-                    $"{nameof(TacMissionStateBlockSection)}.{fieldName}: encoded length {encoded.Length} " +
+                    $"{nameof(DoorEntryStringsSection)}.{fieldName}: encoded length {encoded.Length} " +
                     $"exceeds the fixed slot's content capacity ({maxContent} bytes + 1 terminator). " +
                     "Shorten the edit — the original byte slot size cannot grow.");
             }

@@ -137,6 +137,32 @@ public static class ImGuiExtensions
         return value;
     }
     
+    public static string? InputMultiline(string label, string value, int maxLength, Vector2 size, string? id = null, bool readOnly = false)
+    {
+        if (!string.IsNullOrEmpty(id))
+        {
+            ImGui.PushID(id);
+        }
+        var origValue = value;
+        var flags = ImGuiInputTextFlags.None;
+        if (readOnly)
+        {
+            flags |= ImGuiInputTextFlags.ReadOnly;
+        }
+        ImGui.InputTextMultiline(label, ref value, (uint)maxLength, size, flags);
+        if (!string.IsNullOrEmpty(id))
+        {
+            ImGui.PopID();
+        }
+
+        if (value == origValue)
+        {
+            return null;
+        }
+
+        return value;
+    }
+
     public static bool? Input(string label, bool value, string? id = null, int? width = null)
     {
         if (width != null)

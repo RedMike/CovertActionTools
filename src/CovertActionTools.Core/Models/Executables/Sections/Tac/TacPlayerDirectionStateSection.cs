@@ -21,8 +21,8 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Tac
     {
         public const int SectionSize = 4;
 
-        public ushort PlayerFacingDirection { get; set; }
-        public ushort PlayerInputDirection { get; set; }
+        private ushort PlayerFacingDirection { get; set; }
+        private ushort PlayerInputDirection { get; set; }
 
         public bool Viewable()
         {

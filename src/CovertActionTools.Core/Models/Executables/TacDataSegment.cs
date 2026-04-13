@@ -148,7 +148,7 @@ namespace CovertActionTools.Core.Models.Executables
         public TacGameSettingsSection GameSettings { get; set; } = new();
         public VgaPaletteRemapSection VgaPaletteRemap { get; set; } = new();
         public TacStubOutputCaptureSection StubOutputCapture { get; set; } = new();
-        public TacMissionStateBlockSection MissionStateBlock { get; set; } = new();
+        public DoorEntryStringsSection MissionStateBlock { get; set; } = new();
         public TacPlayerDirectionStateSection PlayerDirectionState { get; set; } = new();
         public TacMenuStringsSection MenuStrings { get; set; } = new();
         public TacInputConfigSection InputConfig { get; set; } = new();

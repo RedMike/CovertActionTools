@@ -167,35 +167,30 @@ namespace CovertActionTools.App.Helpers
             ImGui.TreePop();
         }
 
-        public static void DrawTacMissionStateBlockSection(TacMissionStateBlockSection section, PendingEditorExecutableState pending)
+        public static void DrawDoorEntryStringsSection(DoorEntryStringsSection section, PendingEditorExecutableState pending)
         {
             if (!section.Viewable()) return;
             if (!ImGui.CollapsingHeader("Door Prompt Strings (0x1C26..0x1C41)")) return;
 
-            ImGui.TextWrapped("Three door-picker dialog strings preceded by an intentional empty-string " +
-                              "pointer slot. Door strings are stored in fixed byte slots — edits longer " +
+            ImGui.TextWrapped("Three door-picker dialog strings preceded by an empty-string " +
+                              "null byte. Door strings are stored in fixed byte slots — edits longer " +
                               "than the slot will throw on save.");
 
             var editable = section.Editable();
             if (!editable) ImGui.BeginDisabled();
 
-            ImGui.Text($"Empty String Slot (0x1C26): 0x{section.EmptyStringSlot1:X2}");
+            var multilineSize = new System.Numerics.Vector2(220, 48);
 
-            // Door strings — editable. The ImGui text buffer is sized generously so
-            // control-byte tokens (e.g. [tab]) don't get clipped on display; the real
-            // fixed-slot length constraint is enforced at save time by
-            // TacMissionStateBlockSection.WriteBytes, which throws if the encoded length
-            // exceeds the slot's content capacity.
-            var newHeader = ImGuiExtensions.Input(
-                "Door Prompt Header (0x1C27, 16-byte slot)", section.DoorPromptHeader, 64, width: 220);
+            var newHeader = ImGuiExtensions.InputMultiline(
+                "Door Prompt Header (0x1C27, 16-byte slot)", section.DoorPromptHeader, 64, multilineSize);
             if (newHeader != null) { section.DoorPromptHeader = newHeader; pending.RecordChange(); }
 
-            var newLabel = ImGuiExtensions.Input(
-                "Door Label (0x1C37, 7-byte slot)", section.DoorLabel, 64, width: 220);
+            var newLabel = ImGuiExtensions.InputMultiline(
+                "Door Label (0x1C37, 7-byte slot)", section.DoorLabel, 64, multilineSize);
             if (newLabel != null) { section.DoorLabel = newLabel; pending.RecordChange(); }
 
-            var newSep = ImGuiExtensions.Input(
-                "Door Separator (0x1C3E, 3-byte slot)", section.DoorSeparator, 64, width: 220);
+            var newSep = ImGuiExtensions.InputMultiline(
+                "Door Separator (0x1C3E, 3-byte slot)", section.DoorSeparator, 64, multilineSize);
             if (newSep != null) { section.DoorSeparator = newSep; pending.RecordChange(); }
 
             if (!editable) ImGui.EndDisabled();
