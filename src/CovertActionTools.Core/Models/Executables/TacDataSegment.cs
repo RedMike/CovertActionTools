@@ -282,12 +282,12 @@ namespace CovertActionTools.Core.Models.Executables
             var segment = new TacDataSegment();
 
             var offset = 0;
-            offset += segment.Header.ReadBytes(dataSegment, offset);
-            offset += segment.HeaderFilenames.ReadBytes(dataSegment, offset);
-            offset += segment.RoomTypes.ReadBytes(dataSegment, offset);
-            offset += segment.MapObjectTypes.ReadBytes(dataSegment, offset);
-            offset += segment.Movement.ReadBytes(dataSegment, offset);
-            offset += segment.Rendering.ReadBytes(dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.Header, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.HeaderFilenames, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.RoomTypes, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.MapObjectTypes, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.Movement, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.Rendering, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.CgaColorRemap, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.GameSettings, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.VgaPaletteRemap, dataSegment, offset);
