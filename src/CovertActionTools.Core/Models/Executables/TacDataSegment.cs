@@ -153,7 +153,7 @@ namespace CovertActionTools.Core.Models.Executables
         public TacMenuStringsSection MenuStrings { get; set; } = new();
         public TacInputConfigSection InputConfig { get; set; } = new();
         public CombatAlertedFlagSection CombatAlertedFlag { get; set; } = new();
-        public TacAlertLevelColorsSection AlertLevelColors { get; set; } = new();
+        public TargetReticleColorsSection TargetReticleColors { get; set; } = new();
         public TacGameplayStringsSection GameplayStrings { get; set; } = new();
 
         /// <summary>
@@ -298,7 +298,7 @@ namespace CovertActionTools.Core.Models.Executables
             offset = ReadSectionWithPadding(segment.MenuStrings, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.InputConfig, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.CombatAlertedFlag, dataSegment, offset);
-            offset = ReadSectionWithPadding(segment.AlertLevelColors, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.TargetReticleColors, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.GameplayStrings, dataSegment, offset);
 
             // Read equipment name pointers to find and extract the strings from the mid section
@@ -460,7 +460,7 @@ namespace CovertActionTools.Core.Models.Executables
                 MenuStrings,
                 InputConfig,
                 CombatAlertedFlag,
-                AlertLevelColors,
+                TargetReticleColors,
                 GameplayStrings
             );
 
@@ -522,7 +522,7 @@ namespace CovertActionTools.Core.Models.Executables
                 MenuStrings = MenuStrings.Clone(),
                 InputConfig = InputConfig.Clone(),
                 CombatAlertedFlag = CombatAlertedFlag.Clone(),
-                AlertLevelColors = AlertLevelColors.Clone(),
+                TargetReticleColors = TargetReticleColors.Clone(),
                 GameplayStrings = GameplayStrings.Clone(),
                 GameplayData = GameplayData.ToArray(),
                 EquipmentNames = EquipmentNames.Select(s => s).ToArray(),

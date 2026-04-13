@@ -90,6 +90,7 @@ namespace CovertActionTools.Core.Models.Executables.Records.Shared
         PageDown = 0x51,
         Insert = 0x52,
         Delete = 0x53,
+        SysRq = 0x54,
         F11 = 0x57,
         F12 = 0x58,
     }

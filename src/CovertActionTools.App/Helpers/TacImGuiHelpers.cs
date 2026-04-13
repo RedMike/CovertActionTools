@@ -319,35 +319,39 @@ namespace CovertActionTools.App.Helpers
             if (result != null) { setter((BiosKeyboardScanCode)result.Value); pending.RecordChange(); }
         }
 
-        public static void DrawTacAlertLevelColorsSection(TacAlertLevelColorsSection section, PendingEditorExecutableState pending)
+        public static void DrawTargetReticleColorsSection(TargetReticleColorsSection section, PendingEditorExecutableState pending)
         {
             if (!section.Viewable()) return;
-            if (!ImGui.CollapsingHeader("Alert Level Colors (0x1C8C..0x1C90)")) return;
+            if (!ImGui.CollapsingHeader("Target Reticle Colors (0x1C8C..0x1C90)")) return;
 
-            ImGui.TextWrapped("5 bytes indexed by a clamp-to-[0,4] primitive in FUN_10e8_225d and passed " +
-                              "as the final argument to a draw call — NEEDS INVESTIGATION, the earlier " +
-                              "guard-alertness interpretation is not confirmed. Vanilla values " +
-                              "00 08 03 07 0F.");
+            ImGui.TextWrapped("VGA palette indices for the 16x16 aiming reticle, one per lock-on stage (0-4).");
 
             var editable = section.Editable();
             if (!editable) ImGui.BeginDisabled();
 
+            DrawReticleColorField("Stage 0", () => section.Stage0, v => { section.Stage0 = v; pending.RecordChange(); });
             ImGui.SameLine();
-            for (var i = 0; i < section.Values.Length; i++)
-            {
-                if (i > 0) ImGui.SameLine();
-                ImGui.PushID($"Alc_{i}");
-                var tv = (int)section.Values[i];
-                var newTv = ImGuiExtensions.Input($"##alc{i}", tv, width: 50);
-                if (newTv.HasValue && newTv.Value >= 0 && newTv.Value <= 255)
-                {
-                    section.Values[i] = (byte)newTv.Value;
-                    pending.RecordChange();
-                }
-                ImGui.PopID();
-            }
+            DrawReticleColorField("Stage 1", () => section.Stage1, v => { section.Stage1 = v; pending.RecordChange(); });
+            ImGui.SameLine();
+            DrawReticleColorField("Stage 2", () => section.Stage2, v => { section.Stage2 = v; pending.RecordChange(); });
+            ImGui.SameLine();
+            DrawReticleColorField("Stage 3", () => section.Stage3, v => { section.Stage3 = v; pending.RecordChange(); });
+            ImGui.SameLine();
+            DrawReticleColorField("Stage 4", () => section.Stage4, v => { section.Stage4 = v; pending.RecordChange(); });
 
             if (!editable) ImGui.EndDisabled();
+        }
+
+        private static void DrawReticleColorField(string label, System.Func<byte> getter, System.Action<byte> setter)
+        {
+            ImGui.PushID(label);
+            var tv = (int)getter();
+            var newTv = ImGuiExtensions.Input($"##{label}", tv, width: 50);
+            if (newTv.HasValue && newTv.Value >= 0 && newTv.Value <= 255)
+            {
+                setter((byte)newTv.Value);
+            }
+            ImGui.PopID();
         }
 
         public static void DrawTacGameplayStringsSection(TacGameplayStringsSection section)
