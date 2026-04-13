@@ -35,15 +35,6 @@ namespace CovertActionTools.Core.Models.Executables.Records.Shared
             Array.Copy(fullPayload, startingOffset, raw, 0, size);
 
             var optionMarkers = FindOptionMarkers(raw);
-
-            if (optionMarkers.Count < OptionCount)
-            {
-                Header = DataSegmentHelper.DecodeControlString(raw, 0, raw.Length);
-                Options = new string[OptionCount];
-                for (var i = 0; i < OptionCount; i++) Options[i] = "";
-                return size;
-            }
-
             var firstMarker = optionMarkers[optionMarkers.Count - OptionCount];
             Header = DataSegmentHelper.DecodeControlString(raw, 0, firstMarker);
 
@@ -78,7 +69,6 @@ namespace CovertActionTools.Core.Models.Executables.Records.Shared
                 parts.Add(0x20);
                 parts.AddRange(DataSegmentHelper.EncodeControlString(Options[i]));
             }
-            parts.Add(0x0A);
             parts.Add(0x00);
 
             if (FixedSize.HasValue)
@@ -117,8 +107,10 @@ namespace CovertActionTools.Core.Models.Executables.Records.Shared
         private static int FindContentLength(byte[] data, int start)
         {
             var pos = start;
-            while (pos < data.Length && data[pos] != 0x0A && data[pos] != 0x00)
+            while (pos < data.Length)
             {
+                if (data[pos] == 0x00) break;
+                if (data[pos] == 0x0A && pos + 1 < data.Length && data[pos + 1] == 0x20) break;
                 pos++;
             }
             return pos;
