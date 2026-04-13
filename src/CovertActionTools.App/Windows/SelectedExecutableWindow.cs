@@ -105,6 +105,14 @@ public class SelectedExecutableWindow : BaseWindow
         TacImGuiHelpers.DrawMapObjectTypeSection(tac.MapObjectTypes, _pendingState, roomTypeNames);
         TacImGuiHelpers.DrawMovementSection(tac.Movement, _pendingState);
         TacImGuiHelpers.DrawRenderingSection(tac.Rendering, _pendingState);
+        TacImGuiHelpers.DrawCgaColorRemapSection(tac.CgaColorRemap, _pendingState);
+        TacImGuiHelpers.DrawTacGameSettingsSection(tac.GameSettings, _pendingState);
+        TacImGuiHelpers.DrawVgaPaletteRemapSection(tac.VgaPaletteRemap, _pendingState);
+        TacImGuiHelpers.DrawTacMissionStateBlockSection(tac.MissionStateBlock, _pendingState);
+        TacImGuiHelpers.DrawTacMenuStringsSection(tac.MenuStrings, _pendingState);
+        TacImGuiHelpers.DrawTacInputConfigSection(tac.InputConfig, _pendingState);
+        TacImGuiHelpers.DrawTacAlertLevelColorsSection(tac.AlertLevelColors, _pendingState);
+        TacImGuiHelpers.DrawTacGameplayStringsSection(tac.GameplayStrings);
 
         if (ImGui.CollapsingHeader("Equipment Names"))
         {

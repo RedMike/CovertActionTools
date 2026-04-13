@@ -101,6 +101,326 @@ namespace CovertActionTools.App.Helpers
             DrawCardinalDirectionRecord("Tile Adjacency", section.TileAdjacency, editable, pending);
         }
 
+        public static void DrawCgaColorRemapSection(CgaColorRemapSection section, PendingEditorExecutableState pending)
+        {
+            if (!section.Viewable()) return;
+            if (!ImGui.CollapsingHeader("CGA Color Remap")) return;
+
+            ImGui.TextWrapped("14 × 16-byte records feeding CGRAPHIC stub 27's CGA pixel lookup tables. " +
+                              "Records 2, 3, 10, 11, 12 are directly called from main code (menu highlight / " +
+                              "menu cursor / entity card / dialog box / mission setup); the rest are scratch " +
+                              "or offset-referenced via the anchors. Values are packed 2bpp (each nibble = " +
+                              "one CGA color 0..3).");
+
+            var editable = section.Editable();
+            if (!editable) ImGui.BeginDisabled();
+
+            if (ImGui.BeginTable("CgaRemap", 17, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+            {
+                ImGui.TableSetupColumn("#");
+                for (var b = 0; b < 16; b++)
+                {
+                    ImGui.TableSetupColumn($"[{b}]");
+                }
+                ImGui.TableHeadersRow();
+
+                for (var i = 0; i < section.Records16.Count; i++)
+                {
+                    ImGui.PushID($"Cga_{i}");
+                    ImGui.TableNextRow();
+
+                    ImGui.TableNextColumn();
+                    ImGui.Text(GetCgaRecordLabel(i));
+
+                    var record = section.Records16[i];
+                    for (var b = 0; b < 16; b++)
+                    {
+                        ImGui.TableNextColumn();
+                        var val = (int)record.Data[b];
+                        var newVal = ImGuiExtensions.Input($"##v{b}", val, width: 50);
+                        if (newVal.HasValue && IsValidCgaPackedByte(newVal.Value))
+                        {
+                            record.Data[b] = (byte)newVal.Value;
+                            pending.RecordChange();
+                        }
+                    }
+
+                    ImGui.PopID();
+                }
+
+                ImGui.EndTable();
+            }
+
+            if (!editable) ImGui.EndDisabled();
+        }
+
+        public static void DrawTacGameSettingsSection(TacGameSettingsSection section, PendingEditorExecutableState pending)
+        {
+            if (!section.Viewable()) return;
+            if (!ImGui.CollapsingHeader("Game Settings (word vars)")) return;
+
+            ImGui.TextWrapped("Three word-sized game setting variables between the CGA color remap table " +
+                              "and the VGA palette remap tables. All three are directly code-referenced.");
+
+            var editable = section.Editable();
+            if (!editable) ImGui.BeginDisabled();
+
+            if (ImGui.BeginTable("TacGameSettings", 3, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+            {
+                ImGui.TableSetupColumn("Speed (0-3, d/f/s)");
+                ImGui.TableSetupColumn("Room Enabled Mask");
+                ImGui.TableSetupColumn("Fallback File Index");
+                ImGui.TableHeadersRow();
+                ImGui.TableNextRow();
+
+                ImGui.TableNextColumn();
+                var newSpeed = ImGuiExtensions.Input("##speed", (int)section.Speed, width: 100);
+                if (newSpeed != null) { section.Speed = (ushort)newSpeed.Value; pending.RecordChange(); }
+
+                ImGui.TableNextColumn();
+                var newMask = ImGuiExtensions.Input("##mask", (int)section.RoomEnabledMask, width: 100);
+                if (newMask != null) { section.RoomEnabledMask = (ushort)newMask.Value; pending.RecordChange(); }
+
+                ImGui.TableNextColumn();
+                var newFallback = ImGuiExtensions.Input("##fallback", (int)section.FallbackFileIndex, width: 100);
+                if (newFallback != null) { section.FallbackFileIndex = (ushort)newFallback.Value; pending.RecordChange(); }
+
+                ImGui.EndTable();
+            }
+
+            if (!editable) ImGui.EndDisabled();
+        }
+
+        public static void DrawTacMissionStateBlockSection(TacMissionStateBlockSection section, PendingEditorExecutableState pending)
+        {
+            if (!section.Viewable()) return;
+            if (!ImGui.CollapsingHeader("Door Prompt Strings (0x1C26..0x1C41)")) return;
+
+            ImGui.TextWrapped("Three door-picker dialog strings preceded by an intentional empty-string " +
+                              "pointer slot. Door strings are stored in fixed byte slots — edits longer " +
+                              "than the slot will throw on save.");
+
+            var editable = section.Editable();
+            if (!editable) ImGui.BeginDisabled();
+
+            ImGui.Text($"Empty String Slot (0x1C26): 0x{section.EmptyStringSlot1:X2}");
+
+            // Door strings — editable. The ImGui text buffer is sized generously so
+            // control-byte tokens (e.g. [tab]) don't get clipped on display; the real
+            // fixed-slot length constraint is enforced at save time by
+            // TacMissionStateBlockSection.WriteBytes, which throws if the encoded length
+            // exceeds the slot's content capacity.
+            var newHeader = ImGuiExtensions.Input(
+                "Door Prompt Header (0x1C27, 16-byte slot)", section.DoorPromptHeader, 64, width: 220);
+            if (newHeader != null) { section.DoorPromptHeader = newHeader; pending.RecordChange(); }
+
+            var newLabel = ImGuiExtensions.Input(
+                "Door Label (0x1C37, 7-byte slot)", section.DoorLabel, 64, width: 220);
+            if (newLabel != null) { section.DoorLabel = newLabel; pending.RecordChange(); }
+
+            var newSep = ImGuiExtensions.Input(
+                "Door Separator (0x1C3E, 3-byte slot)", section.DoorSeparator, 64, width: 220);
+            if (newSep != null) { section.DoorSeparator = newSep; pending.RecordChange(); }
+
+            if (!editable) ImGui.EndDisabled();
+        }
+
+        public static void DrawVgaPaletteRemapSection(VgaPaletteRemapSection section, PendingEditorExecutableState pending)
+        {
+            if (!section.Viewable()) return;
+            if (!ImGui.CollapsingHeader("VGA Palette Remap")) return;
+
+            ImGui.TextWrapped("5 × 17-byte palette remap records (16 palette bytes + 1 trailer) plus a " +
+                              "1-byte word-alignment pad. FUN_10e8_06f6(index) computes " +
+                              "index * 0x11 + 0x1BCE and forwards to FUN_1000_00ca (palette-set). " +
+                              "12 call sites pass index values 0..4.");
+
+            var editable = section.Editable();
+            if (!editable) ImGui.BeginDisabled();
+
+            if (ImGui.BeginTable("VgaPalette", 18, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+            {
+                ImGui.TableSetupColumn("Idx");
+                for (var b = 0; b < 16; b++) ImGui.TableSetupColumn($"[{b:X}]");
+                ImGui.TableSetupColumn("Trl");
+                ImGui.TableHeadersRow();
+
+                for (var r = 0; r < section.Records.Count; r++)
+                {
+                    ImGui.PushID($"VgaRec_{r}");
+                    ImGui.TableNextRow();
+                    ImGui.TableNextColumn();
+                    ImGui.Text($"{r}");
+
+                    var record = section.Records[r];
+                    for (var b = 0; b < VgaPaletteRemapRecord.PaletteLength; b++)
+                    {
+                        ImGui.TableNextColumn();
+                        var val = (int)record.Palette[b];
+                        var newVal = ImGuiExtensions.Input($"##v{b}", val, width: 50);
+                        if (newVal.HasValue && newVal.Value >= 0 && newVal.Value <= 15)
+                        {
+                            record.Palette[b] = (byte)newVal.Value;
+                            pending.RecordChange();
+                        }
+                    }
+
+                    ImGui.TableNextColumn();
+                    var trailerVal = (int)record.UnknownTrailerByte;
+                    var newTrailer = ImGuiExtensions.Input("##trl", trailerVal, width: 50);
+                    if (newTrailer.HasValue && newTrailer.Value >= 0 && newTrailer.Value <= 255)
+                    {
+                        record.UnknownTrailerByte = (byte)newTrailer.Value;
+                        pending.RecordChange();
+                    }
+
+                    ImGui.PopID();
+                }
+
+                ImGui.EndTable();
+            }
+
+            if (!editable) ImGui.EndDisabled();
+        }
+
+        public static void DrawTacMenuStringsSection(TacMenuStringsSection section, PendingEditorExecutableState pending)
+        {
+            if (!section.Viewable()) return;
+            if (!ImGui.CollapsingHeader("In-Game Menu Strings")) return;
+
+            ImGui.TextWrapped("Pause banner and quit-confirmation dialog, stored in fixed byte slots. " +
+                              "Edits must encode to no more than (slot size - 1) bytes; the save path " +
+                              "throws on overflow.");
+
+            var editable = section.Editable();
+            if (!editable) ImGui.BeginDisabled();
+
+            var newBanner = ImGuiExtensions.Input(
+                "Pause Banner (0x1C46, 8-byte slot)", section.PauseBanner, 64, width: 220);
+            if (newBanner != null) { section.PauseBanner = newBanner; pending.RecordChange(); }
+
+            var newQuit = ImGuiExtensions.Input(
+                "Quit Dialog (0x1C4E, 41-byte slot)", section.QuitDialog, 128, width: 360);
+            if (newQuit != null) { section.QuitDialog = newQuit; pending.RecordChange(); }
+
+            if (!editable) ImGui.EndDisabled();
+        }
+
+        public static void DrawTacInputConfigSection(TacInputConfigSection section, PendingEditorExecutableState pending)
+        {
+            if (!section.Viewable()) return;
+            if (!ImGui.CollapsingHeader("Input Config (0x1C78..0x1C8B)")) return;
+
+            ImGui.TextWrapped("Direction → BIOS scancode lookup table (9 entries, code-confirmed in " +
+                              "FUN_10e8_0f4c) and the CombatAlertedFlag word (rewritten by " +
+                              "FUN_10e8_1b32).");
+
+            var editable = section.Editable();
+            if (!editable) ImGui.BeginDisabled();
+
+            if (ImGui.BeginTable("InputConfig", 2, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+            {
+                ImGui.TableSetupColumn("Direction");
+                ImGui.TableSetupColumn("Scan Code");
+                ImGui.TableHeadersRow();
+
+                for (var i = 0; i < TacInputConfigSection.DirectionCount; i++)
+                {
+                    ImGui.PushID($"DirKey_{i}");
+                    ImGui.TableNextRow();
+                    ImGui.TableNextColumn();
+                    ImGui.Text(CompassLabels9[i]);
+
+                    ImGui.TableNextColumn();
+                    var val = (int)section.DirectionScanCodes[i];
+                    var newVal = ImGuiExtensions.Input("##sc", val, width: 100);
+                    if (newVal != null) { section.DirectionScanCodes[i] = (ushort)newVal.Value; pending.RecordChange(); }
+
+                    ImGui.PopID();
+                }
+
+                ImGui.EndTable();
+            }
+
+            var flagVal = (int)section.CombatAlertedFlag;
+            var newFlag = ImGuiExtensions.Input("CombatAlertedFlag (DS:0x1C8A)", flagVal, width: 120);
+            if (newFlag != null) { section.CombatAlertedFlag = (ushort)newFlag.Value; pending.RecordChange(); }
+
+            if (!editable) ImGui.EndDisabled();
+        }
+
+        public static void DrawTacAlertLevelColorsSection(TacAlertLevelColorsSection section, PendingEditorExecutableState pending)
+        {
+            if (!section.Viewable()) return;
+            if (!ImGui.CollapsingHeader("Alert Level Colors (0x1C8C..0x1C90)")) return;
+
+            ImGui.TextWrapped("5 bytes indexed by a clamp-to-[0,4] primitive in FUN_10e8_225d and passed " +
+                              "as the final argument to a draw call — NEEDS INVESTIGATION, the earlier " +
+                              "guard-alertness interpretation is not confirmed. Vanilla values " +
+                              "00 08 03 07 0F.");
+
+            var editable = section.Editable();
+            if (!editable) ImGui.BeginDisabled();
+
+            ImGui.SameLine();
+            for (var i = 0; i < section.Values.Length; i++)
+            {
+                if (i > 0) ImGui.SameLine();
+                ImGui.PushID($"Alc_{i}");
+                var tv = (int)section.Values[i];
+                var newTv = ImGuiExtensions.Input($"##alc{i}", tv, width: 50);
+                if (newTv.HasValue && newTv.Value >= 0 && newTv.Value <= 255)
+                {
+                    section.Values[i] = (byte)newTv.Value;
+                    pending.RecordChange();
+                }
+                ImGui.PopID();
+            }
+
+            if (!editable) ImGui.EndDisabled();
+        }
+
+        public static void DrawTacGameplayStringsSection(TacGameplayStringsSection section)
+        {
+            if (!section.Viewable()) return;
+            if (!ImGui.CollapsingHeader("Gameplay Strings")) return;
+
+            ImGui.TextWrapped("Gameplay/dialogue strings used during mission playback. Stored in fixed slots " +
+                              "so free-form edits must fit the original byte length of each slot.");
+
+            for (var i = 0; i < section.Strings.Length; i++)
+            {
+                var slotSize = i < section.StringSizes.Length ? section.StringSizes[i] : section.Strings[i].Length + 1;
+                ImGui.Text($"{i} ({slotSize} B): {section.Strings[i]}");
+            }
+        }
+
+        /// <summary>
+        /// A CGA color remap byte packs two 2-bit pixel values. Valid bytes have both
+        /// nibbles in the range 0..3 (any other value has a high bit set and would
+        /// produce an invalid CGA colour pair).
+        /// </summary>
+        private static bool IsValidCgaPackedByte(int value)
+        {
+            if (value < 0 || value > 0x33) return false;
+            var lo = value & 0x0F;
+            var hi = (value >> 4) & 0x0F;
+            return lo <= 3 && hi <= 3;
+        }
+
+        private static string GetCgaRecordLabel(int index)
+        {
+            return index switch
+            {
+                2 => "2 (0x1B08 menu hl)",
+                3 => "3 (0x1B18 cursor)",
+                10 => "10 (0x1B88 card)",
+                11 => "11 (0x1B98 dialog)",
+                12 => "12 (0x1BA8 mission)",
+                _ => $"{index}"
+            };
+        }
+
         public static void DrawRenderingSection(RenderingSection section, PendingEditorExecutableState pending)
         {
             if (!section.Viewable()) return;
