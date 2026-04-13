@@ -17,7 +17,16 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Tac
     {
         protected override int RecordCount => 14;
 
-        public IReadOnlyList<CgaColorRemapRecord> Records16 => Records;
+        // TODO: check name matches
+        public CgaColorRemapRecord MenuHighlight => Records[2];
+        // TODO: check name matches
+        public CgaColorRemapRecord MenuCursor => Records[3];
+        // TODO: check name matches
+        public CgaColorRemapRecord EntityCard => Records[10];
+        // TODO: check name matches
+        public CgaColorRemapRecord DialogBox => Records[11];
+        // TODO: check name matches
+        public CgaColorRemapRecord MissionSetup => Records[12];
 
         public override bool Viewable()
         {

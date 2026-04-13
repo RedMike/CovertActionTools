@@ -106,43 +106,56 @@ namespace CovertActionTools.App.Helpers
             if (!section.Viewable()) return;
             if (!ImGui.CollapsingHeader("CGA Color Remap")) return;
 
-            ImGui.TextWrapped("14 × 16-byte records feeding CGRAPHIC stub 27's CGA pixel lookup tables. " +
-                              "Records 2, 3, 10, 11, 12 are directly called from main code (menu highlight / " +
-                              "menu cursor / entity card / dialog box / mission setup); the rest are scratch " +
-                              "or offset-referenced via the anchors. Values are packed 2bpp (each nibble = " +
-                              "one CGA color 0..3).");
+            ImGui.TextWrapped("5 directly-referenced CGA dither-remap records from the 14-record table. " +
+                              "Each VGA palette index maps to a (low, high) CGA color pair (0-3) that " +
+                              "alternate on adjacent pixels to approximate the VGA color.");
 
             var editable = section.Editable();
             if (!editable) ImGui.BeginDisabled();
 
-            if (ImGui.BeginTable("CgaRemap", 17, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+            DrawCgaRemapRecord("Menu Highlight", section.MenuHighlight, pending);
+            DrawCgaRemapRecord("Menu Cursor", section.MenuCursor, pending);
+            DrawCgaRemapRecord("Entity Card", section.EntityCard, pending);
+            DrawCgaRemapRecord("Dialog Box", section.DialogBox, pending);
+            DrawCgaRemapRecord("Mission Setup", section.MissionSetup, pending);
+
+            if (!editable) ImGui.EndDisabled();
+        }
+
+        private static void DrawCgaRemapRecord(string label, CgaColorRemapRecord record, PendingEditorExecutableState pending)
+        {
+            if (!ImGui.TreeNode(label)) return;
+
+            if (ImGui.BeginTable($"CgaRemap_{label}", 3, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
             {
-                ImGui.TableSetupColumn("#");
-                for (var b = 0; b < 16; b++)
-                {
-                    ImGui.TableSetupColumn($"[{b}]");
-                }
+                ImGui.TableSetupColumn("VGA Index");
+                ImGui.TableSetupColumn("Low");
+                ImGui.TableSetupColumn("High");
                 ImGui.TableHeadersRow();
 
-                for (var i = 0; i < section.Records16.Count; i++)
+                for (byte i = 0; i < CgaColorRemapRecord.EntryCount; i++)
                 {
-                    ImGui.PushID($"Cga_{i}");
+                    var pair = record.ColorMap[i];
+                    ImGui.PushID($"Cga_{label}_{i}");
                     ImGui.TableNextRow();
 
                     ImGui.TableNextColumn();
-                    ImGui.Text(GetCgaRecordLabel(i));
+                    ImGui.Text($"{i}");
 
-                    var record = section.Records16[i];
-                    for (var b = 0; b < 16; b++)
+                    ImGui.TableNextColumn();
+                    var newLow = ImGuiExtensions.Input("##lo", pair.low, width: 50);
+                    if (newLow.HasValue && newLow.Value >= 0 && newLow.Value <= 3)
                     {
-                        ImGui.TableNextColumn();
-                        var val = (int)record.Data[b];
-                        var newVal = ImGuiExtensions.Input($"##v{b}", val, width: 50);
-                        if (newVal.HasValue && IsValidCgaPackedByte(newVal.Value))
-                        {
-                            record.Data[b] = (byte)newVal.Value;
-                            pending.RecordChange();
-                        }
+                        record.ColorMap[i] = ((byte)newLow.Value, pair.high);
+                        pending.RecordChange();
+                    }
+
+                    ImGui.TableNextColumn();
+                    var newHigh = ImGuiExtensions.Input("##hi", pair.high, width: 50);
+                    if (newHigh.HasValue && newHigh.Value >= 0 && newHigh.Value <= 3)
+                    {
+                        record.ColorMap[i] = (record.ColorMap[i].low, (byte)newHigh.Value);
+                        pending.RecordChange();
                     }
 
                     ImGui.PopID();
@@ -151,7 +164,7 @@ namespace CovertActionTools.App.Helpers
                 ImGui.EndTable();
             }
 
-            if (!editable) ImGui.EndDisabled();
+            ImGui.TreePop();
         }
 
         public static void DrawTacGameSettingsSection(TacGameSettingsSection section, PendingEditorExecutableState pending)
@@ -393,32 +406,6 @@ namespace CovertActionTools.App.Helpers
                 var slotSize = i < section.StringSizes.Length ? section.StringSizes[i] : section.Strings[i].Length + 1;
                 ImGui.Text($"{i} ({slotSize} B): {section.Strings[i]}");
             }
-        }
-
-        /// <summary>
-        /// A CGA color remap byte packs two 2-bit pixel values. Valid bytes have both
-        /// nibbles in the range 0..3 (any other value has a high bit set and would
-        /// produce an invalid CGA colour pair).
-        /// </summary>
-        private static bool IsValidCgaPackedByte(int value)
-        {
-            if (value < 0 || value > 0x33) return false;
-            var lo = value & 0x0F;
-            var hi = (value >> 4) & 0x0F;
-            return lo <= 3 && hi <= 3;
-        }
-
-        private static string GetCgaRecordLabel(int index)
-        {
-            return index switch
-            {
-                2 => "2 (0x1B08 menu hl)",
-                3 => "3 (0x1B18 cursor)",
-                10 => "10 (0x1B88 card)",
-                11 => "11 (0x1B98 dialog)",
-                12 => "12 (0x1BA8 mission)",
-                _ => $"{index}"
-            };
         }
 
         public static void DrawRenderingSection(RenderingSection section, PendingEditorExecutableState pending)
