@@ -4,6 +4,7 @@ using CovertActionTools.App.ViewModels;
 using CovertActionTools.Core.Models.Executables.Records.Shared;
 using CovertActionTools.Core.Models.Executables.Records.Tac;
 using CovertActionTools.Core.Models.Executables.Sections;
+using CovertActionTools.Core.Models.Executables.Sections.Shared;
 using CovertActionTools.Core.Models.Executables.Sections.Tac;
 using ImGuiNET;
 
@@ -380,36 +381,44 @@ namespace CovertActionTools.App.Helpers
             if (!editable) ImGui.EndDisabled();
         }
 
-        private static void DrawStringListSection(string headerLabel, IExecutableSection section, string[] strings, int[] sizes)
+        private static void DrawFixedSizeStringTableSection(
+            string headerLabel, ExactCountFixedSizeStringTableSection section, PendingEditorExecutableState pending)
         {
             if (!section.Viewable()) return;
             if (!ImGui.CollapsingHeader(headerLabel)) return;
 
-            for (var i = 0; i < strings.Length; i++)
+            var editable = section.Editable();
+            if (!editable) ImGui.BeginDisabled();
+
+            var editorSize = new System.Numerics.Vector2(300, 48);
+            for (var i = 0; i < section.Strings.Count; i++)
             {
-                var slotSize = i < sizes.Length ? sizes[i] : strings[i].Length + 1;
-                ImGui.Text($"{i} ({slotSize} B): {strings[i]}");
+                var newVal = ImGuiExtensions.InputMultiline(
+                    $"[{i}]", section.Strings[i], 256, editorSize, id: $"str_{i}");
+                if (newVal != null) { section.Strings[i] = newVal; pending.RecordChange(); }
             }
+
+            if (!editable) ImGui.EndDisabled();
         }
 
-        public static void DrawStatusLineActionStringsSection(StatusLineActionStringsSection section)
+        public static void DrawStatusLineActionStringsSection(StatusLineActionStringsSection section, PendingEditorExecutableState pending)
         {
-            DrawStringListSection("Status Line Action Strings (0x1CE4..0x1D86)", section, section.Strings, section.StringSizes);
+            DrawFixedSizeStringTableSection("Status Line Action Strings (0x1CE4..0x1D86)", section, pending);
         }
 
-        public static void DrawStatusLineStatusStringsSection(StatusLineStatusStringsSection section)
+        public static void DrawStatusLineStatusStringsSection(StatusLineStatusStringsSection section, PendingEditorExecutableState pending)
         {
-            DrawStringListSection("Status Line Status Strings (0x1D87..0x1D93)", section, section.Strings, section.StringSizes);
+            DrawFixedSizeStringTableSection("Status Line Status Strings (0x1D87..0x1D93)", section, pending);
         }
 
-        public static void DrawGameplayEndingStringsSection(GameplayEndingStringsSection section)
+        public static void DrawGameplayEndingStringsSection(GameplayEndingStringsSection section, PendingEditorExecutableState pending)
         {
-            DrawStringListSection("Gameplay Ending Strings (0x1D94..0x1E77)", section, section.Strings, section.StringSizes);
+            DrawFixedSizeStringTableSection("Gameplay Ending Strings (0x1D94..0x1E77)", section, pending);
         }
 
-        public static void DrawGameplayPopupStringsSection(GameplayPopupStringsSection section)
+        public static void DrawGameplayPopupStringsSection(GameplayPopupStringsSection section, PendingEditorExecutableState pending)
         {
-            DrawStringListSection("Gameplay Popup Strings (0x1E78..0x1F35)", section, section.Strings, section.StringSizes);
+            DrawFixedSizeStringTableSection("Gameplay Popup Strings (0x1E78..0x1F35)", section, pending);
         }
 
         public static void DrawRenderingSection(RenderingSection section, PendingEditorExecutableState pending)
