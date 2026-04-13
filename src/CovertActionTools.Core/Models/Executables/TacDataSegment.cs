@@ -408,19 +408,6 @@ namespace CovertActionTools.Core.Models.Executables
                 Array.Copy(EquipmentSlotRects[i].ToBytes(), 0, equipRectBytes, i * TacScreenRect.RecordSize, TacScreenRect.RecordSize);
             }
 
-            var typedSectionBytes = DataSegmentHelper.Concatenate(
-                CgaColorRemap,
-                GameSettings,
-                VgaPaletteRemap,
-                StubOutputCapture,
-                MissionStateBlock,
-                PlayerDirectionState,
-                MenuStrings,
-                InputConfig,
-                AlertLevelColors,
-                GameplayStrings
-            );
-
             // Compute equipment name pointer values from actual string positions. The base
             // offset accounts for all typed sections plus the remaining GameplayData blob.
             var equipNamesBaseOffset = GameplayDataStart + GameplayData.Length;
@@ -455,14 +442,27 @@ namespace CovertActionTools.Core.Models.Executables
             var charNamePointers = DataSegmentHelper.ComputeStringPointers(CharacterNames, charNamesBaseOffset);
             var charNamesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(CharacterNames);
 
+            var allSectionBytes = DataSegmentHelper.Concatenate(
+                Header,
+                HeaderFilenames,
+                RoomTypes,
+                MapObjectTypes,
+                Movement,
+                Rendering,
+                CgaColorRemap,
+                GameSettings,
+                VgaPaletteRemap,
+                StubOutputCapture,
+                MissionStateBlock,
+                PlayerDirectionState,
+                MenuStrings,
+                InputConfig,
+                AlertLevelColors,
+                GameplayStrings
+            );
+
             return DataSegmentHelper.Concatenate(
-                Header.WriteBytes(),
-                HeaderFilenames.WriteBytes(),
-                RoomTypes.WriteBytes(),
-                MapObjectTypes.WriteBytes(),
-                Movement.WriteBytes(),
-                Rendering.WriteBytes(),
-                typedSectionBytes,
+                allSectionBytes,
                 GameplayData,
                 equipNamesBytes,
                 MidSectionPostEquipNames,
