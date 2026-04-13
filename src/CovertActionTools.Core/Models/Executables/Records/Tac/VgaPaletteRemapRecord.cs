@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using CovertActionTools.Core.Models.Executables.Records;
 
 namespace CovertActionTools.Core.Models.Executables.Records.Tac
@@ -18,12 +19,18 @@ namespace CovertActionTools.Core.Models.Executables.Records.Tac
         public const int RecordSize = 17;
         public const int PaletteLength = 16;
 
-        public byte[] Palette { get; set; } = new byte[PaletteLength];
+        public Dictionary<byte, byte> Palette { get; set; } = new Dictionary<byte, byte>();
         public byte UnknownTrailerByte { get; set; }
 
         public int ReadBytes(byte[] fullPayload, int startingOffset)
         {
-            Array.Copy(fullPayload, startingOffset, Palette, 0, PaletteLength);
+            Palette = new Dictionary<byte, byte>(PaletteLength);
+            for (var i = 0; i < PaletteLength; i++)
+            {
+                var value = fullPayload[startingOffset + i];
+                ValidateColorValue(value, i);
+                Palette[(byte)i] = value;
+            }
             UnknownTrailerByte = fullPayload[startingOffset + PaletteLength];
             return RecordSize;
         }
@@ -31,7 +38,14 @@ namespace CovertActionTools.Core.Models.Executables.Records.Tac
         public byte[] WriteBytes()
         {
             var result = new byte[RecordSize];
-            Array.Copy(Palette, 0, result, 0, PaletteLength);
+            for (var i = 0; i < PaletteLength; i++)
+            {
+                var key = (byte)i;
+                if (!Palette.TryGetValue(key, out var value))
+                    throw new Exception($"VgaPaletteRemapRecord: missing entry for palette index {i}.");
+                ValidateColorValue(value, i);
+                result[i] = value;
+            }
             result[PaletteLength] = UnknownTrailerByte;
             return result;
         }
@@ -41,10 +55,20 @@ namespace CovertActionTools.Core.Models.Executables.Records.Tac
             var result = new VgaPaletteRemapRecord
             {
                 UnknownTrailerByte = UnknownTrailerByte,
-                Palette = new byte[PaletteLength]
+                Palette = new Dictionary<byte, byte>(PaletteLength)
             };
-            Array.Copy(Palette, result.Palette, PaletteLength);
+            foreach (var kvp in Palette)
+            {
+                result.Palette[kvp.Key] = kvp.Value;
+            }
             return result;
+        }
+
+        private static void ValidateColorValue(byte value, int index)
+        {
+            if (value > 15)
+                throw new Exception(
+                    $"VgaPaletteRemapRecord: value {value} at palette index {index} is not a valid color (must be 0-15).");
         }
     }
 }

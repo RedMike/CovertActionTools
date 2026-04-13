@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Text;
 using CovertActionTools.Core.Models.Executables.Records.Tac;
+using CovertActionTools.Core.Models.Executables.Sections;
 using CovertActionTools.Core.Models.Executables.Sections.Shared;
 using CovertActionTools.Core.Models.Executables.Sections.Tac;
 
@@ -287,16 +288,16 @@ namespace CovertActionTools.Core.Models.Executables
             offset += segment.MapObjectTypes.ReadBytes(dataSegment, offset);
             offset += segment.Movement.ReadBytes(dataSegment, offset);
             offset += segment.Rendering.ReadBytes(dataSegment, offset);
-            offset += segment.CgaColorRemap.ReadBytes(dataSegment, offset);
-            offset += segment.GameSettings.ReadBytes(dataSegment, offset);
-            offset += segment.VgaPaletteRemap.ReadBytes(dataSegment, offset);
-            offset += segment.StubOutputCapture.ReadBytes(dataSegment, offset);
-            offset += segment.MissionStateBlock.ReadBytes(dataSegment, offset);
-            offset += segment.PlayerDirectionState.ReadBytes(dataSegment, offset);
-            offset += segment.MenuStrings.ReadBytes(dataSegment, offset);
-            offset += segment.InputConfig.ReadBytes(dataSegment, offset);
-            offset += segment.AlertLevelColors.ReadBytes(dataSegment, offset);
-            offset += segment.GameplayStrings.ReadBytes(dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.CgaColorRemap, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.GameSettings, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.VgaPaletteRemap, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.StubOutputCapture, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.MissionStateBlock, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.PlayerDirectionState, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.MenuStrings, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.InputConfig, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.AlertLevelColors, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.GameplayStrings, dataSegment, offset);
 
             // Read equipment name pointers to find and extract the strings from the mid section
             var equipPtrs = DataSegmentHelper.BytesToUInt16Array(dataSegment, EquipmentPointersOffset, EquipmentPointerCount);
@@ -407,27 +408,22 @@ namespace CovertActionTools.Core.Models.Executables
                 Array.Copy(EquipmentSlotRects[i].ToBytes(), 0, equipRectBytes, i * TacScreenRect.RecordSize, TacScreenRect.RecordSize);
             }
 
-            // Serialize the fixed-size typed section chain that sits between the Rendering
-            // section and the Equipment names block. This replaces what used to be a single
-            // raw GameplayData blob for this range.
-            var cgaColorRemapBytes = CgaColorRemap.WriteBytes();
-            var gameSettingsBytes = GameSettings.WriteBytes();
-            var vgaPaletteRemapBytes = VgaPaletteRemap.WriteBytes();
-            var stubOutputCaptureBytes = StubOutputCapture.WriteBytes();
-            var missionStateBlockBytes = MissionStateBlock.WriteBytes();
-            var playerDirectionStateBytes = PlayerDirectionState.WriteBytes();
-            var menuStringsBytes = MenuStrings.WriteBytes();
-            var inputConfigBytes = InputConfig.WriteBytes();
-            var alertLevelColorsBytes = AlertLevelColors.WriteBytes();
-            var gameplayStringsBytes = GameplayStrings.WriteBytes();
-
-            var midSectionBytes = DataSegmentHelper.Concatenate(
-                GameplayData
+            var typedSectionBytes = DataSegmentHelper.Concatenate(
+                CgaColorRemap,
+                GameSettings,
+                VgaPaletteRemap,
+                StubOutputCapture,
+                MissionStateBlock,
+                PlayerDirectionState,
+                MenuStrings,
+                InputConfig,
+                AlertLevelColors,
+                GameplayStrings
             );
 
             // Compute equipment name pointer values from actual string positions. The base
-            // offset is GameplayDataStart + the GameplayData blob length.
-            var equipNamesBaseOffset = GameplayDataStart + midSectionBytes.Length;
+            // offset accounts for all typed sections plus the remaining GameplayData blob.
+            var equipNamesBaseOffset = GameplayDataStart + GameplayData.Length;
             var equipNamePointers = DataSegmentHelper.ComputeStringPointers(EquipmentNames, equipNamesBaseOffset);
             var equipNamesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(EquipmentNames);
 
@@ -466,17 +462,8 @@ namespace CovertActionTools.Core.Models.Executables
                 MapObjectTypes.WriteBytes(),
                 Movement.WriteBytes(),
                 Rendering.WriteBytes(),
-                cgaColorRemapBytes,
-                gameSettingsBytes,
-                vgaPaletteRemapBytes,
-                stubOutputCaptureBytes,
-                missionStateBlockBytes,
-                playerDirectionStateBytes,
-                menuStringsBytes,
-                inputConfigBytes,
-                alertLevelColorsBytes,
-                gameplayStringsBytes,
-                midSectionBytes,
+                typedSectionBytes,
+                GameplayData,
                 equipNamesBytes,
                 MidSectionPostEquipNames,
                 DataSegmentHelper.UInt16ArrayToBytes(equipNamePointers),
@@ -490,6 +477,16 @@ namespace CovertActionTools.Core.Models.Executables
                 DataSegmentHelper.UInt16ArrayToBytes(charNamePointers),
                 TrailingData
             );
+        }
+
+        private static int ReadSectionWithPadding(IExecutableSection section, byte[] data, int offset)
+        {
+            offset += section.ReadBytes(data, offset);
+            if (section is IPaddedToWord && offset % 2 != 0)
+                offset++;
+            else if (section is IPaddedToParagraph && offset % 16 != 0)
+                offset += 16 - (offset % 16);
+            return offset;
         }
 
         private static byte[] ShortArrayToBytes(short[] values)

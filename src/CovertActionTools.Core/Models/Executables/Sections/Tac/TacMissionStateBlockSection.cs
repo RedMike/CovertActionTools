@@ -9,8 +9,7 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Tac
     /// intentional empty-string slot that precedes them. All three door strings are
     /// stored in fixed byte slots; edits must encode to no more than
     /// <c>slotSize - 1</c> bytes (the final byte is reserved for the null terminator).
-    /// A trailing one-byte word-alignment pad at DS:0x1C41 is kept inside the section's
-    /// Read/Write plumbing and not surfaced as a public field.
+    /// Word-alignment padding after the section is handled by <see cref="IPaddedToWord"/>.
     ///
     ///   - 0x1C26 <see cref="EmptyStringSlot1"/> (byte): an intentional empty-string
     ///     data slot. FUN_10e8_070e:0923 issues <c>MOV AX, 0x1c26</c> and passes the
@@ -23,26 +22,22 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Tac
     ///   - 0x1C3E <see cref="DoorSeparator"/>: "\n " — trailing newline + space between
     ///     door entries in the same loop.
     /// </summary>
-    public class TacMissionStateBlockSection : IExecutableSection
+    public class TacMissionStateBlockSection : IExecutableSection, IPaddedToWord
     {
         public const int EmptyStringSlot1Size = 1;
         public const int DoorPromptHeaderSlotSize = 16;
         public const int DoorLabelSlotSize = 7;
         public const int DoorSeparatorSlotSize = 3;
-        private const int TrailingAlignmentPaddingSize = 1;
         public const int SectionSize =
             EmptyStringSlot1Size +
             DoorPromptHeaderSlotSize +
             DoorLabelSlotSize +
-            DoorSeparatorSlotSize +
-            TrailingAlignmentPaddingSize;
+            DoorSeparatorSlotSize;
 
         public byte EmptyStringSlot1 { get; set; }
         public string DoorPromptHeader { get; set; } = string.Empty;
         public string DoorLabel { get; set; } = string.Empty;
         public string DoorSeparator { get; set; } = string.Empty;
-
-        private byte _trailingAlignmentPadding;
 
         public bool Viewable()
         {
@@ -65,8 +60,6 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Tac
             offset += DoorLabelSlotSize;
             DoorSeparator = ReadFixedString(fullPayload, offset, DoorSeparatorSlotSize, nameof(DoorSeparator));
             offset += DoorSeparatorSlotSize;
-            _trailingAlignmentPadding = fullPayload[offset];
-            offset += TrailingAlignmentPaddingSize;
             return offset - startingOffset;
         }
 
@@ -81,8 +74,6 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Tac
             WriteFixedString(result, offset, DoorLabel, DoorLabelSlotSize, nameof(DoorLabel));
             offset += DoorLabelSlotSize;
             WriteFixedString(result, offset, DoorSeparator, DoorSeparatorSlotSize, nameof(DoorSeparator));
-            offset += DoorSeparatorSlotSize;
-            result[offset] = _trailingAlignmentPadding;
             return result;
         }
 
@@ -93,8 +84,7 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Tac
                 EmptyStringSlot1 = EmptyStringSlot1,
                 DoorPromptHeader = DoorPromptHeader,
                 DoorLabel = DoorLabel,
-                DoorSeparator = DoorSeparator,
-                _trailingAlignmentPadding = _trailingAlignmentPadding
+                DoorSeparator = DoorSeparator
             };
         }
 

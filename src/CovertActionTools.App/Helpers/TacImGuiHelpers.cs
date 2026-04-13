@@ -167,43 +167,6 @@ namespace CovertActionTools.App.Helpers
             ImGui.TreePop();
         }
 
-        public static void DrawTacGameSettingsSection(TacGameSettingsSection section, PendingEditorExecutableState pending)
-        {
-            if (!section.Viewable()) return;
-            if (!ImGui.CollapsingHeader("Game Settings (word vars)")) return;
-
-            ImGui.TextWrapped("Three word-sized game setting variables between the CGA color remap table " +
-                              "and the VGA palette remap tables. All three are directly code-referenced.");
-
-            var editable = section.Editable();
-            if (!editable) ImGui.BeginDisabled();
-
-            if (ImGui.BeginTable("TacGameSettings", 3, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
-            {
-                ImGui.TableSetupColumn("Speed (0-3, d/f/s)");
-                ImGui.TableSetupColumn("Room Enabled Mask");
-                ImGui.TableSetupColumn("Fallback File Index");
-                ImGui.TableHeadersRow();
-                ImGui.TableNextRow();
-
-                ImGui.TableNextColumn();
-                var newSpeed = ImGuiExtensions.Input("##speed", (int)section.Speed, width: 100);
-                if (newSpeed != null) { section.Speed = (ushort)newSpeed.Value; pending.RecordChange(); }
-
-                ImGui.TableNextColumn();
-                var newMask = ImGuiExtensions.Input("##mask", (int)section.RoomEnabledMask, width: 100);
-                if (newMask != null) { section.RoomEnabledMask = (ushort)newMask.Value; pending.RecordChange(); }
-
-                ImGui.TableNextColumn();
-                var newFallback = ImGuiExtensions.Input("##fallback", (int)section.FallbackFileIndex, width: 100);
-                if (newFallback != null) { section.FallbackFileIndex = (ushort)newFallback.Value; pending.RecordChange(); }
-
-                ImGui.EndTable();
-            }
-
-            if (!editable) ImGui.EndDisabled();
-        }
-
         public static void DrawTacMissionStateBlockSection(TacMissionStateBlockSection section, PendingEditorExecutableState pending)
         {
             if (!section.Viewable()) return;
@@ -269,11 +232,11 @@ namespace CovertActionTools.App.Helpers
                     for (var b = 0; b < VgaPaletteRemapRecord.PaletteLength; b++)
                     {
                         ImGui.TableNextColumn();
-                        var val = (int)record.Palette[b];
+                        var val = (int)record.Palette[(byte)b];
                         var newVal = ImGuiExtensions.Input($"##v{b}", val, width: 50);
                         if (newVal.HasValue && newVal.Value >= 0 && newVal.Value <= 15)
                         {
-                            record.Palette[b] = (byte)newVal.Value;
+                            record.Palette[(byte)b] = (byte)newVal.Value;
                             pending.RecordChange();
                         }
                     }

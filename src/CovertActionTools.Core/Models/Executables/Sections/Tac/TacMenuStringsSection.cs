@@ -17,20 +17,16 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Tac
     ///     pointer-loaded by FUN_10e8_0f4c.
     ///   <see cref="QuitDialog"/> slot (41 bytes at 0x1C4E): "Are you sure\nyou want
     ///     to Quit?\n No\n Yes\n\0" in vanilla — pointer-loaded by FUN_10e8_0f4c.
-    /// A 1-byte word-alignment pad at DS:0x1C77 follows the two strings — kept inside
-    /// the section's Read/Write plumbing and not surfaced as a public field.
+    /// Word-alignment padding after the section is handled by <see cref="IPaddedToWord"/>.
     /// </summary>
-    public class TacMenuStringsSection : IExecutableSection
+    public class TacMenuStringsSection : IExecutableSection, IPaddedToWord
     {
         public const int PauseBannerSlotSize = 8;
         public const int QuitDialogSlotSize = 41;
-        private const int AlignmentPaddingSize = 1;
-        public const int SectionSize = PauseBannerSlotSize + QuitDialogSlotSize + AlignmentPaddingSize;
+        public const int SectionSize = PauseBannerSlotSize + QuitDialogSlotSize;
 
         public string PauseBanner { get; set; } = string.Empty;
         public string QuitDialog { get; set; } = string.Empty;
-
-        private byte _trailingAlignmentPadding;
 
         public bool Viewable()
         {
@@ -49,8 +45,6 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Tac
             offset += PauseBannerSlotSize;
             QuitDialog = ReadFixedString(fullPayload, offset, QuitDialogSlotSize, nameof(QuitDialog));
             offset += QuitDialogSlotSize;
-            _trailingAlignmentPadding = fullPayload[offset];
-            offset += AlignmentPaddingSize;
             return offset - startingOffset;
         }
 
@@ -61,8 +55,6 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Tac
             WriteFixedString(result, offset, PauseBanner, PauseBannerSlotSize, nameof(PauseBanner));
             offset += PauseBannerSlotSize;
             WriteFixedString(result, offset, QuitDialog, QuitDialogSlotSize, nameof(QuitDialog));
-            offset += QuitDialogSlotSize;
-            result[offset] = _trailingAlignmentPadding;
             return result;
         }
 
@@ -71,8 +63,7 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Tac
             return new TacMenuStringsSection
             {
                 PauseBanner = PauseBanner,
-                QuitDialog = QuitDialog,
-                _trailingAlignmentPadding = _trailingAlignmentPadding
+                QuitDialog = QuitDialog
             };
         }
 

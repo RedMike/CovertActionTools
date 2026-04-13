@@ -24,9 +24,9 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Tac
     {
         public const int SectionSize = 6;
 
-        public ushort Speed { get; set; }
-        public ushort RoomEnabledMask { get; set; }
-        public ushort FallbackFileIndex { get; set; }
+        private ushort Speed { get; set; }
+        private ushort RoomEnabledMask { get; set; }
+        private ushort FallbackFileIndex { get; set; }
 
         public bool Viewable()
         {
