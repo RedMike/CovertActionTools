@@ -36,7 +36,7 @@ namespace CovertActionTools.Core.Models.Executables.Records.Shared
 
             var optionMarkers = FindOptionMarkers(raw);
             var firstMarker = optionMarkers[optionMarkers.Count - OptionCount];
-            Header = DataSegmentHelper.DecodeControlString(raw, 0, firstMarker);
+            Header = DataSegmentHelper.DecodeControlString(raw, 0, firstMarker + 1);
 
             Options = new string[OptionCount];
             for (var i = 0; i < OptionCount; i++)
@@ -46,7 +46,7 @@ namespace CovertActionTools.Core.Models.Executables.Records.Shared
                 int textEnd;
                 if (i < OptionCount - 1)
                 {
-                    textEnd = optionMarkers[markerIdx + 1];
+                    textEnd = optionMarkers[markerIdx + 1] + 1;
                 }
                 else
                 {
@@ -65,7 +65,6 @@ namespace CovertActionTools.Core.Models.Executables.Records.Shared
             parts.AddRange(DataSegmentHelper.EncodeControlString(Header));
             for (var i = 0; i < Options.Length; i++)
             {
-                parts.Add(0x0A);
                 parts.Add(0x20);
                 parts.AddRange(DataSegmentHelper.EncodeControlString(Options[i]));
             }
@@ -109,11 +108,12 @@ namespace CovertActionTools.Core.Models.Executables.Records.Shared
             var pos = start;
             while (pos < data.Length)
             {
-                if (data[pos] == 0x00) break;
-                if (data[pos] == 0x0A && pos + 1 < data.Length && data[pos + 1] == 0x20) break;
+                if (data[pos] == 0x00) return pos;
+                if (data[pos] == 0x0A && pos + 1 < data.Length && data[pos + 1] == 0x20) return pos;
                 pos++;
             }
-            return pos;
+            throw new InvalidOperationException(
+                $"MenuStringRecord: no null or option marker found starting at offset {start}");
         }
 
         private static int FindContentEnd(byte[] data, int startingOffset)
