@@ -152,6 +152,7 @@ namespace CovertActionTools.Core.Models.Executables
         public TacPlayerDirectionStateSection PlayerDirectionState { get; set; } = new();
         public TacMenuStringsSection MenuStrings { get; set; } = new();
         public TacInputConfigSection InputConfig { get; set; } = new();
+        public CombatAlertedFlagSection CombatAlertedFlag { get; set; } = new();
         public TacAlertLevelColorsSection AlertLevelColors { get; set; } = new();
         public TacGameplayStringsSection GameplayStrings { get; set; } = new();
 
@@ -296,6 +297,7 @@ namespace CovertActionTools.Core.Models.Executables
             offset = ReadSectionWithPadding(segment.PlayerDirectionState, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.MenuStrings, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.InputConfig, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.CombatAlertedFlag, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.AlertLevelColors, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.GameplayStrings, dataSegment, offset);
 
@@ -457,6 +459,7 @@ namespace CovertActionTools.Core.Models.Executables
                 PlayerDirectionState,
                 MenuStrings,
                 InputConfig,
+                CombatAlertedFlag,
                 AlertLevelColors,
                 GameplayStrings
             );
@@ -518,6 +521,7 @@ namespace CovertActionTools.Core.Models.Executables
                 PlayerDirectionState = PlayerDirectionState.Clone(),
                 MenuStrings = MenuStrings.Clone(),
                 InputConfig = InputConfig.Clone(),
+                CombatAlertedFlag = CombatAlertedFlag.Clone(),
                 AlertLevelColors = AlertLevelColors.Clone(),
                 GameplayStrings = GameplayStrings.Clone(),
                 GameplayData = GameplayData.ToArray(),

@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using CovertActionTools.App.ViewModels;
 using CovertActionTools.Core.Models.Executables.Records.Shared;
 using CovertActionTools.Core.Models.Executables.Records.Tac;
@@ -277,47 +279,44 @@ namespace CovertActionTools.App.Helpers
             if (!editable) ImGui.EndDisabled();
         }
 
+        private static readonly List<int> ScanCodeValues =
+            System.Enum.GetValues<BiosKeyboardScanCode>().Select(c => (int)c).ToList();
+
+        private static readonly List<string> ScanCodeLabels =
+            System.Enum.GetValues<BiosKeyboardScanCode>()
+                .Select(c => c.ToString())
+                .ToList();
+
         public static void DrawTacInputConfigSection(TacInputConfigSection section, PendingEditorExecutableState pending)
         {
             if (!section.Viewable()) return;
-            if (!ImGui.CollapsingHeader("Input Config (0x1C78..0x1C8B)")) return;
+            if (!ImGui.CollapsingHeader("Direction Scan Codes")) return;
 
-            ImGui.TextWrapped("Direction → BIOS scancode lookup table (9 entries, code-confirmed in " +
-                              "FUN_10e8_0f4c) and the CombatAlertedFlag word (rewritten by " +
-                              "FUN_10e8_1b32).");
+            ImGui.TextWrapped("Direction → BIOS scancode lookup table for keyboard movement input.");
 
             var editable = section.Editable();
             if (!editable) ImGui.BeginDisabled();
 
-            if (ImGui.BeginTable("InputConfig", 2, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
-            {
-                ImGui.TableSetupColumn("Direction");
-                ImGui.TableSetupColumn("Scan Code");
-                ImGui.TableHeadersRow();
+            ImGui.Text($"Stationary: 0x{(int)section.StationaryKey:X2} {section.StationaryKey}");
 
-                for (var i = 0; i < TacInputConfigSection.DirectionCount; i++)
-                {
-                    ImGui.PushID($"DirKey_{i}");
-                    ImGui.TableNextRow();
-                    ImGui.TableNextColumn();
-                    ImGui.Text(CompassLabels9[i]);
-
-                    ImGui.TableNextColumn();
-                    var val = (int)section.DirectionScanCodes[i];
-                    var newVal = ImGuiExtensions.Input("##sc", val, width: 100);
-                    if (newVal != null) { section.DirectionScanCodes[i] = (ushort)newVal.Value; pending.RecordChange(); }
-
-                    ImGui.PopID();
-                }
-
-                ImGui.EndTable();
-            }
-
-            var flagVal = (int)section.CombatAlertedFlag;
-            var newFlag = ImGuiExtensions.Input("CombatAlertedFlag (DS:0x1C8A)", flagVal, width: 120);
-            if (newFlag != null) { section.CombatAlertedFlag = (ushort)newFlag.Value; pending.RecordChange(); }
+            DrawScanCodeCombo("North", section.NorthKey, v => section.NorthKey = v, pending);
+            DrawScanCodeCombo("North-East", section.NorthEastKey, v => section.NorthEastKey = v, pending);
+            DrawScanCodeCombo("East", section.EastKey, v => section.EastKey = v, pending);
+            DrawScanCodeCombo("South-East", section.SouthEastKey, v => section.SouthEastKey = v, pending);
+            DrawScanCodeCombo("South", section.SouthKey, v => section.SouthKey = v, pending);
+            DrawScanCodeCombo("South-West", section.SouthWestKey, v => section.SouthWestKey = v, pending);
+            DrawScanCodeCombo("West", section.WestKey, v => section.WestKey = v, pending);
+            DrawScanCodeCombo("North-West", section.NorthWestKey, v => section.NorthWestKey = v, pending);
 
             if (!editable) ImGui.EndDisabled();
+        }
+
+        private static void DrawScanCodeCombo(
+            string label, BiosKeyboardScanCode current,
+            System.Action<BiosKeyboardScanCode> setter, PendingEditorExecutableState pending)
+        {
+            var result = ImGuiExtensions.Input(label, (int)current, ScanCodeValues, ScanCodeLabels, width: 200);
+            if (result != null) { setter((BiosKeyboardScanCode)result.Value); pending.RecordChange(); }
         }
 
         public static void DrawTacAlertLevelColorsSection(TacAlertLevelColorsSection section, PendingEditorExecutableState pending)

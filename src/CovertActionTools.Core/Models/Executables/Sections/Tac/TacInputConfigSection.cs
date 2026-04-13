@@ -1,79 +1,95 @@
 using System;
+using CovertActionTools.Core.Models.Executables.Records.Shared;
 using CovertActionTools.Core.Models.Executables.Sections;
 
 namespace CovertActionTools.Core.Models.Executables.Sections.Tac
 {
     /// <summary>
-    /// 20-byte block at DS:0x1C78..0x1C8B holding TAC's direction → BIOS scancode
-    /// lookup table and the <see cref="CombatAlertedFlag"/> runtime-state word. The
-    /// whole section is non-viewable and non-editable — the scancode table is loaded
-    /// once into the keyboard-input dispatcher and the combat flag is runtime state
-    /// that the guard/combat AI overwrites on every tick, so there is no meaningful
-    /// static edit a user could make.
-    ///
-    ///   - <see cref="DirectionScanCodes"/> at DS:0x1C78 (9 × uint16 = 18 bytes):
-    ///     direction index (0=Stationary, 1..8=N,NE,E,SE,S,SW,W,NW) → BIOS scan code.
-    ///     Entry 0 is 0x0000 (no key). Entries 1..8 are Up(0x48), PgUp(0x49),
-    ///     Right(0x4D), PgDn(0x51), Down(0x50), End(0x4F), Left(0x4B), Home(0x47).
-    ///     Indexed by FUN_10e8_0f4c at
-    ///     <c>local_16 = *(int *)(local_16 * 2 + 0x1c78) + 0x80</c>.
-    ///   - <see cref="CombatAlertedFlag"/> at DS:0x1C8A (uint16): a boolean flag
-    ///     toggled by FUN_10e8_1b32 via <c>MOV word ptr [0x1c8a], 0</c> and
-    ///     <c>MOV word ptr [0x1c8a], 1</c>, and gated on with <c>CMP word ptr
-    ///     [0x1c8a], 0</c>.
+    /// 18-byte block at DS:0x1C78..0x1C89 holding TAC's direction → BIOS scancode
+    /// lookup table. Each of the 9 entries maps a compass direction
+    /// (0=Stationary, 1..8=N,NE,E,SE,S,SW,W,NW) to a BIOS keyboard scan code.
+    /// Indexed by FUN_10e8_0f4c at
+    /// <c>local_16 = *(int *)(local_16 * 2 + 0x1c78) + 0x80</c>.
     /// </summary>
     public class TacInputConfigSection : IExecutableSection
     {
-        public const int SectionSize = 20;
-        public const int DirectionCount = 9;
-        private const int DirectionBytes = DirectionCount * 2;
+        public const int SectionSize = 18;
 
-        public ushort[] DirectionScanCodes { get; set; } = new ushort[DirectionCount];
-        public ushort CombatAlertedFlag { get; set; }
+        public BiosKeyboardScanCode StationaryKey { get; set; }
+        public BiosKeyboardScanCode NorthKey { get; set; }
+        public BiosKeyboardScanCode NorthEastKey { get; set; }
+        public BiosKeyboardScanCode EastKey { get; set; }
+        public BiosKeyboardScanCode SouthEastKey { get; set; }
+        public BiosKeyboardScanCode SouthKey { get; set; }
+        public BiosKeyboardScanCode SouthWestKey { get; set; }
+        public BiosKeyboardScanCode WestKey { get; set; }
+        public BiosKeyboardScanCode NorthWestKey { get; set; }
 
         public bool Viewable()
         {
-            return false;
+            return true;
         }
 
         public bool Editable()
         {
-            return false;
+            return true;
         }
 
         public int ReadBytes(byte[] fullPayload, int startingOffset)
         {
-            DirectionScanCodes = new ushort[DirectionCount];
-            for (var i = 0; i < DirectionCount; i++)
-            {
-                DirectionScanCodes[i] = BitConverter.ToUInt16(fullPayload, startingOffset + i * 2);
-            }
-            CombatAlertedFlag = BitConverter.ToUInt16(fullPayload, startingOffset + DirectionBytes);
+            StationaryKey = ReadScanCode(fullPayload, startingOffset, 0);
+            NorthKey = ReadScanCode(fullPayload, startingOffset, 1);
+            NorthEastKey = ReadScanCode(fullPayload, startingOffset, 2);
+            EastKey = ReadScanCode(fullPayload, startingOffset, 3);
+            SouthEastKey = ReadScanCode(fullPayload, startingOffset, 4);
+            SouthKey = ReadScanCode(fullPayload, startingOffset, 5);
+            SouthWestKey = ReadScanCode(fullPayload, startingOffset, 6);
+            WestKey = ReadScanCode(fullPayload, startingOffset, 7);
+            NorthWestKey = ReadScanCode(fullPayload, startingOffset, 8);
             return SectionSize;
         }
 
         public byte[] WriteBytes()
         {
             var result = new byte[SectionSize];
-            for (var i = 0; i < DirectionCount; i++)
-            {
-                result[i * 2] = (byte)(DirectionScanCodes[i] & 0xFF);
-                result[i * 2 + 1] = (byte)((DirectionScanCodes[i] >> 8) & 0xFF);
-            }
-            result[DirectionBytes] = (byte)(CombatAlertedFlag & 0xFF);
-            result[DirectionBytes + 1] = (byte)((CombatAlertedFlag >> 8) & 0xFF);
+            WriteScanCode(result, 0, StationaryKey);
+            WriteScanCode(result, 1, NorthKey);
+            WriteScanCode(result, 2, NorthEastKey);
+            WriteScanCode(result, 3, EastKey);
+            WriteScanCode(result, 4, SouthEastKey);
+            WriteScanCode(result, 5, SouthKey);
+            WriteScanCode(result, 6, SouthWestKey);
+            WriteScanCode(result, 7, WestKey);
+            WriteScanCode(result, 8, NorthWestKey);
             return result;
         }
 
         public TacInputConfigSection Clone()
         {
-            var result = new TacInputConfigSection
+            return new TacInputConfigSection
             {
-                CombatAlertedFlag = CombatAlertedFlag,
-                DirectionScanCodes = new ushort[DirectionCount]
+                StationaryKey = StationaryKey,
+                NorthKey = NorthKey,
+                NorthEastKey = NorthEastKey,
+                EastKey = EastKey,
+                SouthEastKey = SouthEastKey,
+                SouthKey = SouthKey,
+                SouthWestKey = SouthWestKey,
+                WestKey = WestKey,
+                NorthWestKey = NorthWestKey
             };
-            Array.Copy(DirectionScanCodes, result.DirectionScanCodes, DirectionCount);
-            return result;
+        }
+
+        private static BiosKeyboardScanCode ReadScanCode(byte[] data, int baseOffset, int index)
+        {
+            return (BiosKeyboardScanCode)BitConverter.ToUInt16(data, baseOffset + index * 2);
+        }
+
+        private static void WriteScanCode(byte[] dest, int index, BiosKeyboardScanCode code)
+        {
+            var value = (ushort)code;
+            dest[index * 2] = (byte)(value & 0xFF);
+            dest[index * 2 + 1] = (byte)((value >> 8) & 0xFF);
         }
     }
 }
