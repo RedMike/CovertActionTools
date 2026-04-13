@@ -5,23 +5,9 @@ using CovertActionTools.Core.Models.Executables.Sections;
 
 namespace CovertActionTools.Core.Models.Executables.Sections.Tac
 {
-    /// <summary>
-    /// Gameplay / dialogue strings used by the TAC mission runtime. Covers action-feedback
-    /// fragments, environmental prompts, terminal interaction messages, and mission-end
-    /// dialogue. The anchor scan finds roughly 30 unique DS-relative pointer targets in
-    /// this range (one per string), all loaded from TAC's own code segment.
-    ///
-    /// The section is stored as a fixed-size byte block (677 bytes, 0x2A5) parsed as
-    /// null-terminated control-byte-aware strings, with per-slot original byte sizes
-    /// preserved so variable-length edits still roundtrip in the original slots (the
-    /// CodeSegment-references-DS-by-immediate problem documented on
-    /// <see cref="DataSegmentHelper"/>).
-    /// </summary>
-    public class TacGameplayStringsSection : IExecutableSection
+    public class GameplayPopupStringsSection : IExecutableSection
     {
-        // 0x1CE4..0x1F35 inclusive — starts after the action menus section, ends at the
-        // null terminator that follows the final "into a double agent!\n" message.
-        public const int SectionSize = 0x252;
+        public const int SectionSize = 0xBE;
 
         public string[] Strings { get; set; } = Array.Empty<string>();
         public int[] StringSizes { get; set; } = Array.Empty<int>();
@@ -58,9 +44,9 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Tac
             return result;
         }
 
-        public TacGameplayStringsSection Clone()
+        public GameplayPopupStringsSection Clone()
         {
-            return new TacGameplayStringsSection
+            return new GameplayPopupStringsSection
             {
                 Strings = Strings.ToArray(),
                 StringSizes = StringSizes.ToArray()

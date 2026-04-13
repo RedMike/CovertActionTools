@@ -155,7 +155,10 @@ namespace CovertActionTools.Core.Models.Executables
         public CombatAlertedFlagSection CombatAlertedFlag { get; set; } = new();
         public TargetReticleColorsSection TargetReticleColors { get; set; } = new();
         public GameplayActionMenusSection GameplayActionMenus { get; set; } = new();
-        public TacGameplayStringsSection GameplayStrings { get; set; } = new();
+        public StatusLineActionStringsSection StatusLineActionStrings { get; set; } = new();
+        public StatusLineStatusStringsSection StatusLineStatusStrings { get; set; } = new();
+        public GameplayEndingStringsSection GameplayEndingStrings { get; set; } = new();
+        public GameplayPopupStringsSection GameplayPopupStrings { get; set; } = new();
 
         /// <summary>
         /// Post-string-block binary data: additional sprite configs, CGA animation frames,
@@ -301,7 +304,10 @@ namespace CovertActionTools.Core.Models.Executables
             offset = ReadSectionWithPadding(segment.CombatAlertedFlag, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.TargetReticleColors, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.GameplayActionMenus, dataSegment, offset);
-            offset = ReadSectionWithPadding(segment.GameplayStrings, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.StatusLineActionStrings, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.StatusLineStatusStrings, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.GameplayEndingStrings, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.GameplayPopupStrings, dataSegment, offset);
 
             // Read equipment name pointers to find and extract the strings from the mid section
             var equipPtrs = DataSegmentHelper.BytesToUInt16Array(dataSegment, EquipmentPointersOffset, EquipmentPointerCount);
@@ -464,7 +470,10 @@ namespace CovertActionTools.Core.Models.Executables
                 CombatAlertedFlag,
                 TargetReticleColors,
                 GameplayActionMenus,
-                GameplayStrings
+                StatusLineActionStrings,
+                StatusLineStatusStrings,
+                GameplayEndingStrings,
+                GameplayPopupStrings
             );
 
             return DataSegmentHelper.Concatenate(
@@ -527,7 +536,10 @@ namespace CovertActionTools.Core.Models.Executables
                 CombatAlertedFlag = CombatAlertedFlag.Clone(),
                 TargetReticleColors = TargetReticleColors.Clone(),
                 GameplayActionMenus = GameplayActionMenus.Clone(),
-                GameplayStrings = GameplayStrings.Clone(),
+                StatusLineActionStrings = StatusLineActionStrings.Clone(),
+                StatusLineStatusStrings = StatusLineStatusStrings.Clone(),
+                GameplayEndingStrings = GameplayEndingStrings.Clone(),
+                GameplayPopupStrings = GameplayPopupStrings.Clone(),
                 GameplayData = GameplayData.ToArray(),
                 EquipmentNames = EquipmentNames.Select(s => s).ToArray(),
                 MidSectionPostEquipNames = MidSectionPostEquipNames.ToArray(),

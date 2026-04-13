@@ -3,6 +3,7 @@ using System.Linq;
 using CovertActionTools.App.ViewModels;
 using CovertActionTools.Core.Models.Executables.Records.Shared;
 using CovertActionTools.Core.Models.Executables.Records.Tac;
+using CovertActionTools.Core.Models.Executables.Sections;
 using CovertActionTools.Core.Models.Executables.Sections.Tac;
 using ImGuiNET;
 
@@ -379,19 +380,36 @@ namespace CovertActionTools.App.Helpers
             if (!editable) ImGui.EndDisabled();
         }
 
-        public static void DrawTacGameplayStringsSection(TacGameplayStringsSection section)
+        private static void DrawStringListSection(string headerLabel, IExecutableSection section, string[] strings, int[] sizes)
         {
             if (!section.Viewable()) return;
-            if (!ImGui.CollapsingHeader("Gameplay Strings")) return;
+            if (!ImGui.CollapsingHeader(headerLabel)) return;
 
-            ImGui.TextWrapped("Gameplay/dialogue strings used during mission playback. Stored in fixed slots " +
-                              "so free-form edits must fit the original byte length of each slot.");
-
-            for (var i = 0; i < section.Strings.Length; i++)
+            for (var i = 0; i < strings.Length; i++)
             {
-                var slotSize = i < section.StringSizes.Length ? section.StringSizes[i] : section.Strings[i].Length + 1;
-                ImGui.Text($"{i} ({slotSize} B): {section.Strings[i]}");
+                var slotSize = i < sizes.Length ? sizes[i] : strings[i].Length + 1;
+                ImGui.Text($"{i} ({slotSize} B): {strings[i]}");
             }
+        }
+
+        public static void DrawStatusLineActionStringsSection(StatusLineActionStringsSection section)
+        {
+            DrawStringListSection("Status Line Action Strings (0x1CE4..0x1D86)", section, section.Strings, section.StringSizes);
+        }
+
+        public static void DrawStatusLineStatusStringsSection(StatusLineStatusStringsSection section)
+        {
+            DrawStringListSection("Status Line Status Strings (0x1D87..0x1D93)", section, section.Strings, section.StringSizes);
+        }
+
+        public static void DrawGameplayEndingStringsSection(GameplayEndingStringsSection section)
+        {
+            DrawStringListSection("Gameplay Ending Strings (0x1D94..0x1E77)", section, section.Strings, section.StringSizes);
+        }
+
+        public static void DrawGameplayPopupStringsSection(GameplayPopupStringsSection section)
+        {
+            DrawStringListSection("Gameplay Popup Strings (0x1E78..0x1F35)", section, section.Strings, section.StringSizes);
         }
 
         public static void DrawRenderingSection(RenderingSection section, PendingEditorExecutableState pending)

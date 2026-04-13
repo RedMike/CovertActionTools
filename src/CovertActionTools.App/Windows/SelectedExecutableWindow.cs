@@ -112,7 +112,10 @@ public class SelectedExecutableWindow : BaseWindow
         TacImGuiHelpers.DrawTacInputConfigSection(tac.InputConfig, _pendingState);
         TacImGuiHelpers.DrawTargetReticleColorsSection(tac.TargetReticleColors, _pendingState);
         TacImGuiHelpers.DrawGameplayActionMenusSection(tac.GameplayActionMenus, _pendingState);
-        TacImGuiHelpers.DrawTacGameplayStringsSection(tac.GameplayStrings);
+        TacImGuiHelpers.DrawStatusLineActionStringsSection(tac.StatusLineActionStrings);
+        TacImGuiHelpers.DrawStatusLineStatusStringsSection(tac.StatusLineStatusStrings);
+        TacImGuiHelpers.DrawGameplayEndingStringsSection(tac.GameplayEndingStrings);
+        TacImGuiHelpers.DrawGameplayPopupStringsSection(tac.GameplayPopupStrings);
 
         if (ImGui.CollapsingHeader("Equipment Names"))
         {
