@@ -263,20 +263,16 @@ namespace CovertActionTools.App.Helpers
             if (!section.Viewable()) return;
             if (!ImGui.CollapsingHeader("In-Game Menu Strings")) return;
 
-            ImGui.TextWrapped("Pause banner and quit-confirmation dialog, stored in fixed byte slots. " +
-                              "Edits must encode to no more than (slot size - 1) bytes; the save path " +
-                              "throws on overflow.");
-
             var editable = section.Editable();
             if (!editable) ImGui.BeginDisabled();
 
             var newBanner = ImGuiExtensions.Input(
-                "Pause Banner (0x1C46, 8-byte slot)", section.PauseBanner, 64, width: 220);
+                "Pause Banner", section.PauseBanner, 64, width: 220);
             if (newBanner != null) { section.PauseBanner = newBanner; pending.RecordChange(); }
 
-            var newQuit = ImGuiExtensions.Input(
-                "Quit Dialog (0x1C4E, 41-byte slot)", section.QuitDialog, 128, width: 360);
-            if (newQuit != null) { section.QuitDialog = newQuit; pending.RecordChange(); }
+            var editorSize = new System.Numerics.Vector2(300, 48);
+            ImGui.Text("Quit Dialog");
+            ImGuiExtensions.DrawMenuStringRecord("QuitDialog", section.QuitDialog, editorSize, () => pending.RecordChange());
 
             if (!editable) ImGui.EndDisabled();
         }
@@ -324,7 +320,7 @@ namespace CovertActionTools.App.Helpers
         public static void DrawTargetReticleColorsSection(TargetReticleColorsSection section, PendingEditorExecutableState pending)
         {
             if (!section.Viewable()) return;
-            if (!ImGui.CollapsingHeader("Target Reticle Colors (0x1C8C..0x1C90)")) return;
+            if (!ImGui.CollapsingHeader("Target Reticle Colors")) return;
 
             ImGui.TextWrapped("VGA palette indices for the 16x16 aiming reticle, one per lock-on stage (0-4).");
 
@@ -348,7 +344,7 @@ namespace CovertActionTools.App.Helpers
         {
             ImGui.PushID(label);
             var tv = (int)getter();
-            var newTv = ImGuiExtensions.Input($"##{label}", tv, width: 50);
+            var newTv = ImGuiExtensions.Input($"##{label}", tv, width: 80);
             if (newTv.HasValue && newTv.Value >= 0 && newTv.Value <= 255)
             {
                 setter((byte)newTv.Value);
@@ -359,7 +355,7 @@ namespace CovertActionTools.App.Helpers
         public static void DrawGameplayActionMenusSection(GameplayActionMenusSection section, PendingEditorExecutableState pending)
         {
             if (!section.Viewable()) return;
-            if (!ImGui.CollapsingHeader("Action Menus (0x1C91..0x1CE3)")) return;
+            if (!ImGui.CollapsingHeader("Action Menus")) return;
 
             var editable = section.Editable();
             if (!editable) ImGui.BeginDisabled();
@@ -382,7 +378,7 @@ namespace CovertActionTools.App.Helpers
         }
 
         private static void DrawFixedSizeStringTableSection(
-            string headerLabel, ExactCountFixedSizeStringTableSection section, PendingEditorExecutableState pending)
+            string headerLabel, string idPrefix, ExactCountFixedSizeStringTableSection section, PendingEditorExecutableState pending)
         {
             if (!section.Viewable()) return;
             if (!ImGui.CollapsingHeader(headerLabel)) return;
@@ -394,7 +390,7 @@ namespace CovertActionTools.App.Helpers
             for (var i = 0; i < section.Strings.Count; i++)
             {
                 var newVal = ImGuiExtensions.InputMultiline(
-                    $"[{i}]", section.Strings[i], 256, editorSize, id: $"str_{i}");
+                    $"[{i}]", section.Strings[i], 256, editorSize, id: $"{idPrefix}_{i}");
                 if (newVal != null) { section.Strings[i] = newVal; pending.RecordChange(); }
             }
 
@@ -403,22 +399,22 @@ namespace CovertActionTools.App.Helpers
 
         public static void DrawStatusLineActionStringsSection(StatusLineActionStringsSection section, PendingEditorExecutableState pending)
         {
-            DrawFixedSizeStringTableSection("Status Line Action Strings (0x1CE4..0x1D86)", section, pending);
+            DrawFixedSizeStringTableSection("Status Line Action Strings", "slact", section, pending);
         }
 
         public static void DrawStatusLineStatusStringsSection(StatusLineStatusStringsSection section, PendingEditorExecutableState pending)
         {
-            DrawFixedSizeStringTableSection("Status Line Status Strings (0x1D87..0x1D93)", section, pending);
+            DrawFixedSizeStringTableSection("Status Line Status Strings", "slstat", section, pending);
         }
 
         public static void DrawGameplayEndingStringsSection(GameplayEndingStringsSection section, PendingEditorExecutableState pending)
         {
-            DrawFixedSizeStringTableSection("Gameplay Ending Strings (0x1D94..0x1E77)", section, pending);
+            DrawFixedSizeStringTableSection("Gameplay Ending Strings", "gpend", section, pending);
         }
 
         public static void DrawGameplayPopupStringsSection(GameplayPopupStringsSection section, PendingEditorExecutableState pending)
         {
-            DrawFixedSizeStringTableSection("Gameplay Popup Strings (0x1E78..0x1F35)", section, pending);
+            DrawFixedSizeStringTableSection("Gameplay Popup Strings", "gppop", section, pending);
         }
 
         public static void DrawRenderingSection(RenderingSection section, PendingEditorExecutableState pending)
