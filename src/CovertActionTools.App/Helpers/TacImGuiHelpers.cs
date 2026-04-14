@@ -12,6 +12,18 @@ namespace CovertActionTools.App.Helpers
 {
     internal static class TacImGuiHelpers
     {
+        #region VGA palette combo data
+
+        private static readonly List<int> VgaPaletteValues =
+            System.Enum.GetValues<VgaPaletteIndex>().Select(c => (int)c).ToList();
+
+        private static readonly List<string> VgaPaletteLabels =
+            System.Enum.GetValues<VgaPaletteIndex>()
+                .Select(c => $"{(int)c}: {c}")
+                .ToList();
+
+        #endregion
+
         #region Direction labels
 
         private static readonly string[] CompassLabels9 =
@@ -144,10 +156,10 @@ namespace CovertActionTools.App.Helpers
                     ImGui.TableNextRow();
 
                     ImGui.TableNextColumn();
-                    ImGui.Text($"{i}");
+                    ImGui.Text($"{(VgaPaletteIndex)i}");
 
                     ImGui.TableNextColumn();
-                    var newLow = ImGuiExtensions.Input("##lo", pair.Low, width: 50);
+                    var newLow = ImGuiExtensions.Input("##lo", pair.Low, width: 80);
                     if (newLow.HasValue && newLow.Value >= 0 && newLow.Value <= 3)
                     {
                         pair.Low = (byte)newLow.Value;
@@ -155,7 +167,7 @@ namespace CovertActionTools.App.Helpers
                     }
 
                     ImGui.TableNextColumn();
-                    var newHigh = ImGuiExtensions.Input("##hi", pair.High, width: 50);
+                    var newHigh = ImGuiExtensions.Input("##hi", pair.High, width: 80);
                     if (newHigh.HasValue && newHigh.Value >= 0 && newHigh.Value <= 3)
                     {
                         pair.High = (byte)newHigh.Value;
@@ -174,11 +186,7 @@ namespace CovertActionTools.App.Helpers
         public static void DrawDoorEntryStringsSection(DoorEntryStringsSection section, PendingEditorExecutableState pending)
         {
             if (!section.Viewable()) return;
-            if (!ImGui.CollapsingHeader("Door Prompt Strings (0x1C26..0x1C41)")) return;
-
-            ImGui.TextWrapped("Three door-picker dialog strings preceded by an empty-string " +
-                              "null byte. Door strings are stored in fixed byte slots — edits longer " +
-                              "than the slot will throw on save.");
+            if (!ImGui.CollapsingHeader("Door Prompt Strings")) return;
 
             var editable = section.Editable();
             if (!editable) ImGui.BeginDisabled();
@@ -186,15 +194,15 @@ namespace CovertActionTools.App.Helpers
             var multilineSize = new System.Numerics.Vector2(220, 48);
 
             var newHeader = ImGuiExtensions.InputMultiline(
-                "Door Prompt Header (0x1C27, 16-byte slot)", section.DoorPromptHeader, 64, multilineSize);
+                "Prompt Header", section.DoorPromptHeader, 64, multilineSize);
             if (newHeader != null) { section.DoorPromptHeader = newHeader; pending.RecordChange(); }
 
             var newLabel = ImGuiExtensions.InputMultiline(
-                "Door Label (0x1C37, 7-byte slot)", section.DoorLabel, 64, multilineSize);
+                "Door Label", section.DoorLabel, 64, multilineSize);
             if (newLabel != null) { section.DoorLabel = newLabel; pending.RecordChange(); }
 
             var newSep = ImGuiExtensions.InputMultiline(
-                "Door Separator (0x1C3E, 3-byte slot)", section.DoorSeparator, 64, multilineSize);
+                "Door Separator", section.DoorSeparator, 64, multilineSize);
             if (newSep != null) { section.DoorSeparator = newSep; pending.RecordChange(); }
 
             if (!editable) ImGui.EndDisabled();
@@ -205,51 +213,36 @@ namespace CovertActionTools.App.Helpers
             if (!section.Viewable()) return;
             if (!ImGui.CollapsingHeader("VGA Palette Remap")) return;
 
-            ImGui.TextWrapped("5 × 17-byte palette remap records (16 palette bytes + 1 trailer) plus a " +
-                              "1-byte word-alignment pad. FUN_10e8_06f6(index) computes " +
-                              "index * 0x11 + 0x1BCE and forwards to FUN_1000_00ca (palette-set). " +
-                              "12 call sites pass index values 0..4.");
-
             var editable = section.Editable();
             if (!editable) ImGui.BeginDisabled();
 
-            if (ImGui.BeginTable("VgaPalette", 18, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+            var colCount = section.Records.Count + 1;
+            if (ImGui.BeginTable("VgaPalette", colCount, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
             {
-                ImGui.TableSetupColumn("Idx");
-                for (var b = 0; b < 16; b++) ImGui.TableSetupColumn($"[{b:X}]");
-                ImGui.TableSetupColumn("Trl");
+                ImGui.TableSetupColumn("Color");
+                for (var r = 0; r < section.Records.Count; r++)
+                    ImGui.TableSetupColumn($"Record {r}");
                 ImGui.TableHeadersRow();
 
-                for (var r = 0; r < section.Records.Count; r++)
+                for (var b = 0; b < VgaPaletteRemapRecord.PaletteLength; b++)
                 {
-                    ImGui.PushID($"VgaRec_{r}");
                     ImGui.TableNextRow();
                     ImGui.TableNextColumn();
-                    ImGui.Text($"{r}");
+                    ImGui.Text($"{(VgaPaletteIndex)b}");
 
-                    var record = section.Records[r];
-                    for (var b = 0; b < VgaPaletteRemapRecord.PaletteLength; b++)
+                    for (var r = 0; r < section.Records.Count; r++)
                     {
                         ImGui.TableNextColumn();
-                        var val = (int)record.Palette[(byte)b];
-                        var newVal = ImGuiExtensions.Input($"##v{b}", val, width: 50);
+                        ImGui.PushID($"Vga_{r}_{b}");
+                        var val = (int)section.Records[r].Palette[(byte)b];
+                        var newVal = ImGuiExtensions.Input("##v", val, width: 80);
                         if (newVal.HasValue && newVal.Value >= 0 && newVal.Value <= 15)
                         {
-                            record.Palette[(byte)b] = (byte)newVal.Value;
+                            section.Records[r].Palette[(byte)b] = (byte)newVal.Value;
                             pending.RecordChange();
                         }
+                        ImGui.PopID();
                     }
-
-                    ImGui.TableNextColumn();
-                    var trailerVal = (int)record.UnknownTrailerByte;
-                    var newTrailer = ImGuiExtensions.Input("##trl", trailerVal, width: 50);
-                    if (newTrailer.HasValue && newTrailer.Value >= 0 && newTrailer.Value <= 255)
-                    {
-                        record.UnknownTrailerByte = (byte)newTrailer.Value;
-                        pending.RecordChange();
-                    }
-
-                    ImGui.PopID();
                 }
 
                 ImGui.EndTable();
@@ -290,12 +283,8 @@ namespace CovertActionTools.App.Helpers
             if (!section.Viewable()) return;
             if (!ImGui.CollapsingHeader("Direction Scan Codes")) return;
 
-            ImGui.TextWrapped("Direction → BIOS scancode lookup table for keyboard movement input.");
-
             var editable = section.Editable();
             if (!editable) ImGui.BeginDisabled();
-
-            ImGui.Text($"Stationary: 0x{(int)section.StationaryKey:X2} {section.StationaryKey}");
 
             DrawScanCodeCombo("North", section.NorthKey, v => section.NorthKey = v, pending);
             DrawScanCodeCombo("North-East", section.NorthEastKey, v => section.NorthEastKey = v, pending);
@@ -322,19 +311,13 @@ namespace CovertActionTools.App.Helpers
             if (!section.Viewable()) return;
             if (!ImGui.CollapsingHeader("Target Reticle Colors")) return;
 
-            ImGui.TextWrapped("VGA palette indices for the 16x16 aiming reticle, one per lock-on stage (0-4).");
-
             var editable = section.Editable();
             if (!editable) ImGui.BeginDisabled();
 
             DrawReticleColorField("Stage 0", () => section.Stage0, v => { section.Stage0 = v; pending.RecordChange(); });
-            ImGui.SameLine();
             DrawReticleColorField("Stage 1", () => section.Stage1, v => { section.Stage1 = v; pending.RecordChange(); });
-            ImGui.SameLine();
             DrawReticleColorField("Stage 2", () => section.Stage2, v => { section.Stage2 = v; pending.RecordChange(); });
-            ImGui.SameLine();
             DrawReticleColorField("Stage 3", () => section.Stage3, v => { section.Stage3 = v; pending.RecordChange(); });
-            ImGui.SameLine();
             DrawReticleColorField("Stage 4", () => section.Stage4, v => { section.Stage4 = v; pending.RecordChange(); });
 
             if (!editable) ImGui.EndDisabled();
@@ -342,14 +325,8 @@ namespace CovertActionTools.App.Helpers
 
         private static void DrawReticleColorField(string label, System.Func<byte> getter, System.Action<byte> setter)
         {
-            ImGui.PushID(label);
-            var tv = (int)getter();
-            var newTv = ImGuiExtensions.Input($"##{label}", tv, width: 80);
-            if (newTv.HasValue && newTv.Value >= 0 && newTv.Value <= 255)
-            {
-                setter((byte)newTv.Value);
-            }
-            ImGui.PopID();
+            var result = ImGuiExtensions.Input(label, (int)getter(), VgaPaletteValues, VgaPaletteLabels, width: 200);
+            if (result != null) { setter((byte)result.Value); }
         }
 
         public static void DrawGameplayActionMenusSection(GameplayActionMenusSection section, PendingEditorExecutableState pending)
@@ -362,17 +339,21 @@ namespace CovertActionTools.App.Helpers
 
             var editorSize = new System.Numerics.Vector2(300, 48);
 
-            ImGui.Text("Set Trap Menu");
-            ImGuiExtensions.DrawMenuStringRecord("SetTrap", section.SetTrapMenuStrings, editorSize, () => pending.RecordChange());
+            if (ImGui.TreeNode("Set Trap Menu"))
+            {
+                ImGuiExtensions.DrawMenuStringRecord("SetTrap", section.SetTrapMenuStrings, editorSize, () => pending.RecordChange());
+                ImGui.TreePop();
+            }
 
-            ImGui.Separator();
-            ImGui.Text("Arrest Menu");
+            if (ImGui.TreeNode("Arrest Menu"))
+            {
+                var newArrestHeader = ImGuiExtensions.InputMultiline(
+                    "Arrest Header", section.ArrestHeaderString, 128, editorSize, id: "arrest_hdr");
+                if (newArrestHeader != null) { section.ArrestHeaderString = newArrestHeader; pending.RecordChange(); }
 
-            var newArrestHeader = ImGuiExtensions.InputMultiline(
-                "Arrest Header", section.ArrestHeaderString, 128, editorSize, id: "arrest_hdr");
-            if (newArrestHeader != null) { section.ArrestHeaderString = newArrestHeader; pending.RecordChange(); }
-
-            ImGuiExtensions.DrawMenuStringRecord("Arrest", section.ArrestMenuStrings, editorSize, () => pending.RecordChange());
+                ImGuiExtensions.DrawMenuStringRecord("Arrest", section.ArrestMenuStrings, editorSize, () => pending.RecordChange());
+                ImGui.TreePop();
+            }
 
             if (!editable) ImGui.EndDisabled();
         }
