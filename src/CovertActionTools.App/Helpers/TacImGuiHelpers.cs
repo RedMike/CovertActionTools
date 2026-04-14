@@ -404,6 +404,11 @@ namespace CovertActionTools.App.Helpers
             DrawFixedSizeStringTableSection("Gameplay Popup Strings", "gppop", section, pending);
         }
 
+        public static void DrawPasswordDialogTextsSection(PasswordDialogTextsSection section, PendingEditorExecutableState pending)
+        {
+            DrawFixedSizeStringTableSection("Password Dialog Texts", "pwdlg", section, pending);
+        }
+
         public static void DrawFloorSafeInventoryItemRewardSection(
             FloorSafeInventoryItemRewardSection section, PendingEditorExecutableState pending,
             string[] equipmentNames)
