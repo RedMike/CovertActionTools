@@ -110,9 +110,9 @@ namespace CovertActionTools.Core.Models.Executables
         private const int UnreferencedGapSize = 6;
         private const int SpriteConfigsSize = 60;
         // End of the Rendering section / start of CgaColorRemap. GameplayData begins
-        // after all Rendering-followup typed sections (CgaColorRemap .. PasswordDialogTexts)
-        // at 0x1FF0.
-        private const int GameplayDataStart = 0x1FF0;
+        // after all Rendering-followup typed sections (CgaColorRemap .. WallTileDirectionSprite)
+        // at 0x2000.
+        private const int GameplayDataStart = 0x2000;
         #endregion
 
         #region PreCharNameData Sub-offsets (DS-relative)
@@ -162,6 +162,7 @@ namespace CovertActionTools.Core.Models.Executables
         public FloorSafeInventoryItemRewardSection FloorSafeInventoryItemRewards { get; set; } = new();
         public PasswordGenerationSection PasswordGeneration { get; set; } = new();
         public PasswordDialogTextsSection PasswordDialogTexts { get; set; } = new();
+        public WallTileDirectionSpriteSection WallTileDirectionSprite { get; set; } = new();
 
         /// <summary>
         /// Post-string-block binary data: additional sprite configs, CGA animation frames,
@@ -314,6 +315,7 @@ namespace CovertActionTools.Core.Models.Executables
             offset = ReadSectionWithPadding(segment.FloorSafeInventoryItemRewards, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.PasswordGeneration, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.PasswordDialogTexts, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.WallTileDirectionSprite, dataSegment, offset);
 
             // Read equipment name pointers to find and extract the strings from the mid section
             var equipPtrs = DataSegmentHelper.BytesToUInt16Array(dataSegment, EquipmentPointersOffset, EquipmentPointerCount);
@@ -482,7 +484,8 @@ namespace CovertActionTools.Core.Models.Executables
                 GameplayPopupStrings,
                 FloorSafeInventoryItemRewards,
                 PasswordGeneration,
-                PasswordDialogTexts
+                PasswordDialogTexts,
+                WallTileDirectionSprite
             );
 
             return DataSegmentHelper.Concatenate(
@@ -552,6 +555,7 @@ namespace CovertActionTools.Core.Models.Executables
                 FloorSafeInventoryItemRewards = FloorSafeInventoryItemRewards.Clone(),
                 PasswordGeneration = PasswordGeneration.Clone(),
                 PasswordDialogTexts = PasswordDialogTexts.Clone(),
+                WallTileDirectionSprite = WallTileDirectionSprite.Clone(),
                 GameplayData = GameplayData.ToArray(),
                 EquipmentNames = EquipmentNames.Select(s => s).ToArray(),
                 MidSectionPostEquipNames = MidSectionPostEquipNames.ToArray(),
