@@ -361,7 +361,6 @@ public class SelectedExecutableWindow : BaseWindow
         {
             // ("SpriteSheetConfigs", tac.SpriteSheetConfigs.Length),
             // ("BssBlock", tac.BssBlock.Length),
-            ("GameplayData", tac.GameplayData.Length),
             ("MidSectionPostEquipNames", tac.MidSectionPostEquipNames.Length),
             ("RagdollRectPadding", tac.RagdollRectPadding.Length),
             ("CluePhrasePointerTable", tac.CluePhrasePointerTable.Length),
