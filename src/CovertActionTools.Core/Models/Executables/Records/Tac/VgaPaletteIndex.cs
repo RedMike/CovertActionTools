@@ -7,7 +7,7 @@ namespace CovertActionTools.Core.Models.Executables.Records.Tac
         Green = 2,
         Cyan = 3,
         Red = 4,
-        DarkBlack = 5,
+        Black = 5,
         Brown = 6,
         LightGray = 7,
         DarkGray = 8,
@@ -15,8 +15,8 @@ namespace CovertActionTools.Core.Models.Executables.Records.Tac
         LightGreen = 10,
         LightCyan = 11,
         LightRed = 12,
-        PlayerClothing = 13,
-        EnemyClothing = 14,
+        Magenta = 13,
+        Yellow = 14,
         White = 15,
     }
 }

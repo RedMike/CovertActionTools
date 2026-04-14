@@ -142,9 +142,10 @@ namespace CovertActionTools.App.Helpers
         {
             if (!ImGui.TreeNode(label)) return;
 
-            if (ImGui.BeginTable($"CgaRemap_{label}", 3, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+            if (ImGui.BeginTable($"CgaRemap_{label}", 4, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
             {
-                ImGui.TableSetupColumn("VGA Index");
+                ImGui.TableSetupColumn("Index");
+                ImGui.TableSetupColumn("Color");
                 ImGui.TableSetupColumn("Low");
                 ImGui.TableSetupColumn("High");
                 ImGui.TableHeadersRow();
@@ -155,6 +156,8 @@ namespace CovertActionTools.App.Helpers
                     ImGui.PushID($"Cga_{label}_{i}");
                     ImGui.TableNextRow();
 
+                    ImGui.TableNextColumn();
+                    ImGui.Text($"{i}");
                     ImGui.TableNextColumn();
                     ImGui.Text($"{(VgaPaletteIndex)i}");
 
@@ -216,9 +219,10 @@ namespace CovertActionTools.App.Helpers
             var editable = section.Editable();
             if (!editable) ImGui.BeginDisabled();
 
-            var colCount = section.Records.Count + 1;
+            var colCount = section.Records.Count + 2;
             if (ImGui.BeginTable("VgaPalette", colCount, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
             {
+                ImGui.TableSetupColumn("Index");
                 ImGui.TableSetupColumn("Color");
                 for (var r = 0; r < section.Records.Count; r++)
                     ImGui.TableSetupColumn($"Record {r}");
@@ -227,6 +231,8 @@ namespace CovertActionTools.App.Helpers
                 for (var b = 0; b < VgaPaletteRemapRecord.PaletteLength; b++)
                 {
                     ImGui.TableNextRow();
+                    ImGui.TableNextColumn();
+                    ImGui.Text($"{b}");
                     ImGui.TableNextColumn();
                     ImGui.Text($"{(VgaPaletteIndex)b}");
 

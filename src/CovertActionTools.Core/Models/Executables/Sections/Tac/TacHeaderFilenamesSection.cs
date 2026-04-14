@@ -16,7 +16,7 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Tac
 
         public override bool Viewable()
         {
-            return true;
+            return false;
         }
 
         public override bool Editable()
