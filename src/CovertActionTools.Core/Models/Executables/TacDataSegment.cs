@@ -2,183 +2,12 @@ using System;
 using System.Linq;
 using System.Text;
 using CovertActionTools.Core.Models.Executables.Records.Tac;
+using CovertActionTools.Core.Models.Executables.Sections;
 using CovertActionTools.Core.Models.Executables.Sections.Shared;
 using CovertActionTools.Core.Models.Executables.Sections.Tac;
 
 namespace CovertActionTools.Core.Models.Executables
 {
-    /// <summary>
-    /// Room type record from TAC.EXE (22 bytes).
-    /// Field interpretations are based on reverse engineering and may not be fully accurate.
-    /// </summary>
-    public class TacRoomTypeRecord
-    {
-        public const int RecordSize = 22;
-        public const int NameLength = 16;
-
-        /// <summary>
-        /// Room type name, null-padded to 16 bytes.
-        /// </summary>
-        public string Name { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Surveillance quality increase granted when a bug is placed in this room type.
-        /// </summary>
-        public ushort SurveillanceQuality { get; set; }
-
-        /// <summary>
-        /// Building size constraint bitfield, matched against the building's room grid area
-        /// (width * height): bit 0 (1) = small (area &lt;= 40), bit 1 (2) = medium (area 41-72),
-        /// bit 2 (4) = large (area &gt; 72). Only large rooms (bit 2) are valid as the local
-        /// agent's spawn room in a building.
-        /// </summary>
-        public ushort SizeConstraint { get; set; }
-
-        /// <summary>
-        /// Room enabled flag. Only bit 0 is tested at runtime (mask is hardcoded to 1),
-        /// so this is effectively boolean: 0 = disabled, non-zero = enabled.
-        /// Vanilla data uses 7 for enabled rooms, but only bit 0 matters.
-        /// </summary>
-        public ushort Enabled { get; set; }
-
-        public TacRoomTypeRecord Clone()
-        {
-            return new TacRoomTypeRecord
-            {
-                Name = Name,
-                SurveillanceQuality = SurveillanceQuality,
-                SizeConstraint = SizeConstraint,
-                Enabled = Enabled
-            };
-        }
-
-        public static TacRoomTypeRecord FromBytes(byte[] data, int offset)
-        {
-            var nameLen = 0;
-            while (nameLen < NameLength && data[offset + nameLen] != 0) nameLen++;
-            var name = DataSegmentHelper.DecodeControlString(data, offset, nameLen);
-
-            return new TacRoomTypeRecord
-            {
-                Name = name,
-                SurveillanceQuality = BitConverter.ToUInt16(data, offset + NameLength),
-                SizeConstraint = BitConverter.ToUInt16(data, offset + NameLength + 2),
-                Enabled = BitConverter.ToUInt16(data, offset + NameLength + 4)
-            };
-        }
-
-        public byte[] ToBytes()
-        {
-            var result = new byte[RecordSize];
-            var nameBytes = DataSegmentHelper.EncodeControlString(Name);
-            Array.Copy(nameBytes, 0, result, 0, Math.Min(nameBytes.Length, NameLength));
-            result[NameLength] = (byte)(SurveillanceQuality & 0xFF);
-            result[NameLength + 1] = (byte)((SurveillanceQuality >> 8) & 0xFF);
-            result[NameLength + 2] = (byte)(SizeConstraint & 0xFF);
-            result[NameLength + 3] = (byte)((SizeConstraint >> 8) & 0xFF);
-            result[NameLength + 4] = (byte)(Enabled & 0xFF);
-            result[NameLength + 5] = (byte)((Enabled >> 8) & 0xFF);
-            return result;
-        }
-    }
-
-    /// <summary>
-    /// Object/furniture record from TAC.EXE (20 bytes).
-    /// Field interpretations are based on reverse engineering and may not be fully accurate.
-    /// </summary>
-    public class TacObjectRecord
-    {
-        public const int RecordSize = 20;
-        public const int NameLength = 12;
-
-        /// <summary>
-        /// Object/furniture name, null-padded to 12 bytes.
-        /// </summary>
-        public string Name { get; set; } = string.Empty;
-
-        /// <summary>
-        /// X pixel offset into the spritesheet.
-        /// </summary>
-        public ushort SpriteOffset { get; set; }
-
-        /// <summary>
-        /// Y pixel offset / sprite page selector.
-        /// </summary>
-        public ushort SpritePage { get; set; }
-
-        /// <summary>
-        /// Object behaviour bitfield:
-        ///   bit 0 (0x001) = Blocks Movement — occupies floor space, tile is impassable.
-        ///   bit 1 (0x002) = Openable — can be opened/closed; open sprite is SpritePage+1.
-        ///   bit 2 (0x004) = Buggable — player can place a listening device.
-        ///   bit 3 (0x008) = Photographable — player can photograph contents.
-        ///   bit 4 (0x010) = Is Door — propagates open/closed state to adjacent tile (through
-        ///                    wall) so pathfinding works from both sides. Direction determined
-        ///                    by (object_index &amp; 3).
-        ///   bit 5 (0x020) = Blocks LOS — fully blocks line-of-sight raycast (returns 0).
-        ///                    Bit 0 objects only partially obstruct (returns 1). Also blocks
-        ///                    movement.
-        ///   bit 6 (0x040) = Multi-tile — object spans 2 tiles along the X axis. Even-indexed
-        ///                    objects extend to X+1, odd to X-1. Paired object is index +/- 1.
-        ///   bit 7 (0x080) = Unused — never tested at runtime. Only set on Table objects.
-        ///   bit 8 (0x100) = Wall-Adjacent — during room generation, placed on wall tiles only
-        ///                    (not freestanding on empty floor).
-        ///   bit 9 (0x200) = Password Terminal — interactable as a cipher terminal.
-        /// </summary>
-        public ushort BehaviourFlags { get; set; }
-
-        /// <summary>
-        /// Room placement bitfield (which room types this object can appear in).
-        /// </summary>
-        public ushort RoomPlacement { get; set; }
-
-        public TacObjectRecord Clone()
-        {
-            return new TacObjectRecord
-            {
-                Name = Name,
-                SpriteOffset = SpriteOffset,
-                SpritePage = SpritePage,
-                BehaviourFlags = BehaviourFlags,
-                RoomPlacement = RoomPlacement
-            };
-        }
-
-        public static TacObjectRecord FromBytes(byte[] data, int offset)
-        {
-            var nameLen = 0;
-            while (nameLen < NameLength && data[offset + nameLen] != 0) nameLen++;
-            var name = DataSegmentHelper.DecodeControlString(data, offset, nameLen);
-
-            return new TacObjectRecord
-            {
-                Name = name,
-                SpriteOffset = BitConverter.ToUInt16(data, offset + NameLength),
-                SpritePage = BitConverter.ToUInt16(data, offset + NameLength + 2),
-                BehaviourFlags = BitConverter.ToUInt16(data, offset + NameLength + 4),
-                RoomPlacement = BitConverter.ToUInt16(data, offset + NameLength + 6)
-            };
-        }
-
-        public byte[] ToBytes()
-        {
-            var result = new byte[RecordSize];
-            var nameBytes = DataSegmentHelper.EncodeControlString(Name);
-            Array.Copy(nameBytes, 0, result, 0, Math.Min(nameBytes.Length, NameLength));
-            WriteUInt16(result, NameLength, SpriteOffset);
-            WriteUInt16(result, NameLength + 2, SpritePage);
-            WriteUInt16(result, NameLength + 4, BehaviourFlags);
-            WriteUInt16(result, NameLength + 6, RoomPlacement);
-            return result;
-        }
-
-        private static void WriteUInt16(byte[] buf, int off, ushort val)
-        {
-            buf[off] = (byte)(val & 0xFF);
-            buf[off + 1] = (byte)((val >> 8) & 0xFF);
-        }
-    }
-
     public class TacScreenCoordinate
     {
         public const int RecordSize = 4;
@@ -280,7 +109,10 @@ namespace CovertActionTools.Core.Models.Executables
         private const int TileAdjacencyCount = 4;
         private const int UnreferencedGapSize = 6;
         private const int SpriteConfigsSize = 60;
-        private const int BssBlockEnd = 0x1AE8;
+        // End of the Rendering section / start of CgaColorRemap. GameplayData begins
+        // after all Rendering-followup typed sections (CgaColorRemap .. TacGameplayStrings)
+        // at 0x1F36.
+        private const int GameplayDataStart = 0x1F36;
         #endregion
 
         #region PreCharNameData Sub-offsets (DS-relative)
@@ -312,10 +144,26 @@ namespace CovertActionTools.Core.Models.Executables
         public MapObjectTypeSection MapObjectTypes { get; set; } = new();
         public MovementSection Movement { get; set; } = new();
         public RenderingSection Rendering { get; set; } = new();
+        public CgaColorRemapSection CgaColorRemap { get; set; } = new();
+        public TacGameSettingsSection GameSettings { get; set; } = new();
+        public VgaPaletteRemapSection VgaPaletteRemap { get; set; } = new();
+        public TacStubOutputCaptureSection StubOutputCapture { get; set; } = new();
+        public DoorEntryStringsSection MissionStateBlock { get; set; } = new();
+        public TacPlayerDirectionStateSection PlayerDirectionState { get; set; } = new();
+        public TacMenuStringsSection MenuStrings { get; set; } = new();
+        public TacInputConfigSection InputConfig { get; set; } = new();
+        public CombatAlertedFlagSection CombatAlertedFlag { get; set; } = new();
+        public TargetReticleColorsSection TargetReticleColors { get; set; } = new();
+        public GameplayActionMenusSection GameplayActionMenus { get; set; } = new();
+        public StatusLineActionStringsSection StatusLineActionStrings { get; set; } = new();
+        public StatusLineStatusStringsSection StatusLineStatusStrings { get; set; } = new();
+        public GameplayEndingStringsSection GameplayEndingStrings { get; set; } = new();
+        public GameplayPopupStringsSection GameplayPopupStrings { get; set; } = new();
 
         /// <summary>
-        /// Post-BSS binary data: additional sprite configs, CGA animation frames, VGA palette
-        /// remap tables, and gameplay menu/dialogue strings (interleaved with binary config data).
+        /// Post-string-block binary data: additional sprite configs, CGA animation frames,
+        /// VGA palette remap tables, and remaining binary config data between the gameplay
+        /// dialogue strings and the equipment name string block.
         /// </summary>
         public byte[] GameplayData { get; set; } = Array.Empty<byte>();
 
@@ -434,19 +282,32 @@ namespace CovertActionTools.Core.Models.Executables
 
         public static TacDataSegment FromBytes(byte[] dataSegment)
         {
-            var roomTypesEnd = RoomTypesOffset + RoomTypeCount * TacRoomTypeRecord.RecordSize;
-            var objectsEnd = ObjectsOffset + ObjectCount * TacObjectRecord.RecordSize;
             var ragdollEnd = RagdollCoordsOffset + RagdollCoordCount * TacScreenCoordinate.RecordSize;
 
             var segment = new TacDataSegment();
 
             var offset = 0;
-            offset += segment.Header.ReadBytes(dataSegment, offset);
-            offset += segment.HeaderFilenames.ReadBytes(dataSegment, offset);
-            offset += segment.RoomTypes.ReadBytes(dataSegment, offset);
-            offset += segment.MapObjectTypes.ReadBytes(dataSegment, offset);
-            offset += segment.Movement.ReadBytes(dataSegment, offset);
-            offset += segment.Rendering.ReadBytes(dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.Header, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.HeaderFilenames, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.RoomTypes, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.MapObjectTypes, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.Movement, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.Rendering, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.CgaColorRemap, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.GameSettings, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.VgaPaletteRemap, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.StubOutputCapture, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.MissionStateBlock, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.PlayerDirectionState, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.MenuStrings, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.InputConfig, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.CombatAlertedFlag, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.TargetReticleColors, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.GameplayActionMenus, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.StatusLineActionStrings, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.StatusLineStatusStrings, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.GameplayEndingStrings, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.GameplayPopupStrings, dataSegment, offset);
 
             // Read equipment name pointers to find and extract the strings from the mid section
             var equipPtrs = DataSegmentHelper.BytesToUInt16Array(dataSegment, EquipmentPointersOffset, EquipmentPointerCount);
@@ -454,7 +315,7 @@ namespace CovertActionTools.Core.Models.Executables
 
             var (blockStart, blockEnd) = DataSegmentHelper.FindStringBlockBounds(equipPtrs, dataSegment);
 
-            segment.GameplayData = DataSegmentHelper.Slice(dataSegment, BssBlockEnd, blockStart - BssBlockEnd);
+            segment.GameplayData = DataSegmentHelper.Slice(dataSegment, GameplayDataStart, blockStart - GameplayDataStart);
 
             segment.MidSectionPostEquipNames = DataSegmentHelper.Slice(dataSegment, blockEnd, EquipmentPointersOffset - blockEnd);
 
@@ -557,14 +418,9 @@ namespace CovertActionTools.Core.Models.Executables
                 Array.Copy(EquipmentSlotRects[i].ToBytes(), 0, equipRectBytes, i * TacScreenRect.RecordSize, TacScreenRect.RecordSize);
             }
 
-            // Serialize MidSection sub-sections
-            var midSectionBytes = DataSegmentHelper.Concatenate(
-                GameplayData
-            );
-
-            // Compute equipment name pointer values from actual string positions
-            var equipNamesBaseOffset = ObjectsOffset + 62 * 20 + 5250 +
-                                       + midSectionBytes.Length;
+            // Compute equipment name pointer values from actual string positions. The base
+            // offset accounts for all typed sections plus the remaining GameplayData blob.
+            var equipNamesBaseOffset = GameplayDataStart + GameplayData.Length;
             var equipNamePointers = DataSegmentHelper.ComputeStringPointers(EquipmentNames, equipNamesBaseOffset);
             var equipNamesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(EquipmentNames);
 
@@ -596,14 +452,33 @@ namespace CovertActionTools.Core.Models.Executables
             var charNamePointers = DataSegmentHelper.ComputeStringPointers(CharacterNames, charNamesBaseOffset);
             var charNamesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(CharacterNames);
 
+            var allSectionBytes = DataSegmentHelper.Concatenate(
+                Header,
+                HeaderFilenames,
+                RoomTypes,
+                MapObjectTypes,
+                Movement,
+                Rendering,
+                CgaColorRemap,
+                GameSettings,
+                VgaPaletteRemap,
+                StubOutputCapture,
+                MissionStateBlock,
+                PlayerDirectionState,
+                MenuStrings,
+                InputConfig,
+                CombatAlertedFlag,
+                TargetReticleColors,
+                GameplayActionMenus,
+                StatusLineActionStrings,
+                StatusLineStatusStrings,
+                GameplayEndingStrings,
+                GameplayPopupStrings
+            );
+
             return DataSegmentHelper.Concatenate(
-                Header.WriteBytes(),
-                HeaderFilenames.WriteBytes(),
-                RoomTypes.WriteBytes(),
-                MapObjectTypes.WriteBytes(),
-                Movement.WriteBytes(),
-                Rendering.WriteBytes(),
-                midSectionBytes,
+                allSectionBytes,
+                GameplayData,
                 equipNamesBytes,
                 MidSectionPostEquipNames,
                 DataSegmentHelper.UInt16ArrayToBytes(equipNamePointers),
@@ -617,6 +492,16 @@ namespace CovertActionTools.Core.Models.Executables
                 DataSegmentHelper.UInt16ArrayToBytes(charNamePointers),
                 TrailingData
             );
+        }
+
+        private static int ReadSectionWithPadding(IExecutableSection section, byte[] data, int offset)
+        {
+            offset += section.ReadBytes(data, offset);
+            if (section is IPaddedToWord && offset % 2 != 0)
+                offset++;
+            else if (section is IPaddedToParagraph && offset % 16 != 0)
+                offset += 16 - (offset % 16);
+            return offset;
         }
 
         private static byte[] ShortArrayToBytes(short[] values)
@@ -640,6 +525,21 @@ namespace CovertActionTools.Core.Models.Executables
                 MapObjectTypes = MapObjectTypes.Clone(),
                 Movement = Movement.Clone(),
                 Rendering = Rendering.Clone(),
+                CgaColorRemap = CgaColorRemap.Clone(),
+                GameSettings = GameSettings.Clone(),
+                VgaPaletteRemap = VgaPaletteRemap.Clone(),
+                StubOutputCapture = StubOutputCapture.Clone(),
+                MissionStateBlock = MissionStateBlock.Clone(),
+                PlayerDirectionState = PlayerDirectionState.Clone(),
+                MenuStrings = MenuStrings.Clone(),
+                InputConfig = InputConfig.Clone(),
+                CombatAlertedFlag = CombatAlertedFlag.Clone(),
+                TargetReticleColors = TargetReticleColors.Clone(),
+                GameplayActionMenus = GameplayActionMenus.Clone(),
+                StatusLineActionStrings = StatusLineActionStrings.Clone(),
+                StatusLineStatusStrings = StatusLineStatusStrings.Clone(),
+                GameplayEndingStrings = GameplayEndingStrings.Clone(),
+                GameplayPopupStrings = GameplayPopupStrings.Clone(),
                 GameplayData = GameplayData.ToArray(),
                 EquipmentNames = EquipmentNames.Select(s => s).ToArray(),
                 MidSectionPostEquipNames = MidSectionPostEquipNames.ToArray(),

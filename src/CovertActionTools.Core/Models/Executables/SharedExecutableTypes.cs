@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using CovertActionTools.Core.Models.Executables.Sections;
 
 namespace CovertActionTools.Core.Models.Executables
 {
@@ -33,6 +34,26 @@ namespace CovertActionTools.Core.Models.Executables
                 pos += s.Length;
             }
             return result;
+        }
+
+        public static byte[] Concatenate(params IExecutableSection[] sections)
+        {
+            var parts = new List<byte>();
+            foreach (var section in sections)
+            {
+                var bytes = section.WriteBytes();
+                parts.AddRange(bytes);
+                if (section is IPaddedToWord && parts.Count % 2 != 0)
+                {
+                    parts.Add(0);
+                }
+                else if (section is IPaddedToParagraph && parts.Count % 16 != 0)
+                {
+                    var padding = 16 - (parts.Count % 16);
+                    for (var i = 0; i < padding; i++) parts.Add(0);
+                }
+            }
+            return parts.ToArray();
         }
 
         public static byte[] UInt16ArrayToBytes(ushort[] values)

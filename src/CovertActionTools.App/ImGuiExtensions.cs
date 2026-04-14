@@ -1,4 +1,5 @@
-﻿using System.Linq.Expressions;
+﻿using System;
+using System.Linq.Expressions;
 using System.Numerics;
 using System.Reflection;
 using CovertActionTools.App.ViewModels;
@@ -137,6 +138,65 @@ public static class ImGuiExtensions
         return value;
     }
     
+    public static string? InputMultiline(string label, string value, int maxLength, Vector2 size, string? id = null, bool readOnly = false)
+    {
+        if (!string.IsNullOrEmpty(id))
+        {
+            ImGui.PushID(id);
+        }
+        var origValue = value;
+        var flags = ImGuiInputTextFlags.None;
+        if (readOnly)
+        {
+            flags |= ImGuiInputTextFlags.ReadOnly;
+        }
+        ImGui.InputTextMultiline(label, ref value, (uint)maxLength, size, flags);
+        if (!string.IsNullOrEmpty(id))
+        {
+            ImGui.PopID();
+        }
+
+        // ImGui.InputTextMultiline strips trailing newlines from the ref string.
+        // Restore them so that strings containing meaningful trailing \n roundtrip
+        // correctly through the editor without data corruption.
+        if (origValue.EndsWith("\n") && !value.EndsWith("\n"))
+        {
+            var stripped = origValue.TrimEnd('\n');
+            if (value == stripped)
+            {
+                return null;
+            }
+            value += origValue.Substring(stripped.Length);
+        }
+
+        if (value == origValue)
+        {
+            return null;
+        }
+
+        return value;
+    }
+
+    public static bool DrawMenuStringRecord(
+        string label, CovertActionTools.Core.Models.Executables.Records.Shared.MenuStringRecord record,
+        Vector2 editorSize, Action onChanged)
+    {
+        var changed = false;
+        ImGui.PushID(label);
+
+        var newHeader = InputMultiline("Header", record.Header, 256, editorSize, id: $"{label}_hdr");
+        if (newHeader != null) { record.Header = newHeader; onChanged(); changed = true; }
+
+        for (var i = 0; i < record.Options.Length; i++)
+        {
+            var newOpt = InputMultiline($"Option {i + 1}", record.Options[i], 256, editorSize, id: $"{label}_opt{i}");
+            if (newOpt != null) { record.Options[i] = newOpt; onChanged(); changed = true; }
+        }
+
+        ImGui.PopID();
+        return changed;
+    }
+
     public static bool? Input(string label, bool value, string? id = null, int? width = null)
     {
         if (width != null)

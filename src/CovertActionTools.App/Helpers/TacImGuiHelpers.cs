@@ -1,6 +1,10 @@
+using System.Collections.Generic;
+using System.Linq;
 using CovertActionTools.App.ViewModels;
 using CovertActionTools.Core.Models.Executables.Records.Shared;
 using CovertActionTools.Core.Models.Executables.Records.Tac;
+using CovertActionTools.Core.Models.Executables.Sections;
+using CovertActionTools.Core.Models.Executables.Sections.Shared;
 using CovertActionTools.Core.Models.Executables.Sections.Tac;
 using ImGuiNET;
 
@@ -8,6 +12,18 @@ namespace CovertActionTools.App.Helpers
 {
     internal static class TacImGuiHelpers
     {
+        #region VGA palette combo data
+
+        private static readonly List<int> VgaPaletteValues =
+            System.Enum.GetValues<VgaPaletteIndex>().Select(c => (int)c).ToList();
+
+        private static readonly List<string> VgaPaletteLabels =
+            System.Enum.GetValues<VgaPaletteIndex>()
+                .Select(c => $"{(int)c}: {c}")
+                .ToList();
+
+        #endregion
+
         #region Direction labels
 
         private static readonly string[] CompassLabels9 =
@@ -99,6 +115,293 @@ namespace CovertActionTools.App.Helpers
             DrawFullDirectionRecord("Walking Pixels", section.Movement, editable, pending);
             DrawFullDirectionRecord("Jumping Tiles", section.Jumping, editable, pending);
             DrawCardinalDirectionRecord("Tile Adjacency", section.TileAdjacency, editable, pending);
+        }
+
+        public static void DrawCgaColorRemapSection(CgaColorRemapSection section, PendingEditorExecutableState pending)
+        {
+            if (!section.Viewable()) return;
+            if (!ImGui.CollapsingHeader("CGA Color Remap")) return;
+
+            ImGui.TextWrapped("5 directly-referenced CGA dither-remap records from the 14-record table. " +
+                              "Each VGA palette index maps to a (low, high) CGA color pair (0-3) that " +
+                              "alternate on adjacent pixels to approximate the VGA color.");
+
+            var editable = section.Editable();
+            if (!editable) ImGui.BeginDisabled();
+
+            DrawCgaRemapRecord("Menu Highlight", section.MenuHighlight, pending);
+            DrawCgaRemapRecord("Menu Cursor", section.MenuCursor, pending);
+            DrawCgaRemapRecord("Entity Card", section.EntityCard, pending);
+            DrawCgaRemapRecord("Dialog Box", section.DialogBox, pending);
+            DrawCgaRemapRecord("Mission Setup", section.MissionSetup, pending);
+
+            if (!editable) ImGui.EndDisabled();
+        }
+
+        private static void DrawCgaRemapRecord(string label, CgaColorRemapRecord record, PendingEditorExecutableState pending)
+        {
+            if (!ImGui.TreeNode(label)) return;
+
+            if (ImGui.BeginTable($"CgaRemap_{label}", 4, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+            {
+                ImGui.TableSetupColumn("Index");
+                ImGui.TableSetupColumn("Color");
+                ImGui.TableSetupColumn("Low");
+                ImGui.TableSetupColumn("High");
+                ImGui.TableHeadersRow();
+
+                for (byte i = 0; i < CgaColorRemapRecord.EntryCount; i++)
+                {
+                    var pair = record.ColorMap[i];
+                    ImGui.PushID($"Cga_{label}_{i}");
+                    ImGui.TableNextRow();
+
+                    ImGui.TableNextColumn();
+                    ImGui.Text($"{i}");
+                    ImGui.TableNextColumn();
+                    ImGui.Text($"{(VgaPaletteIndex)i}");
+
+                    ImGui.TableNextColumn();
+                    var newLow = ImGuiExtensions.Input("##lo", pair.Low, width: 80);
+                    if (newLow.HasValue && newLow.Value >= 0 && newLow.Value <= 3)
+                    {
+                        pair.Low = (byte)newLow.Value;
+                        pending.RecordChange();
+                    }
+
+                    ImGui.TableNextColumn();
+                    var newHigh = ImGuiExtensions.Input("##hi", pair.High, width: 80);
+                    if (newHigh.HasValue && newHigh.Value >= 0 && newHigh.Value <= 3)
+                    {
+                        pair.High = (byte)newHigh.Value;
+                        pending.RecordChange();
+                    }
+
+                    ImGui.PopID();
+                }
+
+                ImGui.EndTable();
+            }
+
+            ImGui.TreePop();
+        }
+
+        public static void DrawDoorEntryStringsSection(DoorEntryStringsSection section, PendingEditorExecutableState pending)
+        {
+            if (!section.Viewable()) return;
+            if (!ImGui.CollapsingHeader("Door Prompt Strings")) return;
+
+            var editable = section.Editable();
+            if (!editable) ImGui.BeginDisabled();
+
+            var multilineSize = new System.Numerics.Vector2(220, 48);
+
+            var newHeader = ImGuiExtensions.InputMultiline(
+                "Prompt Header", section.DoorPromptHeader, 64, multilineSize);
+            if (newHeader != null) { section.DoorPromptHeader = newHeader; pending.RecordChange(); }
+
+            var newLabel = ImGuiExtensions.InputMultiline(
+                "Door Label", section.DoorLabel, 64, multilineSize);
+            if (newLabel != null) { section.DoorLabel = newLabel; pending.RecordChange(); }
+
+            var newSep = ImGuiExtensions.InputMultiline(
+                "Door Separator", section.DoorSeparator, 64, multilineSize);
+            if (newSep != null) { section.DoorSeparator = newSep; pending.RecordChange(); }
+
+            if (!editable) ImGui.EndDisabled();
+        }
+
+        public static void DrawVgaPaletteRemapSection(VgaPaletteRemapSection section, PendingEditorExecutableState pending)
+        {
+            if (!section.Viewable()) return;
+            if (!ImGui.CollapsingHeader("VGA Palette Remap")) return;
+
+            var editable = section.Editable();
+            if (!editable) ImGui.BeginDisabled();
+
+            var colCount = section.Records.Count + 2;
+            if (ImGui.BeginTable("VgaPalette", colCount, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+            {
+                ImGui.TableSetupColumn("Index");
+                ImGui.TableSetupColumn("Color");
+                for (var r = 0; r < section.Records.Count; r++)
+                    ImGui.TableSetupColumn($"Record {r}");
+                ImGui.TableHeadersRow();
+
+                for (var b = 0; b < VgaPaletteRemapRecord.PaletteLength; b++)
+                {
+                    ImGui.TableNextRow();
+                    ImGui.TableNextColumn();
+                    ImGui.Text($"{b}");
+                    ImGui.TableNextColumn();
+                    ImGui.Text($"{(VgaPaletteIndex)b}");
+
+                    for (var r = 0; r < section.Records.Count; r++)
+                    {
+                        ImGui.TableNextColumn();
+                        ImGui.PushID($"Vga_{r}_{b}");
+                        var val = (int)section.Records[r].Palette[(byte)b];
+                        var newVal = ImGuiExtensions.Input("##v", val, width: 80);
+                        if (newVal.HasValue && newVal.Value >= 0 && newVal.Value <= 15)
+                        {
+                            section.Records[r].Palette[(byte)b] = (byte)newVal.Value;
+                            pending.RecordChange();
+                        }
+                        ImGui.PopID();
+                    }
+                }
+
+                ImGui.EndTable();
+            }
+
+            if (!editable) ImGui.EndDisabled();
+        }
+
+        public static void DrawTacMenuStringsSection(TacMenuStringsSection section, PendingEditorExecutableState pending)
+        {
+            if (!section.Viewable()) return;
+            if (!ImGui.CollapsingHeader("In-Game Menu Strings")) return;
+
+            var editable = section.Editable();
+            if (!editable) ImGui.BeginDisabled();
+
+            var newBanner = ImGuiExtensions.Input(
+                "Pause Banner", section.PauseBanner, 64, width: 220);
+            if (newBanner != null) { section.PauseBanner = newBanner; pending.RecordChange(); }
+
+            var editorSize = new System.Numerics.Vector2(300, 48);
+            ImGui.Text("Quit Dialog");
+            ImGuiExtensions.DrawMenuStringRecord("QuitDialog", section.QuitDialog, editorSize, () => pending.RecordChange());
+
+            if (!editable) ImGui.EndDisabled();
+        }
+
+        private static readonly List<int> ScanCodeValues =
+            System.Enum.GetValues<BiosKeyboardScanCode>().Select(c => (int)c).ToList();
+
+        private static readonly List<string> ScanCodeLabels =
+            System.Enum.GetValues<BiosKeyboardScanCode>()
+                .Select(c => c.ToString())
+                .ToList();
+
+        public static void DrawTacInputConfigSection(TacInputConfigSection section, PendingEditorExecutableState pending)
+        {
+            if (!section.Viewable()) return;
+            if (!ImGui.CollapsingHeader("Direction Scan Codes")) return;
+
+            var editable = section.Editable();
+            if (!editable) ImGui.BeginDisabled();
+
+            DrawScanCodeCombo("North", section.NorthKey, v => section.NorthKey = v, pending);
+            DrawScanCodeCombo("North-East", section.NorthEastKey, v => section.NorthEastKey = v, pending);
+            DrawScanCodeCombo("East", section.EastKey, v => section.EastKey = v, pending);
+            DrawScanCodeCombo("South-East", section.SouthEastKey, v => section.SouthEastKey = v, pending);
+            DrawScanCodeCombo("South", section.SouthKey, v => section.SouthKey = v, pending);
+            DrawScanCodeCombo("South-West", section.SouthWestKey, v => section.SouthWestKey = v, pending);
+            DrawScanCodeCombo("West", section.WestKey, v => section.WestKey = v, pending);
+            DrawScanCodeCombo("North-West", section.NorthWestKey, v => section.NorthWestKey = v, pending);
+
+            if (!editable) ImGui.EndDisabled();
+        }
+
+        private static void DrawScanCodeCombo(
+            string label, BiosKeyboardScanCode current,
+            System.Action<BiosKeyboardScanCode> setter, PendingEditorExecutableState pending)
+        {
+            var result = ImGuiExtensions.Input(label, (int)current, ScanCodeValues, ScanCodeLabels, width: 200);
+            if (result != null) { setter((BiosKeyboardScanCode)result.Value); pending.RecordChange(); }
+        }
+
+        public static void DrawTargetReticleColorsSection(TargetReticleColorsSection section, PendingEditorExecutableState pending)
+        {
+            if (!section.Viewable()) return;
+            if (!ImGui.CollapsingHeader("Target Reticle Colors")) return;
+
+            var editable = section.Editable();
+            if (!editable) ImGui.BeginDisabled();
+
+            DrawReticleColorField("Stage 0", () => section.Stage0, v => { section.Stage0 = v; pending.RecordChange(); });
+            DrawReticleColorField("Stage 1", () => section.Stage1, v => { section.Stage1 = v; pending.RecordChange(); });
+            DrawReticleColorField("Stage 2", () => section.Stage2, v => { section.Stage2 = v; pending.RecordChange(); });
+            DrawReticleColorField("Stage 3", () => section.Stage3, v => { section.Stage3 = v; pending.RecordChange(); });
+            DrawReticleColorField("Stage 4", () => section.Stage4, v => { section.Stage4 = v; pending.RecordChange(); });
+
+            if (!editable) ImGui.EndDisabled();
+        }
+
+        private static void DrawReticleColorField(string label, System.Func<byte> getter, System.Action<byte> setter)
+        {
+            var result = ImGuiExtensions.Input(label, (int)getter(), VgaPaletteValues, VgaPaletteLabels, width: 200);
+            if (result != null) { setter((byte)result.Value); }
+        }
+
+        public static void DrawGameplayActionMenusSection(GameplayActionMenusSection section, PendingEditorExecutableState pending)
+        {
+            if (!section.Viewable()) return;
+            if (!ImGui.CollapsingHeader("Action Menus")) return;
+
+            var editable = section.Editable();
+            if (!editable) ImGui.BeginDisabled();
+
+            var editorSize = new System.Numerics.Vector2(300, 48);
+
+            if (ImGui.TreeNode("Set Trap Menu"))
+            {
+                ImGuiExtensions.DrawMenuStringRecord("SetTrap", section.SetTrapMenuStrings, editorSize, () => pending.RecordChange());
+                ImGui.TreePop();
+            }
+
+            if (ImGui.TreeNode("Arrest Menu"))
+            {
+                var newArrestHeader = ImGuiExtensions.InputMultiline(
+                    "Arrest Header", section.ArrestHeaderString, 128, editorSize, id: "arrest_hdr");
+                if (newArrestHeader != null) { section.ArrestHeaderString = newArrestHeader; pending.RecordChange(); }
+
+                ImGuiExtensions.DrawMenuStringRecord("Arrest", section.ArrestMenuStrings, editorSize, () => pending.RecordChange());
+                ImGui.TreePop();
+            }
+
+            if (!editable) ImGui.EndDisabled();
+        }
+
+        private static void DrawFixedSizeStringTableSection(
+            string headerLabel, string idPrefix, ExactCountFixedSizeStringTableSection section, PendingEditorExecutableState pending)
+        {
+            if (!section.Viewable()) return;
+            if (!ImGui.CollapsingHeader(headerLabel)) return;
+
+            var editable = section.Editable();
+            if (!editable) ImGui.BeginDisabled();
+
+            var editorSize = new System.Numerics.Vector2(300, 48);
+            for (var i = 0; i < section.Strings.Count; i++)
+            {
+                var newVal = ImGuiExtensions.InputMultiline(
+                    $"[{i}]", section.Strings[i], 256, editorSize, id: $"{idPrefix}_{i}");
+                if (newVal != null) { section.Strings[i] = newVal; pending.RecordChange(); }
+            }
+
+            if (!editable) ImGui.EndDisabled();
+        }
+
+        public static void DrawStatusLineActionStringsSection(StatusLineActionStringsSection section, PendingEditorExecutableState pending)
+        {
+            DrawFixedSizeStringTableSection("Status Line Action Strings", "slact", section, pending);
+        }
+
+        public static void DrawStatusLineStatusStringsSection(StatusLineStatusStringsSection section, PendingEditorExecutableState pending)
+        {
+            DrawFixedSizeStringTableSection("Status Line Status Strings", "slstat", section, pending);
+        }
+
+        public static void DrawGameplayEndingStringsSection(GameplayEndingStringsSection section, PendingEditorExecutableState pending)
+        {
+            DrawFixedSizeStringTableSection("Gameplay Ending Strings", "gpend", section, pending);
+        }
+
+        public static void DrawGameplayPopupStringsSection(GameplayPopupStringsSection section, PendingEditorExecutableState pending)
+        {
+            DrawFixedSizeStringTableSection("Gameplay Popup Strings", "gppop", section, pending);
         }
 
         public static void DrawRenderingSection(RenderingSection section, PendingEditorExecutableState pending)

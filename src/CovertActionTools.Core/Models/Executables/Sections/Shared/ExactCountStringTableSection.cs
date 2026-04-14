@@ -24,7 +24,7 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
         public abstract bool Viewable();
         public abstract bool Editable();
 
-        public int ReadBytes(byte[] fullPayload, int startingOffset)
+        public virtual int ReadBytes(byte[] fullPayload, int startingOffset)
         {
             var s = new List<string>();
             var offset = startingOffset;
@@ -52,7 +52,7 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
             return offset - startingOffset;
         }
 
-        public byte[] WriteBytes()
+        public virtual byte[] WriteBytes()
         {
             var bytes = new List<byte>();
             foreach (var str in Strings)

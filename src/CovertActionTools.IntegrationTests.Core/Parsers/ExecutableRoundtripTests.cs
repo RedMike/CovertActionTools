@@ -2,7 +2,9 @@ using System;
 using System.IO;
 using System.Linq;
 using CovertActionTools.Core.Compression;
+using CovertActionTools.Core.Exporting.Exporters;
 using CovertActionTools.Core.Exporting.Publishers;
+using CovertActionTools.Core.Importing.Importers;
 using CovertActionTools.Core.Importing.Parsers;
 using CovertActionTools.Core.Models;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -15,8 +17,11 @@ namespace CovertActionTools.IntegrationTests.Core.Parsers;
 public class ExecutableRoundtripTests : IDisposable
 {
     private readonly LegacyExecutableParser _parser;
+    private readonly ExecutableExporter _exporter;
+    private readonly ExecutableImporter _importer;
     private readonly ExecutablePublisher _publisher;
     private readonly string _tempDir;
+    private readonly string _jsonDir;
 
     public ExecutableRoundtripTests()
     {
@@ -25,11 +30,15 @@ public class ExecutableRoundtripTests : IDisposable
 
         _parser = new LegacyExecutableParser(
             NullLogger<LegacyExecutableParser>.Instance, decompression);
+        _exporter = new ExecutableExporter(NullLogger<ExecutableExporter>.Instance);
+        _importer = new ExecutableImporter(NullLogger<ExecutableImporter>.Instance);
         _publisher = new ExecutablePublisher(
             NullLogger<ExecutablePublisher>.Instance, compression);
 
         _tempDir = Path.Combine(Path.GetTempPath(), $"ExecutableRoundtrip_{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempDir);
+        _jsonDir = Path.Combine(Path.GetTempPath(), $"ExecutableRoundtrip_Json_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_jsonDir);
     }
 
     public void Dispose()
@@ -38,6 +47,22 @@ public class ExecutableRoundtripTests : IDisposable
         {
             Directory.Delete(_tempDir, true);
         }
+        if (Directory.Exists(_jsonDir))
+        {
+            Directory.Delete(_jsonDir, true);
+        }
+    }
+
+    private PackageModel JsonRoundtrip(PackageModel model)
+    {
+        _exporter.Start(_jsonDir, model);
+        while (!_exporter.RunStep()) { }
+
+        _importer.Start(_jsonDir);
+        while (!_importer.RunStep()) { }
+        var result = new PackageModel();
+        _importer.SetResult(result);
+        return result;
     }
 
     private PackageModel TryParseFromScratch()
@@ -70,10 +95,13 @@ public class ExecutableRoundtripTests : IDisposable
         var scratchDir = ExecutableTestDataGenerator.FindScratchDirectory();
         var originalBytes = File.ReadAllBytes(Path.Combine(scratchDir, $"{name}.EXE"));
 
-        // Publish the parsed model
+        // JSON export → import (mirrors the editor's package save/load)
+        var jsonModel = JsonRoundtrip(model);
+
+        // Publish the JSON-roundtripped model
         var publishModel = new PackageModel
         {
-            Executables = model.Executables
+            Executables = jsonModel.Executables
                 .Where(x => x.Key == name)
                 .ToDictionary(x => x.Key, x => x.Value)
         };
@@ -114,10 +142,13 @@ public class ExecutableRoundtripTests : IDisposable
 
         var originalExe = model.Executables["FINAL"];
 
-        // Publish
+        // JSON export → import
+        var jsonModel = JsonRoundtrip(model);
+
+        // Publish the JSON-roundtripped model
         var publishModel = new PackageModel
         {
-            Executables = model.Executables
+            Executables = jsonModel.Executables
                 .Where(x => x.Key == "FINAL")
                 .ToDictionary(x => x.Key, x => x.Value)
         };
@@ -168,10 +199,13 @@ public class ExecutableRoundtripTests : IDisposable
 
         var originalExe = model.Executables[name];
 
-        // Publish
+        // JSON export → import (mirrors the editor's package save/load)
+        var jsonModel = JsonRoundtrip(model);
+
+        // Publish the JSON-roundtripped model
         var publishModel = new PackageModel
         {
-            Executables = model.Executables
+            Executables = jsonModel.Executables
                 .Where(x => x.Key == name)
                 .ToDictionary(x => x.Key, x => x.Value)
         };
