@@ -415,6 +415,110 @@ namespace CovertActionTools.App.Helpers
             DrawFixedSizeStringTableSection("Inventory Item Names", "invitem", section, pending);
         }
 
+        public static void DrawInventoryItemRagdollCoordinatesSection(
+            InventoryItemRagdollCoordinatesSection section, PendingEditorExecutableState pending)
+        {
+            if (!section.Viewable()) return;
+            if (!ImGui.CollapsingHeader("Inventory Item Ragdoll Coordinates")) return;
+
+            var editable = section.Editable();
+            if (!editable) ImGui.BeginDisabled();
+
+            if (ImGui.BeginTable("InvRagdoll", 3, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+            {
+                ImGui.TableSetupColumn("#");
+                ImGui.TableSetupColumn("X");
+                ImGui.TableSetupColumn("Y");
+                ImGui.TableHeadersRow();
+
+                for (var i = 0; i < section.Coordinates.Length; i++)
+                {
+                    var coord = section.Coordinates[i];
+                    ImGui.PushID($"InvRagdoll_{i}");
+                    ImGui.TableNextRow();
+
+                    ImGui.TableNextColumn();
+                    ImGui.Text($"{i}");
+
+                    ImGui.TableNextColumn();
+                    var newX = ImGuiExtensions.Input("##X", (int)coord.X, width: 80);
+                    if (newX != null) { coord.X = (ushort)newX.Value; pending.RecordChange(); }
+
+                    ImGui.TableNextColumn();
+                    var newY = ImGuiExtensions.Input("##Y", (int)coord.Y, width: 80);
+                    if (newY != null) { coord.Y = (ushort)newY.Value; pending.RecordChange(); }
+
+                    ImGui.PopID();
+                }
+
+                ImGui.EndTable();
+            }
+
+            if (!editable) ImGui.EndDisabled();
+        }
+
+        public static void DrawInventoryItemSelectionRectanglesSection(
+            InventoryItemSelectionRectanglesSection section,
+            PendingEditorExecutableState pending,
+            IList<string> inventoryItemNames)
+        {
+            if (!section.Viewable()) return;
+            if (!ImGui.CollapsingHeader("Inventory Item Selection Rectangles")) return;
+
+            var editable = section.Editable();
+            if (!editable) ImGui.BeginDisabled();
+
+            if (ImGui.BeginTable("InvSelRects", 6, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+            {
+                ImGui.TableSetupColumn("Slot");
+                ImGui.TableSetupColumn("X");
+                ImGui.TableSetupColumn("Y");
+                ImGui.TableSetupColumn("W");
+                ImGui.TableSetupColumn("H");
+                ImGui.TableSetupColumn("");
+                ImGui.TableHeadersRow();
+
+                for (var i = 0; i < section.Rectangles.Length; i++)
+                {
+                    var rect = section.Rectangles[i];
+                    ImGui.PushID($"InvSelRect_{i}");
+                    ImGui.TableNextRow();
+
+                    ImGui.TableNextColumn();
+                    var label = i < inventoryItemNames.Count && !string.IsNullOrEmpty(inventoryItemNames[i])
+                        ? $"{i}: {inventoryItemNames[i]}"
+                        : $"{i}";
+                    ImGui.Text(label);
+
+                    ImGui.TableNextColumn();
+                    var newX = ImGuiExtensions.Input("##X", (int)rect.X1, width: 80);
+                    if (newX != null) { rect.X1 = (ushort)newX.Value; pending.RecordChange(); }
+
+                    ImGui.TableNextColumn();
+                    var newY = ImGuiExtensions.Input("##Y", (int)rect.Y1, width: 80);
+                    if (newY != null) { rect.Y1 = (ushort)newY.Value; pending.RecordChange(); }
+
+                    ImGui.TableNextColumn();
+                    var w = rect.X2 - rect.X1;
+                    var newW = ImGuiExtensions.Input("##W", w, width: 80);
+                    if (newW != null) { rect.X2 = (ushort)(rect.X1 + newW.Value); pending.RecordChange(); }
+
+                    ImGui.TableNextColumn();
+                    var h = rect.Y2 - rect.Y1;
+                    var newH = ImGuiExtensions.Input("##H", h, width: 80);
+                    if (newH != null) { rect.Y2 = (ushort)(rect.Y1 + newH.Value); pending.RecordChange(); }
+
+                    ImGui.TableNextColumn();
+
+                    ImGui.PopID();
+                }
+
+                ImGui.EndTable();
+            }
+
+            if (!editable) ImGui.EndDisabled();
+        }
+
         public static void DrawInventoryItemSelectionNavigationSection(
             InventoryItemSelectionNavigationSection section,
             PendingEditorExecutableState pending,

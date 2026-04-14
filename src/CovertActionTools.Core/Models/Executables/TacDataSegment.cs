@@ -95,10 +95,8 @@ namespace CovertActionTools.Core.Models.Executables
         private const int EquipmentPointersOffset = 0x20E0;
         private const int EquipmentPointerCount = 16;
         private const int InventoryItemSelectionNavigationOffset = 0x2100;
-        private const int RagdollCoordsOffset = 0x2160;
-        private const int RagdollCoordCount = 44;
-        private const int EquipSlotRectsOffset = 0x2214;
-        private const int EquipSlotRectCount = 11;
+        private const int InventoryItemRagdollCoordinatesOffset = 0x2160;
+        private const int InventoryItemSelectionRectanglesOffset = 0x220C;
         private const int CharNamePointersOffset = 0x346C;
         private const int CharNamePointerCount = 192;
         #endregion
@@ -165,15 +163,8 @@ namespace CovertActionTools.Core.Models.Executables
         public InventoryItemNamesSection InventoryItemNames { get; set; } = new();
         public EquipmentScreenFilenameSection EquipmentScreenFilename { get; set; } = new();
         public InventoryItemSelectionNavigationSection InventoryItemSelectionNavigation { get; set; } = new();
-
-        /// <summary>43 screen coordinates for ragdoll item positions + (0,0) terminator.</summary>
-        public TacScreenCoordinate[] RagdollCoordinates { get; set; } = Array.Empty<TacScreenCoordinate>();
-
-        /// <summary>4-byte padding between ragdoll coordinates and equipment slot rects (no direct code references).</summary>
-        public byte[] RagdollRectPadding { get; set; } = Array.Empty<byte>();
-
-        /// <summary>11 TL/BR rectangle pairs for equipment slot UI positions.</summary>
-        public TacScreenRect[] EquipmentSlotRects { get; set; } = Array.Empty<TacScreenRect>();
+        public InventoryItemRagdollCoordinatesSection InventoryItemRagdollCoordinates { get; set; } = new();
+        public InventoryItemSelectionRectanglesSection InventoryItemSelectionRectangles { get; set; } = new();
 
         #region PreCharNameData (between Equipment Slot Rects and Character Names)
 
@@ -269,8 +260,6 @@ namespace CovertActionTools.Core.Models.Executables
 
         public static TacDataSegment FromBytes(byte[] dataSegment)
         {
-            var ragdollEnd = RagdollCoordsOffset + RagdollCoordCount * TacScreenCoordinate.RecordSize;
-
             var segment = new TacDataSegment();
 
             var offset = 0;
@@ -307,19 +296,8 @@ namespace CovertActionTools.Core.Models.Executables
 
             segment.InventoryItemSelectionNavigation.ReadBytes(dataSegment, InventoryItemSelectionNavigationOffset);
 
-            segment.RagdollCoordinates = new TacScreenCoordinate[RagdollCoordCount];
-            for (var i = 0; i < RagdollCoordCount; i++)
-            {
-                segment.RagdollCoordinates[i] = TacScreenCoordinate.FromBytes(dataSegment, RagdollCoordsOffset + i * TacScreenCoordinate.RecordSize);
-            }
-
-            segment.RagdollRectPadding = DataSegmentHelper.Slice(dataSegment, ragdollEnd, EquipSlotRectsOffset - ragdollEnd);
-
-            segment.EquipmentSlotRects = new TacScreenRect[EquipSlotRectCount];
-            for (var i = 0; i < EquipSlotRectCount; i++)
-            {
-                segment.EquipmentSlotRects[i] = TacScreenRect.FromBytes(dataSegment, EquipSlotRectsOffset + i * TacScreenRect.RecordSize);
-            }
+            segment.InventoryItemRagdollCoordinates.ReadBytes(dataSegment, InventoryItemRagdollCoordinatesOffset);
+            segment.InventoryItemSelectionRectangles.ReadBytes(dataSegment, InventoryItemSelectionRectanglesOffset);
 
             #region Parse PreCharNameData sub-sections
 
@@ -392,17 +370,8 @@ namespace CovertActionTools.Core.Models.Executables
 
         public byte[] ToBytes()
         {
-            var ragdollBytes = new byte[RagdollCoordCount * TacScreenCoordinate.RecordSize];
-            for (var i = 0; i < RagdollCoordinates.Length; i++)
-            {
-                Array.Copy(RagdollCoordinates[i].ToBytes(), 0, ragdollBytes, i * TacScreenCoordinate.RecordSize, TacScreenCoordinate.RecordSize);
-            }
-
-            var equipRectBytes = new byte[EquipSlotRectCount * TacScreenRect.RecordSize];
-            for (var i = 0; i < EquipmentSlotRects.Length; i++)
-            {
-                Array.Copy(EquipmentSlotRects[i].ToBytes(), 0, equipRectBytes, i * TacScreenRect.RecordSize, TacScreenRect.RecordSize);
-            }
+            var ragdollBytes = InventoryItemRagdollCoordinates.WriteBytes();
+            var equipRectBytes = InventoryItemSelectionRectangles.WriteBytes();
 
             // Inventory item names are serialized as part of allSectionBytes (fixed-size slots);
             // the pointer table values are derived from the section's field sizes.
@@ -465,7 +434,7 @@ namespace CovertActionTools.Core.Models.Executables
             var charNamesBaseOffset = allSectionBytes.Length
                 + DataSegmentHelper.UInt16ArrayToBytes(equipNamePointers).Length
                 + navTableBytes.Length
-                + ragdollBytes.Length + RagdollRectPadding.Length
+                + ragdollBytes.Length
                 + equipRectBytes.Length + preCharNameBytes.Length;
             var charNamePointers = DataSegmentHelper.ComputeStringPointers(CharacterNames, charNamesBaseOffset);
             var charNamesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(CharacterNames);
@@ -475,7 +444,6 @@ namespace CovertActionTools.Core.Models.Executables
                 DataSegmentHelper.UInt16ArrayToBytes(equipNamePointers),
                 navTableBytes,
                 ragdollBytes,
-                RagdollRectPadding,
                 equipRectBytes,
                 preCharNameBytes,
                 charNamesBytes,
@@ -541,9 +509,8 @@ namespace CovertActionTools.Core.Models.Executables
                 InventoryItemNames = InventoryItemNames.Clone(),
                 EquipmentScreenFilename = EquipmentScreenFilename.Clone(),
                 InventoryItemSelectionNavigation = InventoryItemSelectionNavigation.Clone(),
-                RagdollCoordinates = RagdollCoordinates.Select(c => c.Clone()).ToArray(),
-                RagdollRectPadding = RagdollRectPadding.ToArray(),
-                EquipmentSlotRects = EquipmentSlotRects.Select(r => r.Clone()).ToArray(),
+                InventoryItemRagdollCoordinates = InventoryItemRagdollCoordinates.Clone(),
+                InventoryItemSelectionRectangles = InventoryItemSelectionRectangles.Clone(),
                 ClueRelationshipPhrases = ClueRelationshipPhrases.ToArray(),
                 CluePhraseSizes = CluePhraseSizes.ToArray(),
                 MonthAbbreviations = MonthAbbreviations.ToArray(),
