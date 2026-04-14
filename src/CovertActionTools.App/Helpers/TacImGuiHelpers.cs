@@ -404,6 +404,127 @@ namespace CovertActionTools.App.Helpers
             DrawFixedSizeStringTableSection("Gameplay Popup Strings", "gppop", section, pending);
         }
 
+        public static void DrawPasswordDialogTextsSection(PasswordDialogTextsSection section, PendingEditorExecutableState pending)
+        {
+            DrawFixedSizeStringTableSection("Password Dialog Texts", "pwdlg", section, pending);
+        }
+
+        public static void DrawFloorSafeInventoryItemRewardSection(
+            FloorSafeInventoryItemRewardSection section, PendingEditorExecutableState pending,
+            string[] equipmentNames)
+        {
+            if (!section.Viewable()) return;
+            if (!ImGui.CollapsingHeader("Floor Safe Inventory Item Rewards")) return;
+
+            var editable = section.Editable();
+            if (!editable) ImGui.BeginDisabled();
+
+            var itemValues = new List<int>();
+            var itemLabels = new List<string>();
+            for (var i = 0; i < equipmentNames.Length; i++)
+            {
+                itemValues.Add(i);
+                itemLabels.Add(string.IsNullOrEmpty(equipmentNames[i])
+                    ? $"{i}"
+                    : $"{i}: {equipmentNames[i]}");
+            }
+
+            if (ImGui.BeginTable("FloorSafeRewards", 2, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+            {
+                ImGui.TableSetupColumn("Slot");
+                ImGui.TableSetupColumn("Inventory Item");
+                ImGui.TableHeadersRow();
+
+                for (var i = 0; i < section.Records.Count; i++)
+                {
+                    ImGui.PushID($"FloorSafe_{i}");
+                    ImGui.TableNextRow();
+                    ImGui.TableNextColumn();
+                    ImGui.Text($"{i}");
+                    ImGui.TableNextColumn();
+                    var result = ImGuiExtensions.Input("##item", section.Records[i].InventoryItemIndex,
+                        itemValues, itemLabels, width: 250);
+                    if (result != null)
+                    {
+                        section.Records[i].InventoryItemIndex = (ushort)result.Value;
+                        pending.RecordChange();
+                    }
+                    ImGui.PopID();
+                }
+
+                ImGui.EndTable();
+            }
+
+            if (!editable) ImGui.EndDisabled();
+        }
+
+        public static void DrawWallTileDirectionSpriteSection(
+            WallTileDirectionSpriteSection section, PendingEditorExecutableState pending)
+        {
+            if (!section.Viewable()) return;
+            if (!ImGui.CollapsingHeader("Wall Tile Direction Sprites")) return;
+
+            var editable = section.Editable();
+            if (!editable) ImGui.BeginDisabled();
+
+            var spriteValues = new List<int> { 0, 1, 2, 3, 4, 5, 6, 7 };
+            var spriteLabels = new List<string>
+            {
+                "None",
+                "Wall 1", "Wall 2", "Wall 3", "Wall 4",
+                "Wall 5", "Wall 6", "Wall 7"
+            };
+
+            if (ImGui.BeginTable("WallDirSprites", 3, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+            {
+                ImGui.TableSetupColumn("Index", ImGuiTableColumnFlags.WidthFixed, 40);
+                ImGui.TableSetupColumn("Direction");
+                ImGui.TableSetupColumn("Sprite");
+                ImGui.TableHeadersRow();
+
+                for (var i = 0; i < 16; i++)
+                {
+                    var dir = (WallDirection)i;
+                    ImGui.PushID($"WallDir_{i}");
+                    ImGui.TableNextRow();
+
+                    ImGui.TableNextColumn();
+                    ImGui.Text($"{i}");
+
+                    ImGui.TableNextColumn();
+                    ImGui.Text(FormatWallDirection(dir));
+
+                    ImGui.TableNextColumn();
+                    if (section.Sprites.TryGetValue(dir, out var current))
+                    {
+                        var result = ImGuiExtensions.Input("##sprite", current, spriteValues, spriteLabels, width: 120);
+                        if (result != null)
+                        {
+                            section.Sprites[dir] = (byte)result.Value;
+                            pending.RecordChange();
+                        }
+                    }
+
+                    ImGui.PopID();
+                }
+
+                ImGui.EndTable();
+            }
+
+            if (!editable) ImGui.EndDisabled();
+        }
+
+        private static string FormatWallDirection(WallDirection dir)
+        {
+            if (dir == WallDirection.Unknown) return "(none)";
+            var parts = new List<string>();
+            if ((dir & WallDirection.North) != 0) parts.Add("North");
+            if ((dir & WallDirection.South) != 0) parts.Add("South");
+            if ((dir & WallDirection.West) != 0) parts.Add("West");
+            if ((dir & WallDirection.East) != 0) parts.Add("East");
+            return string.Join(" + ", parts);
+        }
+
         public static void DrawRenderingSection(RenderingSection section, PendingEditorExecutableState pending)
         {
             if (!section.Viewable()) return;

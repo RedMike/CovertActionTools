@@ -109,10 +109,9 @@ namespace CovertActionTools.Core.Models.Executables
         private const int TileAdjacencyCount = 4;
         private const int UnreferencedGapSize = 6;
         private const int SpriteConfigsSize = 60;
-        // End of the Rendering section / start of CgaColorRemap. GameplayData begins
-        // after all Rendering-followup typed sections (CgaColorRemap .. TacGameplayStrings)
-        // at 0x1F36.
-        private const int GameplayDataStart = 0x1F36;
+        // First byte of the equipment name string block, immediately after the
+        // CachedRoomDistanceTarget section (which ends at 0x2034).
+        private const int EquipmentNamesStart = 0x2034;
         #endregion
 
         #region PreCharNameData Sub-offsets (DS-relative)
@@ -159,13 +158,13 @@ namespace CovertActionTools.Core.Models.Executables
         public StatusLineStatusStringsSection StatusLineStatusStrings { get; set; } = new();
         public GameplayEndingStringsSection GameplayEndingStrings { get; set; } = new();
         public GameplayPopupStringsSection GameplayPopupStrings { get; set; } = new();
-
-        /// <summary>
-        /// Post-string-block binary data: additional sprite configs, CGA animation frames,
-        /// VGA palette remap tables, and remaining binary config data between the gameplay
-        /// dialogue strings and the equipment name string block.
-        /// </summary>
-        public byte[] GameplayData { get; set; } = Array.Empty<byte>();
+        public FloorSafeInventoryItemRewardSection FloorSafeInventoryItemRewards { get; set; } = new();
+        public PasswordGenerationSection PasswordGeneration { get; set; } = new();
+        public PasswordDialogTextsSection PasswordDialogTexts { get; set; } = new();
+        public WallTileDirectionSpriteSection WallTileDirectionSprite { get; set; } = new();
+        public TacGraphicsFilenamesSection GraphicsFilenames { get; set; } = new();
+        public SignToCompassDirectionSection SignToCompassDirection { get; set; } = new();
+        public CachedRoomDistanceTargetSection CachedRoomDistanceTarget { get; set; } = new();
 
         /// <summary>16 equipment name strings (resolved from DS-relative pointers).</summary>
         public string[] EquipmentNames { get; set; } = Array.Empty<string>();
@@ -308,14 +307,19 @@ namespace CovertActionTools.Core.Models.Executables
             offset = ReadSectionWithPadding(segment.StatusLineStatusStrings, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.GameplayEndingStrings, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.GameplayPopupStrings, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.FloorSafeInventoryItemRewards, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.PasswordGeneration, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.PasswordDialogTexts, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.WallTileDirectionSprite, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.GraphicsFilenames, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.SignToCompassDirection, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.CachedRoomDistanceTarget, dataSegment, offset);
 
             // Read equipment name pointers to find and extract the strings from the mid section
             var equipPtrs = DataSegmentHelper.BytesToUInt16Array(dataSegment, EquipmentPointersOffset, EquipmentPointerCount);
             segment.EquipmentNames = DataSegmentHelper.ExtractStringsFromPointers(equipPtrs, dataSegment);
 
-            var (blockStart, blockEnd) = DataSegmentHelper.FindStringBlockBounds(equipPtrs, dataSegment);
-
-            segment.GameplayData = DataSegmentHelper.Slice(dataSegment, GameplayDataStart, blockStart - GameplayDataStart);
+            var (_, blockEnd) = DataSegmentHelper.FindStringBlockBounds(equipPtrs, dataSegment);
 
             segment.MidSectionPostEquipNames = DataSegmentHelper.Slice(dataSegment, blockEnd, EquipmentPointersOffset - blockEnd);
 
@@ -418,9 +422,8 @@ namespace CovertActionTools.Core.Models.Executables
                 Array.Copy(EquipmentSlotRects[i].ToBytes(), 0, equipRectBytes, i * TacScreenRect.RecordSize, TacScreenRect.RecordSize);
             }
 
-            // Compute equipment name pointer values from actual string positions. The base
-            // offset accounts for all typed sections plus the remaining GameplayData blob.
-            var equipNamesBaseOffset = GameplayDataStart + GameplayData.Length;
+            // Compute equipment name pointer values from actual string positions.
+            var equipNamesBaseOffset = EquipmentNamesStart;
             var equipNamePointers = DataSegmentHelper.ComputeStringPointers(EquipmentNames, equipNamesBaseOffset);
             var equipNamesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(EquipmentNames);
 
@@ -473,12 +476,18 @@ namespace CovertActionTools.Core.Models.Executables
                 StatusLineActionStrings,
                 StatusLineStatusStrings,
                 GameplayEndingStrings,
-                GameplayPopupStrings
+                GameplayPopupStrings,
+                FloorSafeInventoryItemRewards,
+                PasswordGeneration,
+                PasswordDialogTexts,
+                WallTileDirectionSprite,
+                GraphicsFilenames,
+                SignToCompassDirection,
+                CachedRoomDistanceTarget
             );
 
             return DataSegmentHelper.Concatenate(
                 allSectionBytes,
-                GameplayData,
                 equipNamesBytes,
                 MidSectionPostEquipNames,
                 DataSegmentHelper.UInt16ArrayToBytes(equipNamePointers),
@@ -540,7 +549,13 @@ namespace CovertActionTools.Core.Models.Executables
                 StatusLineStatusStrings = StatusLineStatusStrings.Clone(),
                 GameplayEndingStrings = GameplayEndingStrings.Clone(),
                 GameplayPopupStrings = GameplayPopupStrings.Clone(),
-                GameplayData = GameplayData.ToArray(),
+                FloorSafeInventoryItemRewards = FloorSafeInventoryItemRewards.Clone(),
+                PasswordGeneration = PasswordGeneration.Clone(),
+                PasswordDialogTexts = PasswordDialogTexts.Clone(),
+                WallTileDirectionSprite = WallTileDirectionSprite.Clone(),
+                GraphicsFilenames = GraphicsFilenames.Clone(),
+                SignToCompassDirection = SignToCompassDirection.Clone(),
+                CachedRoomDistanceTarget = CachedRoomDistanceTarget.Clone(),
                 EquipmentNames = EquipmentNames.Select(s => s).ToArray(),
                 MidSectionPostEquipNames = MidSectionPostEquipNames.ToArray(),
                 EquipmentNavTable = EquipmentNavTable.ToArray(),
