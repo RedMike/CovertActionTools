@@ -430,7 +430,7 @@ namespace CovertActionTools.App.Helpers
                 ImGui.TableSetupColumn("Inventory Item");
                 ImGui.TableHeadersRow();
 
-                for (var i = 0; i < section.Records.Length; i++)
+                for (var i = 0; i < section.Records.Count; i++)
                 {
                     ImGui.PushID($"FloorSafe_{i}");
                     ImGui.TableNextRow();

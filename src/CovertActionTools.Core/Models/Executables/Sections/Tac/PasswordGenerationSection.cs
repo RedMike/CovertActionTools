@@ -1,64 +1,58 @@
-using System;
 using System.Linq;
-using CovertActionTools.Core.Models.Executables.Sections;
+using CovertActionTools.Core.Models.Executables.Sections.Shared;
 
 namespace CovertActionTools.Core.Models.Executables.Sections.Tac
 {
-    public class PasswordGenerationSection : IExecutableSection
+    public class PasswordGenerationSection : ExactCountFixedSizeStringTableSection
     {
-        public const int StringCount = 5;
+        protected override int[] StringSizes => _stringSizes;
+        private int[] _stringSizes = new[] { 3, 9, 5, 5, 11 };
 
-        public string ReadFileMode { get; set; } = "";
-        public string Filename { get; set; } = "";
-        public string FileReadFormat1 { get; set; } = "";
-        public string FileReadFormat2 { get; set; } = "";
-        public string PasswordTemplateString { get; set; } = "";
+        public string ReadFileMode
+        {
+            get => Strings.Count > 0 ? Strings[0] : "";
+            set { if (Strings.Count > 0) Strings[0] = value; }
+        }
 
-        public int[] OriginalByteSizes { get; set; } = Array.Empty<int>();
+        public string Filename
+        {
+            get => Strings.Count > 1 ? Strings[1] : "";
+            set { if (Strings.Count > 1) Strings[1] = value; }
+        }
 
-        public bool Viewable()
+        public string FileReadFormat1
+        {
+            get => Strings.Count > 2 ? Strings[2] : "";
+            set { if (Strings.Count > 2) Strings[2] = value; }
+        }
+
+        public string FileReadFormat2
+        {
+            get => Strings.Count > 3 ? Strings[3] : "";
+            set { if (Strings.Count > 3) Strings[3] = value; }
+        }
+
+        public string PasswordTemplateString
+        {
+            get => Strings.Count > 4 ? Strings[4] : "";
+            set { if (Strings.Count > 4) Strings[4] = value; }
+        }
+
+        public override bool Viewable()
         {
             return false;
         }
 
-        public bool Editable()
+        public override bool Editable()
         {
             return false;
-        }
-
-        public int ReadBytes(byte[] fullPayload, int startingOffset)
-        {
-            var (strings, sizes) = DataSegmentHelper.NullTerminatedStringsWithSizesFromBytes(
-                fullPayload, startingOffset, StringCount);
-
-            ReadFileMode = strings[0];
-            Filename = strings[1];
-            FileReadFormat1 = strings[2];
-            FileReadFormat2 = strings[3];
-            PasswordTemplateString = strings[4];
-            OriginalByteSizes = sizes;
-
-            var totalSize = 0;
-            foreach (var s in sizes) totalSize += s;
-            return totalSize;
-        }
-
-        public byte[] WriteBytes()
-        {
-            var strings = new[] { ReadFileMode, Filename, FileReadFormat1, FileReadFormat2, PasswordTemplateString };
-            return DataSegmentHelper.NullTerminatedStringsToFixedBytes(strings, OriginalByteSizes);
         }
 
         public PasswordGenerationSection Clone()
         {
             return new PasswordGenerationSection
             {
-                ReadFileMode = ReadFileMode,
-                Filename = Filename,
-                FileReadFormat1 = FileReadFormat1,
-                FileReadFormat2 = FileReadFormat2,
-                PasswordTemplateString = PasswordTemplateString,
-                OriginalByteSizes = OriginalByteSizes.ToArray()
+                Strings = Strings.ToList()
             };
         }
     }

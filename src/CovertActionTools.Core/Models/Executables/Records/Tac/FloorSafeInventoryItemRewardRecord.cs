@@ -2,18 +2,16 @@ using System;
 
 namespace CovertActionTools.Core.Models.Executables.Records.Tac
 {
-    public class FloorSafeInventoryItemRewardRecord
+    public class FloorSafeInventoryItemRewardRecord : IExecutableRecord
     {
         public const int RecordSize = 2;
 
         public ushort InventoryItemIndex { get; set; }
 
-        public static FloorSafeInventoryItemRewardRecord FromBytes(byte[] data, int offset)
+        public int ReadBytes(byte[] fullPayload, int startingOffset)
         {
-            return new FloorSafeInventoryItemRewardRecord
-            {
-                InventoryItemIndex = BitConverter.ToUInt16(data, offset)
-            };
+            InventoryItemIndex = BitConverter.ToUInt16(fullPayload, startingOffset);
+            return RecordSize;
         }
 
         public byte[] WriteBytes()
