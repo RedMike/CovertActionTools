@@ -110,9 +110,9 @@ namespace CovertActionTools.Core.Models.Executables
         private const int UnreferencedGapSize = 6;
         private const int SpriteConfigsSize = 60;
         // End of the Rendering section / start of CgaColorRemap. GameplayData begins
-        // after all Rendering-followup typed sections (CgaColorRemap .. WallTileDirectionSprite)
-        // at 0x2000.
-        private const int GameplayDataStart = 0x2000;
+        // after all Rendering-followup typed sections (CgaColorRemap .. TacGraphicsFilenames)
+        // at 0x2020.
+        private const int GameplayDataStart = 0x2020;
         #endregion
 
         #region PreCharNameData Sub-offsets (DS-relative)
@@ -163,6 +163,7 @@ namespace CovertActionTools.Core.Models.Executables
         public PasswordGenerationSection PasswordGeneration { get; set; } = new();
         public PasswordDialogTextsSection PasswordDialogTexts { get; set; } = new();
         public WallTileDirectionSpriteSection WallTileDirectionSprite { get; set; } = new();
+        public TacGraphicsFilenamesSection GraphicsFilenames { get; set; } = new();
 
         /// <summary>
         /// Post-string-block binary data: additional sprite configs, CGA animation frames,
@@ -316,6 +317,7 @@ namespace CovertActionTools.Core.Models.Executables
             offset = ReadSectionWithPadding(segment.PasswordGeneration, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.PasswordDialogTexts, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.WallTileDirectionSprite, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.GraphicsFilenames, dataSegment, offset);
 
             // Read equipment name pointers to find and extract the strings from the mid section
             var equipPtrs = DataSegmentHelper.BytesToUInt16Array(dataSegment, EquipmentPointersOffset, EquipmentPointerCount);
@@ -485,7 +487,8 @@ namespace CovertActionTools.Core.Models.Executables
                 FloorSafeInventoryItemRewards,
                 PasswordGeneration,
                 PasswordDialogTexts,
-                WallTileDirectionSprite
+                WallTileDirectionSprite,
+                GraphicsFilenames
             );
 
             return DataSegmentHelper.Concatenate(
@@ -556,6 +559,7 @@ namespace CovertActionTools.Core.Models.Executables
                 PasswordGeneration = PasswordGeneration.Clone(),
                 PasswordDialogTexts = PasswordDialogTexts.Clone(),
                 WallTileDirectionSprite = WallTileDirectionSprite.Clone(),
+                GraphicsFilenames = GraphicsFilenames.Clone(),
                 GameplayData = GameplayData.ToArray(),
                 EquipmentNames = EquipmentNames.Select(s => s).ToArray(),
                 MidSectionPostEquipNames = MidSectionPostEquipNames.ToArray(),
