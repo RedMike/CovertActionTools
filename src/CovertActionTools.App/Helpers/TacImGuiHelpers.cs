@@ -404,6 +404,55 @@ namespace CovertActionTools.App.Helpers
             DrawFixedSizeStringTableSection("Gameplay Popup Strings", "gppop", section, pending);
         }
 
+        public static void DrawFloorSafeInventoryItemRewardSection(
+            FloorSafeInventoryItemRewardSection section, PendingEditorExecutableState pending,
+            string[] equipmentNames)
+        {
+            if (!section.Viewable()) return;
+            if (!ImGui.CollapsingHeader("Floor Safe Inventory Item Rewards")) return;
+
+            var editable = section.Editable();
+            if (!editable) ImGui.BeginDisabled();
+
+            var itemValues = new List<int>();
+            var itemLabels = new List<string>();
+            for (var i = 0; i < equipmentNames.Length; i++)
+            {
+                itemValues.Add(i);
+                itemLabels.Add(string.IsNullOrEmpty(equipmentNames[i])
+                    ? $"{i}"
+                    : $"{i}: {equipmentNames[i]}");
+            }
+
+            if (ImGui.BeginTable("FloorSafeRewards", 2, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+            {
+                ImGui.TableSetupColumn("Slot");
+                ImGui.TableSetupColumn("Inventory Item");
+                ImGui.TableHeadersRow();
+
+                for (var i = 0; i < section.Records.Length; i++)
+                {
+                    ImGui.PushID($"FloorSafe_{i}");
+                    ImGui.TableNextRow();
+                    ImGui.TableNextColumn();
+                    ImGui.Text($"{i}");
+                    ImGui.TableNextColumn();
+                    var result = ImGuiExtensions.Input("##item", section.Records[i].InventoryItemIndex,
+                        itemValues, itemLabels, width: 250);
+                    if (result != null)
+                    {
+                        section.Records[i].InventoryItemIndex = (ushort)result.Value;
+                        pending.RecordChange();
+                    }
+                    ImGui.PopID();
+                }
+
+                ImGui.EndTable();
+            }
+
+            if (!editable) ImGui.EndDisabled();
+        }
+
         public static void DrawRenderingSection(RenderingSection section, PendingEditorExecutableState pending)
         {
             if (!section.Viewable()) return;

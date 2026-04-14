@@ -116,6 +116,7 @@ public class SelectedExecutableWindow : BaseWindow
         TacImGuiHelpers.DrawStatusLineStatusStringsSection(tac.StatusLineStatusStrings, _pendingState);
         TacImGuiHelpers.DrawGameplayEndingStringsSection(tac.GameplayEndingStrings, _pendingState);
         TacImGuiHelpers.DrawGameplayPopupStringsSection(tac.GameplayPopupStrings, _pendingState);
+        TacImGuiHelpers.DrawFloorSafeInventoryItemRewardSection(tac.FloorSafeInventoryItemRewards, _pendingState, tac.EquipmentNames);
 
         if (ImGui.CollapsingHeader("Equipment Names"))
         {

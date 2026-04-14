@@ -110,9 +110,9 @@ namespace CovertActionTools.Core.Models.Executables
         private const int UnreferencedGapSize = 6;
         private const int SpriteConfigsSize = 60;
         // End of the Rendering section / start of CgaColorRemap. GameplayData begins
-        // after all Rendering-followup typed sections (CgaColorRemap .. TacGameplayStrings)
-        // at 0x1F36.
-        private const int GameplayDataStart = 0x1F36;
+        // after all Rendering-followup typed sections (CgaColorRemap .. PasswordGeneration)
+        // at 0x1F67.
+        private const int GameplayDataStart = 0x1F67;
         #endregion
 
         #region PreCharNameData Sub-offsets (DS-relative)
@@ -159,6 +159,8 @@ namespace CovertActionTools.Core.Models.Executables
         public StatusLineStatusStringsSection StatusLineStatusStrings { get; set; } = new();
         public GameplayEndingStringsSection GameplayEndingStrings { get; set; } = new();
         public GameplayPopupStringsSection GameplayPopupStrings { get; set; } = new();
+        public FloorSafeInventoryItemRewardSection FloorSafeInventoryItemRewards { get; set; } = new();
+        public PasswordGenerationSection PasswordGeneration { get; set; } = new();
 
         /// <summary>
         /// Post-string-block binary data: additional sprite configs, CGA animation frames,
@@ -308,6 +310,8 @@ namespace CovertActionTools.Core.Models.Executables
             offset = ReadSectionWithPadding(segment.StatusLineStatusStrings, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.GameplayEndingStrings, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.GameplayPopupStrings, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.FloorSafeInventoryItemRewards, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.PasswordGeneration, dataSegment, offset);
 
             // Read equipment name pointers to find and extract the strings from the mid section
             var equipPtrs = DataSegmentHelper.BytesToUInt16Array(dataSegment, EquipmentPointersOffset, EquipmentPointerCount);
@@ -473,7 +477,9 @@ namespace CovertActionTools.Core.Models.Executables
                 StatusLineActionStrings,
                 StatusLineStatusStrings,
                 GameplayEndingStrings,
-                GameplayPopupStrings
+                GameplayPopupStrings,
+                FloorSafeInventoryItemRewards,
+                PasswordGeneration
             );
 
             return DataSegmentHelper.Concatenate(
@@ -540,6 +546,8 @@ namespace CovertActionTools.Core.Models.Executables
                 StatusLineStatusStrings = StatusLineStatusStrings.Clone(),
                 GameplayEndingStrings = GameplayEndingStrings.Clone(),
                 GameplayPopupStrings = GameplayPopupStrings.Clone(),
+                FloorSafeInventoryItemRewards = FloorSafeInventoryItemRewards.Clone(),
+                PasswordGeneration = PasswordGeneration.Clone(),
                 GameplayData = GameplayData.ToArray(),
                 EquipmentNames = EquipmentNames.Select(s => s).ToArray(),
                 MidSectionPostEquipNames = MidSectionPostEquipNames.ToArray(),
