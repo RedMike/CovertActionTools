@@ -1,4 +1,5 @@
 using System.Linq;
+using CovertActionTools.Core.Models.Executables.Records.Tac;
 
 namespace CovertActionTools.Core.Models.Executables.Sections.Tac
 {
@@ -11,28 +12,30 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Tac
     {
         public const int EntryCount = 12;
 
-        public TacScreenRect[] Rectangles { get; set; } = new TacScreenRect[EntryCount];
+        public TacScreenRectRecord[] Rectangles { get; set; } = new TacScreenRectRecord[EntryCount];
 
         public bool Viewable() => true;
         public bool Editable() => true;
 
         public int ReadBytes(byte[] fullPayload, int startingOffset)
         {
-            Rectangles = new TacScreenRect[EntryCount];
+            Rectangles = new TacScreenRectRecord[EntryCount];
             for (var i = 0; i < EntryCount; i++)
             {
-                Rectangles[i] = TacScreenRect.FromBytes(fullPayload, startingOffset + i * TacScreenRect.RecordSize);
+                var record = new TacScreenRectRecord();
+                record.ReadBytes(fullPayload, startingOffset + i * TacScreenRectRecord.RecordSize);
+                Rectangles[i] = record;
             }
-            return EntryCount * TacScreenRect.RecordSize;
+            return EntryCount * TacScreenRectRecord.RecordSize;
         }
 
         public byte[] WriteBytes()
         {
-            var result = new byte[EntryCount * TacScreenRect.RecordSize];
+            var result = new byte[EntryCount * TacScreenRectRecord.RecordSize];
             for (var i = 0; i < EntryCount; i++)
             {
-                var bytes = (Rectangles[i] ?? new TacScreenRect()).ToBytes();
-                System.Array.Copy(bytes, 0, result, i * TacScreenRect.RecordSize, TacScreenRect.RecordSize);
+                var bytes = (Rectangles[i] ?? new TacScreenRectRecord()).WriteBytes();
+                System.Array.Copy(bytes, 0, result, i * TacScreenRectRecord.RecordSize, TacScreenRectRecord.RecordSize);
             }
             return result;
         }
@@ -41,7 +44,7 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Tac
         {
             return new InventoryItemSelectionRectanglesSection
             {
-                Rectangles = Rectangles.Select(r => r?.Clone() ?? new TacScreenRect()).ToArray()
+                Rectangles = Rectangles.Select(r => r?.Clone() ?? new TacScreenRectRecord()).ToArray()
             };
         }
     }

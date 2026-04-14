@@ -1,4 +1,5 @@
 using System.Linq;
+using CovertActionTools.Core.Models.Executables.Records.Tac;
 
 namespace CovertActionTools.Core.Models.Executables.Sections.Tac
 {
@@ -12,28 +13,30 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Tac
     {
         public const int EntryCount = 43;
 
-        public TacScreenCoordinate[] Coordinates { get; set; } = new TacScreenCoordinate[EntryCount];
+        public TacScreenCoordinateRecord[] Coordinates { get; set; } = new TacScreenCoordinateRecord[EntryCount];
 
         public bool Viewable() => true;
         public bool Editable() => true;
 
         public int ReadBytes(byte[] fullPayload, int startingOffset)
         {
-            Coordinates = new TacScreenCoordinate[EntryCount];
+            Coordinates = new TacScreenCoordinateRecord[EntryCount];
             for (var i = 0; i < EntryCount; i++)
             {
-                Coordinates[i] = TacScreenCoordinate.FromBytes(fullPayload, startingOffset + i * TacScreenCoordinate.RecordSize);
+                var record = new TacScreenCoordinateRecord();
+                record.ReadBytes(fullPayload, startingOffset + i * TacScreenCoordinateRecord.RecordSize);
+                Coordinates[i] = record;
             }
-            return EntryCount * TacScreenCoordinate.RecordSize;
+            return EntryCount * TacScreenCoordinateRecord.RecordSize;
         }
 
         public byte[] WriteBytes()
         {
-            var result = new byte[EntryCount * TacScreenCoordinate.RecordSize];
+            var result = new byte[EntryCount * TacScreenCoordinateRecord.RecordSize];
             for (var i = 0; i < EntryCount; i++)
             {
-                var bytes = (Coordinates[i] ?? new TacScreenCoordinate()).ToBytes();
-                System.Array.Copy(bytes, 0, result, i * TacScreenCoordinate.RecordSize, TacScreenCoordinate.RecordSize);
+                var bytes = (Coordinates[i] ?? new TacScreenCoordinateRecord()).WriteBytes();
+                System.Array.Copy(bytes, 0, result, i * TacScreenCoordinateRecord.RecordSize, TacScreenCoordinateRecord.RecordSize);
             }
             return result;
         }
@@ -42,7 +45,7 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Tac
         {
             return new InventoryItemRagdollCoordinatesSection
             {
-                Coordinates = Coordinates.Select(c => c?.Clone() ?? new TacScreenCoordinate()).ToArray()
+                Coordinates = Coordinates.Select(c => c?.Clone() ?? new TacScreenCoordinateRecord()).ToArray()
             };
         }
     }
