@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using CovertActionTools.App.ViewModels;
 using CovertActionTools.Core.Models.Executables.Records.Shared;
+using System;
 using CovertActionTools.Core.Models.Executables.Records.Tac;
 using CovertActionTools.Core.Models.Executables.Sections;
 using CovertActionTools.Core.Models.Executables.Sections.Shared;
@@ -409,9 +410,67 @@ namespace CovertActionTools.App.Helpers
             DrawFixedSizeStringTableSection("Password Dialog Texts", "pwdlg", section, pending);
         }
 
+        public static void DrawInventoryItemNamesSection(InventoryItemNamesSection section, PendingEditorExecutableState pending)
+        {
+            DrawFixedSizeStringTableSection("Inventory Item Names", "invitem", section, pending);
+        }
+
+        public static void DrawInventoryItemSelectionNavigationSection(
+            InventoryItemSelectionNavigationSection section,
+            PendingEditorExecutableState pending,
+            IList<string> inventoryItemNames)
+        {
+            if (!section.Viewable()) return;
+            if (!ImGui.CollapsingHeader("Inventory Item Selection Navigation")) return;
+
+            var editable = section.Editable();
+            if (!editable) ImGui.BeginDisabled();
+
+            ImGui.Text("Target slot index reached when an arrow key is pressed from each inventory slot.");
+
+            if (ImGui.BeginTable("InvItemNav", 5, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+            {
+                ImGui.TableSetupColumn("Slot");
+                foreach (var dir in Enum.GetValues<MenuNavigationDirection>())
+                {
+                    ImGui.TableSetupColumn(dir.ToString());
+                }
+                ImGui.TableHeadersRow();
+
+                var rowKeys = section.Entries.Keys.OrderBy(k => k).ToList();
+                foreach (var row in rowKeys)
+                {
+                    ImGui.TableNextRow();
+                    ImGui.TableNextColumn();
+                    var label = row < inventoryItemNames.Count && !string.IsNullOrEmpty(inventoryItemNames[row])
+                        ? $"{row}: {inventoryItemNames[row]}"
+                        : $"{row}";
+                    ImGui.Text(label);
+
+                    foreach (var dir in Enum.GetValues<MenuNavigationDirection>())
+                    {
+                        ImGui.TableNextColumn();
+                        ImGui.PushID($"InvItemNav_{row}_{dir}");
+                        section.Entries[row].TryGetValue(dir, out var current);
+                        var newVal = ImGuiExtensions.Input("##v", current, width: 80);
+                        if (newVal != null)
+                        {
+                            section.Entries[row][dir] = newVal.Value;
+                            pending.RecordChange();
+                        }
+                        ImGui.PopID();
+                    }
+                }
+
+                ImGui.EndTable();
+            }
+
+            if (!editable) ImGui.EndDisabled();
+        }
+
         public static void DrawFloorSafeInventoryItemRewardSection(
             FloorSafeInventoryItemRewardSection section, PendingEditorExecutableState pending,
-            string[] equipmentNames)
+            IList<string> equipmentNames)
         {
             if (!section.Viewable()) return;
             if (!ImGui.CollapsingHeader("Floor Safe Inventory Item Rewards")) return;
@@ -421,7 +480,7 @@ namespace CovertActionTools.App.Helpers
 
             var itemValues = new List<int>();
             var itemLabels = new List<string>();
-            for (var i = 0; i < equipmentNames.Length; i++)
+            for (var i = 0; i < equipmentNames.Count; i++)
             {
                 itemValues.Add(i);
                 itemLabels.Add(string.IsNullOrEmpty(equipmentNames[i])

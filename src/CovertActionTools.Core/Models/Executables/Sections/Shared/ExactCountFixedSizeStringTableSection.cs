@@ -9,6 +9,22 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
         protected sealed override int StringCount => StringSizes.Length;
         protected sealed override int? StringLength => null;
 
+        /// <summary>
+        /// Computes absolute offsets for each string slot given the base offset of the section.
+        /// Useful when the DS contains a pointer table that references these strings.
+        /// </summary>
+        public ushort[] ComputePointers(int baseOffset)
+        {
+            var result = new ushort[StringSizes.Length];
+            var pos = baseOffset;
+            for (var i = 0; i < StringSizes.Length; i++)
+            {
+                result[i] = (ushort)pos;
+                pos += StringSizes[i];
+            }
+            return result;
+        }
+
         public override bool Viewable()
         {
             return true;
