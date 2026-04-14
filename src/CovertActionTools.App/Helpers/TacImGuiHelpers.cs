@@ -147,18 +147,18 @@ namespace CovertActionTools.App.Helpers
                     ImGui.Text($"{i}");
 
                     ImGui.TableNextColumn();
-                    var newLow = ImGuiExtensions.Input("##lo", pair.low, width: 50);
+                    var newLow = ImGuiExtensions.Input("##lo", pair.Low, width: 50);
                     if (newLow.HasValue && newLow.Value >= 0 && newLow.Value <= 3)
                     {
-                        record.ColorMap[i] = ((byte)newLow.Value, pair.high);
+                        pair.Low = (byte)newLow.Value;
                         pending.RecordChange();
                     }
 
                     ImGui.TableNextColumn();
-                    var newHigh = ImGuiExtensions.Input("##hi", pair.high, width: 50);
+                    var newHigh = ImGuiExtensions.Input("##hi", pair.High, width: 50);
                     if (newHigh.HasValue && newHigh.Value >= 0 && newHigh.Value <= 3)
                     {
-                        record.ColorMap[i] = (record.ColorMap[i].low, (byte)newHigh.Value);
+                        pair.High = (byte)newHigh.Value;
                         pending.RecordChange();
                     }
 

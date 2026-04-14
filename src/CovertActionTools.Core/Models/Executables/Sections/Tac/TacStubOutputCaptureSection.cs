@@ -13,7 +13,7 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Tac
     {
         public const int SectionSize = 2;
 
-        private ushort Value { get; set; }
+        public ushort Value { get; set; }
 
         public bool Viewable()
         {

@@ -34,7 +34,7 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Tac
             DoorLabelSlotSize +
             DoorSeparatorSlotSize;
 
-        private byte EmptyStringSlot1 { get; set; }
+        public byte EmptyStringSlot1 { get; set; }
         public string DoorPromptHeader { get; set; } = string.Empty;
         public string DoorLabel { get; set; } = string.Empty;
         public string DoorSeparator { get; set; } = string.Empty;

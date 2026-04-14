@@ -4,6 +4,25 @@ using CovertActionTools.Core.Models.Executables.Records;
 
 namespace CovertActionTools.Core.Models.Executables.Records.Tac
 {
+    public class CgaDitherPair
+    {
+        public byte Low { get; set; }
+        public byte High { get; set; }
+
+        public CgaDitherPair() { }
+
+        public CgaDitherPair(byte low, byte high)
+        {
+            Low = low;
+            High = high;
+        }
+
+        public CgaDitherPair Clone()
+        {
+            return new CgaDitherPair(Low, High);
+        }
+    }
+
     /// <summary>
     /// 16-byte CGA color remap record. Each byte maps one of the game's 16 VGA palette
     /// indices to a CGA dither pair: the low nibble is one CGA color (0-3) and the high
@@ -16,11 +35,11 @@ namespace CovertActionTools.Core.Models.Executables.Records.Tac
         public const int RecordSize = 16;
         public const int EntryCount = 16;
 
-        public Dictionary<byte, (byte low, byte high)> ColorMap { get; set; } = new Dictionary<byte, (byte low, byte high)>();
+        public Dictionary<byte, CgaDitherPair> ColorMap { get; set; } = new Dictionary<byte, CgaDitherPair>();
 
         public int ReadBytes(byte[] fullPayload, int startingOffset)
         {
-            ColorMap = new Dictionary<byte, (byte low, byte high)>(EntryCount);
+            ColorMap = new Dictionary<byte, CgaDitherPair>(EntryCount);
             for (var i = 0; i < EntryCount; i++)
             {
                 var packed = fullPayload[startingOffset + i];
@@ -28,7 +47,7 @@ namespace CovertActionTools.Core.Models.Executables.Records.Tac
                 var high = (byte)((packed >> 4) & 0x0F);
                 ValidateCgaColor(low, i, "low");
                 ValidateCgaColor(high, i, "high");
-                ColorMap[(byte)i] = (low, high);
+                ColorMap[(byte)i] = new CgaDitherPair(low, high);
             }
             return RecordSize;
         }
@@ -41,9 +60,9 @@ namespace CovertActionTools.Core.Models.Executables.Records.Tac
                 var key = (byte)i;
                 if (!ColorMap.TryGetValue(key, out var pair))
                     throw new Exception($"CgaColorRemapRecord: missing entry for VGA index {i}.");
-                ValidateCgaColor(pair.low, i, "low");
-                ValidateCgaColor(pair.high, i, "high");
-                result[i] = (byte)((pair.high << 4) | pair.low);
+                ValidateCgaColor(pair.Low, i, "low");
+                ValidateCgaColor(pair.High, i, "high");
+                result[i] = (byte)((pair.High << 4) | pair.Low);
             }
             return result;
         }
@@ -52,11 +71,11 @@ namespace CovertActionTools.Core.Models.Executables.Records.Tac
         {
             var result = new CgaColorRemapRecord
             {
-                ColorMap = new Dictionary<byte, (byte low, byte high)>(EntryCount)
+                ColorMap = new Dictionary<byte, CgaDitherPair>(EntryCount)
             };
             foreach (var kvp in ColorMap)
             {
-                result.ColorMap[kvp.Key] = kvp.Value;
+                result.ColorMap[kvp.Key] = kvp.Value.Clone();
             }
             return result;
         }
