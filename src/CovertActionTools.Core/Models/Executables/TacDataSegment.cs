@@ -8,74 +8,6 @@ using CovertActionTools.Core.Models.Executables.Sections.Tac;
 
 namespace CovertActionTools.Core.Models.Executables
 {
-    public class TacScreenCoordinate
-    {
-        public const int RecordSize = 4;
-
-        public ushort X { get; set; }
-        public ushort Y { get; set; }
-
-        public TacScreenCoordinate Clone()
-        {
-            return new TacScreenCoordinate { X = X, Y = Y };
-        }
-
-        public static TacScreenCoordinate FromBytes(byte[] data, int offset)
-        {
-            return new TacScreenCoordinate
-            {
-                X = BitConverter.ToUInt16(data, offset),
-                Y = BitConverter.ToUInt16(data, offset + 2)
-            };
-        }
-
-        public byte[] ToBytes()
-        {
-            var result = new byte[RecordSize];
-            result[0] = (byte)(X & 0xFF);
-            result[1] = (byte)((X >> 8) & 0xFF);
-            result[2] = (byte)(Y & 0xFF);
-            result[3] = (byte)((Y >> 8) & 0xFF);
-            return result;
-        }
-    }
-
-    public class TacScreenRect
-    {
-        public const int RecordSize = 8;
-
-        public ushort X1 { get; set; }
-        public ushort Y1 { get; set; }
-        public ushort X2 { get; set; }
-        public ushort Y2 { get; set; }
-
-        public TacScreenRect Clone()
-        {
-            return new TacScreenRect { X1 = X1, Y1 = Y1, X2 = X2, Y2 = Y2 };
-        }
-
-        public static TacScreenRect FromBytes(byte[] data, int offset)
-        {
-            return new TacScreenRect
-            {
-                X1 = BitConverter.ToUInt16(data, offset),
-                Y1 = BitConverter.ToUInt16(data, offset + 2),
-                X2 = BitConverter.ToUInt16(data, offset + 4),
-                Y2 = BitConverter.ToUInt16(data, offset + 6)
-            };
-        }
-
-        public byte[] ToBytes()
-        {
-            var result = new byte[RecordSize];
-            result[0] = (byte)(X1 & 0xFF); result[1] = (byte)((X1 >> 8) & 0xFF);
-            result[2] = (byte)(Y1 & 0xFF); result[3] = (byte)((Y1 >> 8) & 0xFF);
-            result[4] = (byte)(X2 & 0xFF); result[5] = (byte)((X2 >> 8) & 0xFF);
-            result[6] = (byte)(Y2 & 0xFF); result[7] = (byte)((Y2 >> 8) & 0xFF);
-            return result;
-        }
-    }
-
     /// <summary>
     /// Structured data segment for TAC.EXE.
     /// Field boundaries and interpretations are based on reverse engineering and may not
@@ -91,14 +23,12 @@ namespace CovertActionTools.Core.Models.Executables
         private const int RoomTypeCount = 10;
         private const int ObjectsOffset = 0x018E;
         private const int ObjectCount = 62;
+        private const int InventoryItemNamesStart = 0x2034;
         private const int EquipmentPointersOffset = 0x20E0;
         private const int EquipmentPointerCount = 16;
-        private const int EquipNavTableOffset = 0x2100;
-        private const int EquipNavTableCount = 48;
-        private const int RagdollCoordsOffset = 0x2160;
-        private const int RagdollCoordCount = 44;
-        private const int EquipSlotRectsOffset = 0x2214;
-        private const int EquipSlotRectCount = 11;
+        private const int InventoryItemSelectionNavigationOffset = 0x2100;
+        private const int InventoryItemRagdollCoordinatesOffset = 0x2160;
+        private const int InventoryItemSelectionRectanglesOffset = 0x220C;
         private const int CharNamePointersOffset = 0x346C;
         private const int CharNamePointerCount = 192;
         #endregion
@@ -109,9 +39,6 @@ namespace CovertActionTools.Core.Models.Executables
         private const int TileAdjacencyCount = 4;
         private const int UnreferencedGapSize = 6;
         private const int SpriteConfigsSize = 60;
-        // First byte of the equipment name string block, immediately after the
-        // CachedRoomDistanceTarget section (which ends at 0x2034).
-        private const int EquipmentNamesStart = 0x2034;
         #endregion
 
         #region PreCharNameData Sub-offsets (DS-relative)
@@ -165,27 +92,11 @@ namespace CovertActionTools.Core.Models.Executables
         public TacGraphicsFilenamesSection GraphicsFilenames { get; set; } = new();
         public SignToCompassDirectionSection SignToCompassDirection { get; set; } = new();
         public CachedRoomDistanceTargetSection CachedRoomDistanceTarget { get; set; } = new();
-
-        /// <summary>16 equipment name strings (resolved from DS-relative pointers).</summary>
-        public string[] EquipmentNames { get; set; } = Array.Empty<string>();
-
-        /// <summary>Data after equipment names but before equipment pointer table (equip2.pic filename).</summary>
-        public byte[] MidSectionPostEquipNames { get; set; } = Array.Empty<byte>();
-
-        /// <summary>
-        /// Equipment selection UI navigation table: 12 rows x 4 columns (Up, Down, Left, Right).
-        /// Each cell is the equipment index to navigate to when that arrow key is pressed.
-        /// </summary>
-        public ushort[] EquipmentNavTable { get; set; } = Array.Empty<ushort>();
-
-        /// <summary>43 screen coordinates for ragdoll item positions + (0,0) terminator.</summary>
-        public TacScreenCoordinate[] RagdollCoordinates { get; set; } = Array.Empty<TacScreenCoordinate>();
-
-        /// <summary>4-byte padding between ragdoll coordinates and equipment slot rects (no direct code references).</summary>
-        public byte[] RagdollRectPadding { get; set; } = Array.Empty<byte>();
-
-        /// <summary>11 TL/BR rectangle pairs for equipment slot UI positions.</summary>
-        public TacScreenRect[] EquipmentSlotRects { get; set; } = Array.Empty<TacScreenRect>();
+        public InventoryItemNamesSection InventoryItemNames { get; set; } = new();
+        public EquipmentScreenFilenameSection EquipmentScreenFilename { get; set; } = new();
+        public InventoryItemSelectionNavigationSection InventoryItemSelectionNavigation { get; set; } = new();
+        public InventoryItemRagdollCoordinatesSection InventoryItemRagdollCoordinates { get; set; } = new();
+        public InventoryItemSelectionRectanglesSection InventoryItemSelectionRectangles { get; set; } = new();
 
         #region PreCharNameData (between Equipment Slot Rects and Character Names)
 
@@ -281,8 +192,6 @@ namespace CovertActionTools.Core.Models.Executables
 
         public static TacDataSegment FromBytes(byte[] dataSegment)
         {
-            var ragdollEnd = RagdollCoordsOffset + RagdollCoordCount * TacScreenCoordinate.RecordSize;
-
             var segment = new TacDataSegment();
 
             var offset = 0;
@@ -314,30 +223,13 @@ namespace CovertActionTools.Core.Models.Executables
             offset = ReadSectionWithPadding(segment.GraphicsFilenames, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.SignToCompassDirection, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.CachedRoomDistanceTarget, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.InventoryItemNames, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.EquipmentScreenFilename, dataSegment, offset);
 
-            // Read equipment name pointers to find and extract the strings from the mid section
-            var equipPtrs = DataSegmentHelper.BytesToUInt16Array(dataSegment, EquipmentPointersOffset, EquipmentPointerCount);
-            segment.EquipmentNames = DataSegmentHelper.ExtractStringsFromPointers(equipPtrs, dataSegment);
+            segment.InventoryItemSelectionNavigation.ReadBytes(dataSegment, InventoryItemSelectionNavigationOffset);
 
-            var (_, blockEnd) = DataSegmentHelper.FindStringBlockBounds(equipPtrs, dataSegment);
-
-            segment.MidSectionPostEquipNames = DataSegmentHelper.Slice(dataSegment, blockEnd, EquipmentPointersOffset - blockEnd);
-
-            segment.EquipmentNavTable = DataSegmentHelper.BytesToUInt16Array(dataSegment, EquipNavTableOffset, EquipNavTableCount);
-
-            segment.RagdollCoordinates = new TacScreenCoordinate[RagdollCoordCount];
-            for (var i = 0; i < RagdollCoordCount; i++)
-            {
-                segment.RagdollCoordinates[i] = TacScreenCoordinate.FromBytes(dataSegment, RagdollCoordsOffset + i * TacScreenCoordinate.RecordSize);
-            }
-
-            segment.RagdollRectPadding = DataSegmentHelper.Slice(dataSegment, ragdollEnd, EquipSlotRectsOffset - ragdollEnd);
-
-            segment.EquipmentSlotRects = new TacScreenRect[EquipSlotRectCount];
-            for (var i = 0; i < EquipSlotRectCount; i++)
-            {
-                segment.EquipmentSlotRects[i] = TacScreenRect.FromBytes(dataSegment, EquipSlotRectsOffset + i * TacScreenRect.RecordSize);
-            }
+            segment.InventoryItemRagdollCoordinates.ReadBytes(dataSegment, InventoryItemRagdollCoordinatesOffset);
+            segment.InventoryItemSelectionRectangles.ReadBytes(dataSegment, InventoryItemSelectionRectanglesOffset);
 
             #region Parse PreCharNameData sub-sections
 
@@ -410,22 +302,12 @@ namespace CovertActionTools.Core.Models.Executables
 
         public byte[] ToBytes()
         {
-            var ragdollBytes = new byte[RagdollCoordCount * TacScreenCoordinate.RecordSize];
-            for (var i = 0; i < RagdollCoordinates.Length; i++)
-            {
-                Array.Copy(RagdollCoordinates[i].ToBytes(), 0, ragdollBytes, i * TacScreenCoordinate.RecordSize, TacScreenCoordinate.RecordSize);
-            }
+            var ragdollBytes = InventoryItemRagdollCoordinates.WriteBytes();
+            var equipRectBytes = InventoryItemSelectionRectangles.WriteBytes();
 
-            var equipRectBytes = new byte[EquipSlotRectCount * TacScreenRect.RecordSize];
-            for (var i = 0; i < EquipmentSlotRects.Length; i++)
-            {
-                Array.Copy(EquipmentSlotRects[i].ToBytes(), 0, equipRectBytes, i * TacScreenRect.RecordSize, TacScreenRect.RecordSize);
-            }
-
-            // Compute equipment name pointer values from actual string positions.
-            var equipNamesBaseOffset = EquipmentNamesStart;
-            var equipNamePointers = DataSegmentHelper.ComputeStringPointers(EquipmentNames, equipNamesBaseOffset);
-            var equipNamesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(EquipmentNames);
+            // Inventory item names are serialized as part of allSectionBytes (fixed-size slots);
+            // the pointer table values are derived from the section's field sizes.
+            var equipNamePointers = InventoryItemNames.ComputePointers(InventoryItemNamesStart);
 
             // Serialize PreCharNameData sub-sections
             var preCharNameBytes = DataSegmentHelper.Concatenate(
@@ -444,16 +326,6 @@ namespace CovertActionTools.Core.Models.Executables
                 DataSegmentHelper.ControlStringsToFixedBytes(InvestigationMethods, InvestigationMethodSizes),
                 ClueSystemData
             );
-
-            // Compute character name pointer values
-            var charNamesBaseOffset = equipNamesBaseOffset + equipNamesBytes.Length
-                + MidSectionPostEquipNames.Length
-                + DataSegmentHelper.UInt16ArrayToBytes(equipNamePointers).Length
-                + DataSegmentHelper.UInt16ArrayToBytes(EquipmentNavTable).Length
-                + ragdollBytes.Length + RagdollRectPadding.Length
-                + equipRectBytes.Length + preCharNameBytes.Length;
-            var charNamePointers = DataSegmentHelper.ComputeStringPointers(CharacterNames, charNamesBaseOffset);
-            var charNamesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(CharacterNames);
 
             var allSectionBytes = DataSegmentHelper.Concatenate(
                 Header,
@@ -483,17 +355,27 @@ namespace CovertActionTools.Core.Models.Executables
                 WallTileDirectionSprite,
                 GraphicsFilenames,
                 SignToCompassDirection,
-                CachedRoomDistanceTarget
+                CachedRoomDistanceTarget,
+                InventoryItemNames,
+                EquipmentScreenFilename
             );
+
+            var navTableBytes = InventoryItemSelectionNavigation.WriteBytes();
+
+            // Compute character name pointer values
+            var charNamesBaseOffset = allSectionBytes.Length
+                + DataSegmentHelper.UInt16ArrayToBytes(equipNamePointers).Length
+                + navTableBytes.Length
+                + ragdollBytes.Length
+                + equipRectBytes.Length + preCharNameBytes.Length;
+            var charNamePointers = DataSegmentHelper.ComputeStringPointers(CharacterNames, charNamesBaseOffset);
+            var charNamesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(CharacterNames);
 
             return DataSegmentHelper.Concatenate(
                 allSectionBytes,
-                equipNamesBytes,
-                MidSectionPostEquipNames,
                 DataSegmentHelper.UInt16ArrayToBytes(equipNamePointers),
-                DataSegmentHelper.UInt16ArrayToBytes(EquipmentNavTable),
+                navTableBytes,
                 ragdollBytes,
-                RagdollRectPadding,
                 equipRectBytes,
                 preCharNameBytes,
                 charNamesBytes,
@@ -556,12 +438,11 @@ namespace CovertActionTools.Core.Models.Executables
                 GraphicsFilenames = GraphicsFilenames.Clone(),
                 SignToCompassDirection = SignToCompassDirection.Clone(),
                 CachedRoomDistanceTarget = CachedRoomDistanceTarget.Clone(),
-                EquipmentNames = EquipmentNames.Select(s => s).ToArray(),
-                MidSectionPostEquipNames = MidSectionPostEquipNames.ToArray(),
-                EquipmentNavTable = EquipmentNavTable.ToArray(),
-                RagdollCoordinates = RagdollCoordinates.Select(c => c.Clone()).ToArray(),
-                RagdollRectPadding = RagdollRectPadding.ToArray(),
-                EquipmentSlotRects = EquipmentSlotRects.Select(r => r.Clone()).ToArray(),
+                InventoryItemNames = InventoryItemNames.Clone(),
+                EquipmentScreenFilename = EquipmentScreenFilename.Clone(),
+                InventoryItemSelectionNavigation = InventoryItemSelectionNavigation.Clone(),
+                InventoryItemRagdollCoordinates = InventoryItemRagdollCoordinates.Clone(),
+                InventoryItemSelectionRectangles = InventoryItemSelectionRectangles.Clone(),
                 ClueRelationshipPhrases = ClueRelationshipPhrases.ToArray(),
                 CluePhraseSizes = CluePhraseSizes.ToArray(),
                 MonthAbbreviations = MonthAbbreviations.ToArray(),

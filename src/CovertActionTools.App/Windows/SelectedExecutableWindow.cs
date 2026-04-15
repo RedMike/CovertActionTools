@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Numerics;
 using System.Text;
 using CovertActionTools.App.ViewModels;
@@ -116,201 +117,17 @@ public class SelectedExecutableWindow : BaseWindow
         TacImGuiHelpers.DrawStatusLineStatusStringsSection(tac.StatusLineStatusStrings, _pendingState);
         TacImGuiHelpers.DrawGameplayEndingStringsSection(tac.GameplayEndingStrings, _pendingState);
         TacImGuiHelpers.DrawGameplayPopupStringsSection(tac.GameplayPopupStrings, _pendingState);
-        TacImGuiHelpers.DrawFloorSafeInventoryItemRewardSection(tac.FloorSafeInventoryItemRewards, _pendingState, tac.EquipmentNames);
+        TacImGuiHelpers.DrawFloorSafeInventoryItemRewardSection(tac.FloorSafeInventoryItemRewards, _pendingState, tac.InventoryItemNames.Strings);
         TacImGuiHelpers.DrawPasswordDialogTextsSection(tac.PasswordDialogTexts, _pendingState);
         TacImGuiHelpers.DrawWallTileDirectionSpriteSection(tac.WallTileDirectionSprite, _pendingState);
+        TacImGuiHelpers.DrawInventoryItemNamesSection(tac.InventoryItemNames, _pendingState);
 
-        if (ImGui.CollapsingHeader("Equipment Names"))
-        {
-            DrawStringArray(tac.EquipmentNames, "EquipName");
-        }
-
-        if (ImGui.CollapsingHeader("Equipment Nav Table"))
-        {
-            ImGui.Text("Cursor navigation grid: 12 equipment items x 4 directions");
-            if (ImGui.BeginTable("EquipNav", 5, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
-            {
-                ImGui.TableSetupColumn("Item");
-                ImGui.TableSetupColumn("Up");
-                ImGui.TableSetupColumn("Down");
-                ImGui.TableSetupColumn("Left");
-                ImGui.TableSetupColumn("Right");
-                ImGui.TableHeadersRow();
-
-                for (var row = 0; row < 12 && row * 4 + 3 < tac.EquipmentNavTable.Length; row++)
-                {
-                    ImGui.TableNextRow();
-                    ImGui.TableNextColumn();
-                    var equipIdx = row + 1;
-                    ImGui.Text(equipIdx < tac.EquipmentNames.Length && !string.IsNullOrEmpty(tac.EquipmentNames[equipIdx])
-                        ? tac.EquipmentNames[equipIdx] : $"Item {equipIdx}");
-
-                    for (var col = 0; col < 4; col++)
-                    {
-                        var idx = row * 4 + col;
-                        ImGui.TableNextColumn();
-                        ImGui.PushID($"EquipNav_{idx}");
-                        var newVal = ImGuiExtensions.Input("##v", (int)tac.EquipmentNavTable[idx], width: 80);
-                        if (newVal != null) { tac.EquipmentNavTable[idx] = (ushort)newVal.Value; _pendingState.RecordChange(); }
-                        ImGui.PopID();
-                    }
-                }
-
-                ImGui.EndTable();
-            }
-        }
-
-        // Resolve equipment names from the pointer table for labelling ragdoll items
-        var equipNames = tac.EquipmentNames;
-        // 13 dest points (entries 0-12), 15 src rect pairs (entries 13-42), entry 43 is (0,0) terminator (hidden)
-        var destCount = 13;
-        var srcCount = 15;
-
-        // TODO: Ragdoll dest points, source rects, and equipment slot rects map to the
-        // spritesheets on EQUIP1/EQUIP1M and EQUIP2. The parser will need to generate those
-        // spritesheets from this data and read them from there instead.
-        if (ImGui.CollapsingHeader("Ragdoll Destination Points"))
-        {
-            if (ImGui.BeginTable("RagdollDest", 4, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
-            {
-                ImGui.TableSetupColumn("#");
-                ImGui.TableSetupColumn("Item");
-                ImGui.TableSetupColumn("X");
-                ImGui.TableSetupColumn("Y");
-                ImGui.TableHeadersRow();
-
-                for (var i = 0; i < destCount && i < tac.RagdollCoordinates.Length; i++)
-                {
-                    ImGui.PushID($"RagdollDest_{i}");
-                    var coord = tac.RagdollCoordinates[i];
-                    ImGui.TableNextRow();
-
-                    ImGui.TableNextColumn();
-                    ImGui.Text($"{i}");
-
-                    ImGui.TableNextColumn();
-                    ImGui.Text(GetRagdollDestLabel(i, equipNames));
-
-                    ImGui.TableNextColumn();
-                    var newX = ImGuiExtensions.Input("##X", (int)coord.X, width: 80);
-                    if (newX != null) { coord.X = (ushort)newX.Value; _pendingState.RecordChange(); }
-
-                    ImGui.TableNextColumn();
-                    var newY = ImGuiExtensions.Input("##Y", (int)coord.Y, width: 80);
-                    if (newY != null) { coord.Y = (ushort)newY.Value; _pendingState.RecordChange(); }
-
-                    ImGui.PopID();
-                }
-
-                ImGui.EndTable();
-            }
-        }
-
-        if (ImGui.CollapsingHeader("Ragdoll Source Rects"))
-        {
-            if (ImGui.BeginTable("RagdollSrc", 6, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
-            {
-                ImGui.TableSetupColumn("#");
-                ImGui.TableSetupColumn("Item");
-                ImGui.TableSetupColumn("X");
-                ImGui.TableSetupColumn("Y");
-                ImGui.TableSetupColumn("W");
-                ImGui.TableSetupColumn("H");
-                ImGui.TableHeadersRow();
-
-                for (var i = 0; i < srcCount; i++)
-                {
-                    var tlIdx = destCount + i * 2;
-                    var brIdx = tlIdx + 1;
-                    if (brIdx >= tac.RagdollCoordinates.Length) break;
-
-                    ImGui.PushID($"RagdollSrc_{i}");
-                    var tl = tac.RagdollCoordinates[tlIdx];
-                    var br = tac.RagdollCoordinates[brIdx];
-                    ImGui.TableNextRow();
-
-                    ImGui.TableNextColumn();
-                    ImGui.Text($"{i}");
-
-                    ImGui.TableNextColumn();
-                    ImGui.Text(GetRagdollSrcLabel(i, equipNames));
-
-                    ImGui.TableNextColumn();
-                    var newX = ImGuiExtensions.Input("##X", (int)tl.X, width: 80);
-                    if (newX != null) { tl.X = (ushort)newX.Value; _pendingState.RecordChange(); }
-
-                    ImGui.TableNextColumn();
-                    var newY = ImGuiExtensions.Input("##Y", (int)tl.Y, width: 80);
-                    if (newY != null) { tl.Y = (ushort)newY.Value; _pendingState.RecordChange(); }
-
-                    ImGui.TableNextColumn();
-                    var w = br.X - tl.X;
-                    var newW = ImGuiExtensions.Input("##W", w, width: 80);
-                    if (newW != null) { br.X = (ushort)(tl.X + newW.Value); _pendingState.RecordChange(); }
-
-                    ImGui.TableNextColumn();
-                    var h = br.Y - tl.Y;
-                    var newH = ImGuiExtensions.Input("##H", h, width: 80);
-                    if (newH != null) { br.Y = (ushort)(tl.Y + newH.Value); _pendingState.RecordChange(); }
-
-                    ImGui.PopID();
-                }
-
-                ImGui.EndTable();
-            }
-        }
-
-        if (ImGui.CollapsingHeader("Equipment Slot Rects"))
-        {
-            if (ImGui.BeginTable("EquipRects", 6, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
-            {
-                ImGui.TableSetupColumn("#");
-                ImGui.TableSetupColumn("Item");
-                ImGui.TableSetupColumn("X");
-                ImGui.TableSetupColumn("Y");
-                ImGui.TableSetupColumn("W");
-                ImGui.TableSetupColumn("H");
-                ImGui.TableHeadersRow();
-
-                for (var i = 0; i < tac.EquipmentSlotRects.Length; i++)
-                {
-                    ImGui.PushID($"EquipRect_{i}");
-                    var rect = tac.EquipmentSlotRects[i];
-                    ImGui.TableNextRow();
-
-                    ImGui.TableNextColumn();
-                    ImGui.Text($"{i}");
-
-                    // Slot 0 = Uzi (equipment index 1), no Pistol in slot list
-                    ImGui.TableNextColumn();
-                    var equipIdx = i + 1;
-                    ImGui.Text(equipIdx < equipNames.Length && !string.IsNullOrEmpty(equipNames[equipIdx])
-                        ? equipNames[equipIdx] : $"Item {equipIdx}");
-
-                    ImGui.TableNextColumn();
-                    var newX = ImGuiExtensions.Input("##X", (int)rect.X1, width: 80);
-                    if (newX != null) { rect.X1 = (ushort)newX.Value; _pendingState.RecordChange(); }
-
-                    ImGui.TableNextColumn();
-                    var newY = ImGuiExtensions.Input("##Y", (int)rect.Y1, width: 80);
-                    if (newY != null) { rect.Y1 = (ushort)newY.Value; _pendingState.RecordChange(); }
-
-                    ImGui.TableNextColumn();
-                    var w = rect.X2 - rect.X1;
-                    var newW = ImGuiExtensions.Input("##W", (int)w, width: 80);
-                    if (newW != null) { rect.X2 = (ushort)(rect.X1 + newW.Value); _pendingState.RecordChange(); }
-
-                    ImGui.TableNextColumn();
-                    var h = rect.Y2 - rect.Y1;
-                    var newH = ImGuiExtensions.Input("##H", (int)h, width: 80);
-                    if (newH != null) { rect.Y2 = (ushort)(rect.Y1 + newH.Value); _pendingState.RecordChange(); }
-
-                    ImGui.PopID();
-                }
-
-                ImGui.EndTable();
-            }
-        }
+        TacImGuiHelpers.DrawInventoryItemSelectionNavigationSection(
+            tac.InventoryItemSelectionNavigation, _pendingState, tac.InventoryItemNames.Strings);
+        TacImGuiHelpers.DrawInventoryItemRagdollCoordinatesSection(
+            tac.InventoryItemRagdollCoordinates, _pendingState);
+        TacImGuiHelpers.DrawInventoryItemSelectionRectanglesSection(
+            tac.InventoryItemSelectionRectangles, _pendingState, tac.InventoryItemNames.Strings);
 
         if (ImGui.CollapsingHeader("Character Names"))
         {
@@ -361,8 +178,6 @@ public class SelectedExecutableWindow : BaseWindow
         {
             // ("SpriteSheetConfigs", tac.SpriteSheetConfigs.Length),
             // ("BssBlock", tac.BssBlock.Length),
-            ("MidSectionPostEquipNames", tac.MidSectionPostEquipNames.Length),
-            ("RagdollRectPadding", tac.RagdollRectPadding.Length),
             ("CluePhrasePointerTable", tac.CluePhrasePointerTable.Length),
             ("ClueCategoryData", tac.ClueCategoryData.Length),
             ("MonthPointerTable", tac.MonthPointerTable.Length),
@@ -372,29 +187,6 @@ public class SelectedExecutableWindow : BaseWindow
             ("TrailingData", tac.TrailingData.Length)
         });
     }
-
-    // TODO: Are the hardcoded ones just hardcoded from game logic or is the entire list
-    // hardcoded? To investigate later.
-    private static string GetRagdollDestLabel(int index, string[] equipNames)
-    {
-        // 13 dest points: first 11 from equipment names, last 2 are ammo types
-        if (index == 11) return "Ammo Bullet";
-        if (index == 12) return "Ammo Magazine";
-        if (index < equipNames.Length && !string.IsNullOrEmpty(equipNames[index])) return equipNames[index];
-        return $"Item {index}";
-    }
-
-    private static string GetRagdollSrcLabel(int index, string[] equipNames)
-    {
-        // 15 src rects: first 11 from equipment names, then 4 hardcoded
-        if (index == 11) return "Ammo Bullet";
-        if (index == 12) return "Ammo Magazine";
-        if (index == 13) return "Wound";
-        if (index == 14) return "Target";
-        if (index < equipNames.Length && !string.IsNullOrEmpty(equipNames[index])) return equipNames[index];
-        return $"Item {index}";
-    }
-
 
     #endregion
 
