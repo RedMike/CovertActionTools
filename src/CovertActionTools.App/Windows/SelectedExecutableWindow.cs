@@ -183,36 +183,9 @@ public class SelectedExecutableWindow : BaseWindow
             DrawStringArray(tac.InvestigationMethods, "InvMethod", tac.InvestigationMethodSizes);
         }
 
-        if (ImGui.CollapsingHeader("Unknown Clue Data (16 bytes)"))
-        {
-            var slots = tac.SharedClueAndIntel.UnknownClueData;
-            if (ImGui.BeginTable("UnknownClueData_table", 16, ImGuiTableFlags.Borders))
-            {
-                for (var i = 0; i < 16; i++)
-                {
-                    ImGui.TableSetupColumn($"{i:X1}", ImGuiTableColumnFlags.WidthFixed, 34);
-                }
-                ImGui.TableHeadersRow();
-                ImGui.TableNextRow();
-                for (var i = 0; i < slots.Length; i++)
-                {
-                    ImGui.TableNextColumn();
-                    ImGui.PushID($"UnknownClueByte_{i}");
-                    var val = (int)slots[i].Value;
-                    ImGui.SetNextItemWidth(30);
-                    if (ImGui.InputInt("", ref val, 0, 0) && val >= 0 && val <= 255)
-                    {
-                        slots[i].Value = (byte)val;
-                        _pendingState.RecordChange();
-                    }
-                    ImGui.PopID();
-                }
-                ImGui.EndTable();
-            }
-        }
-
         DrawRawSectionSizes("Raw Sections", new[]
         {
+            ("UnknownClueData", tac.SharedClueAndIntel.UnknownClueData.Size),
             ("CluePopcountTables", tac.SharedClueAndIntel.CluePopcountTables.Size),
             ("EvidenceRankPointerTable", tac.EvidenceRankPointerTable.Length),
             ("ClueSystemData", tac.ClueSystemData.Length),
