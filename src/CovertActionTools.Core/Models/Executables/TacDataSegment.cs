@@ -225,11 +225,12 @@ namespace CovertActionTools.Core.Models.Executables
             offset = ReadSectionWithPadding(segment.CachedRoomDistanceTarget, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.InventoryItemNames, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.EquipmentScreenFilename, dataSegment, offset);
-
-            segment.InventoryItemSelectionNavigation.ReadBytes(dataSegment, InventoryItemSelectionNavigationOffset);
-
-            segment.InventoryItemRagdollCoordinates.ReadBytes(dataSegment, InventoryItemRagdollCoordinatesOffset);
-            segment.InventoryItemSelectionRectangles.ReadBytes(dataSegment, InventoryItemSelectionRectanglesOffset);
+            // Equipment name pointer table (16 ushorts at DS:0x20E0) is not stored as a section;
+            // values are recomputed on write from InventoryItemNames field sizes.
+            offset += EquipmentPointerCount * 2;
+            offset = ReadSectionWithPadding(segment.InventoryItemSelectionNavigation, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.InventoryItemRagdollCoordinates, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.InventoryItemSelectionRectangles, dataSegment, offset);
 
             #region Parse PreCharNameData sub-sections
 
@@ -302,14 +303,8 @@ namespace CovertActionTools.Core.Models.Executables
 
         public byte[] ToBytes()
         {
-            var ragdollBytes = InventoryItemRagdollCoordinates.WriteBytes();
-            var equipRectBytes = InventoryItemSelectionRectangles.WriteBytes();
-
-            // Inventory item names are serialized as part of allSectionBytes (fixed-size slots);
-            // the pointer table values are derived from the section's field sizes.
             var equipNamePointers = InventoryItemNames.ComputePointers(InventoryItemNamesStart);
 
-            // Serialize PreCharNameData sub-sections
             var preCharNameBytes = DataSegmentHelper.Concatenate(
                 DataSegmentHelper.ControlStringsToFixedBytes(ClueRelationshipPhrases, CluePhraseSizes),
                 DataSegmentHelper.ControlStringsToFixedBytes(MonthAbbreviations, MonthSizes),
@@ -327,7 +322,7 @@ namespace CovertActionTools.Core.Models.Executables
                 ClueSystemData
             );
 
-            var allSectionBytes = DataSegmentHelper.Concatenate(
+            var preEquipPointerBytes = DataSegmentHelper.Concatenate(
                 Header,
                 HeaderFilenames,
                 RoomTypes,
@@ -360,23 +355,25 @@ namespace CovertActionTools.Core.Models.Executables
                 EquipmentScreenFilename
             );
 
-            var navTableBytes = InventoryItemSelectionNavigation.WriteBytes();
+            var postEquipPointerBytes = DataSegmentHelper.Concatenate(
+                InventoryItemSelectionNavigation,
+                InventoryItemRagdollCoordinates,
+                InventoryItemSelectionRectangles
+            );
 
-            // Compute character name pointer values
-            var charNamesBaseOffset = allSectionBytes.Length
-                + DataSegmentHelper.UInt16ArrayToBytes(equipNamePointers).Length
-                + navTableBytes.Length
-                + ragdollBytes.Length
-                + equipRectBytes.Length + preCharNameBytes.Length;
+            var equipNamePointerBytes = DataSegmentHelper.UInt16ArrayToBytes(equipNamePointers);
+
+            var charNamesBaseOffset = preEquipPointerBytes.Length
+                + equipNamePointerBytes.Length
+                + postEquipPointerBytes.Length
+                + preCharNameBytes.Length;
             var charNamePointers = DataSegmentHelper.ComputeStringPointers(CharacterNames, charNamesBaseOffset);
             var charNamesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(CharacterNames);
 
             return DataSegmentHelper.Concatenate(
-                allSectionBytes,
-                DataSegmentHelper.UInt16ArrayToBytes(equipNamePointers),
-                navTableBytes,
-                ragdollBytes,
-                equipRectBytes,
+                preEquipPointerBytes,
+                equipNamePointerBytes,
+                postEquipPointerBytes,
                 preCharNameBytes,
                 charNamesBytes,
                 PostCharNameData,
