@@ -166,29 +166,33 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Rank Names"))
         {
-            DrawStringArray(tac.RankNames, "Rank", tac.RankNameSizes);
+            var rankNames = tac.SharedClueAndIntel.RankNames;
+            DrawStringArray(rankNames.Strings, "Rank", rankNames.SlotSizes);
         }
 
         if (ImGui.CollapsingHeader("Evidence Type Abbreviations"))
         {
-            DrawStringArray(tac.EvidenceTypeAbbreviations, "EvType", tac.EvidenceTypeSizes);
+            var evTypes = tac.SharedClueAndIntel.EvidenceTypeAbbreviations;
+            DrawStringArray(evTypes.Strings, "EvType", evTypes.SlotSizes);
         }
 
         if (ImGui.CollapsingHeader("Evidence Item Names"))
         {
-            DrawStringArray(tac.EvidenceItemNames, "EvItem", tac.EvidenceItemSizes);
+            var evItems = tac.SharedClueAndIntel.EvidenceItemNames;
+            DrawStringArray(evItems.Strings, "EvItem", evItems.SlotSizes);
         }
 
         if (ImGui.CollapsingHeader("Investigation Methods"))
         {
-            DrawStringArray(tac.InvestigationMethods, "InvMethod", tac.InvestigationMethodSizes);
+            var invMethods = tac.SharedClueAndIntel.InvestigationMethods;
+            DrawStringArray(invMethods.Strings, "InvMethod", invMethods.SlotSizes);
         }
 
         DrawRawSectionSizes("Raw Sections", new[]
         {
             ("UnknownClueData", tac.SharedClueAndIntel.UnknownClueData.Size),
             ("CluePopcountTables", tac.SharedClueAndIntel.CluePopcountTables.Size),
-            ("EvidenceRankPointerTable", tac.EvidenceRankPointerTable.Length),
+            ("EvidenceRankPointerTable", tac.SharedClueAndIntel.EvidenceRankPointerTable.Size),
             ("ClueSystemData", tac.ClueSystemData.Length),
             ("PostCharNameData", tac.PostCharNameData.Length),
             ("TrailingData", tac.TrailingData.Length)

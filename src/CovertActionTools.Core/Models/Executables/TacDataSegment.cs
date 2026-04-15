@@ -39,14 +39,10 @@ namespace CovertActionTools.Core.Models.Executables
         #endregion
 
         #region PreCharNameData Sub-offsets (DS-relative)
-        // RankNames begins at 0x274C immediately after SharedClueAndIntel
-        // (which now absorbs IntelReportTexts and ends at 0x274C exactly).
-        private const int RankNamesStart = 0x274C;
-        private const int EvidenceTypesStart = 0x279F;
-        private const int EvidenceItemsStart = 0x27BB;
-        private const int EvidenceTableOffset = 0x2A26;
-        private const int EvidenceTableSize = 160;
-        private const int InvestMethodsStart = 0x2AC6;
+        // ClueSystemData starts immediately after SharedClueAndIntel (which now
+        // absorbs IntelReportTexts, RankNames, EvidenceTypeAbbreviations,
+        // EvidenceItemNames, EvidenceRankPointerTable, and InvestigationMethods,
+        // ending at 0x2B4C exactly).
         private const int ClueSystemStart = 0x2B4C;
         #endregion
 
@@ -92,32 +88,11 @@ namespace CovertActionTools.Core.Models.Executables
         // they cannot drift apart.
         /// <summary>Clue relationship phrases, month abbreviations, intel headers, intel
         /// phrases, the 40-entry clue phrase pointer table, the opaque UnknownClueData
-        /// block, the popcount lookup tables, the month pointer table, and the intel
-        /// report text fragments (0x226C-0x274C).</summary>
+        /// block, the popcount lookup tables, the month pointer table, the intel
+        /// report text fragments, rank names, evidence type abbreviations, evidence
+        /// item names, the evidence/rank pointer table, and investigation method
+        /// names (0x226C-0x2B4C).</summary>
         public SharedClueAndIntelSection SharedClueAndIntel { get; set; } = new();
-
-        /// <summary>8 agent rank names: "Recruit", "Operative", ... "MasterMind".</summary>
-        public string[] RankNames { get; set; } = Array.Empty<string>();
-        /// <summary>Original byte sizes for rank name slots.</summary>
-        public int[] RankNameSizes { get; set; } = Array.Empty<int>();
-
-        /// <summary>8 evidence type abbreviations: "CAR", "WPN", "ADR", "TKT", "MSG", "$", "$", "FCE".</summary>
-        public string[] EvidenceTypeAbbreviations { get; set; } = Array.Empty<string>();
-        /// <summary>Original byte sizes for evidence type slots.</summary>
-        public int[] EvidenceTypeSizes { get; set; } = Array.Empty<int>();
-
-        /// <summary>Evidence item name templates (cars, weapons, addresses, tickets, messages, money, IDs).</summary>
-        public string[] EvidenceItemNames { get; set; } = Array.Empty<string>();
-        /// <summary>Original byte sizes for evidence item name slots.</summary>
-        public int[] EvidenceItemSizes { get; set; } = Array.Empty<int>();
-
-        /// <summary>Combined pointer table for rank names, evidence types, and evidence items (preserved as raw bytes).</summary>
-        public byte[] EvidenceRankPointerTable { get; set; } = Array.Empty<byte>();
-
-        /// <summary>8 investigation method names: "Clandestine Photo", ... "Local Authorities", "Clue".</summary>
-        public string[] InvestigationMethods { get; set; } = Array.Empty<string>();
-        /// <summary>Original byte sizes for investigation method slots.</summary>
-        public int[] InvestigationMethodSizes { get; set; } = Array.Empty<int>();
 
         /// <summary>Remaining clue system data: UI text, template variables, file references, text.dta lookups.</summary>
         public byte[] ClueSystemData { get; set; } = Array.Empty<byte>();
@@ -176,28 +151,6 @@ namespace CovertActionTools.Core.Models.Executables
 
             #region Parse PreCharNameData sub-sections
 
-            var (ranks, rankSzs) = DataSegmentHelper.ControlStringsFromBytes(
-                dataSegment, RankNamesStart, EvidenceTypesStart - RankNamesStart);
-            segment.RankNames = ranks;
-            segment.RankNameSizes = rankSzs;
-
-            var (evTypes, evTypeSzs) = DataSegmentHelper.ControlStringsFromBytes(
-                dataSegment, EvidenceTypesStart, EvidenceItemsStart - EvidenceTypesStart);
-            segment.EvidenceTypeAbbreviations = evTypes;
-            segment.EvidenceTypeSizes = evTypeSzs;
-
-            var (evItems, evItemSzs) = DataSegmentHelper.ControlStringsFromBytes(
-                dataSegment, EvidenceItemsStart, EvidenceTableOffset - EvidenceItemsStart);
-            segment.EvidenceItemNames = evItems;
-            segment.EvidenceItemSizes = evItemSzs;
-
-            segment.EvidenceRankPointerTable = DataSegmentHelper.Slice(dataSegment, EvidenceTableOffset, EvidenceTableSize);
-
-            var (invMethods, invMethodSzs) = DataSegmentHelper.ControlStringsFromBytes(
-                dataSegment, InvestMethodsStart, ClueSystemStart - InvestMethodsStart);
-            segment.InvestigationMethods = invMethods;
-            segment.InvestigationMethodSizes = invMethodSzs;
-
             // Extract character names using pointer table
             var charPtrs = DataSegmentHelper.BytesToUInt16Array(dataSegment, CharNamePointersOffset, CharNamePointerCount);
             segment.CharacterNames = DataSegmentHelper.ExtractStringsFromPointers(charPtrs, dataSegment);
@@ -220,14 +173,7 @@ namespace CovertActionTools.Core.Models.Executables
 
         public byte[] ToBytes()
         {
-            var preCharNameBytes = DataSegmentHelper.Concatenate(
-                DataSegmentHelper.ControlStringsToFixedBytes(RankNames, RankNameSizes),
-                DataSegmentHelper.ControlStringsToFixedBytes(EvidenceTypeAbbreviations, EvidenceTypeSizes),
-                DataSegmentHelper.ControlStringsToFixedBytes(EvidenceItemNames, EvidenceItemSizes),
-                EvidenceRankPointerTable,
-                DataSegmentHelper.ControlStringsToFixedBytes(InvestigationMethods, InvestigationMethodSizes),
-                ClueSystemData
-            );
+            var preCharNameBytes = ClueSystemData;
 
             var allSectionBytes = DataSegmentHelper.Concatenate(
                 Header,
@@ -339,15 +285,6 @@ namespace CovertActionTools.Core.Models.Executables
                 InventoryItemRagdollCoordinates = InventoryItemRagdollCoordinates.Clone(),
                 InventoryItemSelectionRectangles = InventoryItemSelectionRectangles.Clone(),
                 SharedClueAndIntel = SharedClueAndIntel.Clone(),
-                RankNames = RankNames.ToArray(),
-                RankNameSizes = RankNameSizes.ToArray(),
-                EvidenceTypeAbbreviations = EvidenceTypeAbbreviations.ToArray(),
-                EvidenceTypeSizes = EvidenceTypeSizes.ToArray(),
-                EvidenceItemNames = EvidenceItemNames.ToArray(),
-                EvidenceItemSizes = EvidenceItemSizes.ToArray(),
-                EvidenceRankPointerTable = EvidenceRankPointerTable.ToArray(),
-                InvestigationMethods = InvestigationMethods.ToArray(),
-                InvestigationMethodSizes = InvestigationMethodSizes.ToArray(),
                 ClueSystemData = ClueSystemData.ToArray(),
                 CharacterNames = CharacterNames.Select(s => s).ToArray(),
                 PostCharNameData = PostCharNameData.ToArray(),

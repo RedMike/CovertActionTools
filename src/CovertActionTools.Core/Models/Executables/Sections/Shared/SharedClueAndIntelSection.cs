@@ -18,8 +18,14 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
     ///   0x25C2 month pointer table (24 bytes, 12 entries, regenerated on write)
     ///   0x25DA two bytes of dword-alignment padding (zero-filled on write)
     ///   0x25DC IntelReportTexts (21 fixed-size slots, 368 bytes total)
-    ///   0x274C end of data (already dword-aligned, no trailing padding required)
-    /// GAME/FINAL/BUG carry the same structure at different DS bases.
+    ///   0x274C RankNames (8 slots, 83 bytes)
+    ///   0x279F EvidenceTypeAbbreviations (8 slots, 28 bytes)
+    ///   0x27BB EvidenceItemNames (65 slots, 619 bytes)
+    ///   0x2A26 EvidenceRankPointerTable (160 raw bytes)
+    ///   0x2AC6 InvestigationMethods (8 slots, 134 bytes)
+    ///   0x2B4C end of data (ClueSystemData and beyond live in the host data segment)
+    /// GAME/FINAL carry the same structure at different DS bases (GAME stops earlier
+    /// since it lacks the trailing ClueSystemData blob in its host segment).
     /// </summary>
     public class SharedClueAndIntelSection : IExecutableSection
     {
@@ -73,11 +79,30 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
         /// padding written as zeros and absorbed into this section.</summary>
         public IntelReportTextsSection IntelReportTexts { get; set; } = new();
 
+        /// <summary>Eight agent rank names ("Recruit" .. "MasterMind").</summary>
+        public RankNamesSection RankNames { get; set; } = new();
+
+        /// <summary>Eight evidence type abbreviations ("CAR", "WPN", ... "FCE").</summary>
+        public EvidenceTypeAbbreviationsSection EvidenceTypeAbbreviations { get; set; } = new();
+
+        /// <summary>65 evidence item name templates (cars, weapons, addresses, tickets,
+        /// telegrams, cash placeholders, ID/passport templates, plus a trailing empty slot).</summary>
+        public EvidenceItemNamesSection EvidenceItemNames { get; set; } = new();
+
+        /// <summary>160-byte combined pointer table covering ranks, evidence types, and
+        /// evidence items. Preserved as raw bytes; populated and consumed by code paths
+        /// that have not been fully decoded yet.</summary>
+        public BlobRecord EvidenceRankPointerTable { get; set; } = new(EvidenceRankPointerTableSize);
+
+        /// <summary>Eight investigation method names ("Clandestine Photo" .. "Clue").</summary>
+        public InvestigationMethodsSection InvestigationMethods { get; set; } = new();
+
         private const int PointerTableSizeBytes = ClueRelationshipPhrasesSection.PhraseCount * 2;
         private const int UnknownClueDataSize = 16;
         private const int CluePopcountTablesSize = 32;
         private const int MonthPointerTableSize = MonthAbbreviationsSection.MonthCount * 2;
         private const int IntelTextsAlignmentPadding = 2;
+        private const int EvidenceRankPointerTableSize = 160;
 
         public bool Viewable() => true;
         public bool Editable() => true;
@@ -96,6 +121,11 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
             offset += MonthPointerTableSize;
             offset += IntelTextsAlignmentPadding;
             offset += IntelReportTexts.ReadBytes(fullPayload, offset);
+            offset += RankNames.ReadBytes(fullPayload, offset);
+            offset += EvidenceTypeAbbreviations.ReadBytes(fullPayload, offset);
+            offset += EvidenceItemNames.ReadBytes(fullPayload, offset);
+            offset += EvidenceRankPointerTable.ReadBytes(fullPayload, offset);
+            offset += InvestigationMethods.ReadBytes(fullPayload, offset);
             return offset - startingOffset;
         }
 
@@ -110,11 +140,18 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
             var popcount = CluePopcountTables.WriteBytes();
             var monthPointers = MonthAbbreviations.ComputePointers(MonthBaseOffset);
             var intelTexts = IntelReportTexts.WriteBytes();
+            var rankNames = RankNames.WriteBytes();
+            var evidenceTypes = EvidenceTypeAbbreviations.WriteBytes();
+            var evidenceItems = EvidenceItemNames.WriteBytes();
+            var evidencePointers = EvidenceRankPointerTable.WriteBytes();
+            var investMethods = InvestigationMethods.WriteBytes();
 
             var total = phrases.Length + months.Length + headers.Length
                 + intelPhrases.Length + PointerTableSizeBytes
                 + unknown.Length + popcount.Length + MonthPointerTableSize
-                + IntelTextsAlignmentPadding + intelTexts.Length;
+                + IntelTextsAlignmentPadding + intelTexts.Length
+                + rankNames.Length + evidenceTypes.Length + evidenceItems.Length
+                + evidencePointers.Length + investMethods.Length;
             var result = new byte[total];
             var pos = 0;
             Array.Copy(phrases, 0, result, pos, phrases.Length); pos += phrases.Length;
@@ -137,6 +174,11 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
             }
             pos += IntelTextsAlignmentPadding;
             Array.Copy(intelTexts, 0, result, pos, intelTexts.Length); pos += intelTexts.Length;
+            Array.Copy(rankNames, 0, result, pos, rankNames.Length); pos += rankNames.Length;
+            Array.Copy(evidenceTypes, 0, result, pos, evidenceTypes.Length); pos += evidenceTypes.Length;
+            Array.Copy(evidenceItems, 0, result, pos, evidenceItems.Length); pos += evidenceItems.Length;
+            Array.Copy(evidencePointers, 0, result, pos, evidencePointers.Length); pos += evidencePointers.Length;
+            Array.Copy(investMethods, 0, result, pos, investMethods.Length); pos += investMethods.Length;
             return result;
         }
 
@@ -153,6 +195,11 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
                 UnknownClueData = UnknownClueData.Clone(),
                 CluePopcountTables = CluePopcountTables.Clone(),
                 IntelReportTexts = IntelReportTexts.Clone(),
+                RankNames = RankNames.Clone(),
+                EvidenceTypeAbbreviations = EvidenceTypeAbbreviations.Clone(),
+                EvidenceItemNames = EvidenceItemNames.Clone(),
+                EvidenceRankPointerTable = EvidenceRankPointerTable.Clone(),
+                InvestigationMethods = InvestigationMethods.Clone(),
             };
         }
     }
