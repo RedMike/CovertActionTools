@@ -136,17 +136,26 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Clue Relationship Phrases"))
         {
-            DrawStringArray(tac.ClueRelationshipPhrases, "CluePhrase", tac.CluePhraseSizes);
+            var phrases = tac.SharedClueAndIntel.ClueRelationshipPhrases;
+            DrawStringArray(phrases.Strings, "CluePhrase", phrases.SlotSizes);
         }
 
         if (ImGui.CollapsingHeader("Month Abbreviations"))
         {
-            DrawStringArray(tac.MonthAbbreviations, "Month", tac.MonthSizes);
+            var months = tac.SharedClueAndIntel.MonthAbbreviations;
+            DrawStringArray(months.Strings, "Month", months.SlotSizes);
         }
 
         if (ImGui.CollapsingHeader("Intel Headers"))
         {
-            DrawStringArray(tac.IntelHeaders, "IntelHdr", tac.IntelHeaderSizes);
+            var headers = tac.SharedClueAndIntel.IntelHeaders;
+            DrawStringArray(headers.Strings, "IntelHdr", headers.SlotSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Intel Phrases"))
+        {
+            var intelPhrases = tac.SharedClueAndIntel.IntelPhrases;
+            DrawStringArray(intelPhrases.Strings, "IntelPhr", intelPhrases.SlotSizes);
         }
 
         if (ImGui.CollapsingHeader("Intel Report Texts"))
@@ -176,11 +185,8 @@ public class SelectedExecutableWindow : BaseWindow
 
         DrawRawSectionSizes("Raw Sections", new[]
         {
-            // ("SpriteSheetConfigs", tac.SpriteSheetConfigs.Length),
-            // ("BssBlock", tac.BssBlock.Length),
-            ("CluePhrasePointerTable", tac.CluePhrasePointerTable.Length),
-            ("ClueCategoryData", tac.ClueCategoryData.Length),
-            ("MonthPointerTable", tac.MonthPointerTable.Length),
+            ("UnknownClueData", tac.SharedClueAndIntel.UnknownClueData.Size),
+            ("CluePopcountTables", tac.SharedClueAndIntel.CluePopcountTables.Size),
             ("EvidenceRankPointerTable", tac.EvidenceRankPointerTable.Length),
             ("ClueSystemData", tac.ClueSystemData.Length),
             ("PostCharNameData", tac.PostCharNameData.Length),
@@ -1199,9 +1205,9 @@ public class SelectedExecutableWindow : BaseWindow
 
     // TODO: Allow different string lengths after pointer recalculation is implemented.
     // Currently each string is fixed to its original byte size to prevent pointer drift.
-    private void DrawStringArray(string[] strings, string idPrefix, int[]? byteSizes = null)
+    private void DrawStringArray(IList<string> strings, string idPrefix, int[]? byteSizes = null)
     {
-        for (var i = 0; i < strings.Length; i++)
+        for (var i = 0; i < strings.Count; i++)
         {
             ImGui.PushID($"{idPrefix}_{i}");
             var contentSize = ImGui.GetContentRegionAvail();

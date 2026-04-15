@@ -6,6 +6,9 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
     {
         protected abstract int[] StringSizes { get; }
 
+        /// <summary>Public accessor for the per-slot byte sizes.</summary>
+        public int[] SlotSizes => StringSizes;
+
         protected sealed override int StringCount => StringSizes.Length;
         protected sealed override int? StringLength => null;
 

@@ -1,4 +1,5 @@
 using System;
+using CovertActionTools.Core.Models.Executables.Records.Shared;
 
 namespace CovertActionTools.Core.Models.Executables.Sections.Shared
 {
@@ -14,7 +15,7 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
     ///   0x2542 phrase pointer table (80 bytes, 40 entries)
     ///   0x2592 UnknownClueData (16 bytes)
     ///   0x25A2 CluePopcountTables (32 bytes, 4 sub-tables of 8)
-    ///   0x25C2 MonthPointerTable (24 bytes, 12 entries)
+    ///   0x25C2 month pointer table (24 bytes, 12 entries, regenerated on write)
     ///   0x25DA end
     /// GAME/FINAL/BUG carry the same structure at different DS bases.
     /// </summary>
@@ -22,10 +23,17 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
     {
         /// <summary>
         /// DS-relative offset of the first clue relationship phrase. Used as the base for
-        /// the generated pointer table; defaults to TAC's layout and can be set by the
-        /// owning data segment if reused by another EXE with a different location.
+        /// the generated phrase pointer table; defaults to TAC's layout and can be set by
+        /// the owning data segment if reused by another EXE with a different location.
         /// </summary>
         public int PhraseBaseOffset { get; set; } = 0x226C;
+
+        /// <summary>
+        /// DS-relative offset of the first month abbreviation. Used as the base for the
+        /// generated month pointer table; defaults to TAC's layout and can be set by the
+        /// owning data segment for other EXEs.
+        /// </summary>
+        public int MonthBaseOffset { get; set; } = 0x248C;
 
         public ClueRelationshipPhrasesSection ClueRelationshipPhrases { get; set; } = new();
         public MonthAbbreviationsSection MonthAbbreviations { get; set; } = new();
@@ -47,7 +55,7 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
         // read elsewhere. Preserved verbatim so a future investigation can pick it up.
         /// <summary>Opaque 16-byte block following the phrase pointer table. See TODO
         /// above for the investigation state.</summary>
-        public byte[] UnknownClueData { get; set; } = Array.Empty<byte>();
+        public BlobRecord UnknownClueData { get; set; } = new(UnknownClueDataSize);
 
         /// <summary>32-byte popcount lookup table. 4 sub-tables of 8 bytes each:
         /// popcount(0..7)+0, popcount(0..7)+1, popcount(0..7)+1 (duplicate of the
@@ -55,17 +63,12 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
         /// <c>[BX + 0x25A2]</c> with <c>BX &amp; 0x1f</c>, so the high 2 bits of the
         /// masked index select the sub-table and the low 3 bits are the popcount input.
         /// Identical across TAC/GAME/FINAL/BUG (same bit-count math).</summary>
-        public byte[] CluePopcountTables { get; set; } = Array.Empty<byte>();
-
-        /// <summary>Pointer table for the 12 month abbreviations (DS-relative offsets,
-        /// preserved as raw bytes rather than regenerated so unexpected encodings
-        /// survive a roundtrip).</summary>
-        public byte[] MonthPointerTable { get; set; } = Array.Empty<byte>();
+        public BlobRecord CluePopcountTables { get; set; } = new(CluePopcountTablesSize);
 
         private const int PointerTableSizeBytes = ClueRelationshipPhrasesSection.PhraseCount * 2;
         private const int UnknownClueDataSize = 16;
         private const int CluePopcountTablesSize = 32;
-        private const int MonthPointerTableSize = 24;
+        private const int MonthPointerTableSize = MonthAbbreviationsSection.MonthCount * 2;
 
         public bool Viewable() => true;
         public bool Editable() => true;
@@ -77,18 +80,11 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
             offset += MonthAbbreviations.ReadBytes(fullPayload, offset);
             offset += IntelHeaders.ReadBytes(fullPayload, offset);
             offset += IntelPhrases.ReadBytes(fullPayload, offset);
-            // Pointer table is recomputed on write from the phrase slot layout.
+            // Pointer tables are recomputed on write from the phrase/month slot layouts.
             offset += PointerTableSizeBytes;
-
-            UnknownClueData = SliceFixed(fullPayload, offset, UnknownClueDataSize);
-            offset += UnknownClueDataSize;
-
-            CluePopcountTables = SliceFixed(fullPayload, offset, CluePopcountTablesSize);
-            offset += CluePopcountTablesSize;
-
-            MonthPointerTable = SliceFixed(fullPayload, offset, MonthPointerTableSize);
+            offset += UnknownClueData.ReadBytes(fullPayload, offset);
+            offset += CluePopcountTables.ReadBytes(fullPayload, offset);
             offset += MonthPointerTableSize;
-
             return offset - startingOffset;
         }
 
@@ -98,11 +94,14 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
             var months = MonthAbbreviations.WriteBytes();
             var headers = IntelHeaders.WriteBytes();
             var intelPhrases = IntelPhrases.WriteBytes();
-            var pointers = ClueRelationshipPhrases.ComputePointers(PhraseBaseOffset);
+            var phrasePointers = ClueRelationshipPhrases.ComputePointers(PhraseBaseOffset);
+            var unknown = UnknownClueData.WriteBytes();
+            var popcount = CluePopcountTables.WriteBytes();
+            var monthPointers = MonthAbbreviations.ComputePointers(MonthBaseOffset);
 
             var total = phrases.Length + months.Length + headers.Length
                 + intelPhrases.Length + PointerTableSizeBytes
-                + UnknownClueDataSize + CluePopcountTablesSize + MonthPointerTableSize;
+                + unknown.Length + popcount.Length + MonthPointerTableSize;
             var result = new byte[total];
             var pos = 0;
             Array.Copy(phrases, 0, result, pos, phrases.Length); pos += phrases.Length;
@@ -111,13 +110,18 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
             Array.Copy(intelPhrases, 0, result, pos, intelPhrases.Length); pos += intelPhrases.Length;
             for (var i = 0; i < ClueRelationshipPhrasesSection.PhraseCount; i++)
             {
-                result[pos] = (byte)(pointers[i] & 0xFF);
-                result[pos + 1] = (byte)((pointers[i] >> 8) & 0xFF);
+                result[pos] = (byte)(phrasePointers[i] & 0xFF);
+                result[pos + 1] = (byte)((phrasePointers[i] >> 8) & 0xFF);
                 pos += 2;
             }
-            CopyFixed(UnknownClueData, result, pos, UnknownClueDataSize); pos += UnknownClueDataSize;
-            CopyFixed(CluePopcountTables, result, pos, CluePopcountTablesSize); pos += CluePopcountTablesSize;
-            CopyFixed(MonthPointerTable, result, pos, MonthPointerTableSize); pos += MonthPointerTableSize;
+            Array.Copy(unknown, 0, result, pos, unknown.Length); pos += unknown.Length;
+            Array.Copy(popcount, 0, result, pos, popcount.Length); pos += popcount.Length;
+            for (var i = 0; i < MonthAbbreviationsSection.MonthCount; i++)
+            {
+                result[pos] = (byte)(monthPointers[i] & 0xFF);
+                result[pos + 1] = (byte)((monthPointers[i] >> 8) & 0xFF);
+                pos += 2;
+            }
             return result;
         }
 
@@ -126,28 +130,14 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
             return new SharedClueAndIntelSection
             {
                 PhraseBaseOffset = PhraseBaseOffset,
+                MonthBaseOffset = MonthBaseOffset,
                 ClueRelationshipPhrases = ClueRelationshipPhrases.Clone(),
                 MonthAbbreviations = MonthAbbreviations.Clone(),
                 IntelHeaders = IntelHeaders.Clone(),
                 IntelPhrases = IntelPhrases.Clone(),
-                UnknownClueData = (byte[])UnknownClueData.Clone(),
-                CluePopcountTables = (byte[])CluePopcountTables.Clone(),
-                MonthPointerTable = (byte[])MonthPointerTable.Clone(),
+                UnknownClueData = UnknownClueData.Clone(),
+                CluePopcountTables = CluePopcountTables.Clone(),
             };
-        }
-
-        private static byte[] SliceFixed(byte[] src, int start, int len)
-        {
-            var dst = new byte[len];
-            Array.Copy(src, start, dst, 0, len);
-            return dst;
-        }
-
-        private static void CopyFixed(byte[] src, byte[] dst, int dstPos, int expectedLen)
-        {
-            if (src == null || src.Length == 0) return;
-            var len = src.Length < expectedLen ? src.Length : expectedLen;
-            Array.Copy(src, 0, dst, dstPos, len);
         }
     }
 }
