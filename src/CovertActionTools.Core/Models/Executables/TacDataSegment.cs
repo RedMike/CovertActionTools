@@ -39,12 +39,6 @@ namespace CovertActionTools.Core.Models.Executables
         #endregion
 
         #region PreCharNameData Sub-offsets (DS-relative)
-        private const int CluePhraseTableOffset = 0x2542;
-        private const int CluePhraseTableSize = 80;
-        private const int ClueCategoryDataOffset = 0x2592;
-        private const int ClueCategoryDataSize = 48;
-        private const int MonthTableOffset = 0x25C2;
-        private const int MonthTableSize = 24;
         private const int IntelPaddingOffset = 0x25DA;
         private const int IntelPaddingSize = 3;
         private const int IntelTextsStart = 0x25DD;
@@ -93,40 +87,14 @@ namespace CovertActionTools.Core.Models.Executables
 
         #region PreCharNameData (between Equipment Slot Rects and Character Names)
 
-        // TODO: ClueRelationshipPhrases, MonthAbbreviations, IntelHeaders and IntelPhrases are
-        // duplicated across TAC, FINAL, GAME and BUG. Each EXE currently carries its own
-        // section instance; long term the editor should present them once and fan edits out
-        // to every host EXE so they cannot drift apart.
-        /// <summary>40 clue relationship phrases used in evidence connections.</summary>
-        public ClueRelationshipPhrasesSection ClueRelationshipPhrases { get; set; } = new();
-
-        /// <summary>12 month abbreviations: "Jan", "Feb", ... "Dec".</summary>
-        public MonthAbbreviationsSection MonthAbbreviations { get; set; } = new();
-
-        /// <summary>4 intel report header strings.</summary>
-        public IntelHeadersSection IntelHeaders { get; set; } = new();
-
-        /// <summary>10 intel report sentence-joining phrase fragments.</summary>
-        public IntelPhrasesSection IntelPhrases { get; set; } = new();
-
-        /// <summary>Pointer table for the 40 clue relationship phrases (DS-relative offsets, preserved as raw bytes).</summary>
-        public byte[] CluePhrasePointerTable { get; set; } = Array.Empty<byte>();
-
-        /// <summary>
-        /// 48-byte clue category and popcount lookup table. Identical across FINAL/TAC/GAME.
-        /// Bytes 0-15: category bit flags per clue pair (values 1/2/4/8 = single-bit masks).
-        /// Bytes 16-23: popcount(0-7) + 0 lookup.
-        /// Bytes 24-31: popcount(0-7) + 1 lookup.
-        /// Bytes 32-39: popcount(0-7) + 1 lookup (duplicate of 24-31).
-        /// Bytes 40-47: popcount(0-7) + 2 lookup.
-        /// TODO: investigate how the clue system uses this table — the bit flags likely map
-        /// clue slots to evidence categories, and the popcount sub-tables count active categories
-        /// for a given bitmask. Trace from GAME.EXE clue processing code to confirm.
-        /// </summary>
-        public byte[] ClueCategoryData { get; set; } = Array.Empty<byte>();
-
-        /// <summary>Pointer table for the 12 month abbreviations (DS-relative offsets, preserved as raw bytes).</summary>
-        public byte[] MonthPointerTable { get; set; } = Array.Empty<byte>();
+        // TODO: The clue/intel string tables inside SharedClueAndIntel are duplicated across
+        // TAC, FINAL, GAME and BUG. Each EXE currently carries its own section instance; long
+        // term the editor should present them once and fan edits out to every host EXE so
+        // they cannot drift apart.
+        /// <summary>Clue relationship phrases, month abbreviations, intel headers, intel
+        /// phrases, the 40-entry clue phrase pointer table, the opaque UnknownClueData
+        /// block, the popcount lookup tables, and the month pointer table (0x226C-0x25DA).</summary>
+        public SharedClueAndIntelSection SharedClueAndIntel { get; set; } = new();
 
         /// <summary>Padding bytes between month pointer table and intel report texts.</summary>
         public byte[] IntelMidPadding { get; set; } = Array.Empty<byte>();
@@ -215,16 +183,10 @@ namespace CovertActionTools.Core.Models.Executables
             offset = ReadSectionWithPadding(segment.InventoryItemSelectionNavigation, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.InventoryItemRagdollCoordinates, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.InventoryItemSelectionRectangles, dataSegment, offset);
-            offset = ReadSectionWithPadding(segment.ClueRelationshipPhrases, dataSegment, offset);
-            offset = ReadSectionWithPadding(segment.MonthAbbreviations, dataSegment, offset);
-            offset = ReadSectionWithPadding(segment.IntelHeaders, dataSegment, offset);
-            offset = ReadSectionWithPadding(segment.IntelPhrases, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.SharedClueAndIntel, dataSegment, offset);
 
             #region Parse PreCharNameData sub-sections
 
-            segment.CluePhrasePointerTable = DataSegmentHelper.Slice(dataSegment, CluePhraseTableOffset, CluePhraseTableSize);
-            segment.ClueCategoryData = DataSegmentHelper.Slice(dataSegment, ClueCategoryDataOffset, ClueCategoryDataSize);
-            segment.MonthPointerTable = DataSegmentHelper.Slice(dataSegment, MonthTableOffset, MonthTableSize);
             segment.IntelMidPadding = DataSegmentHelper.Slice(dataSegment, IntelPaddingOffset, IntelPaddingSize);
 
             var (intelTexts, intelTextSzs) = DataSegmentHelper.ControlStringsFromBytes(
@@ -277,9 +239,6 @@ namespace CovertActionTools.Core.Models.Executables
         public byte[] ToBytes()
         {
             var preCharNameBytes = DataSegmentHelper.Concatenate(
-                CluePhrasePointerTable,
-                ClueCategoryData,
-                MonthPointerTable,
                 IntelMidPadding,
                 DataSegmentHelper.ControlStringsToFixedBytes(IntelReportTexts, IntelReportTextSizes),
                 DataSegmentHelper.ControlStringsToFixedBytes(RankNames, RankNameSizes),
@@ -323,10 +282,7 @@ namespace CovertActionTools.Core.Models.Executables
                 InventoryItemSelectionNavigation,
                 InventoryItemRagdollCoordinates,
                 InventoryItemSelectionRectangles,
-                ClueRelationshipPhrases,
-                MonthAbbreviations,
-                IntelHeaders,
-                IntelPhrases
+                SharedClueAndIntel
             );
 
             var charNamesBaseOffset = allSectionBytes.Length + preCharNameBytes.Length;
@@ -400,13 +356,7 @@ namespace CovertActionTools.Core.Models.Executables
                 InventoryItemSelectionNavigation = InventoryItemSelectionNavigation.Clone(),
                 InventoryItemRagdollCoordinates = InventoryItemRagdollCoordinates.Clone(),
                 InventoryItemSelectionRectangles = InventoryItemSelectionRectangles.Clone(),
-                ClueRelationshipPhrases = ClueRelationshipPhrases.Clone(),
-                MonthAbbreviations = MonthAbbreviations.Clone(),
-                IntelHeaders = IntelHeaders.Clone(),
-                IntelPhrases = IntelPhrases.Clone(),
-                CluePhrasePointerTable = CluePhrasePointerTable.ToArray(),
-                ClueCategoryData = ClueCategoryData.ToArray(),
-                MonthPointerTable = MonthPointerTable.ToArray(),
+                SharedClueAndIntel = SharedClueAndIntel.Clone(),
                 IntelMidPadding = IntelMidPadding.ToArray(),
                 IntelReportTexts = IntelReportTexts.ToArray(),
                 IntelReportTextSizes = IntelReportTextSizes.ToArray(),
