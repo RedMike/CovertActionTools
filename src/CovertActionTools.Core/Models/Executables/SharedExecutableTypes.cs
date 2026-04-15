@@ -43,14 +43,19 @@ namespace CovertActionTools.Core.Models.Executables
             {
                 var bytes = section.WriteBytes();
                 parts.AddRange(bytes);
-                if (section is IPaddedToWord && parts.Count % 2 != 0)
-                {
-                    parts.Add(0);
-                }
-                else if (section is IPaddedToParagraph && parts.Count % 16 != 0)
+                if (section is IPaddedToParagraph && parts.Count % 16 != 0)
                 {
                     var padding = 16 - (parts.Count % 16);
                     for (var i = 0; i < padding; i++) parts.Add(0);
+                }
+                else if (section is IPaddedToDword && parts.Count % 4 != 0)
+                {
+                    var padding = 4 - (parts.Count % 4);
+                    for (var i = 0; i < padding; i++) parts.Add(0);
+                }
+                else if (section is IPaddedToWord && parts.Count % 2 != 0)
+                {
+                    parts.Add(0);
                 }
             }
             return parts.ToArray();

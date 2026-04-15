@@ -39,9 +39,12 @@ namespace CovertActionTools.Core.Models.Executables
         #endregion
 
         #region PreCharNameData Sub-offsets (DS-relative)
-        private const int IntelPaddingOffset = 0x25DA;
-        private const int IntelPaddingSize = 3;
-        private const int IntelTextsStart = 0x25DD;
+        // IntelReportTexts begins at 0x25DC; the two bytes at 0x25DA-0x25DB are
+        // dword-alignment padding owned by SharedClueAndIntel (IPaddedToDword).
+        // The byte at 0x25DC is a zero which acts as an empty-string entry used by
+        // the intel formatter to reset the destination buffer before appending a
+        // suffix -- it is the first slot of IntelReportTexts, not padding.
+        private const int IntelTextsStart = 0x25DC;
         private const int RankNamesStart = 0x274C;
         private const int EvidenceTypesStart = 0x279F;
         private const int EvidenceItemsStart = 0x27BB;
@@ -96,10 +99,7 @@ namespace CovertActionTools.Core.Models.Executables
         /// block, the popcount lookup tables, and the month pointer table (0x226C-0x25DA).</summary>
         public SharedClueAndIntelSection SharedClueAndIntel { get; set; } = new();
 
-        /// <summary>Padding bytes between month pointer table and intel report texts.</summary>
-        public byte[] IntelMidPadding { get; set; } = Array.Empty<byte>();
-
-        // TODO: Investigate string identification for IntelReportTexts -- the region from 0x25DD to
+        // TODO: Investigate string identification for IntelReportTexts -- the region from 0x25DC to
         // 0x274C is extracted as null-terminated strings, but some entries are empty or single-char
         // values that may be binary data or format control codes rather than displayable text.
         /// <summary>Intel report text templates used in the clue/intel display system.</summary>
@@ -187,8 +187,6 @@ namespace CovertActionTools.Core.Models.Executables
 
             #region Parse PreCharNameData sub-sections
 
-            segment.IntelMidPadding = DataSegmentHelper.Slice(dataSegment, IntelPaddingOffset, IntelPaddingSize);
-
             var (intelTexts, intelTextSzs) = DataSegmentHelper.ControlStringsFromBytes(
                 dataSegment, IntelTextsStart, RankNamesStart - IntelTextsStart);
             segment.IntelReportTexts = intelTexts;
@@ -239,7 +237,6 @@ namespace CovertActionTools.Core.Models.Executables
         public byte[] ToBytes()
         {
             var preCharNameBytes = DataSegmentHelper.Concatenate(
-                IntelMidPadding,
                 DataSegmentHelper.ControlStringsToFixedBytes(IntelReportTexts, IntelReportTextSizes),
                 DataSegmentHelper.ControlStringsToFixedBytes(RankNames, RankNameSizes),
                 DataSegmentHelper.ControlStringsToFixedBytes(EvidenceTypeAbbreviations, EvidenceTypeSizes),
@@ -302,10 +299,12 @@ namespace CovertActionTools.Core.Models.Executables
         private static int ReadSectionWithPadding(IExecutableSection section, byte[] data, int offset)
         {
             offset += section.ReadBytes(data, offset);
-            if (section is IPaddedToWord && offset % 2 != 0)
-                offset++;
-            else if (section is IPaddedToParagraph && offset % 16 != 0)
+            if (section is IPaddedToParagraph && offset % 16 != 0)
                 offset += 16 - (offset % 16);
+            else if (section is IPaddedToDword && offset % 4 != 0)
+                offset += 4 - (offset % 4);
+            else if (section is IPaddedToWord && offset % 2 != 0)
+                offset++;
             return offset;
         }
 
@@ -357,7 +356,6 @@ namespace CovertActionTools.Core.Models.Executables
                 InventoryItemRagdollCoordinates = InventoryItemRagdollCoordinates.Clone(),
                 InventoryItemSelectionRectangles = InventoryItemSelectionRectangles.Clone(),
                 SharedClueAndIntel = SharedClueAndIntel.Clone(),
-                IntelMidPadding = IntelMidPadding.ToArray(),
                 IntelReportTexts = IntelReportTexts.ToArray(),
                 IntelReportTextSizes = IntelReportTextSizes.ToArray(),
                 RankNames = RankNames.ToArray(),

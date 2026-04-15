@@ -16,10 +16,11 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
     ///   0x2592 UnknownClueData (16 bytes)
     ///   0x25A2 CluePopcountTables (32 bytes, 4 sub-tables of 8)
     ///   0x25C2 month pointer table (24 bytes, 12 entries, regenerated on write)
-    ///   0x25DA end
+    ///   0x25DA end of data (two bytes of dword-alignment padding follow before
+    ///          the next section, handled by <see cref="IPaddedToDword"/>)
     /// GAME/FINAL/BUG carry the same structure at different DS bases.
     /// </summary>
-    public class SharedClueAndIntelSection : IExecutableSection
+    public class SharedClueAndIntelSection : IExecutableSection, IPaddedToDword
     {
         /// <summary>
         /// DS-relative offset of the first clue relationship phrase. Used as the base for
