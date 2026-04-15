@@ -16,11 +16,12 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
     ///   0x2592 UnknownClueData (16 bytes)
     ///   0x25A2 CluePopcountTables (32 bytes, 4 sub-tables of 8)
     ///   0x25C2 month pointer table (24 bytes, 12 entries, regenerated on write)
-    ///   0x25DA end of data (two bytes of dword-alignment padding follow before
-    ///          the next section, handled by <see cref="IPaddedToDword"/>)
+    ///   0x25DA two bytes of dword-alignment padding (zero-filled on write)
+    ///   0x25DC IntelReportTexts (21 fixed-size slots, 368 bytes total)
+    ///   0x274C end of data (already dword-aligned, no trailing padding required)
     /// GAME/FINAL/BUG carry the same structure at different DS bases.
     /// </summary>
-    public class SharedClueAndIntelSection : IExecutableSection, IPaddedToDword
+    public class SharedClueAndIntelSection : IExecutableSection
     {
         /// <summary>
         /// DS-relative offset of the first clue relationship phrase. Used as the base for
@@ -67,10 +68,16 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
         /// Identical across TAC/GAME/FINAL/BUG (same bit-count math).</summary>
         public BlobRecord CluePopcountTables { get; set; } = new(CluePopcountTablesSize);
 
+        /// <summary>Intel report text fragments concatenated by the clue/intel formatter.
+        /// Sits 2 bytes after the month pointer table; those 2 bytes are dword-alignment
+        /// padding written as zeros and absorbed into this section.</summary>
+        public IntelReportTextsSection IntelReportTexts { get; set; } = new();
+
         private const int PointerTableSizeBytes = ClueRelationshipPhrasesSection.PhraseCount * 2;
         private const int UnknownClueDataSize = 16;
         private const int CluePopcountTablesSize = 32;
         private const int MonthPointerTableSize = MonthAbbreviationsSection.MonthCount * 2;
+        private const int IntelTextsAlignmentPadding = 2;
 
         public bool Viewable() => true;
         public bool Editable() => true;
@@ -87,6 +94,8 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
             offset += UnknownClueData.ReadBytes(fullPayload, offset);
             offset += CluePopcountTables.ReadBytes(fullPayload, offset);
             offset += MonthPointerTableSize;
+            offset += IntelTextsAlignmentPadding;
+            offset += IntelReportTexts.ReadBytes(fullPayload, offset);
             return offset - startingOffset;
         }
 
@@ -100,10 +109,12 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
             var unknown = UnknownClueData.WriteBytes();
             var popcount = CluePopcountTables.WriteBytes();
             var monthPointers = MonthAbbreviations.ComputePointers(MonthBaseOffset);
+            var intelTexts = IntelReportTexts.WriteBytes();
 
             var total = phrases.Length + months.Length + headers.Length
                 + intelPhrases.Length + PointerTableSizeBytes
-                + unknown.Length + popcount.Length + MonthPointerTableSize;
+                + unknown.Length + popcount.Length + MonthPointerTableSize
+                + IntelTextsAlignmentPadding + intelTexts.Length;
             var result = new byte[total];
             var pos = 0;
             Array.Copy(phrases, 0, result, pos, phrases.Length); pos += phrases.Length;
@@ -124,6 +135,8 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
                 result[pos + 1] = (byte)((monthPointers[i] >> 8) & 0xFF);
                 pos += 2;
             }
+            pos += IntelTextsAlignmentPadding;
+            Array.Copy(intelTexts, 0, result, pos, intelTexts.Length); pos += intelTexts.Length;
             return result;
         }
 
@@ -139,6 +152,7 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
                 IntelPhrases = IntelPhrases.Clone(),
                 UnknownClueData = UnknownClueData.Clone(),
                 CluePopcountTables = CluePopcountTables.Clone(),
+                IntelReportTexts = IntelReportTexts.Clone(),
             };
         }
     }

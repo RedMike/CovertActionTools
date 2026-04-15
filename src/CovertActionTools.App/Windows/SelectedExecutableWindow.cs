@@ -160,7 +160,8 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Intel Report Texts"))
         {
-            DrawStringArray(tac.IntelReportTexts, "IntelTxt", tac.IntelReportTextSizes);
+            var intelTexts = tac.SharedClueAndIntel.IntelReportTexts;
+            DrawStringArray(intelTexts.Strings, "IntelTxt", intelTexts.SlotSizes);
         }
 
         if (ImGui.CollapsingHeader("Rank Names"))

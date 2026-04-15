@@ -39,12 +39,8 @@ namespace CovertActionTools.Core.Models.Executables
         #endregion
 
         #region PreCharNameData Sub-offsets (DS-relative)
-        // IntelReportTexts begins at 0x25DC; the two bytes at 0x25DA-0x25DB are
-        // dword-alignment padding owned by SharedClueAndIntel (IPaddedToDword).
-        // The byte at 0x25DC is a zero which acts as an empty-string entry used by
-        // the intel formatter to reset the destination buffer before appending a
-        // suffix -- it is the first slot of IntelReportTexts, not padding.
-        private const int IntelTextsStart = 0x25DC;
+        // RankNames begins at 0x274C immediately after SharedClueAndIntel
+        // (which now absorbs IntelReportTexts and ends at 0x274C exactly).
         private const int RankNamesStart = 0x274C;
         private const int EvidenceTypesStart = 0x279F;
         private const int EvidenceItemsStart = 0x27BB;
@@ -96,16 +92,9 @@ namespace CovertActionTools.Core.Models.Executables
         // they cannot drift apart.
         /// <summary>Clue relationship phrases, month abbreviations, intel headers, intel
         /// phrases, the 40-entry clue phrase pointer table, the opaque UnknownClueData
-        /// block, the popcount lookup tables, and the month pointer table (0x226C-0x25DA).</summary>
+        /// block, the popcount lookup tables, the month pointer table, and the intel
+        /// report text fragments (0x226C-0x274C).</summary>
         public SharedClueAndIntelSection SharedClueAndIntel { get; set; } = new();
-
-        // TODO: Investigate string identification for IntelReportTexts -- the region from 0x25DC to
-        // 0x274C is extracted as null-terminated strings, but some entries are empty or single-char
-        // values that may be binary data or format control codes rather than displayable text.
-        /// <summary>Intel report text templates used in the clue/intel display system.</summary>
-        public string[] IntelReportTexts { get; set; } = Array.Empty<string>();
-        /// <summary>Original byte sizes for intel report text slots.</summary>
-        public int[] IntelReportTextSizes { get; set; } = Array.Empty<int>();
 
         /// <summary>8 agent rank names: "Recruit", "Operative", ... "MasterMind".</summary>
         public string[] RankNames { get; set; } = Array.Empty<string>();
@@ -187,11 +176,6 @@ namespace CovertActionTools.Core.Models.Executables
 
             #region Parse PreCharNameData sub-sections
 
-            var (intelTexts, intelTextSzs) = DataSegmentHelper.ControlStringsFromBytes(
-                dataSegment, IntelTextsStart, RankNamesStart - IntelTextsStart);
-            segment.IntelReportTexts = intelTexts;
-            segment.IntelReportTextSizes = intelTextSzs;
-
             var (ranks, rankSzs) = DataSegmentHelper.ControlStringsFromBytes(
                 dataSegment, RankNamesStart, EvidenceTypesStart - RankNamesStart);
             segment.RankNames = ranks;
@@ -237,7 +221,6 @@ namespace CovertActionTools.Core.Models.Executables
         public byte[] ToBytes()
         {
             var preCharNameBytes = DataSegmentHelper.Concatenate(
-                DataSegmentHelper.ControlStringsToFixedBytes(IntelReportTexts, IntelReportTextSizes),
                 DataSegmentHelper.ControlStringsToFixedBytes(RankNames, RankNameSizes),
                 DataSegmentHelper.ControlStringsToFixedBytes(EvidenceTypeAbbreviations, EvidenceTypeSizes),
                 DataSegmentHelper.ControlStringsToFixedBytes(EvidenceItemNames, EvidenceItemSizes),
@@ -356,8 +339,6 @@ namespace CovertActionTools.Core.Models.Executables
                 InventoryItemRagdollCoordinates = InventoryItemRagdollCoordinates.Clone(),
                 InventoryItemSelectionRectangles = InventoryItemSelectionRectangles.Clone(),
                 SharedClueAndIntel = SharedClueAndIntel.Clone(),
-                IntelReportTexts = IntelReportTexts.ToArray(),
-                IntelReportTextSizes = IntelReportTextSizes.ToArray(),
                 RankNames = RankNames.ToArray(),
                 RankNameSizes = RankNameSizes.ToArray(),
                 EvidenceTypeAbbreviations = EvidenceTypeAbbreviations.ToArray(),
