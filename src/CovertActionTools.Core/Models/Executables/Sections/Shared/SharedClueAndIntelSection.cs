@@ -46,17 +46,20 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
         // masks arranged as 8 pairs), but exhaustive raw-byte scans of every plausible
         // instruction encoding -- direct `[disp16]`, register-immediate `MOV reg,imm16`,
         // `PUSH imm16`, stored pointer words, segment-prefixed variants, far-pointer LDS/
-        // LES target data, and indexed `[reg+disp16]` with the literal displacement in
-        // range -- turn up no reference in TAC, GAME, FINAL, or BUG. The block is present
-        // only in the four EXEs that can show a clue screen (absent from CHASE and CODE),
-        // so it almost certainly does get read; we just have not located the access path
-        // yet. Possible remaining access paths (none yet confirmed): overlay code running
-        // under the host EXE's DS, runtime-computed pointer arithmetic from a nearby base
-        // (0x2542 or 0x25A2), or a runtime REP MOVS copy to a BSS buffer that is then
-        // read elsewhere. Preserved verbatim so a future investigation can pick it up.
+        // LES target data, indexed `[reg+disp16]` with the literal displacement in range,
+        // DS-resident pointer words targeting the block, and phrase-pointer-table /
+        // popcount-base over- or under-run -- all turn up no reference in TAC, GAME,
+        // FINAL, or BUG. The block is present only in the four EXEs that can show a clue
+        // screen (absent from CHASE and CODE), so it almost certainly does get read; we
+        // just have not located the access path yet. Possible remaining access paths
+        // (none yet confirmed): overlay code running under the host EXE's DS, runtime
+        // pointer arithmetic synthesised from two unrelated immediates, or a runtime REP
+        // MOVS copy into a BSS buffer that is then read elsewhere. Exposed as 16 per-byte
+        // records so the editor can test-zero each slot and observe whether the game
+        // changes behaviour.
         /// <summary>Opaque 16-byte block following the phrase pointer table. See TODO
         /// above for the investigation state.</summary>
-        public BlobRecord UnknownClueData { get; set; } = new(UnknownClueDataSize);
+        public UnknownClueByteRecord[] UnknownClueData { get; set; } = CreateEmptyUnknownClueData();
 
         /// <summary>32-byte popcount lookup table. 4 sub-tables of 8 bytes each:
         /// popcount(0..7)+0, popcount(0..7)+1, popcount(0..7)+1 (duplicate of the
@@ -67,9 +70,23 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
         public BlobRecord CluePopcountTables { get; set; } = new(CluePopcountTablesSize);
 
         private const int PointerTableSizeBytes = ClueRelationshipPhrasesSection.PhraseCount * 2;
-        private const int UnknownClueDataSize = 16;
+        public const int UnknownClueDataSize = 16;
         private const int CluePopcountTablesSize = 32;
         private const int MonthPointerTableSize = MonthAbbreviationsSection.MonthCount * 2;
+
+        private static UnknownClueByteRecord[] CreateEmptyUnknownClueData()
+        {
+            var arr = new UnknownClueByteRecord[UnknownClueDataSize];
+            for (var i = 0; i < UnknownClueDataSize; i++) arr[i] = new UnknownClueByteRecord();
+            return arr;
+        }
+
+        private UnknownClueByteRecord[] CloneUnknownClueData()
+        {
+            var arr = new UnknownClueByteRecord[UnknownClueDataSize];
+            for (var i = 0; i < UnknownClueDataSize; i++) arr[i] = UnknownClueData[i].Clone();
+            return arr;
+        }
 
         public bool Viewable() => true;
         public bool Editable() => true;
@@ -83,7 +100,10 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
             offset += IntelPhrases.ReadBytes(fullPayload, offset);
             // Pointer tables are recomputed on write from the phrase/month slot layouts.
             offset += PointerTableSizeBytes;
-            offset += UnknownClueData.ReadBytes(fullPayload, offset);
+            for (var i = 0; i < UnknownClueDataSize; i++)
+            {
+                offset += UnknownClueData[i].ReadBytes(fullPayload, offset);
+            }
             offset += CluePopcountTables.ReadBytes(fullPayload, offset);
             offset += MonthPointerTableSize;
             return offset - startingOffset;
@@ -96,13 +116,12 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
             var headers = IntelHeaders.WriteBytes();
             var intelPhrases = IntelPhrases.WriteBytes();
             var phrasePointers = ClueRelationshipPhrases.ComputePointers(PhraseBaseOffset);
-            var unknown = UnknownClueData.WriteBytes();
             var popcount = CluePopcountTables.WriteBytes();
             var monthPointers = MonthAbbreviations.ComputePointers(MonthBaseOffset);
 
             var total = phrases.Length + months.Length + headers.Length
                 + intelPhrases.Length + PointerTableSizeBytes
-                + unknown.Length + popcount.Length + MonthPointerTableSize;
+                + UnknownClueDataSize + popcount.Length + MonthPointerTableSize;
             var result = new byte[total];
             var pos = 0;
             Array.Copy(phrases, 0, result, pos, phrases.Length); pos += phrases.Length;
@@ -115,7 +134,11 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
                 result[pos + 1] = (byte)((phrasePointers[i] >> 8) & 0xFF);
                 pos += 2;
             }
-            Array.Copy(unknown, 0, result, pos, unknown.Length); pos += unknown.Length;
+            for (var i = 0; i < UnknownClueDataSize; i++)
+            {
+                result[pos + i] = UnknownClueData[i].Value;
+            }
+            pos += UnknownClueDataSize;
             Array.Copy(popcount, 0, result, pos, popcount.Length); pos += popcount.Length;
             for (var i = 0; i < MonthAbbreviationsSection.MonthCount; i++)
             {
@@ -136,7 +159,7 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Shared
                 MonthAbbreviations = MonthAbbreviations.Clone(),
                 IntelHeaders = IntelHeaders.Clone(),
                 IntelPhrases = IntelPhrases.Clone(),
-                UnknownClueData = UnknownClueData.Clone(),
+                UnknownClueData = CloneUnknownClueData(),
                 CluePopcountTables = CluePopcountTables.Clone(),
             };
         }
