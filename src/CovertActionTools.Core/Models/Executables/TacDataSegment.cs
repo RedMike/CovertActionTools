@@ -39,7 +39,6 @@ namespace CovertActionTools.Core.Models.Executables
         #endregion
 
         #region PreCharNameData Sub-offsets (DS-relative)
-        private const int IntelHeadersStart = 0x24BC;
         private const int CluePhraseTableOffset = 0x2542;
         private const int CluePhraseTableSize = 80;
         private const int ClueCategoryDataOffset = 0x2592;
@@ -94,22 +93,21 @@ namespace CovertActionTools.Core.Models.Executables
 
         #region PreCharNameData (between Equipment Slot Rects and Character Names)
 
-        // TODO: Clue relationship phrases are duplicated across multiple EXEs (TAC, FINAL, GAME, BUG).
-        // These should be merged into a shared data segment model so editing in one EXE updates all.
+        // TODO: ClueRelationshipPhrases, MonthAbbreviations, IntelHeaders and IntelPhrases are
+        // duplicated across TAC, FINAL, GAME and BUG. Each EXE currently carries its own
+        // section instance; long term the editor should present them once and fan edits out
+        // to every host EXE so they cannot drift apart.
         /// <summary>40 clue relationship phrases used in evidence connections.</summary>
         public ClueRelationshipPhrasesSection ClueRelationshipPhrases { get; set; } = new();
 
         /// <summary>12 month abbreviations: "Jan", "Feb", ... "Dec".</summary>
         public MonthAbbreviationsSection MonthAbbreviations { get; set; } = new();
 
-        // TODO: Investigate string identification for IntelHeaders -- the region from 0x24BC to
-        // 0x2542 is extracted as null-terminated strings, but some entries are empty or single-char
-        // filler values that may be binary data misidentified as strings. The boundary between
-        // headers and the clue phrase pointer table needs verification.
-        /// <summary>Intel report headers and filler text fragments ("CODED MESSAGE:", "MEETING NOTES:", etc.).</summary>
-        public string[] IntelHeaders { get; set; } = Array.Empty<string>();
-        /// <summary>Original byte sizes for intel header slots.</summary>
-        public int[] IntelHeaderSizes { get; set; } = Array.Empty<int>();
+        /// <summary>4 intel report header strings.</summary>
+        public IntelHeadersSection IntelHeaders { get; set; } = new();
+
+        /// <summary>10 intel report sentence-joining phrase fragments.</summary>
+        public IntelPhrasesSection IntelPhrases { get; set; } = new();
 
         /// <summary>Pointer table for the 40 clue relationship phrases (DS-relative offsets, preserved as raw bytes).</summary>
         public byte[] CluePhrasePointerTable { get; set; } = Array.Empty<byte>();
@@ -219,13 +217,10 @@ namespace CovertActionTools.Core.Models.Executables
             offset = ReadSectionWithPadding(segment.InventoryItemSelectionRectangles, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.ClueRelationshipPhrases, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.MonthAbbreviations, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.IntelHeaders, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.IntelPhrases, dataSegment, offset);
 
             #region Parse PreCharNameData sub-sections
-
-            var (intelHdrs, intelHdrSzs) = DataSegmentHelper.ControlStringsFromBytes(
-                dataSegment, IntelHeadersStart, CluePhraseTableOffset - IntelHeadersStart);
-            segment.IntelHeaders = intelHdrs;
-            segment.IntelHeaderSizes = intelHdrSzs;
 
             segment.CluePhrasePointerTable = DataSegmentHelper.Slice(dataSegment, CluePhraseTableOffset, CluePhraseTableSize);
             segment.ClueCategoryData = DataSegmentHelper.Slice(dataSegment, ClueCategoryDataOffset, ClueCategoryDataSize);
@@ -282,7 +277,6 @@ namespace CovertActionTools.Core.Models.Executables
         public byte[] ToBytes()
         {
             var preCharNameBytes = DataSegmentHelper.Concatenate(
-                DataSegmentHelper.ControlStringsToFixedBytes(IntelHeaders, IntelHeaderSizes),
                 CluePhrasePointerTable,
                 ClueCategoryData,
                 MonthPointerTable,
@@ -330,7 +324,9 @@ namespace CovertActionTools.Core.Models.Executables
                 InventoryItemRagdollCoordinates,
                 InventoryItemSelectionRectangles,
                 ClueRelationshipPhrases,
-                MonthAbbreviations
+                MonthAbbreviations,
+                IntelHeaders,
+                IntelPhrases
             );
 
             var charNamesBaseOffset = allSectionBytes.Length + preCharNameBytes.Length;
@@ -406,8 +402,8 @@ namespace CovertActionTools.Core.Models.Executables
                 InventoryItemSelectionRectangles = InventoryItemSelectionRectangles.Clone(),
                 ClueRelationshipPhrases = ClueRelationshipPhrases.Clone(),
                 MonthAbbreviations = MonthAbbreviations.Clone(),
-                IntelHeaders = IntelHeaders.ToArray(),
-                IntelHeaderSizes = IntelHeaderSizes.ToArray(),
+                IntelHeaders = IntelHeaders.Clone(),
+                IntelPhrases = IntelPhrases.Clone(),
                 CluePhrasePointerTable = CluePhrasePointerTable.ToArray(),
                 ClueCategoryData = ClueCategoryData.ToArray(),
                 MonthPointerTable = MonthPointerTable.ToArray(),
