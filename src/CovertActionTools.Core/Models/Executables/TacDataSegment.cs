@@ -23,9 +23,6 @@ namespace CovertActionTools.Core.Models.Executables
         private const int RoomTypeCount = 10;
         private const int ObjectsOffset = 0x018E;
         private const int ObjectCount = 62;
-        private const int InventoryItemNamesStart = 0x2034;
-        private const int EquipmentPointersOffset = 0x20E0;
-        private const int EquipmentPointerCount = 16;
         private const int InventoryItemSelectionNavigationOffset = 0x2100;
         private const int InventoryItemRagdollCoordinatesOffset = 0x2160;
         private const int InventoryItemSelectionRectanglesOffset = 0x220C;
@@ -93,7 +90,6 @@ namespace CovertActionTools.Core.Models.Executables
         public SignToCompassDirectionSection SignToCompassDirection { get; set; } = new();
         public CachedRoomDistanceTargetSection CachedRoomDistanceTarget { get; set; } = new();
         public InventoryItemNamesSection InventoryItemNames { get; set; } = new();
-        public EquipmentScreenFilenameSection EquipmentScreenFilename { get; set; } = new();
         public InventoryItemSelectionNavigationSection InventoryItemSelectionNavigation { get; set; } = new();
         public InventoryItemRagdollCoordinatesSection InventoryItemRagdollCoordinates { get; set; } = new();
         public InventoryItemSelectionRectanglesSection InventoryItemSelectionRectangles { get; set; } = new();
@@ -224,10 +220,6 @@ namespace CovertActionTools.Core.Models.Executables
             offset = ReadSectionWithPadding(segment.SignToCompassDirection, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.CachedRoomDistanceTarget, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.InventoryItemNames, dataSegment, offset);
-            offset = ReadSectionWithPadding(segment.EquipmentScreenFilename, dataSegment, offset);
-            // Equipment name pointer table (16 ushorts at DS:0x20E0) is not stored as a section;
-            // values are recomputed on write from InventoryItemNames field sizes.
-            offset += EquipmentPointerCount * 2;
             offset = ReadSectionWithPadding(segment.InventoryItemSelectionNavigation, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.InventoryItemRagdollCoordinates, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.InventoryItemSelectionRectangles, dataSegment, offset);
@@ -303,8 +295,6 @@ namespace CovertActionTools.Core.Models.Executables
 
         public byte[] ToBytes()
         {
-            var equipNamePointers = InventoryItemNames.ComputePointers(InventoryItemNamesStart);
-
             var preCharNameBytes = DataSegmentHelper.Concatenate(
                 DataSegmentHelper.ControlStringsToFixedBytes(ClueRelationshipPhrases, CluePhraseSizes),
                 DataSegmentHelper.ControlStringsToFixedBytes(MonthAbbreviations, MonthSizes),
@@ -322,7 +312,7 @@ namespace CovertActionTools.Core.Models.Executables
                 ClueSystemData
             );
 
-            var preEquipPointerBytes = DataSegmentHelper.Concatenate(
+            var allSectionBytes = DataSegmentHelper.Concatenate(
                 Header,
                 HeaderFilenames,
                 RoomTypes,
@@ -352,28 +342,17 @@ namespace CovertActionTools.Core.Models.Executables
                 SignToCompassDirection,
                 CachedRoomDistanceTarget,
                 InventoryItemNames,
-                EquipmentScreenFilename
-            );
-
-            var postEquipPointerBytes = DataSegmentHelper.Concatenate(
                 InventoryItemSelectionNavigation,
                 InventoryItemRagdollCoordinates,
                 InventoryItemSelectionRectangles
             );
 
-            var equipNamePointerBytes = DataSegmentHelper.UInt16ArrayToBytes(equipNamePointers);
-
-            var charNamesBaseOffset = preEquipPointerBytes.Length
-                + equipNamePointerBytes.Length
-                + postEquipPointerBytes.Length
-                + preCharNameBytes.Length;
+            var charNamesBaseOffset = allSectionBytes.Length + preCharNameBytes.Length;
             var charNamePointers = DataSegmentHelper.ComputeStringPointers(CharacterNames, charNamesBaseOffset);
             var charNamesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(CharacterNames);
 
             return DataSegmentHelper.Concatenate(
-                preEquipPointerBytes,
-                equipNamePointerBytes,
-                postEquipPointerBytes,
+                allSectionBytes,
                 preCharNameBytes,
                 charNamesBytes,
                 PostCharNameData,
@@ -436,7 +415,6 @@ namespace CovertActionTools.Core.Models.Executables
                 SignToCompassDirection = SignToCompassDirection.Clone(),
                 CachedRoomDistanceTarget = CachedRoomDistanceTarget.Clone(),
                 InventoryItemNames = InventoryItemNames.Clone(),
-                EquipmentScreenFilename = EquipmentScreenFilename.Clone(),
                 InventoryItemSelectionNavigation = InventoryItemSelectionNavigation.Clone(),
                 InventoryItemRagdollCoordinates = InventoryItemRagdollCoordinates.Clone(),
                 InventoryItemSelectionRectangles = InventoryItemSelectionRectangles.Clone(),
