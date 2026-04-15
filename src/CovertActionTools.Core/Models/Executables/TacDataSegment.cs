@@ -39,8 +39,6 @@ namespace CovertActionTools.Core.Models.Executables
         #endregion
 
         #region PreCharNameData Sub-offsets (DS-relative)
-        private const int CluePhrasesStart = 0x226C;
-        private const int MonthAbbrevsStart = 0x248C;
         private const int IntelHeadersStart = 0x24BC;
         private const int CluePhraseTableOffset = 0x2542;
         private const int CluePhraseTableSize = 80;
@@ -98,15 +96,11 @@ namespace CovertActionTools.Core.Models.Executables
 
         // TODO: Clue relationship phrases are duplicated across multiple EXEs (TAC, FINAL, GAME, BUG).
         // These should be merged into a shared data segment model so editing in one EXE updates all.
-        /// <summary>40 clue relationship phrases used in evidence connections (e.g. " tied to ", " registered to ").</summary>
-        public string[] ClueRelationshipPhrases { get; set; } = Array.Empty<string>();
-        /// <summary>Original byte sizes for clue phrase slots.</summary>
-        public int[] CluePhraseSizes { get; set; } = Array.Empty<int>();
+        /// <summary>40 clue relationship phrases used in evidence connections.</summary>
+        public ClueRelationshipPhrasesSection ClueRelationshipPhrases { get; set; } = new();
 
         /// <summary>12 month abbreviations: "Jan", "Feb", ... "Dec".</summary>
-        public string[] MonthAbbreviations { get; set; } = Array.Empty<string>();
-        /// <summary>Original byte sizes for month abbreviation slots.</summary>
-        public int[] MonthSizes { get; set; } = Array.Empty<int>();
+        public MonthAbbreviationsSection MonthAbbreviations { get; set; } = new();
 
         // TODO: Investigate string identification for IntelHeaders -- the region from 0x24BC to
         // 0x2542 is extracted as null-terminated strings, but some entries are empty or single-char
@@ -223,18 +217,10 @@ namespace CovertActionTools.Core.Models.Executables
             offset = ReadSectionWithPadding(segment.InventoryItemSelectionNavigation, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.InventoryItemRagdollCoordinates, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.InventoryItemSelectionRectangles, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.ClueRelationshipPhrases, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.MonthAbbreviations, dataSegment, offset);
 
             #region Parse PreCharNameData sub-sections
-
-            var (cluePhrases, clueSizes) = DataSegmentHelper.ControlStringsFromBytes(
-                dataSegment, CluePhrasesStart, MonthAbbrevsStart - CluePhrasesStart);
-            segment.ClueRelationshipPhrases = cluePhrases;
-            segment.CluePhraseSizes = clueSizes;
-
-            var (months, monthSzs) = DataSegmentHelper.ControlStringsFromBytes(
-                dataSegment, MonthAbbrevsStart, IntelHeadersStart - MonthAbbrevsStart);
-            segment.MonthAbbreviations = months;
-            segment.MonthSizes = monthSzs;
 
             var (intelHdrs, intelHdrSzs) = DataSegmentHelper.ControlStringsFromBytes(
                 dataSegment, IntelHeadersStart, CluePhraseTableOffset - IntelHeadersStart);
@@ -296,8 +282,6 @@ namespace CovertActionTools.Core.Models.Executables
         public byte[] ToBytes()
         {
             var preCharNameBytes = DataSegmentHelper.Concatenate(
-                DataSegmentHelper.ControlStringsToFixedBytes(ClueRelationshipPhrases, CluePhraseSizes),
-                DataSegmentHelper.ControlStringsToFixedBytes(MonthAbbreviations, MonthSizes),
                 DataSegmentHelper.ControlStringsToFixedBytes(IntelHeaders, IntelHeaderSizes),
                 CluePhrasePointerTable,
                 ClueCategoryData,
@@ -344,7 +328,9 @@ namespace CovertActionTools.Core.Models.Executables
                 InventoryItemNames,
                 InventoryItemSelectionNavigation,
                 InventoryItemRagdollCoordinates,
-                InventoryItemSelectionRectangles
+                InventoryItemSelectionRectangles,
+                ClueRelationshipPhrases,
+                MonthAbbreviations
             );
 
             var charNamesBaseOffset = allSectionBytes.Length + preCharNameBytes.Length;
@@ -418,10 +404,8 @@ namespace CovertActionTools.Core.Models.Executables
                 InventoryItemSelectionNavigation = InventoryItemSelectionNavigation.Clone(),
                 InventoryItemRagdollCoordinates = InventoryItemRagdollCoordinates.Clone(),
                 InventoryItemSelectionRectangles = InventoryItemSelectionRectangles.Clone(),
-                ClueRelationshipPhrases = ClueRelationshipPhrases.ToArray(),
-                CluePhraseSizes = CluePhraseSizes.ToArray(),
-                MonthAbbreviations = MonthAbbreviations.ToArray(),
-                MonthSizes = MonthSizes.ToArray(),
+                ClueRelationshipPhrases = ClueRelationshipPhrases.Clone(),
+                MonthAbbreviations = MonthAbbreviations.Clone(),
                 IntelHeaders = IntelHeaders.ToArray(),
                 IntelHeaderSizes = IntelHeaderSizes.ToArray(),
                 CluePhrasePointerTable = CluePhrasePointerTable.ToArray(),
