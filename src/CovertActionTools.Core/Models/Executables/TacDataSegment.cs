@@ -46,8 +46,8 @@ namespace CovertActionTools.Core.Models.Executables
         private const int IntelPhrasesOffset = 0x251E;
         private const int IntelReportTextsOffset = 0x25DC;
         private const int RankNamesOffset = 0x274C;
-        private const int EvidenceTypeAbbreviationsOffset = 0x279F;
-        private const int EvidenceItemNamesOffset = 0x27BB;
+        private const int ClueTypeAbbreviationsOffset = 0x279F;
+        private const int ClueItemNamesOffset = 0x27BB;
         private const int InvestigationMethodsOffset = 0x2AC6;
         private const int ClueHeaderStringsOffset = 0x2B4C;
         private const int ClueTargetStringsOffset = 0x2BC8;
@@ -101,8 +101,8 @@ namespace CovertActionTools.Core.Models.Executables
         public IntelPhrasesSection IntelPhrases { get; set; } = new();
         public IntelReportTextsSection IntelReportTexts { get; set; } = new();
         public RankNamesSection RankNames { get; set; } = new();
-        public EvidenceTypeAbbreviationsSection EvidenceTypeAbbreviations { get; set; } = new();
-        public EvidenceItemNamesSection EvidenceItemNames { get; set; } = new();
+        public ClueTypeAbbreviationsSection ClueTypeAbbreviations { get; set; } = new();
+        public ClueItemNamesSection ClueItemNames { get; set; } = new();
         public InvestigationMethodsSection InvestigationMethods { get; set; } = new();
         public ClueHeaderStringsSection ClueHeaderStrings { get; set; } = new();
         public ClueTargetStringsSection ClueTargetStrings { get; set; } = new();
@@ -154,8 +154,8 @@ namespace CovertActionTools.Core.Models.Executables
             segment.IntelPhrases.ReadBytes(dataSegment, IntelPhrasesOffset);
             segment.IntelReportTexts.ReadBytes(dataSegment, IntelReportTextsOffset);
             segment.RankNames.ReadBytes(dataSegment, RankNamesOffset);
-            segment.EvidenceTypeAbbreviations.ReadBytes(dataSegment, EvidenceTypeAbbreviationsOffset);
-            segment.EvidenceItemNames.ReadBytes(dataSegment, EvidenceItemNamesOffset);
+            segment.ClueTypeAbbreviations.ReadBytes(dataSegment, ClueTypeAbbreviationsOffset);
+            segment.ClueItemNames.ReadBytes(dataSegment, ClueItemNamesOffset);
             segment.InvestigationMethods.ReadBytes(dataSegment, InvestigationMethodsOffset);
             segment.ClueHeaderStrings.ReadBytes(dataSegment, ClueHeaderStringsOffset);
             segment.ClueTargetStrings.ReadBytes(dataSegment, ClueTargetStringsOffset);
@@ -206,8 +206,8 @@ namespace CovertActionTools.Core.Models.Executables
             Overlay(result, IntelPhrasesOffset, IntelPhrases.WriteBytes());
             Overlay(result, IntelReportTextsOffset, IntelReportTexts.WriteBytes());
             Overlay(result, RankNamesOffset, RankNames.WriteBytes());
-            Overlay(result, EvidenceTypeAbbreviationsOffset, EvidenceTypeAbbreviations.WriteBytes());
-            Overlay(result, EvidenceItemNamesOffset, EvidenceItemNames.WriteBytes());
+            Overlay(result, ClueTypeAbbreviationsOffset, ClueTypeAbbreviations.WriteBytes());
+            Overlay(result, ClueItemNamesOffset, ClueItemNames.WriteBytes());
             Overlay(result, InvestigationMethodsOffset, InvestigationMethods.WriteBytes());
             Overlay(result, ClueHeaderStringsOffset, ClueHeaderStrings.WriteBytes());
             Overlay(result, ClueTargetStringsOffset, ClueTargetStrings.WriteBytes());
@@ -263,8 +263,8 @@ namespace CovertActionTools.Core.Models.Executables
                 IntelPhrases = IntelPhrases.Clone(),
                 IntelReportTexts = IntelReportTexts.Clone(),
                 RankNames = RankNames.Clone(),
-                EvidenceTypeAbbreviations = EvidenceTypeAbbreviations.Clone(),
-                EvidenceItemNames = EvidenceItemNames.Clone(),
+                ClueTypeAbbreviations = ClueTypeAbbreviations.Clone(),
+                ClueItemNames = ClueItemNames.Clone(),
                 InvestigationMethods = InvestigationMethods.Clone(),
                 ClueHeaderStrings = ClueHeaderStrings.Clone(),
                 ClueTargetStrings = ClueTargetStrings.Clone(),

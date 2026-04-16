@@ -177,14 +177,14 @@ public class SelectedExecutableWindow : BaseWindow
             DrawStringArray(tac.RankNames.Strings, "Rank", tac.RankNames.SlotSizes);
         }
 
-        if (ImGui.CollapsingHeader("Evidence Type Abbreviations"))
+        if (ImGui.CollapsingHeader("Clue Type Abbreviations"))
         {
-            DrawStringArray(tac.EvidenceTypeAbbreviations.Strings, "EvType", tac.EvidenceTypeAbbreviations.SlotSizes);
+            DrawStringArray(tac.ClueTypeAbbreviations.Strings, "ClueAbbr", tac.ClueTypeAbbreviations.SlotSizes);
         }
 
-        if (ImGui.CollapsingHeader("Evidence Item Names"))
+        if (ImGui.CollapsingHeader("Clue Item Names"))
         {
-            DrawStringArray(tac.EvidenceItemNames.Strings, "EvItem", tac.EvidenceItemNames.SlotSizes);
+            DrawClueItemNames(tac.ClueItemNames);
         }
 
         if (ImGui.CollapsingHeader("Investigation Methods"))
@@ -1272,6 +1272,36 @@ public class SelectedExecutableWindow : BaseWindow
 
     // TODO: Allow different string lengths after pointer recalculation is implemented.
     // Currently each string is fixed to its original byte size to prevent pointer drift.
+    private void DrawClueItemNames(CovertActionTools.Core.Models.Executables.Sections.Shared.ClueItemNamesSection section)
+    {
+        for (var t = 0; t < CovertActionTools.Core.Models.Executables.Sections.Shared.ClueTypeAbbreviationsSection.ClueTypeCount; t++)
+        {
+            var type = (CovertActionTools.Core.Models.ClueType)t;
+            ImGui.PushID($"ClueType_{t}");
+            if (ImGui.TreeNode($"{type}"))
+            {
+                for (var i = 0; i < CovertActionTools.Core.Models.Executables.Sections.Shared.ClueItemNamesSection.ItemsPerType; i++)
+                {
+                    var flatIdx = t * CovertActionTools.Core.Models.Executables.Sections.Shared.ClueItemNamesSection.ItemsPerType + i;
+                    var slotSize = section.SlotSizes[flatIdx];
+                    var maxChars = slotSize - 1;
+                    if (maxChars < 1) maxChars = 1;
+                    ImGui.PushID($"item_{i}");
+                    var label = $"[{i}] (max {maxChars})";
+                    var newVal = ImGuiExtensions.Input(label, section.GetString(type, i), maxChars + 1, width: 240);
+                    if (newVal != null && newVal.Length <= maxChars)
+                    {
+                        section.SetString(type, i, newVal);
+                        _pendingState.RecordChange();
+                    }
+                    ImGui.PopID();
+                }
+                ImGui.TreePop();
+            }
+            ImGui.PopID();
+        }
+    }
+
     private void DrawStringArray(IList<string> strings, string idPrefix, int[]? byteSizes = null)
     {
         for (var i = 0; i < strings.Count; i++)
