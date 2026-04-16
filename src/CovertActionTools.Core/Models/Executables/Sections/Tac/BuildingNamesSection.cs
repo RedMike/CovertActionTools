@@ -6,10 +6,9 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Tac
     /// <summary>
     /// Five building-type suffix strings appended after an organisation name when
     /// the game labels a mission location ("&lt;org&gt; hideout", "&lt;org&gt; agent", etc.).
-    /// Each starts with a leading space that acts as the separator. The fourth
-    /// entry is stored as " active cel" (single 'l') in the original ROM; the
-    /// final 'l' of "cell" is appended elsewhere at render time, so the truncation
-    /// is preserved verbatim for round-trip fidelity.
+    /// Each starts with a leading space that acts as the separator. " active cel"
+    /// is the spelling actually used in-game -- that truncation is the original
+    /// label, not a storage artefact.
     /// </summary>
     public class BuildingNamesSection : ExactCountFixedSizeStringTableSection
     {

@@ -6,8 +6,8 @@ namespace CovertActionTools.Core.Models.Executables.Sections.Tac
     /// <summary>
     /// Single fixed-size string shown when the player tries to open a file their
     /// security clearance does not permit: "This information requires security
-    /// clearance: ". The trailing space is intentional -- the game appends the
-    /// required clearance level onto the end of the message at render time.
+    /// clearance: ". The trailing space is part of the string as rendered; the
+    /// game does not append anything to it.
     /// </summary>
     public class LoadFailedStringSection : ExactCountFixedSizeStringTableSection
     {

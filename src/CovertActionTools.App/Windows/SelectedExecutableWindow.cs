@@ -223,7 +223,23 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Time Template"))
         {
-            DrawStringArray(tac.TimeTemplateString.Strings, "TimeTpl", tac.TimeTemplateString.SlotSizes);
+            ImGui.TextWrapped("Only the separator characters are editable; the digits are overwritten in place by the clock formatter at render time.");
+
+            var sep1 = tac.TimeTemplateString.HoursMinutesSeparator.ToString();
+            var newSep1 = ImGuiExtensions.Input("HH-MM separator", sep1, 1, width: 40);
+            if (newSep1 != null && newSep1.Length > 0)
+            {
+                tac.TimeTemplateString.HoursMinutesSeparator = newSep1[0];
+                _pendingState.RecordChange();
+            }
+
+            var sep2 = tac.TimeTemplateString.MinutesSecondsSeparator.ToString();
+            var newSep2 = ImGuiExtensions.Input("MM-SS separator", sep2, 1, width: 40);
+            if (newSep2 != null && newSep2.Length > 0)
+            {
+                tac.TimeTemplateString.MinutesSecondsSeparator = newSep2[0];
+                _pendingState.RecordChange();
+            }
         }
 
         if (ImGui.CollapsingHeader("Loading Message"))
