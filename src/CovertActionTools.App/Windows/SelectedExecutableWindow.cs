@@ -175,6 +175,58 @@ public class SelectedExecutableWindow : BaseWindow
         {
             DrawStringArray(tac.InvestigationMethods.Strings, "InvMethod", tac.InvestigationMethods.SlotSizes);
         }
+
+        if (ImGui.CollapsingHeader("Clue Header Strings"))
+        {
+            DrawStringArray(tac.ClueHeaderStrings.Strings, "ClueHdr", tac.ClueHeaderStrings.SlotSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Clue Target Strings"))
+        {
+            DrawStringArray(tac.ClueTargetStrings.Strings, "ClueTgt", tac.ClueTargetStrings.SlotSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Suspect File Strings"))
+        {
+            DrawStringArray(tac.SuspectFileStrings.Strings, "SuspFile", tac.SuspectFileStrings.SlotSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Load Failed String"))
+        {
+            DrawStringArray(tac.LoadFailedString.Strings, "LoadFail", tac.LoadFailedString.SlotSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Building Names"))
+        {
+            DrawStringArray(tac.BuildingNames.Strings, "BldgName", tac.BuildingNames.SlotSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Unknown Agent Template String"))
+        {
+            DrawStringArray(tac.UnknownAgentTemplateString.Strings, "UnkAgent", tac.UnknownAgentTemplateString.SlotSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Found Document Strings"))
+        {
+            DrawStringArray(tac.FoundDocumentStrings.Strings, "FoundDoc", tac.FoundDocumentStrings.SlotSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Time Template"))
+        {
+            DrawStringArray(tac.TimeTemplateString.Strings, "TimeTpl", tac.TimeTemplateString.SlotSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Loading Message"))
+        {
+            DrawStringArray(tac.LoadingMessageString.Strings, "LoadMsg", tac.LoadingMessageString.SlotSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Quit Menu"))
+        {
+            ImGuiExtensions.DrawMenuStringRecord(
+                "QuitMenu", tac.QuitMenu.Menu, new System.Numerics.Vector2(300, 48),
+                () => _pendingState.RecordChange());
+        }
     }
 
     #endregion

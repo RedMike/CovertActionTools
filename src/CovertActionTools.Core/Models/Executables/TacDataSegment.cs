@@ -49,6 +49,16 @@ namespace CovertActionTools.Core.Models.Executables
         private const int EvidenceTypeAbbreviationsOffset = 0x279F;
         private const int EvidenceItemNamesOffset = 0x27BB;
         private const int InvestigationMethodsOffset = 0x2AC6;
+        private const int ClueHeaderStringsOffset = 0x2B4C;
+        private const int ClueTargetStringsOffset = 0x2BC8;
+        private const int SuspectFileStringsOffset = 0x2C0D;
+        private const int LoadFailedStringOffset = 0x2E46;
+        private const int BuildingNamesOffset = 0x2F2A;
+        private const int UnknownAgentTemplateStringOffset = 0x2F59;
+        private const int FoundDocumentStringsOffset = 0x35EC;
+        private const int TimeTemplateStringOffset = 0x364C;
+        private const int LoadingMessageStringOffset = 0x3656;
+        private const int QuitMenuOffset = 0x366B;
 
         private const int CharacterNamePointersOffset = 0x346C;
         private const int CharacterNamePointerCount = 192;
@@ -93,6 +103,16 @@ namespace CovertActionTools.Core.Models.Executables
         public EvidenceTypeAbbreviationsSection EvidenceTypeAbbreviations { get; set; } = new();
         public EvidenceItemNamesSection EvidenceItemNames { get; set; } = new();
         public InvestigationMethodsSection InvestigationMethods { get; set; } = new();
+        public ClueHeaderStringsSection ClueHeaderStrings { get; set; } = new();
+        public ClueTargetStringsSection ClueTargetStrings { get; set; } = new();
+        public SuspectFileStringsSection SuspectFileStrings { get; set; } = new();
+        public LoadFailedStringSection LoadFailedString { get; set; } = new();
+        public BuildingNamesSection BuildingNames { get; set; } = new();
+        public UnknownAgentTemplateStringSection UnknownAgentTemplateString { get; set; } = new();
+        public FoundDocumentStringsSection FoundDocumentStrings { get; set; } = new();
+        public TimeTemplateStringSection TimeTemplateString { get; set; } = new();
+        public LoadingMessageStringSection LoadingMessageString { get; set; } = new();
+        public QuitMenuSection QuitMenu { get; set; } = new();
 
         /// <summary>192 character names (4 ethnic groups x female first / male first / male surname, 16 each).</summary>
         public string[] CharacterNames { get; set; } = Array.Empty<string>();
@@ -135,6 +155,16 @@ namespace CovertActionTools.Core.Models.Executables
             segment.EvidenceTypeAbbreviations.ReadBytes(dataSegment, EvidenceTypeAbbreviationsOffset);
             segment.EvidenceItemNames.ReadBytes(dataSegment, EvidenceItemNamesOffset);
             segment.InvestigationMethods.ReadBytes(dataSegment, InvestigationMethodsOffset);
+            segment.ClueHeaderStrings.ReadBytes(dataSegment, ClueHeaderStringsOffset);
+            segment.ClueTargetStrings.ReadBytes(dataSegment, ClueTargetStringsOffset);
+            segment.SuspectFileStrings.ReadBytes(dataSegment, SuspectFileStringsOffset);
+            segment.LoadFailedString.ReadBytes(dataSegment, LoadFailedStringOffset);
+            segment.BuildingNames.ReadBytes(dataSegment, BuildingNamesOffset);
+            segment.UnknownAgentTemplateString.ReadBytes(dataSegment, UnknownAgentTemplateStringOffset);
+            segment.FoundDocumentStrings.ReadBytes(dataSegment, FoundDocumentStringsOffset);
+            segment.TimeTemplateString.ReadBytes(dataSegment, TimeTemplateStringOffset);
+            segment.LoadingMessageString.ReadBytes(dataSegment, LoadingMessageStringOffset);
+            segment.QuitMenu.ReadBytes(dataSegment, QuitMenuOffset);
 
             var charPtrs = DataSegmentHelper.BytesToUInt16Array(
                 dataSegment, CharacterNamePointersOffset, CharacterNamePointerCount);
@@ -177,6 +207,16 @@ namespace CovertActionTools.Core.Models.Executables
             Overlay(result, EvidenceTypeAbbreviationsOffset, EvidenceTypeAbbreviations.WriteBytes());
             Overlay(result, EvidenceItemNamesOffset, EvidenceItemNames.WriteBytes());
             Overlay(result, InvestigationMethodsOffset, InvestigationMethods.WriteBytes());
+            Overlay(result, ClueHeaderStringsOffset, ClueHeaderStrings.WriteBytes());
+            Overlay(result, ClueTargetStringsOffset, ClueTargetStrings.WriteBytes());
+            Overlay(result, SuspectFileStringsOffset, SuspectFileStrings.WriteBytes());
+            Overlay(result, LoadFailedStringOffset, LoadFailedString.WriteBytes());
+            Overlay(result, BuildingNamesOffset, BuildingNames.WriteBytes());
+            Overlay(result, UnknownAgentTemplateStringOffset, UnknownAgentTemplateString.WriteBytes());
+            Overlay(result, FoundDocumentStringsOffset, FoundDocumentStrings.WriteBytes());
+            Overlay(result, TimeTemplateStringOffset, TimeTemplateString.WriteBytes());
+            Overlay(result, LoadingMessageStringOffset, LoadingMessageString.WriteBytes());
+            Overlay(result, QuitMenuOffset, QuitMenu.WriteBytes());
 
             OverlayCharacterNames(result);
 
@@ -262,6 +302,16 @@ namespace CovertActionTools.Core.Models.Executables
                 EvidenceTypeAbbreviations = EvidenceTypeAbbreviations.Clone(),
                 EvidenceItemNames = EvidenceItemNames.Clone(),
                 InvestigationMethods = InvestigationMethods.Clone(),
+                ClueHeaderStrings = ClueHeaderStrings.Clone(),
+                ClueTargetStrings = ClueTargetStrings.Clone(),
+                SuspectFileStrings = SuspectFileStrings.Clone(),
+                LoadFailedString = LoadFailedString.Clone(),
+                BuildingNames = BuildingNames.Clone(),
+                UnknownAgentTemplateString = UnknownAgentTemplateString.Clone(),
+                FoundDocumentStrings = FoundDocumentStrings.Clone(),
+                TimeTemplateString = TimeTemplateString.Clone(),
+                LoadingMessageString = LoadingMessageString.Clone(),
+                QuitMenu = QuitMenu.Clone(),
                 CharacterNames = CharacterNames.Select(s => s).ToArray(),
             };
         }
