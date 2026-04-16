@@ -98,14 +98,11 @@ public class SelectedExecutableWindow : BaseWindow
 
     private void DrawTacData(TacDataSegment tac)
     {
-        TacImGuiHelpers.DrawTacHeaderFilenamesSection(tac.HeaderFilenames);
         TacImGuiHelpers.DrawRoomTypeSection(tac.RoomTypes, _pendingState);
 
         var roomTypeNames = tac.RoomTypes.RoomTypes.Select(r => r.Name).ToList();
         roomTypeNames.Add("Target Room");
         TacImGuiHelpers.DrawMapObjectTypeSection(tac.MapObjectTypes, _pendingState, roomTypeNames);
-        TacImGuiHelpers.DrawMovementSection(tac.Movement, _pendingState);
-        TacImGuiHelpers.DrawRenderingSection(tac.Rendering, _pendingState);
         TacImGuiHelpers.DrawCgaColorRemapSection(tac.CgaColorRemap, _pendingState);
         TacImGuiHelpers.DrawVgaPaletteRemapSection(tac.VgaPaletteRemap, _pendingState);
         TacImGuiHelpers.DrawDoorEntryStringsSection(tac.MissionStateBlock, _pendingState);
@@ -120,6 +117,12 @@ public class SelectedExecutableWindow : BaseWindow
         TacImGuiHelpers.DrawFloorSafeInventoryItemRewardSection(tac.FloorSafeInventoryItemRewards, _pendingState, tac.InventoryItemNames.Strings);
         TacImGuiHelpers.DrawPasswordDialogTextsSection(tac.PasswordDialogTexts, _pendingState);
         TacImGuiHelpers.DrawWallTileDirectionSpriteSection(tac.WallTileDirectionSprite, _pendingState);
+
+        if (ImGui.CollapsingHeader("Ambush Location Room Name"))
+        {
+            DrawStringArray(tac.AmbushLocationRoomName.Strings, "AmbushRoom", tac.AmbushLocationRoomName.SlotSizes);
+        }
+
         TacImGuiHelpers.DrawInventoryItemNamesSection(tac.InventoryItemNames, _pendingState);
 
         TacImGuiHelpers.DrawInventoryItemSelectionNavigationSection(
@@ -129,74 +132,133 @@ public class SelectedExecutableWindow : BaseWindow
         TacImGuiHelpers.DrawInventoryItemSelectionRectanglesSection(
             tac.InventoryItemSelectionRectangles, _pendingState, tac.InventoryItemNames.Strings);
 
-        if (ImGui.CollapsingHeader("Character Names"))
+        if (ImGui.CollapsingHeader("Female First Names"))
         {
-            DrawStringArray(tac.CharacterNames, "CharName");
+            DrawStringArray(tac.FemaleFirstNames.Strings, "FemFirst", tac.FemaleFirstNames.SlotSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Male First Names"))
+        {
+            DrawStringArray(tac.MaleFirstNames.Strings, "MaleFirst", tac.MaleFirstNames.SlotSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Last Names"))
+        {
+            DrawStringArray(tac.LastNames.Strings, "LastName", tac.LastNames.SlotSizes);
         }
 
         if (ImGui.CollapsingHeader("Clue Relationship Phrases"))
         {
-            var phrases = tac.SharedClueAndIntel.ClueRelationshipPhrases;
-            DrawStringArray(phrases.Strings, "CluePhrase", phrases.SlotSizes);
+            DrawStringArray(tac.ClueRelationshipPhrases.Strings, "CluePhrase", tac.ClueRelationshipPhrases.SlotSizes);
         }
 
         if (ImGui.CollapsingHeader("Month Abbreviations"))
         {
-            var months = tac.SharedClueAndIntel.MonthAbbreviations;
-            DrawStringArray(months.Strings, "Month", months.SlotSizes);
+            DrawStringArray(tac.MonthAbbreviations.Strings, "Month", tac.MonthAbbreviations.SlotSizes);
         }
 
         if (ImGui.CollapsingHeader("Intel Headers"))
         {
-            var headers = tac.SharedClueAndIntel.IntelHeaders;
-            DrawStringArray(headers.Strings, "IntelHdr", headers.SlotSizes);
+            DrawStringArray(tac.IntelHeaders.Strings, "IntelHdr", tac.IntelHeaders.SlotSizes);
         }
 
         if (ImGui.CollapsingHeader("Intel Phrases"))
         {
-            var intelPhrases = tac.SharedClueAndIntel.IntelPhrases;
-            DrawStringArray(intelPhrases.Strings, "IntelPhr", intelPhrases.SlotSizes);
+            DrawStringArray(tac.IntelPhrases.Strings, "IntelPhr", tac.IntelPhrases.SlotSizes);
         }
 
         if (ImGui.CollapsingHeader("Intel Report Texts"))
         {
-            var intelTexts = tac.SharedClueAndIntel.IntelReportTexts;
-            DrawStringArray(intelTexts.Strings, "IntelTxt", intelTexts.SlotSizes);
+            DrawStringArray(tac.IntelReportTexts.Strings, "IntelTxt", tac.IntelReportTexts.SlotSizes);
         }
 
         if (ImGui.CollapsingHeader("Rank Names"))
         {
-            var rankNames = tac.SharedClueAndIntel.RankNames;
-            DrawStringArray(rankNames.Strings, "Rank", rankNames.SlotSizes);
+            DrawStringArray(tac.RankNames.Strings, "Rank", tac.RankNames.SlotSizes);
         }
 
-        if (ImGui.CollapsingHeader("Evidence Type Abbreviations"))
+        if (ImGui.CollapsingHeader("Clue Type Abbreviations"))
         {
-            var evTypes = tac.SharedClueAndIntel.EvidenceTypeAbbreviations;
-            DrawStringArray(evTypes.Strings, "EvType", evTypes.SlotSizes);
+            DrawStringArray(tac.ClueTypeAbbreviations.Strings, "ClueAbbr", tac.ClueTypeAbbreviations.SlotSizes);
         }
 
-        if (ImGui.CollapsingHeader("Evidence Item Names"))
+        if (ImGui.CollapsingHeader("Clue Item Names"))
         {
-            var evItems = tac.SharedClueAndIntel.EvidenceItemNames;
-            DrawStringArray(evItems.Strings, "EvItem", evItems.SlotSizes);
+            DrawClueItemNames(tac.ClueItemNames);
         }
 
         if (ImGui.CollapsingHeader("Investigation Methods"))
         {
-            var invMethods = tac.SharedClueAndIntel.InvestigationMethods;
-            DrawStringArray(invMethods.Strings, "InvMethod", invMethods.SlotSizes);
+            DrawStringArray(tac.InvestigationMethods.Strings, "InvMethod", tac.InvestigationMethods.SlotSizes);
         }
 
-        DrawRawSectionSizes("Raw Sections", new[]
+        if (ImGui.CollapsingHeader("Clue Header Strings"))
         {
-            ("UnknownClueData", tac.SharedClueAndIntel.UnknownClueData.Size),
-            ("CluePopcountTables", tac.SharedClueAndIntel.CluePopcountTables.Size),
-            ("EvidenceRankPointerTable", tac.SharedClueAndIntel.EvidenceRankPointerTable.Size),
-            ("ClueSystemData", tac.ClueSystemData.Length),
-            ("PostCharNameData", tac.PostCharNameData.Length),
-            ("TrailingData", tac.TrailingData.Length)
-        });
+            DrawStringArray(tac.ClueHeaderStrings.Strings, "ClueHdr", tac.ClueHeaderStrings.SlotSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Clue Target Strings"))
+        {
+            DrawStringArray(tac.ClueTargetStrings.Strings, "ClueTgt", tac.ClueTargetStrings.SlotSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Suspect File Strings"))
+        {
+            DrawStringArray(tac.SuspectFileStrings.Strings, "SuspFile", tac.SuspectFileStrings.SlotSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Load Failed String"))
+        {
+            DrawStringArray(tac.LoadFailedString.Strings, "LoadFail", tac.LoadFailedString.SlotSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Building Names"))
+        {
+            DrawStringArray(tac.BuildingNames.Strings, "BldgName", tac.BuildingNames.SlotSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Unknown Agent Template String"))
+        {
+            DrawStringArray(tac.UnknownAgentTemplateString.Strings, "UnkAgent", tac.UnknownAgentTemplateString.SlotSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Found Document Strings"))
+        {
+            DrawStringArray(tac.FoundDocumentStrings.Strings, "FoundDoc", tac.FoundDocumentStrings.SlotSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Time Template"))
+        {
+            ImGui.TextWrapped("Only the separator characters are editable; the digits are overwritten in place by the clock formatter at render time.");
+
+            var sep1 = tac.TimeTemplateString.HoursMinutesSeparator.ToString();
+            var newSep1 = ImGuiExtensions.Input("HH-MM separator", sep1, 1, width: 40);
+            if (newSep1 != null && newSep1.Length > 0)
+            {
+                tac.TimeTemplateString.HoursMinutesSeparator = newSep1[0];
+                _pendingState.RecordChange();
+            }
+
+            var sep2 = tac.TimeTemplateString.MinutesSecondsSeparator.ToString();
+            var newSep2 = ImGuiExtensions.Input("MM-SS separator", sep2, 1, width: 40);
+            if (newSep2 != null && newSep2.Length > 0)
+            {
+                tac.TimeTemplateString.MinutesSecondsSeparator = newSep2[0];
+                _pendingState.RecordChange();
+            }
+        }
+
+        if (ImGui.CollapsingHeader("Loading Message"))
+        {
+            DrawStringArray(tac.LoadingMessageString.Strings, "LoadMsg", tac.LoadingMessageString.SlotSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Quit Menu"))
+        {
+            ImGuiExtensions.DrawMenuStringRecord(
+                "QuitMenu", tac.QuitMenu.Menu, new System.Numerics.Vector2(300, 48),
+                () => _pendingState.RecordChange());
+        }
     }
 
     #endregion
@@ -1210,6 +1272,36 @@ public class SelectedExecutableWindow : BaseWindow
 
     // TODO: Allow different string lengths after pointer recalculation is implemented.
     // Currently each string is fixed to its original byte size to prevent pointer drift.
+    private void DrawClueItemNames(CovertActionTools.Core.Models.Executables.Sections.Shared.ClueItemNamesSection section)
+    {
+        for (var t = 0; t < CovertActionTools.Core.Models.Executables.Sections.Shared.ClueTypeAbbreviationsSection.ClueTypeCount; t++)
+        {
+            var type = (CovertActionTools.Core.Models.ClueType)t;
+            ImGui.PushID($"ClueType_{t}");
+            if (ImGui.TreeNode($"{type}"))
+            {
+                for (var i = 0; i < CovertActionTools.Core.Models.Executables.Sections.Shared.ClueItemNamesSection.ItemsPerType; i++)
+                {
+                    var flatIdx = t * CovertActionTools.Core.Models.Executables.Sections.Shared.ClueItemNamesSection.ItemsPerType + i;
+                    var slotSize = section.SlotSizes[flatIdx];
+                    var maxChars = slotSize - 1;
+                    if (maxChars < 1) maxChars = 1;
+                    ImGui.PushID($"item_{i}");
+                    var label = $"[{i}] (max {maxChars})";
+                    var newVal = ImGuiExtensions.Input(label, section.GetString(type, i), maxChars + 1, width: 240);
+                    if (newVal != null && newVal.Length <= maxChars)
+                    {
+                        section.SetString(type, i, newVal);
+                        _pendingState.RecordChange();
+                    }
+                    ImGui.PopID();
+                }
+                ImGui.TreePop();
+            }
+            ImGui.PopID();
+        }
+    }
+
     private void DrawStringArray(IList<string> strings, string idPrefix, int[]? byteSizes = null)
     {
         for (var i = 0; i < strings.Count; i++)
