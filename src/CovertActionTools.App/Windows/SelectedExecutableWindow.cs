@@ -136,52 +136,63 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Clue Relationship Phrases"))
         {
-            DrawStringArray(tac.ClueRelationshipPhrases, "CluePhrase", tac.CluePhraseSizes);
+            var phrases = tac.SharedClueAndIntel.ClueRelationshipPhrases;
+            DrawStringArray(phrases.Strings, "CluePhrase", phrases.SlotSizes);
         }
 
         if (ImGui.CollapsingHeader("Month Abbreviations"))
         {
-            DrawStringArray(tac.MonthAbbreviations, "Month", tac.MonthSizes);
+            var months = tac.SharedClueAndIntel.MonthAbbreviations;
+            DrawStringArray(months.Strings, "Month", months.SlotSizes);
         }
 
         if (ImGui.CollapsingHeader("Intel Headers"))
         {
-            DrawStringArray(tac.IntelHeaders, "IntelHdr", tac.IntelHeaderSizes);
+            var headers = tac.SharedClueAndIntel.IntelHeaders;
+            DrawStringArray(headers.Strings, "IntelHdr", headers.SlotSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Intel Phrases"))
+        {
+            var intelPhrases = tac.SharedClueAndIntel.IntelPhrases;
+            DrawStringArray(intelPhrases.Strings, "IntelPhr", intelPhrases.SlotSizes);
         }
 
         if (ImGui.CollapsingHeader("Intel Report Texts"))
         {
-            DrawStringArray(tac.IntelReportTexts, "IntelTxt", tac.IntelReportTextSizes);
+            var intelTexts = tac.SharedClueAndIntel.IntelReportTexts;
+            DrawStringArray(intelTexts.Strings, "IntelTxt", intelTexts.SlotSizes);
         }
 
         if (ImGui.CollapsingHeader("Rank Names"))
         {
-            DrawStringArray(tac.RankNames, "Rank", tac.RankNameSizes);
+            var rankNames = tac.SharedClueAndIntel.RankNames;
+            DrawStringArray(rankNames.Strings, "Rank", rankNames.SlotSizes);
         }
 
         if (ImGui.CollapsingHeader("Evidence Type Abbreviations"))
         {
-            DrawStringArray(tac.EvidenceTypeAbbreviations, "EvType", tac.EvidenceTypeSizes);
+            var evTypes = tac.SharedClueAndIntel.EvidenceTypeAbbreviations;
+            DrawStringArray(evTypes.Strings, "EvType", evTypes.SlotSizes);
         }
 
         if (ImGui.CollapsingHeader("Evidence Item Names"))
         {
-            DrawStringArray(tac.EvidenceItemNames, "EvItem", tac.EvidenceItemSizes);
+            var evItems = tac.SharedClueAndIntel.EvidenceItemNames;
+            DrawStringArray(evItems.Strings, "EvItem", evItems.SlotSizes);
         }
 
         if (ImGui.CollapsingHeader("Investigation Methods"))
         {
-            DrawStringArray(tac.InvestigationMethods, "InvMethod", tac.InvestigationMethodSizes);
+            var invMethods = tac.SharedClueAndIntel.InvestigationMethods;
+            DrawStringArray(invMethods.Strings, "InvMethod", invMethods.SlotSizes);
         }
 
         DrawRawSectionSizes("Raw Sections", new[]
         {
-            // ("SpriteSheetConfigs", tac.SpriteSheetConfigs.Length),
-            // ("BssBlock", tac.BssBlock.Length),
-            ("CluePhrasePointerTable", tac.CluePhrasePointerTable.Length),
-            ("ClueCategoryData", tac.ClueCategoryData.Length),
-            ("MonthPointerTable", tac.MonthPointerTable.Length),
-            ("EvidenceRankPointerTable", tac.EvidenceRankPointerTable.Length),
+            ("UnknownClueData", tac.SharedClueAndIntel.UnknownClueData.Size),
+            ("CluePopcountTables", tac.SharedClueAndIntel.CluePopcountTables.Size),
+            ("EvidenceRankPointerTable", tac.SharedClueAndIntel.EvidenceRankPointerTable.Size),
             ("ClueSystemData", tac.ClueSystemData.Length),
             ("PostCharNameData", tac.PostCharNameData.Length),
             ("TrailingData", tac.TrailingData.Length)
@@ -1199,9 +1210,9 @@ public class SelectedExecutableWindow : BaseWindow
 
     // TODO: Allow different string lengths after pointer recalculation is implemented.
     // Currently each string is fixed to its original byte size to prevent pointer drift.
-    private void DrawStringArray(string[] strings, string idPrefix, int[]? byteSizes = null)
+    private void DrawStringArray(IList<string> strings, string idPrefix, int[]? byteSizes = null)
     {
-        for (var i = 0; i < strings.Length; i++)
+        for (var i = 0; i < strings.Count; i++)
         {
             ImGui.PushID($"{idPrefix}_{i}");
             var contentSize = ImGui.GetContentRegionAvail();

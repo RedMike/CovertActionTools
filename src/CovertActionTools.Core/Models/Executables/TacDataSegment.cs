@@ -23,9 +23,6 @@ namespace CovertActionTools.Core.Models.Executables
         private const int RoomTypeCount = 10;
         private const int ObjectsOffset = 0x018E;
         private const int ObjectCount = 62;
-        private const int InventoryItemNamesStart = 0x2034;
-        private const int EquipmentPointersOffset = 0x20E0;
-        private const int EquipmentPointerCount = 16;
         private const int InventoryItemSelectionNavigationOffset = 0x2100;
         private const int InventoryItemRagdollCoordinatesOffset = 0x2160;
         private const int InventoryItemSelectionRectanglesOffset = 0x220C;
@@ -42,24 +39,10 @@ namespace CovertActionTools.Core.Models.Executables
         #endregion
 
         #region PreCharNameData Sub-offsets (DS-relative)
-        private const int CluePhrasesStart = 0x226C;
-        private const int MonthAbbrevsStart = 0x248C;
-        private const int IntelHeadersStart = 0x24BC;
-        private const int CluePhraseTableOffset = 0x2542;
-        private const int CluePhraseTableSize = 80;
-        private const int ClueCategoryDataOffset = 0x2592;
-        private const int ClueCategoryDataSize = 48;
-        private const int MonthTableOffset = 0x25C2;
-        private const int MonthTableSize = 24;
-        private const int IntelPaddingOffset = 0x25DA;
-        private const int IntelPaddingSize = 3;
-        private const int IntelTextsStart = 0x25DD;
-        private const int RankNamesStart = 0x274C;
-        private const int EvidenceTypesStart = 0x279F;
-        private const int EvidenceItemsStart = 0x27BB;
-        private const int EvidenceTableOffset = 0x2A26;
-        private const int EvidenceTableSize = 160;
-        private const int InvestMethodsStart = 0x2AC6;
+        // ClueSystemData starts immediately after SharedClueAndIntel (which now
+        // absorbs IntelReportTexts, RankNames, EvidenceTypeAbbreviations,
+        // EvidenceItemNames, EvidenceRankPointerTable, and InvestigationMethods,
+        // ending at 0x2B4C exactly).
         private const int ClueSystemStart = 0x2B4C;
         #endregion
 
@@ -93,86 +76,23 @@ namespace CovertActionTools.Core.Models.Executables
         public SignToCompassDirectionSection SignToCompassDirection { get; set; } = new();
         public CachedRoomDistanceTargetSection CachedRoomDistanceTarget { get; set; } = new();
         public InventoryItemNamesSection InventoryItemNames { get; set; } = new();
-        public EquipmentScreenFilenameSection EquipmentScreenFilename { get; set; } = new();
         public InventoryItemSelectionNavigationSection InventoryItemSelectionNavigation { get; set; } = new();
         public InventoryItemRagdollCoordinatesSection InventoryItemRagdollCoordinates { get; set; } = new();
         public InventoryItemSelectionRectanglesSection InventoryItemSelectionRectangles { get; set; } = new();
 
         #region PreCharNameData (between Equipment Slot Rects and Character Names)
 
-        // TODO: Clue relationship phrases are duplicated across multiple EXEs (TAC, FINAL, GAME, BUG).
-        // These should be merged into a shared data segment model so editing in one EXE updates all.
-        /// <summary>40 clue relationship phrases used in evidence connections (e.g. " tied to ", " registered to ").</summary>
-        public string[] ClueRelationshipPhrases { get; set; } = Array.Empty<string>();
-        /// <summary>Original byte sizes for clue phrase slots.</summary>
-        public int[] CluePhraseSizes { get; set; } = Array.Empty<int>();
-
-        /// <summary>12 month abbreviations: "Jan", "Feb", ... "Dec".</summary>
-        public string[] MonthAbbreviations { get; set; } = Array.Empty<string>();
-        /// <summary>Original byte sizes for month abbreviation slots.</summary>
-        public int[] MonthSizes { get; set; } = Array.Empty<int>();
-
-        // TODO: Investigate string identification for IntelHeaders -- the region from 0x24BC to
-        // 0x2542 is extracted as null-terminated strings, but some entries are empty or single-char
-        // filler values that may be binary data misidentified as strings. The boundary between
-        // headers and the clue phrase pointer table needs verification.
-        /// <summary>Intel report headers and filler text fragments ("CODED MESSAGE:", "MEETING NOTES:", etc.).</summary>
-        public string[] IntelHeaders { get; set; } = Array.Empty<string>();
-        /// <summary>Original byte sizes for intel header slots.</summary>
-        public int[] IntelHeaderSizes { get; set; } = Array.Empty<int>();
-
-        /// <summary>Pointer table for the 40 clue relationship phrases (DS-relative offsets, preserved as raw bytes).</summary>
-        public byte[] CluePhrasePointerTable { get; set; } = Array.Empty<byte>();
-
-        /// <summary>
-        /// 48-byte clue category and popcount lookup table. Identical across FINAL/TAC/GAME.
-        /// Bytes 0-15: category bit flags per clue pair (values 1/2/4/8 = single-bit masks).
-        /// Bytes 16-23: popcount(0-7) + 0 lookup.
-        /// Bytes 24-31: popcount(0-7) + 1 lookup.
-        /// Bytes 32-39: popcount(0-7) + 1 lookup (duplicate of 24-31).
-        /// Bytes 40-47: popcount(0-7) + 2 lookup.
-        /// TODO: investigate how the clue system uses this table — the bit flags likely map
-        /// clue slots to evidence categories, and the popcount sub-tables count active categories
-        /// for a given bitmask. Trace from GAME.EXE clue processing code to confirm.
-        /// </summary>
-        public byte[] ClueCategoryData { get; set; } = Array.Empty<byte>();
-
-        /// <summary>Pointer table for the 12 month abbreviations (DS-relative offsets, preserved as raw bytes).</summary>
-        public byte[] MonthPointerTable { get; set; } = Array.Empty<byte>();
-
-        /// <summary>Padding bytes between month pointer table and intel report texts.</summary>
-        public byte[] IntelMidPadding { get; set; } = Array.Empty<byte>();
-
-        // TODO: Investigate string identification for IntelReportTexts -- the region from 0x25DD to
-        // 0x274C is extracted as null-terminated strings, but some entries are empty or single-char
-        // values that may be binary data or format control codes rather than displayable text.
-        /// <summary>Intel report text templates used in the clue/intel display system.</summary>
-        public string[] IntelReportTexts { get; set; } = Array.Empty<string>();
-        /// <summary>Original byte sizes for intel report text slots.</summary>
-        public int[] IntelReportTextSizes { get; set; } = Array.Empty<int>();
-
-        /// <summary>8 agent rank names: "Recruit", "Operative", ... "MasterMind".</summary>
-        public string[] RankNames { get; set; } = Array.Empty<string>();
-        /// <summary>Original byte sizes for rank name slots.</summary>
-        public int[] RankNameSizes { get; set; } = Array.Empty<int>();
-
-        /// <summary>8 evidence type abbreviations: "CAR", "WPN", "ADR", "TKT", "MSG", "$", "$", "FCE".</summary>
-        public string[] EvidenceTypeAbbreviations { get; set; } = Array.Empty<string>();
-        /// <summary>Original byte sizes for evidence type slots.</summary>
-        public int[] EvidenceTypeSizes { get; set; } = Array.Empty<int>();
-
-        /// <summary>Evidence item name templates (cars, weapons, addresses, tickets, messages, money, IDs).</summary>
-        public string[] EvidenceItemNames { get; set; } = Array.Empty<string>();
-        /// <summary>Original byte sizes for evidence item name slots.</summary>
-        public int[] EvidenceItemSizes { get; set; } = Array.Empty<int>();
-
-        /// <summary>Combined pointer table for rank names, evidence types, and evidence items (preserved as raw bytes).</summary>
-        public byte[] EvidenceRankPointerTable { get; set; } = Array.Empty<byte>();
-
-        /// <summary>8 investigation method names: "Clandestine Photo", ... "Local Authorities", "Clue".</summary>
-        public string[] InvestigationMethods { get; set; } = Array.Empty<string>();
-        /// <summary>Original byte sizes for investigation method slots.</summary>
-        public int[] InvestigationMethodSizes { get; set; } = Array.Empty<int>();
+        // TODO: The clue/intel string tables inside SharedClueAndIntel are duplicated across
+        // TAC, FINAL, GAME and BUG. Each EXE currently carries its own section instance; long
+        // term the editor should present them once and fan edits out to every host EXE so
+        // they cannot drift apart.
+        /// <summary>Clue relationship phrases, month abbreviations, intel headers, intel
+        /// phrases, the 40-entry clue phrase pointer table, the opaque UnknownClueData
+        /// block, the popcount lookup tables, the month pointer table, the intel
+        /// report text fragments, rank names, evidence type abbreviations, evidence
+        /// item names, the evidence/rank pointer table, and investigation method
+        /// names (0x226C-0x2B4C).</summary>
+        public SharedClueAndIntelSection SharedClueAndIntel { get; set; } = new();
 
         /// <summary>Remaining clue system data: UI text, template variables, file references, text.dta lookups.</summary>
         public byte[] ClueSystemData { get; set; } = Array.Empty<byte>();
@@ -224,61 +144,12 @@ namespace CovertActionTools.Core.Models.Executables
             offset = ReadSectionWithPadding(segment.SignToCompassDirection, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.CachedRoomDistanceTarget, dataSegment, offset);
             offset = ReadSectionWithPadding(segment.InventoryItemNames, dataSegment, offset);
-            offset = ReadSectionWithPadding(segment.EquipmentScreenFilename, dataSegment, offset);
-
-            segment.InventoryItemSelectionNavigation.ReadBytes(dataSegment, InventoryItemSelectionNavigationOffset);
-
-            segment.InventoryItemRagdollCoordinates.ReadBytes(dataSegment, InventoryItemRagdollCoordinatesOffset);
-            segment.InventoryItemSelectionRectangles.ReadBytes(dataSegment, InventoryItemSelectionRectanglesOffset);
+            offset = ReadSectionWithPadding(segment.InventoryItemSelectionNavigation, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.InventoryItemRagdollCoordinates, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.InventoryItemSelectionRectangles, dataSegment, offset);
+            offset = ReadSectionWithPadding(segment.SharedClueAndIntel, dataSegment, offset);
 
             #region Parse PreCharNameData sub-sections
-
-            var (cluePhrases, clueSizes) = DataSegmentHelper.ControlStringsFromBytes(
-                dataSegment, CluePhrasesStart, MonthAbbrevsStart - CluePhrasesStart);
-            segment.ClueRelationshipPhrases = cluePhrases;
-            segment.CluePhraseSizes = clueSizes;
-
-            var (months, monthSzs) = DataSegmentHelper.ControlStringsFromBytes(
-                dataSegment, MonthAbbrevsStart, IntelHeadersStart - MonthAbbrevsStart);
-            segment.MonthAbbreviations = months;
-            segment.MonthSizes = monthSzs;
-
-            var (intelHdrs, intelHdrSzs) = DataSegmentHelper.ControlStringsFromBytes(
-                dataSegment, IntelHeadersStart, CluePhraseTableOffset - IntelHeadersStart);
-            segment.IntelHeaders = intelHdrs;
-            segment.IntelHeaderSizes = intelHdrSzs;
-
-            segment.CluePhrasePointerTable = DataSegmentHelper.Slice(dataSegment, CluePhraseTableOffset, CluePhraseTableSize);
-            segment.ClueCategoryData = DataSegmentHelper.Slice(dataSegment, ClueCategoryDataOffset, ClueCategoryDataSize);
-            segment.MonthPointerTable = DataSegmentHelper.Slice(dataSegment, MonthTableOffset, MonthTableSize);
-            segment.IntelMidPadding = DataSegmentHelper.Slice(dataSegment, IntelPaddingOffset, IntelPaddingSize);
-
-            var (intelTexts, intelTextSzs) = DataSegmentHelper.ControlStringsFromBytes(
-                dataSegment, IntelTextsStart, RankNamesStart - IntelTextsStart);
-            segment.IntelReportTexts = intelTexts;
-            segment.IntelReportTextSizes = intelTextSzs;
-
-            var (ranks, rankSzs) = DataSegmentHelper.ControlStringsFromBytes(
-                dataSegment, RankNamesStart, EvidenceTypesStart - RankNamesStart);
-            segment.RankNames = ranks;
-            segment.RankNameSizes = rankSzs;
-
-            var (evTypes, evTypeSzs) = DataSegmentHelper.ControlStringsFromBytes(
-                dataSegment, EvidenceTypesStart, EvidenceItemsStart - EvidenceTypesStart);
-            segment.EvidenceTypeAbbreviations = evTypes;
-            segment.EvidenceTypeSizes = evTypeSzs;
-
-            var (evItems, evItemSzs) = DataSegmentHelper.ControlStringsFromBytes(
-                dataSegment, EvidenceItemsStart, EvidenceTableOffset - EvidenceItemsStart);
-            segment.EvidenceItemNames = evItems;
-            segment.EvidenceItemSizes = evItemSzs;
-
-            segment.EvidenceRankPointerTable = DataSegmentHelper.Slice(dataSegment, EvidenceTableOffset, EvidenceTableSize);
-
-            var (invMethods, invMethodSzs) = DataSegmentHelper.ControlStringsFromBytes(
-                dataSegment, InvestMethodsStart, ClueSystemStart - InvestMethodsStart);
-            segment.InvestigationMethods = invMethods;
-            segment.InvestigationMethodSizes = invMethodSzs;
 
             // Extract character names using pointer table
             var charPtrs = DataSegmentHelper.BytesToUInt16Array(dataSegment, CharNamePointersOffset, CharNamePointerCount);
@@ -302,30 +173,7 @@ namespace CovertActionTools.Core.Models.Executables
 
         public byte[] ToBytes()
         {
-            var ragdollBytes = InventoryItemRagdollCoordinates.WriteBytes();
-            var equipRectBytes = InventoryItemSelectionRectangles.WriteBytes();
-
-            // Inventory item names are serialized as part of allSectionBytes (fixed-size slots);
-            // the pointer table values are derived from the section's field sizes.
-            var equipNamePointers = InventoryItemNames.ComputePointers(InventoryItemNamesStart);
-
-            // Serialize PreCharNameData sub-sections
-            var preCharNameBytes = DataSegmentHelper.Concatenate(
-                DataSegmentHelper.ControlStringsToFixedBytes(ClueRelationshipPhrases, CluePhraseSizes),
-                DataSegmentHelper.ControlStringsToFixedBytes(MonthAbbreviations, MonthSizes),
-                DataSegmentHelper.ControlStringsToFixedBytes(IntelHeaders, IntelHeaderSizes),
-                CluePhrasePointerTable,
-                ClueCategoryData,
-                MonthPointerTable,
-                IntelMidPadding,
-                DataSegmentHelper.ControlStringsToFixedBytes(IntelReportTexts, IntelReportTextSizes),
-                DataSegmentHelper.ControlStringsToFixedBytes(RankNames, RankNameSizes),
-                DataSegmentHelper.ControlStringsToFixedBytes(EvidenceTypeAbbreviations, EvidenceTypeSizes),
-                DataSegmentHelper.ControlStringsToFixedBytes(EvidenceItemNames, EvidenceItemSizes),
-                EvidenceRankPointerTable,
-                DataSegmentHelper.ControlStringsToFixedBytes(InvestigationMethods, InvestigationMethodSizes),
-                ClueSystemData
-            );
+            var preCharNameBytes = ClueSystemData;
 
             var allSectionBytes = DataSegmentHelper.Concatenate(
                 Header,
@@ -357,26 +205,18 @@ namespace CovertActionTools.Core.Models.Executables
                 SignToCompassDirection,
                 CachedRoomDistanceTarget,
                 InventoryItemNames,
-                EquipmentScreenFilename
+                InventoryItemSelectionNavigation,
+                InventoryItemRagdollCoordinates,
+                InventoryItemSelectionRectangles,
+                SharedClueAndIntel
             );
 
-            var navTableBytes = InventoryItemSelectionNavigation.WriteBytes();
-
-            // Compute character name pointer values
-            var charNamesBaseOffset = allSectionBytes.Length
-                + DataSegmentHelper.UInt16ArrayToBytes(equipNamePointers).Length
-                + navTableBytes.Length
-                + ragdollBytes.Length
-                + equipRectBytes.Length + preCharNameBytes.Length;
+            var charNamesBaseOffset = allSectionBytes.Length + preCharNameBytes.Length;
             var charNamePointers = DataSegmentHelper.ComputeStringPointers(CharacterNames, charNamesBaseOffset);
             var charNamesBytes = DataSegmentHelper.NullTerminatedStringsToBytes(CharacterNames);
 
             return DataSegmentHelper.Concatenate(
                 allSectionBytes,
-                DataSegmentHelper.UInt16ArrayToBytes(equipNamePointers),
-                navTableBytes,
-                ragdollBytes,
-                equipRectBytes,
                 preCharNameBytes,
                 charNamesBytes,
                 PostCharNameData,
@@ -388,10 +228,12 @@ namespace CovertActionTools.Core.Models.Executables
         private static int ReadSectionWithPadding(IExecutableSection section, byte[] data, int offset)
         {
             offset += section.ReadBytes(data, offset);
-            if (section is IPaddedToWord && offset % 2 != 0)
-                offset++;
-            else if (section is IPaddedToParagraph && offset % 16 != 0)
+            if (section is IPaddedToParagraph && offset % 16 != 0)
                 offset += 16 - (offset % 16);
+            else if (section is IPaddedToDword && offset % 4 != 0)
+                offset += 4 - (offset % 4);
+            else if (section is IPaddedToWord && offset % 2 != 0)
+                offset++;
             return offset;
         }
 
@@ -439,31 +281,10 @@ namespace CovertActionTools.Core.Models.Executables
                 SignToCompassDirection = SignToCompassDirection.Clone(),
                 CachedRoomDistanceTarget = CachedRoomDistanceTarget.Clone(),
                 InventoryItemNames = InventoryItemNames.Clone(),
-                EquipmentScreenFilename = EquipmentScreenFilename.Clone(),
                 InventoryItemSelectionNavigation = InventoryItemSelectionNavigation.Clone(),
                 InventoryItemRagdollCoordinates = InventoryItemRagdollCoordinates.Clone(),
                 InventoryItemSelectionRectangles = InventoryItemSelectionRectangles.Clone(),
-                ClueRelationshipPhrases = ClueRelationshipPhrases.ToArray(),
-                CluePhraseSizes = CluePhraseSizes.ToArray(),
-                MonthAbbreviations = MonthAbbreviations.ToArray(),
-                MonthSizes = MonthSizes.ToArray(),
-                IntelHeaders = IntelHeaders.ToArray(),
-                IntelHeaderSizes = IntelHeaderSizes.ToArray(),
-                CluePhrasePointerTable = CluePhrasePointerTable.ToArray(),
-                ClueCategoryData = ClueCategoryData.ToArray(),
-                MonthPointerTable = MonthPointerTable.ToArray(),
-                IntelMidPadding = IntelMidPadding.ToArray(),
-                IntelReportTexts = IntelReportTexts.ToArray(),
-                IntelReportTextSizes = IntelReportTextSizes.ToArray(),
-                RankNames = RankNames.ToArray(),
-                RankNameSizes = RankNameSizes.ToArray(),
-                EvidenceTypeAbbreviations = EvidenceTypeAbbreviations.ToArray(),
-                EvidenceTypeSizes = EvidenceTypeSizes.ToArray(),
-                EvidenceItemNames = EvidenceItemNames.ToArray(),
-                EvidenceItemSizes = EvidenceItemSizes.ToArray(),
-                EvidenceRankPointerTable = EvidenceRankPointerTable.ToArray(),
-                InvestigationMethods = InvestigationMethods.ToArray(),
-                InvestigationMethodSizes = InvestigationMethodSizes.ToArray(),
+                SharedClueAndIntel = SharedClueAndIntel.Clone(),
                 ClueSystemData = ClueSystemData.ToArray(),
                 CharacterNames = CharacterNames.Select(s => s).ToArray(),
                 PostCharNameData = PostCharNameData.ToArray(),
