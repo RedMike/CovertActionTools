@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using System.Text;
 using CovertActionTools.Core.Models.Executables.Sections.Shared;
 using CovertActionTools.Core.Models.Executables.Sections.Tac;
 
@@ -59,9 +58,9 @@ namespace CovertActionTools.Core.Models.Executables
         private const int TimeTemplateStringOffset = 0x364C;
         private const int LoadingMessageStringOffset = 0x3656;
         private const int QuitMenuOffset = 0x366B;
-
-        private const int CharacterNamePointersOffset = 0x346C;
-        private const int CharacterNamePointerCount = 192;
+        private const int FemaleFirstNamesOffset = 0x2F61;
+        private const int MaleFirstNamesOffset = 0x3112;
+        private const int LastNamesOffset = 0x32AB;
         #endregion
 
         /// <summary>
@@ -113,9 +112,9 @@ namespace CovertActionTools.Core.Models.Executables
         public TimeTemplateStringSection TimeTemplateString { get; set; } = new();
         public LoadingMessageStringSection LoadingMessageString { get; set; } = new();
         public QuitMenuSection QuitMenu { get; set; } = new();
-
-        /// <summary>192 character names (4 ethnic groups x female first / male first / male surname, 16 each).</summary>
-        public string[] CharacterNames { get; set; } = Array.Empty<string>();
+        public FemaleFirstNamesSection FemaleFirstNames { get; set; } = new();
+        public MaleFirstNamesSection MaleFirstNames { get; set; } = new();
+        public LastNamesSection LastNames { get; set; } = new();
         #endregion
 
         public static TacDataSegment FromBytes(byte[] dataSegment)
@@ -165,10 +164,9 @@ namespace CovertActionTools.Core.Models.Executables
             segment.TimeTemplateString.ReadBytes(dataSegment, TimeTemplateStringOffset);
             segment.LoadingMessageString.ReadBytes(dataSegment, LoadingMessageStringOffset);
             segment.QuitMenu.ReadBytes(dataSegment, QuitMenuOffset);
-
-            var charPtrs = DataSegmentHelper.BytesToUInt16Array(
-                dataSegment, CharacterNamePointersOffset, CharacterNamePointerCount);
-            segment.CharacterNames = DataSegmentHelper.ExtractStringsFromPointers(charPtrs, dataSegment);
+            segment.FemaleFirstNames.ReadBytes(dataSegment, FemaleFirstNamesOffset);
+            segment.MaleFirstNames.ReadBytes(dataSegment, MaleFirstNamesOffset);
+            segment.LastNames.ReadBytes(dataSegment, LastNamesOffset);
 
             return segment;
         }
@@ -217,8 +215,9 @@ namespace CovertActionTools.Core.Models.Executables
             Overlay(result, TimeTemplateStringOffset, TimeTemplateString.WriteBytes());
             Overlay(result, LoadingMessageStringOffset, LoadingMessageString.WriteBytes());
             Overlay(result, QuitMenuOffset, QuitMenu.WriteBytes());
-
-            OverlayCharacterNames(result);
+            Overlay(result, FemaleFirstNamesOffset, FemaleFirstNames.WriteBytes());
+            Overlay(result, MaleFirstNamesOffset, MaleFirstNames.WriteBytes());
+            Overlay(result, LastNamesOffset, LastNames.WriteBytes());
 
             return result;
         }
@@ -226,46 +225,6 @@ namespace CovertActionTools.Core.Models.Executables
         private static void Overlay(byte[] destination, int offset, byte[] source)
         {
             Array.Copy(source, 0, destination, offset, source.Length);
-        }
-
-        // The character-name pointer table is part of the opaque blob (it lives in
-        // OriginalDsBytes and is never recomputed). Each name is written back at the
-        // offset its pointer targets, with a null terminator; bytes beyond the null
-        // and before the next name's start are left as whatever was already in the
-        // blob. Names that grow past their original slot are truncated -- the editor
-        // UI caps the edit length to the slot size to prevent this silently.
-        private void OverlayCharacterNames(byte[] destination)
-        {
-            if (CharacterNames.Length == 0) return;
-
-            var charPtrs = DataSegmentHelper.BytesToUInt16Array(
-                OriginalDsBytes, CharacterNamePointersOffset, CharacterNamePointerCount);
-
-            for (var i = 0; i < CharacterNames.Length && i < charPtrs.Length; i++)
-            {
-                var target = charPtrs[i];
-                if (target == 0 || target >= destination.Length) continue;
-
-                var maxSlotLen = GetCharacterNameSlotLength(charPtrs, i, destination.Length);
-                var bytes = Encoding.ASCII.GetBytes(CharacterNames[i] ?? string.Empty);
-                var writeLen = Math.Min(bytes.Length, maxSlotLen - 1); // leave room for null
-
-                for (var j = 0; j < writeLen; j++) destination[target + j] = bytes[j];
-                destination[target + writeLen] = 0;
-            }
-        }
-
-        private static int GetCharacterNameSlotLength(ushort[] pointers, int index, int segmentLength)
-        {
-            // Slot length = distance from this pointer to the next non-zero pointer.
-            for (var j = index + 1; j < pointers.Length; j++)
-            {
-                if (pointers[j] != 0 && pointers[j] > pointers[index])
-                {
-                    return pointers[j] - pointers[index];
-                }
-            }
-            return Math.Max(1, segmentLength - pointers[index]);
         }
 
         public TacDataSegment Clone()
@@ -312,7 +271,9 @@ namespace CovertActionTools.Core.Models.Executables
                 TimeTemplateString = TimeTemplateString.Clone(),
                 LoadingMessageString = LoadingMessageString.Clone(),
                 QuitMenu = QuitMenu.Clone(),
-                CharacterNames = CharacterNames.Select(s => s).ToArray(),
+                FemaleFirstNames = FemaleFirstNames.Clone(),
+                MaleFirstNames = MaleFirstNames.Clone(),
+                LastNames = LastNames.Clone(),
             };
         }
     }

@@ -126,9 +126,19 @@ public class SelectedExecutableWindow : BaseWindow
         TacImGuiHelpers.DrawInventoryItemSelectionRectanglesSection(
             tac.InventoryItemSelectionRectangles, _pendingState, tac.InventoryItemNames.Strings);
 
-        if (ImGui.CollapsingHeader("Character Names"))
+        if (ImGui.CollapsingHeader("Female First Names"))
         {
-            DrawStringArray(tac.CharacterNames, "CharName");
+            DrawStringArray(tac.FemaleFirstNames.Strings, "FemFirst", tac.FemaleFirstNames.SlotSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Male First Names"))
+        {
+            DrawStringArray(tac.MaleFirstNames.Strings, "MaleFirst", tac.MaleFirstNames.SlotSizes);
+        }
+
+        if (ImGui.CollapsingHeader("Last Names"))
+        {
+            DrawStringArray(tac.LastNames.Strings, "LastName", tac.LastNames.SlotSizes);
         }
 
         if (ImGui.CollapsingHeader("Clue Relationship Phrases"))
