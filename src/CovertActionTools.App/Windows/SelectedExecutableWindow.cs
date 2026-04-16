@@ -98,14 +98,11 @@ public class SelectedExecutableWindow : BaseWindow
 
     private void DrawTacData(TacDataSegment tac)
     {
-        TacImGuiHelpers.DrawTacHeaderFilenamesSection(tac.HeaderFilenames);
         TacImGuiHelpers.DrawRoomTypeSection(tac.RoomTypes, _pendingState);
 
         var roomTypeNames = tac.RoomTypes.RoomTypes.Select(r => r.Name).ToList();
         roomTypeNames.Add("Target Room");
         TacImGuiHelpers.DrawMapObjectTypeSection(tac.MapObjectTypes, _pendingState, roomTypeNames);
-        TacImGuiHelpers.DrawMovementSection(tac.Movement, _pendingState);
-        TacImGuiHelpers.DrawRenderingSection(tac.Rendering, _pendingState);
         TacImGuiHelpers.DrawCgaColorRemapSection(tac.CgaColorRemap, _pendingState);
         TacImGuiHelpers.DrawVgaPaletteRemapSection(tac.VgaPaletteRemap, _pendingState);
         TacImGuiHelpers.DrawDoorEntryStringsSection(tac.MissionStateBlock, _pendingState);
@@ -136,67 +133,48 @@ public class SelectedExecutableWindow : BaseWindow
 
         if (ImGui.CollapsingHeader("Clue Relationship Phrases"))
         {
-            var phrases = tac.SharedClueAndIntel.ClueRelationshipPhrases;
-            DrawStringArray(phrases.Strings, "CluePhrase", phrases.SlotSizes);
+            DrawStringArray(tac.ClueRelationshipPhrases.Strings, "CluePhrase", tac.ClueRelationshipPhrases.SlotSizes);
         }
 
         if (ImGui.CollapsingHeader("Month Abbreviations"))
         {
-            var months = tac.SharedClueAndIntel.MonthAbbreviations;
-            DrawStringArray(months.Strings, "Month", months.SlotSizes);
+            DrawStringArray(tac.MonthAbbreviations.Strings, "Month", tac.MonthAbbreviations.SlotSizes);
         }
 
         if (ImGui.CollapsingHeader("Intel Headers"))
         {
-            var headers = tac.SharedClueAndIntel.IntelHeaders;
-            DrawStringArray(headers.Strings, "IntelHdr", headers.SlotSizes);
+            DrawStringArray(tac.IntelHeaders.Strings, "IntelHdr", tac.IntelHeaders.SlotSizes);
         }
 
         if (ImGui.CollapsingHeader("Intel Phrases"))
         {
-            var intelPhrases = tac.SharedClueAndIntel.IntelPhrases;
-            DrawStringArray(intelPhrases.Strings, "IntelPhr", intelPhrases.SlotSizes);
+            DrawStringArray(tac.IntelPhrases.Strings, "IntelPhr", tac.IntelPhrases.SlotSizes);
         }
 
         if (ImGui.CollapsingHeader("Intel Report Texts"))
         {
-            var intelTexts = tac.SharedClueAndIntel.IntelReportTexts;
-            DrawStringArray(intelTexts.Strings, "IntelTxt", intelTexts.SlotSizes);
+            DrawStringArray(tac.IntelReportTexts.Strings, "IntelTxt", tac.IntelReportTexts.SlotSizes);
         }
 
         if (ImGui.CollapsingHeader("Rank Names"))
         {
-            var rankNames = tac.SharedClueAndIntel.RankNames;
-            DrawStringArray(rankNames.Strings, "Rank", rankNames.SlotSizes);
+            DrawStringArray(tac.RankNames.Strings, "Rank", tac.RankNames.SlotSizes);
         }
 
         if (ImGui.CollapsingHeader("Evidence Type Abbreviations"))
         {
-            var evTypes = tac.SharedClueAndIntel.EvidenceTypeAbbreviations;
-            DrawStringArray(evTypes.Strings, "EvType", evTypes.SlotSizes);
+            DrawStringArray(tac.EvidenceTypeAbbreviations.Strings, "EvType", tac.EvidenceTypeAbbreviations.SlotSizes);
         }
 
         if (ImGui.CollapsingHeader("Evidence Item Names"))
         {
-            var evItems = tac.SharedClueAndIntel.EvidenceItemNames;
-            DrawStringArray(evItems.Strings, "EvItem", evItems.SlotSizes);
+            DrawStringArray(tac.EvidenceItemNames.Strings, "EvItem", tac.EvidenceItemNames.SlotSizes);
         }
 
         if (ImGui.CollapsingHeader("Investigation Methods"))
         {
-            var invMethods = tac.SharedClueAndIntel.InvestigationMethods;
-            DrawStringArray(invMethods.Strings, "InvMethod", invMethods.SlotSizes);
+            DrawStringArray(tac.InvestigationMethods.Strings, "InvMethod", tac.InvestigationMethods.SlotSizes);
         }
-
-        DrawRawSectionSizes("Raw Sections", new[]
-        {
-            ("UnknownClueData", tac.SharedClueAndIntel.UnknownClueData.Size),
-            ("CluePopcountTables", tac.SharedClueAndIntel.CluePopcountTables.Size),
-            ("EvidenceRankPointerTable", tac.SharedClueAndIntel.EvidenceRankPointerTable.Size),
-            ("ClueSystemData", tac.ClueSystemData.Length),
-            ("PostCharNameData", tac.PostCharNameData.Length),
-            ("TrailingData", tac.TrailingData.Length)
-        });
     }
 
     #endregion
