@@ -34,6 +34,7 @@ namespace CovertActionTools.Core.Models.Executables
         private const int FloorSafeInventoryItemRewardsOffset = 0x1F36;
         private const int PasswordDialogTextsOffset = 0x1F67;
         private const int WallTileDirectionSpriteOffset = 0x1FF0;
+        private const int AmbushLocationRoomNameOffset = 0x2000;
         private const int InventoryItemNamesOffset = 0x2034;
         private const int InventoryItemSelectionNavigationOffset = 0x2100;
         private const int InventoryItemRagdollCoordinatesOffset = 0x2160;
@@ -88,6 +89,7 @@ namespace CovertActionTools.Core.Models.Executables
         public FloorSafeInventoryItemRewardSection FloorSafeInventoryItemRewards { get; set; } = new();
         public PasswordDialogTextsSection PasswordDialogTexts { get; set; } = new();
         public WallTileDirectionSpriteSection WallTileDirectionSprite { get; set; } = new();
+        public AmbushLocationRoomNameSection AmbushLocationRoomName { get; set; } = new();
         public InventoryItemNamesSection InventoryItemNames { get; set; } = new();
         public InventoryItemSelectionNavigationSection InventoryItemSelectionNavigation { get; set; } = new();
         public InventoryItemRagdollCoordinatesSection InventoryItemRagdollCoordinates { get; set; } = new();
@@ -140,6 +142,7 @@ namespace CovertActionTools.Core.Models.Executables
             segment.FloorSafeInventoryItemRewards.ReadBytes(dataSegment, FloorSafeInventoryItemRewardsOffset);
             segment.PasswordDialogTexts.ReadBytes(dataSegment, PasswordDialogTextsOffset);
             segment.WallTileDirectionSprite.ReadBytes(dataSegment, WallTileDirectionSpriteOffset);
+            segment.AmbushLocationRoomName.ReadBytes(dataSegment, AmbushLocationRoomNameOffset);
             segment.InventoryItemNames.ReadBytes(dataSegment, InventoryItemNamesOffset);
             segment.InventoryItemSelectionNavigation.ReadBytes(dataSegment, InventoryItemSelectionNavigationOffset);
             segment.InventoryItemRagdollCoordinates.ReadBytes(dataSegment, InventoryItemRagdollCoordinatesOffset);
@@ -191,6 +194,7 @@ namespace CovertActionTools.Core.Models.Executables
             Overlay(result, FloorSafeInventoryItemRewardsOffset, FloorSafeInventoryItemRewards.WriteBytes());
             Overlay(result, PasswordDialogTextsOffset, PasswordDialogTexts.WriteBytes());
             Overlay(result, WallTileDirectionSpriteOffset, WallTileDirectionSprite.WriteBytes());
+            Overlay(result, AmbushLocationRoomNameOffset, AmbushLocationRoomName.WriteBytes());
             Overlay(result, InventoryItemNamesOffset, InventoryItemNames.WriteBytes());
             Overlay(result, InventoryItemSelectionNavigationOffset, InventoryItemSelectionNavigation.WriteBytes());
             Overlay(result, InventoryItemRagdollCoordinatesOffset, InventoryItemRagdollCoordinates.WriteBytes());
@@ -248,6 +252,7 @@ namespace CovertActionTools.Core.Models.Executables
                 FloorSafeInventoryItemRewards = FloorSafeInventoryItemRewards.Clone(),
                 PasswordDialogTexts = PasswordDialogTexts.Clone(),
                 WallTileDirectionSprite = WallTileDirectionSprite.Clone(),
+                AmbushLocationRoomName = AmbushLocationRoomName.Clone(),
                 InventoryItemNames = InventoryItemNames.Clone(),
                 InventoryItemSelectionNavigation = InventoryItemSelectionNavigation.Clone(),
                 InventoryItemRagdollCoordinates = InventoryItemRagdollCoordinates.Clone(),

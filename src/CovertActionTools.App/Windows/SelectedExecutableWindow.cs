@@ -117,6 +117,12 @@ public class SelectedExecutableWindow : BaseWindow
         TacImGuiHelpers.DrawFloorSafeInventoryItemRewardSection(tac.FloorSafeInventoryItemRewards, _pendingState, tac.InventoryItemNames.Strings);
         TacImGuiHelpers.DrawPasswordDialogTextsSection(tac.PasswordDialogTexts, _pendingState);
         TacImGuiHelpers.DrawWallTileDirectionSpriteSection(tac.WallTileDirectionSprite, _pendingState);
+
+        if (ImGui.CollapsingHeader("Ambush Location Room Name"))
+        {
+            DrawStringArray(tac.AmbushLocationRoomName.Strings, "AmbushRoom", tac.AmbushLocationRoomName.SlotSizes);
+        }
+
         TacImGuiHelpers.DrawInventoryItemNamesSection(tac.InventoryItemNames, _pendingState);
 
         TacImGuiHelpers.DrawInventoryItemSelectionNavigationSection(
