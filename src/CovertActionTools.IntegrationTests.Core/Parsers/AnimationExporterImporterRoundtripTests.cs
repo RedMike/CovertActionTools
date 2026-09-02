@@ -71,7 +71,7 @@ public class AnimationExporterImporterRoundtripTests : IDisposable
         var anim = result["anim1"];
         Assert.Equal(99, anim.Data.BoundingWidth);
         Assert.Equal(79, anim.Data.BoundingHeight);
-        Assert.Equal(1, anim.Data.GlobalFrameSkip);
+        Assert.Equal(1, anim.Data.FrameDelay);
         Assert.Equal(AnimationModel.BackgroundType.ClearToColor, anim.Data.BackgroundType);
         Assert.Equal(5, anim.Data.ClearColor);
         Assert.Equal(3, anim.Data.Unknown2);
@@ -235,7 +235,7 @@ public class AnimationExporterImporterRoundtripTests : IDisposable
             {
                 BoundingWidth = 99,
                 BoundingHeight = 79,
-                GlobalFrameSkip = 1,
+                FrameDelay = 1,
                 BackgroundType = AnimationModel.BackgroundType.ClearToColor,
                 ClearColor = 5,
                 Unknown2 = 3,

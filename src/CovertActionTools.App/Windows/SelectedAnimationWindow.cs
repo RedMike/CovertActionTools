@@ -1,5 +1,6 @@
-﻿using System.Numerics;
+using System.Numerics;
 using CovertActionTools.App.ViewModels;
+using CovertActionTools.Core.Conversion;
 using CovertActionTools.Core.Models;
 using CovertActionTools.Core.Processors;
 using ImGuiNET;
@@ -41,7 +42,7 @@ public class SelectedAnimationWindow : SharedImageWindow
         {
             return;
         }
-        
+
         var key = _mainEditorState.SelectedItem.Value.id;
         if (_animationPreviewState.SelectedId != key)
         {
@@ -51,7 +52,7 @@ public class SelectedAnimationWindow : SharedImageWindow
         {
             _animationEditorState.Reset(key);
         }
-        
+
         var screenSize = ImGui.GetMainViewport().Size;
         var initialPos = new Vector2(300.0f, 20.0f);
         var initialSize = new Vector2(screenSize.X - 300.0f, screenSize.Y - 200.0f);
@@ -60,7 +61,7 @@ public class SelectedAnimationWindow : SharedImageWindow
         ImGui.Begin("Animation",
             ImGuiWindowFlags.NoResize |
             ImGuiWindowFlags.NoMove |
-            ImGuiWindowFlags.NoNav | 
+            ImGuiWindowFlags.NoNav |
             ImGuiWindowFlags.NoCollapse);
 
         if (_mainEditorState.LoadedPackage != null)
@@ -89,31 +90,31 @@ public class SelectedAnimationWindow : SharedImageWindow
                     model.Index.AnimationIncluded.Add(key);
                 }
             });
-        
+
         _animationEditorState.Update(animation);
 
         DrawSharedMetadataEditor(animation.Metadata, () => { _pendingState.RecordChange(); });
-        
+
         ImGui.BeginTabBar("AnimationTabs", ImGuiTabBarFlags.NoCloseWithMiddleMouseButton);
-        
+
         if (ImGui.BeginTabItem("Images"))
         {
             DrawAnimationImageWindow(model, animation);
-            
+
             ImGui.EndTabItem();
         }
-        
+
         if (ImGui.BeginTabItem("Instructions"))
         {
-            DrawAnimationInstructionsWindow(model, animation);    
-            
+            DrawAnimationInstructionsWindow(model, animation);
+
             ImGui.EndTabItem();
         }
-        
+
         if (ImGui.BeginTabItem("Preview"))
         {
-            DrawAnimationPreviewWindow(model, animation);    
-            
+            DrawAnimationPreviewWindow(model, animation);
+
             ImGui.EndTabItem();
         }
 
@@ -127,7 +128,7 @@ public class SelectedAnimationWindow : SharedImageWindow
         {
             _animationPreviewState.SelectedFrameId = newFrameId.Value;
         }
-        
+
         var inputRegisters = animation.Control.Instructions
             .Where(x => x.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.PushRegisterToStack)
             .Select(x => x.Data[0])
@@ -151,7 +152,7 @@ public class SelectedAnimationWindow : SharedImageWindow
             {
                 _animationPreviewState.SetInputRegister(inputRegister, _animationPreviewState.InputRegisters[inputRegister].value, newFrameIndex.Value);
             }
-                
+
             ImGui.Text("");
         }
 
@@ -159,29 +160,27 @@ public class SelectedAnimationWindow : SharedImageWindow
         if (newBackgroundType != null)
         {
             animation.Data.BackgroundType = newBackgroundType.Value;
+            _animationPreviewState.Invalidate();
         }
 
         if (animation.Data.BackgroundType == AnimationModel.BackgroundType.ClearToColor)
         {
             var validColours = new List<int>()
             {
-                1, 2, 3, 4, 5,
-                6, 7, 8, 9, 10, 
+                0, 1, 2, 3, 4, 5,
+                6, 7, 8, 9, 10,
                 11, 12, 13, 14, 15
             };
             var newBackgroundClearColour = ImGuiExtensions.Input("Clear Color", animation.Data.ClearColor, validColours);
             if (newBackgroundClearColour != null)
             {
                 animation.Data.ClearColor = (byte)newBackgroundClearColour.Value;
+                _animationPreviewState.Invalidate();
             }
         } else if (animation.Data.BackgroundType == AnimationModel.BackgroundType.PreviousAnimation)
         {
-            //only animations with EndImmediate can be used as backgrounds, otherwise it'd never end in the first place
             var eligiblePreviousAnimations = model.Animations
-                .Where(x => x.Value.Control.Instructions
-                                .Any(i => i.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.EndImmediate)
-                            && x.Value.Key != animation.Key
-                )
+                .Where(x => x.Value.Key != animation.Key)
                 .Select(x => (x.Key, x.Value))
                 .ToList();
 
@@ -194,128 +193,65 @@ public class SelectedAnimationWindow : SharedImageWindow
                 _animationPreviewState.PreviousAnimationId = newSelectedPreviousAnimation;
             }
         }
-        
+
         var width = animation.Data.BoundingWidth + 1;
         var height = animation.Data.BoundingHeight + 1;
         var offsetX = 100;
         var offsetY = 100;
         var fullWidth = width + 2 * offsetX;
         var fullHeight = height + 2 * offsetY;
-        
+
         var windowSize = ImGui.GetContentRegionAvail();
         AnimationModel? previousAnimation = null;
         if (!string.IsNullOrEmpty(_animationPreviewState.PreviousAnimationId) && model.Animations.TryGetValue(_animationPreviewState.PreviousAnimationId, out var prevAnimation))
         {
             previousAnimation = prevAnimation;
         }
-        var (state, previousAnimationState) = _animationPreviewState.GetState(animation, previousAnimation, _animationProcessor);
+        var (state, _) = _animationPreviewState.GetState(animation, previousAnimation, _animationProcessor);
 
         if (ImGui.BeginChild("view", new Vector2(fullWidth + 10.0f, windowSize.Y), false,
                 ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoResize |
                 ImGuiWindowFlags.NoTitleBar))
         {
             var pos = ImGui.GetCursorPos();
-            var rawPos = ImGui.GetCursorScreenPos();
             //draw the checkerboard first
             ImGui.SetCursorPos(pos);
             var bgTexture = RenderWindow.RenderCheckerboardRectangle(25, fullWidth, fullHeight,
                 (40, 30, 40, 255), (50, 40, 50, 255));
             ImGui.Image(bgTexture, new Vector2(fullWidth, fullHeight));
-            
-            if (_animationPreviewState.LimitToGameWindow)
-            {
-                ImGui.PushClipRect(rawPos + new Vector2(offsetX, offsetY),
-                    rawPos + new Vector2(offsetX + width, offsetY + height), false);
-            }
 
-            //now draw background
+            //the frame is the composed page seen through the animation's palette, exactly what the game shows
+            //colour 0 is never drawn, anything else shows its palette colour, and palette entry 0 is black
             ImGui.SetCursorPos(pos + new Vector2(offsetX, offsetY));
-            if (animation.Data.BackgroundType == AnimationModel.BackgroundType.ClearToColor)
+            var rgba = new byte[state.Frame.Length * 4];
+            for (var i = 0; i < state.Frame.Length; i++)
             {
-                var backgroundTexture = RenderWindow.RenderCheckerboardRectangle(100, width, height,
-                    Core.Constants.VgaColorMapping[animation.Data.ClearColor],
-                    Core.Constants.VgaColorMapping[animation.Data.ClearColor]);
-                ImGui.Image(backgroundTexture, new Vector2(width, height));
-            }
-            else if (animation.Data.BackgroundType == AnimationModel.BackgroundType.PreviousAnimation)
-            {
-                if (previousAnimation != null && previousAnimationState != null)
+                var index = state.Frame[i] & 0x0F;
+                if (index == 0)
                 {
-                    //render background
-                    if (previousAnimation.Data.BackgroundType == AnimationModel.BackgroundType.PreviousAnimation)
-                    {
-                        throw new Exception("PreviousAnimation chaining not supported");
-                    }
-                    if (previousAnimation.Data.BackgroundType == AnimationModel.BackgroundType.ClearToImage)
-                    {
-                        var backgroundImage = previousAnimation.Images.OrderBy(x => x.Key).First().Value;
-                        var id = $"image_{previousAnimation.Key}_frame";
-                        var texture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, id,
-                            backgroundImage.Data.Width, backgroundImage.Data.Height,
-                            backgroundImage.VgaImageData);
-                        ImGui.Image(texture,
-                            new Vector2(backgroundImage.Data.Width, backgroundImage.Data.Height));
-                    }
-                    else
-                    {
-                        var backgroundTexture = RenderWindow.RenderCheckerboardRectangle(100, width, height,
-                            Core.Constants.VgaColorMapping[previousAnimation.Data.ClearColor],
-                            Core.Constants.VgaColorMapping[previousAnimation.Data.ClearColor]);
-                        ImGui.Image(backgroundTexture, new Vector2(width, height));
-                    }
-                    
-                    //render sprites
-                    foreach (var drawnImage in previousAnimationState.DrawnImages.OrderBy(x => x.SpriteIndex))
-                    {
-                        ImGui.SetCursorPos(pos + new Vector2(offsetX + drawnImage.PositionX, offsetY + drawnImage.PositionY));
-
-                        var drawnImageIndex = previousAnimation.Data.ImageIdToIndex[drawnImage.ImageId];
-                        var drawnImageImg = previousAnimation.Images[drawnImageIndex];
-                        var id = $"image_{previousAnimation.Key}_{drawnImageIndex}";
-                        var texture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, id,
-                            drawnImageImg.Data.Width, drawnImageImg.Data.Height,
-                            drawnImageImg.VgaImageData);
-                        ImGui.Image(texture,
-                            new Vector2(drawnImageImg.Data.Width, drawnImageImg.Data.Height));
-                    }
+                    continue;
                 }
-            }
-            else
-            {
-                var backgroundImage = animation.Images.OrderBy(x => x.Key).First().Value;
-                var id = $"image_{animation.Key}_frame";
-                var texture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, id,
-                    backgroundImage.Data.Width, backgroundImage.Data.Height,
-                    backgroundImage.VgaImageData);
-                ImGui.Image(texture,
-                    new Vector2(backgroundImage.Data.Width, backgroundImage.Data.Height));
-            }
 
-            foreach (var drawnImage in state.DrawnImages.OrderBy(x => x.SpriteIndex))
-            {
-                ImGui.SetCursorPos(pos + new Vector2(offsetX + drawnImage.PositionX, offsetY + drawnImage.PositionY));
-
-                var drawnImageIndex = animation.Data.ImageIdToIndex[drawnImage.ImageId];
-                var drawnImageImg = animation.Images[drawnImageIndex];
-                var id = $"image_{animation.Key}_{drawnImageIndex}";
-                var texture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, id,
-                    drawnImageImg.Data.Width, drawnImageImg.Data.Height,
-                    drawnImageImg.VgaImageData);
-                ImGui.Image(texture,
-                    new Vector2(drawnImageImg.Data.Width, drawnImageImg.Data.Height));
+                var displayed = state.Palette[index];
+                var (r, g, b, a) = displayed == 0
+                    ? ((byte)0, (byte)0, (byte)0, (byte)255)
+                    : Core.Constants.VgaColorMapping[displayed];
+                rgba[i * 4 + 0] = r;
+                rgba[i * 4 + 1] = g;
+                rgba[i * 4 + 2] = b;
+                rgba[i * 4 + 3] = a;
             }
-            
-            if (_animationPreviewState.LimitToGameWindow)
-            {
-                ImGui.PopClipRect();
-            }
+            var frameId = $"animation_{animation.Key}_frame";
+            var frameTexture = RenderWindow.RenderImage(RenderWindow.RenderType.Image, frameId,
+                state.PageWidth, state.PageHeight, rgba);
+            ImGui.Image(frameTexture, new Vector2(state.PageWidth, state.PageHeight));
 
-            var selectedSprite = state.Sprites.FirstOrDefault(x => x.Index == _selectedSprite);
-            if (selectedSprite != null)
+            var selectedSprite = state.GetSprite(_selectedSprite);
+            var selectedPosition = state.GetSpritePosition(_selectedSprite);
+            if (selectedSprite != null && selectedPosition != null)
             {
-                var (spriteX, spriteY) = state.GetSpritePosition(selectedSprite.Index);
-                var ox = offsetX + spriteX;
-                var oy = offsetY + spriteY;
+                var ox = offsetX + selectedPosition.Value.x;
+                var oy = offsetY + selectedPosition.Value.y;
                 var w = 5;
                 var h = 5;
                 if (selectedSprite.ImageId >= 0 &&
@@ -339,20 +275,19 @@ public class SelectedAnimationWindow : SharedImageWindow
         ImGui.SameLine();
         if (ImGui.BeginChild("menu", new Vector2(windowSize.X - fullWidth - 20.0f, windowSize.Y), true))
         {
-            var newLimitGameWindow = ImGuiExtensions.Input("Draw Only Game Window", _animationPreviewState.LimitToGameWindow);
-            if (newLimitGameWindow != null)
-            {
-                _animationPreviewState.LimitToGameWindow = newLimitGameWindow.Value;
-            }
-            
             ImGui.Text($"Stack ({state.Stack.Count}): {string.Join(" ", state.Stack.Select(x => $"{x}"))}");
-            foreach (var pair in state.Registers)
+            foreach (var pair in state.Registers.OrderBy(x => x.Key))
             {
                 ImGui.Text($"Register {pair.Key}: {pair.Value}");
             }
-            
+
             ImGui.Text($"Instruction: {state.InstructionIndex}");
             ImGui.Text($"Wait: {state.FramesToWait}");
+            ImGui.Text($"Ended: {state.Ended}");
+            if (state.TriggeredAudio.Count > 0)
+            {
+                ImGui.Text($"Audio: {string.Join(" ", state.TriggeredAudio)}");
+            }
             if (ImGui.CollapsingHeader("Instruction View"))
             {
                 foreach (var instructionIndex in state.LastFrameInstructionIndices)
@@ -361,27 +296,37 @@ public class SelectedAnimationWindow : SharedImageWindow
                     ImGui.Text(GetInstructionText(instructionIndex, instruction));
                 }
             }
+            if (state.Warnings.Count > 0 && ImGui.CollapsingHeader("Warnings"))
+            {
+                foreach (var warning in state.Warnings)
+                {
+                    ImGui.Text(warning);
+                }
+            }
 
             ImGui.Text("");
 
             var spriteIndexes = animation.Control.Instructions
-                .Where(x => x.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.SetupSprite)
+                .Where(x => x.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.SetupSprite &&
+                            x.StackParameters.Length == 6)
                 .Select(x => (int)x.StackParameters[0])
+                .Concat(state.Sprites.Select(x => x.Index))
+                .Where(x => x >= 1 && x <= AnimationState.MaxSprites)
                 .Distinct()
                 .OrderBy(x => x)
                 .ToList();
             var spriteIndexNames = spriteIndexes
-                .Select(id => (id, state.Sprites.FirstOrDefault(s => s.Index == id)))
+                .Select(id => (id, state.GetSprite(id)))
                 .Select(x => $"{x.id} {((x.Item2?.Active ?? false) ? "Active" : "Inactive")} {(x.Item2?.ImageId >= 0 ? "Drawn" : "Hidden")}")
                 .ToList();
-            
+
             var newSelectedAnimation = ImGuiExtensions.Input("Sprite", _selectedSprite, spriteIndexes, spriteIndexNames);
             if (newSelectedAnimation != null)
             {
                 _selectedSprite = newSelectedAnimation.Value;
             }
-            
-            var sprite = state.Sprites.FirstOrDefault(x => x.Index == _selectedSprite);
+
+            var sprite = state.GetSprite(_selectedSprite);
             if (sprite != null)
             {
                 if (sprite.ImageId >= 0)
@@ -403,10 +348,11 @@ public class SelectedAnimationWindow : SharedImageWindow
                 ImGui.Text($"Active: {sprite.Active}");
                 ImGui.Text($"Counter: {sprite.Counter} ({string.Join(" ", sprite.CounterStack)})");
                 ImGui.Text($"Follow: ({sprite.FollowIndex})");
-                var (x, y) = state.GetSpritePosition(sprite.Index);
-                ImGui.Text($"Position: ({x}, {y})");
+                var position = state.GetSpritePosition(sprite.Index);
+                ImGui.Text(position != null ? $"Position: ({position.Value.x}, {position.Value.y})" : "Position: not drawn");
                 ImGui.Text($"Step: {sprite.StepIndex}");
-                    
+                ImGui.Text($"Speed: {sprite.Speed} (credit {sprite.Credit}, rate {sprite.Rate})");
+                ImGui.Text($"Flags: {sprite.Flags}");
             }
             else
             {
@@ -440,12 +386,13 @@ public class SelectedAnimationWindow : SharedImageWindow
 
                 //mark it for reset so that the model gets updated
                 _animationEditorState.Reset("");
+                _animationPreviewState.Invalidate();
                 _pendingState.RecordChange();
             }
         }
-        
+
         var windowSize = ImGui.GetContentRegionAvail();
-        
+
         if (ImGui.CollapsingHeader("Instructions"))
         {
             ImGui.InputTextMultiline("InstructionsText", ref _animationEditorState.SerialisedInstructions, 32000, new Vector2(windowSize.X, 400), ImGuiInputTextFlags.AllowTabInput);
@@ -463,7 +410,7 @@ public class SelectedAnimationWindow : SharedImageWindow
         {
             index = -2;
         }
-        
+
         var imageIds = new List<int>();
         var imageIdNames = new List<string>();
         if (animation.Data.BackgroundType == AnimationModel.BackgroundType.ClearToImage)
@@ -526,25 +473,21 @@ public class SelectedAnimationWindow : SharedImageWindow
 
         DrawImageTabs($"{animation.Key}_{selectedIndex}", image, () => { }, null);
     }
-    
+
     private string GetInstructionText(int index, AnimationModel.AnimationInstruction instruction)
     {
         var name = $"{index} - {instruction.Opcode}";
-        if (instruction.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.ConditionalJump ||
-            instruction.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.Jump)
+        if (!string.IsNullOrEmpty(instruction.Label))
         {
             name += $" {instruction.Label}";
         }
-        else if (instruction.Opcode == AnimationModel.AnimationInstruction.AnimationOpcode.SetupSprite)
+        if (!string.IsNullOrEmpty(instruction.StepLabel))
         {
             name += $" {instruction.StepLabel}";
         }
-        else
+        if (instruction.Data.Length > 0)
         {
-            if (instruction.Data.Length > 0)
-            {
-                name += $" {string.Join(" ", instruction.Data.Select(x => $"{x:X2}"))}";
-            }
+            name += $" {string.Join(" ", instruction.Data.Select(x => $"{x:X2}"))}";
         }
 
         if (instruction.StackParameters.Length > 0)

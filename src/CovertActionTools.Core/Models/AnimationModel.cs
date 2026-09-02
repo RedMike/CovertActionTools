@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -8,8 +8,6 @@ namespace CovertActionTools.Core.Models
     /// <summary>
     /// Represents a PAN file animation, which combines a set of images with a two-level control system:
     /// a stack-based instruction VM that orchestrates sprites, and per-sprite step sequences that drive movement and drawing.
-    /// The format is now fully understood and supports round-trip parsing and publishing. Some values and instructions
-    /// that have never been used in real game files remain with best-guess interpretations.
     /// </summary>
     public class AnimationModel
     {
@@ -17,23 +15,53 @@ namespace CovertActionTools.Core.Models
         {
             Unknown = -1,
             /// <summary>
-            /// Relies on previous animation to have set up content.
-            /// Header section is before any image.
-            /// Header section is only 500 bytes long instead of 502.
+            /// Keeps the background page left behind by the previous animation.
             /// </summary>
             PreviousAnimation = 0x00,
             /// <summary>
-            /// Redraws first image as background before anything else.
-            /// Header section is after first image.
-            /// Header section is 502 bytes long.
+            /// Draws the background image (stored before the index table) onto the background page.
             /// </summary>
             ClearToImage = 0x01,
             /// <summary>
-            /// Clears screen to colour before anything else.
-            /// Header section is before any image.
-            /// Header section is 502 bytes long. First byte is background colour to clear to.
+            /// Fills the background page with ClearColor.
             /// </summary>
             ClearToColor = 0x02
+        }
+
+        public enum ImageFormat
+        {
+            /// <summary>
+            /// Images are stored as uncompressed rows, one byte per pixel.
+            /// Note: not used in retail game versions but supported by the legacy game engine
+            /// </summary>
+            Raw = 0x00,
+            /// <summary>
+            /// Images are stored in the standard shared image format.
+            /// </summary>
+            Compressed = 0x01
+        }
+
+        public enum ColorMappingType
+        {
+            /// <summary>
+            /// No colour block, the palette is left untouched.
+            /// Note: not used in retail game versions but supported by the legacy game engine
+            /// </summary>
+            None = -1,
+            /// <summary>
+            /// A 17-byte colour block is embedded in the header.
+            /// </summary>
+            Embedded = 0x00,
+            /// <summary>
+            /// No colour block, the last loaded block is applied again.
+            /// Note: not used in retail game versions but supported by the legacy game engine
+            /// </summary>
+            Previous = 0x01,
+            /// <summary>
+            /// A 774-byte palette block is embedded in the header.
+            /// Note: not used in retail game versions but supported by the legacy game engine
+            /// </summary>
+            Palette = 0x02
         }
 
         public class AnimationInstruction
@@ -46,47 +74,51 @@ namespace CovertActionTools.Core.Models
                 RawDataLabel = -7, //fake instruction, allows piping a calculated label straight into a file
                 Comment = -2, //used for lines that have only comment
                 Unknown = -1,
-                SetupSprite = 0, //00, loads 7 * 2 stack (pointer, index, follow, x, y, frame skip, flags), add active sprite
-                RemoveSprite = 1, //01, loads 2 stack, stops/removes target sprite
-                WaitForFrames = 2, //02, loads 2 stack, render for X frames
-                TriggerAudio = 3, //03, loads 2 stack, triggers audio from engine global audio table
-                StampSprite = 4, //04, loads 2 stack, saves a persistent copy of the sprite at the current position/image
-                PushToStack = 5, //05 00 XX XX, push XX XX to stack
+                SetupSprite = 0, //00, pops 7 (pointer, index, follow, x, y, rate, flags), sets up a sprite slot
+                RemoveSprite = 1, //01, pops 1, deactivates target sprite
+                WaitForFrames = 2, //02, pops 1, render for X frames
+                TriggerAudio = 3, //03, pops 1, triggers audio from engine global audio table
+                StampSprite = 4, //04, pops 1, draws the sprite into the background page at the end of the frame
+                PushToStack = 5, //05 00 XX XX, push XX XX to stack (or a step label pointer)
                 PushRegisterToStack = 261, //05 01 XX XX, push register X to stack
                 PopStackToRegister = 6, //06 XX XX, pops stack and sets register X to value
                 PushCopyOfStackValue = 7, //07, pushes copy of top stack value
-                CompareEqual = 8, //08, loads 2 stack, pops 2 values off stack, and pushes 1 if the first value is equal to the second one, or 0 otherwise
-                CompareNotEqual = 9, //09, loads 2 stack, pops 2 values off stack, and pushes 1 if the first value is not equal to the second one, or 0 otherwise
-                CompareGreaterThan = 10, //0A, loads 2 stack, pops 2 values off stack, and pushes 1 if the first value is greater than the second one, or 0 otherwise
-                CompareLessThan = 11, //0B, loads 2 stack, pops 2 values off stack, and pushes 1 if the first value is less than the second one, or 0 otherwise
-                CompareGreaterOrEqual = 12, //0C, loads 2 stack, pops 2 values off stack, and pushes 1 if the first value is greater or equal to the second one, or 0 otherwise
-                CompareLessOrEqual = 13, //0D, loads 2 stack, pops 2 values off stack, and pushes 1 if the first value is less or equal to the second one, or 0 otherwise
-                Add = 14, //0E, loads 2 stack, pops most recent two stack entries, adds them together and pushes it
-                Subtract = 15, //0F, loads 2 stack, pops most recent two stack entries, subtracts the most recent from the previous and pushes it
-                Multiply = 16, //10, loads 2 stack, pops most recent two stack entries, multiplies the most recent from the previous and pushes it 
-                Divide = 17, //11, loads 2 stack, pops most recent two stack entries, divides the most recent from the previous and pushes it
-                ConditionalJump = 18, //12 XX XX, jumps only if compare flag is set
-                Jump = 19, //13 XX XX, always jumps, TODO: unclear why some existing files have two 13's one after the other
-                End = 20, //14, acts as a WaitForFrames 1 that infinitely loops
-                EndImmediate = 21, //15, acts as an immediate end to the animation
-                
+                CompareEqual = 8, //08, pops 2 values off stack, and pushes 1 if the first value is equal to the second one, or 0 otherwise
+                CompareNotEqual = 9, //09, pops 2 values off stack, and pushes 1 if the first value is not equal to the second one, or 0 otherwise
+                CompareGreaterThan = 10, //0A, pops 2 values off stack, and pushes 1 if the first value is greater than the second one, or 0 otherwise
+                CompareLessThan = 11, //0B, pops 2 values off stack, and pushes 1 if the first value is less than the second one, or 0 otherwise
+                CompareGreaterOrEqual = 12, //0C, pops 2 values off stack, and pushes 1 if the first value is greater or equal to the second one, or 0 otherwise
+                CompareLessOrEqual = 13, //0D, pops 2 values off stack, and pushes 1 if the first value is less or equal to the second one, or 0 otherwise
+                Add = 14, //0E, pops most recent two stack entries, adds them together and pushes it
+                Subtract = 15, //0F, pops most recent two stack entries, subtracts the most recent from the previous and pushes it
+                Multiply = 16, //10, pops most recent two stack entries, multiplies the most recent from the previous and pushes it
+                Divide = 17, //11, pops most recent two stack entries, divides the most recent from the previous and pushes it
+                ConditionalJump = 18, //12 XX XX, pops 1, jumps only if the value is non-zero
+                Jump = 19, //13 XX XX, always jumps
+                End = 20, //14, never ends the animation: the pointer stays here and sprites keep stepping and drawing until the game stops it
+                EndImmediate = 21, //15, ends the animation at once, the current frame is not stepped or drawn
+                //Note: not used in retail game versions but supported by the legacy game engine
+                Return = 22, //16, pops a return address and jumps to it
+                //Note: not used in retail game versions but supported by the legacy game engine
+                Call = 23, //17 XX XX, pushes the address of the next instruction and jumps
             }
 
             public AnimationOpcode Opcode { get; set; } = AnimationOpcode.Unknown;
             public byte[] Data { get; set; } = Array.Empty<byte>();
-            
+
             /// <summary>
             /// Populated for jump instructions
             /// </summary>
             public string Label { get; set; } = string.Empty;
-            
+
             /// <summary>
             /// Populated from preceding Push instructions, and removes those Push instructions
             /// </summary>
             public short[] StackParameters { get; set; } = Array.Empty<short>();
 
             /// <summary>
-            /// Populated for SetupSprite instructions, points into data sub-section
+            /// Populated for SetupSprite instructions and step pointer pushes, points into data sub-section
+            /// Note: step pointer pushes are not used in retail game versions but supported by the legacy game engine
             /// </summary>
             public string StepLabel { get; set; } = string.Empty;
 
@@ -113,12 +145,11 @@ namespace CovertActionTools.Core.Models
                 RawByte = -10, //fake instruction, allows piping raw byte into a file
                 RawShort = -9, //fake instruction, allows piping 2 raw bytes into a file
                 RawLabel = -8, //fake instruction, allows piping a calculated label straight into a file
-                
+
                 Comment = -2, //used for lines that have no instruction
                 Unknown = -1,
                 /// <summary>
-                /// Draw frame with current image, -1 for waiting a frame without drawing
-                /// Does NOT reduce Counter
+                /// Draw frame with given image ID, -1 for waiting a frame without drawing
                 /// </summary>
                 DrawFrame = 0x00,
                 /// <summary>
@@ -130,25 +161,23 @@ namespace CovertActionTools.Core.Models
                 /// </summary>
                 MoveRelative = 0x02,
                 /// <summary>
-                /// Sets frame skip of sprite
-                /// TODO: actual way value maps to behaviour is unclear
+                /// Sets the speed of the sprite (255 steps every frame)
                 /// </summary>
-                SetFrameSkip = 0x03,
+                SetSpeed = 0x03,
                 /// <summary>
-                /// TODO: this is related to frame skip but unclear exactly how it works
+                /// Adds to the speed of the sprite
                 /// </summary>
-                SetFrameAdjustment = 0x04,
+                AddSpeed = 0x04,
                 /// <summary>
                 /// Push value to Counter stack
                 /// </summary>
                 PushCounter = 0x05,
                 /// <summary>
-                /// Jump only if Counter is > 0
-                /// Reduces Counter by 1 or pops Counter stack if 0 
+                /// Decrements Counter and jumps if it is not 0, otherwise pops it
                 /// </summary>
                 JumpIfCounter = 0x06,
                 /// <summary>
-                /// Reset simulation and state (position)
+                /// Reset simulation and state (position, speed)
                 /// </summary>
                 Restart = 0x07,
                 /// <summary>
@@ -192,29 +221,75 @@ namespace CovertActionTools.Core.Models
             /// Width - 1
             /// </summary>
             public int BoundingWidth { get; set; }
-            
+
             /// <summary>
             /// Height - 1
             /// </summary>
             public int BoundingHeight { get; set; }
-            
+
             /// <summary>
-            /// Global frame skip value, 1 means play normally, higher values skip increasing numbers of frames.
-            /// Building animations in legacy data have non-1 values (3 or 4)
+            /// Minimum number of system timer ticks (18.2 per second) each frame lasts, 1 plays at full speed.
+            /// Building animations in legacy data have higher values (3 to 5)
             /// </summary>
-            public int GlobalFrameSkip { get; set; }
+            public int FrameDelay { get; set; }
+
+            /// <summary>
+            /// Older exports stored FrameDelay under this name, only read during import
+            /// </summary>
+            [Obsolete("Use FrameDelay")]
+            public int GlobalFrameSkip
+            {
+                set => FrameDelay = value;
+            }
 
             /// <summary>
             /// How the game draws a background before updating or drawing images based on the animations
             /// </summary>
             public BackgroundType BackgroundType { get; set; } = BackgroundType.Unknown;
-            
+
             /// <summary>
-            /// Color mapping for the entire set of images in the file
-            /// Not actually used by legacy game files, but engine supports it
+            /// How the images in the file are stored
+            /// Note: only Compressed is used in retail game versions, Raw is supported by the legacy game engine
+            /// </summary>
+            public ImageFormat ImageFormat { get; set; } = ImageFormat.Compressed;
+
+            /// <summary>
+            /// Which colour block the header carries
+            /// Note: only Embedded is used in retail game versions, the others are supported by the legacy game engine
+            /// </summary>
+            public ColorMappingType ColorMappingType { get; set; } = ColorMappingType.Embedded;
+
+            /// <summary>
+            /// Palette applied while the animation plays, maps colour indices 0-15 to displayed colours
+            /// Entry 0 gets overwritten with 0 at runtime; legacy game files store 3 there and map colour 5 to 0
             /// </summary>
             public Dictionary<byte, byte> ColorMapping { get; set; } = new();
-            
+
+            /// <summary>
+            /// Last byte of the embedded colour block, colours the screen border outside the 320x200 picture while the animation plays
+            /// EGA writes it to the overscan register and Tandy to its border register, MCGA/CGA hand it to their palette routine (unverified), and emulators may not show it
+            /// Note: always 0 in retail game versions but other values are supported by the legacy game engine
+            /// </summary>
+            public byte BorderColor { get; set; }
+
+            /// <summary>
+            /// Only populated when ColorMappingType is Palette, the raw 774-byte block
+            /// Note: not used in retail game versions but supported by the legacy game engine
+            /// </summary>
+            public byte[] PaletteData { get; set; } = Array.Empty<byte>();
+
+            /// <summary>
+            /// Default screen position of the animation, normally overridden by the game at runtime
+            /// Note: always 0 in retail game versions but other values are supported by the legacy game engine
+            /// </summary>
+            public int PositionX { get; set; }
+
+            /// <summary>
+            /// Default screen position of the animation, normally overridden by the game at runtime
+            /// Note: always 0 in retail game versions but other values are supported by the legacy game engine
+            /// </summary>
+            public int PositionY { get; set; }
+
             /// <summary>
             /// Only populated when BackgroundType is ClearToColor
             /// Represents the color to clear to before drawing anything
@@ -226,7 +301,7 @@ namespace CovertActionTools.Core.Models
             public byte Unknown2 { get; set; }
 
             /// <summary>
-            /// Each image ID is assigned an index; this ID can only increase monotonically but can have gaps. 
+            /// Each image ID is assigned an index; this ID can only increase monotonically but can have gaps.
             /// In the file format, this looks like a series of u16, where any 00 00 represents a gap.
             /// With no gaps in 500 bytes that means the maximum number of images is 250.
             /// Example: the start of a header with data AA AA  00 00  00 00  BB BB
@@ -252,9 +327,15 @@ namespace CovertActionTools.Core.Models
                 {
                     BoundingWidth = BoundingWidth,
                     BoundingHeight = BoundingHeight,
-                    GlobalFrameSkip = GlobalFrameSkip,
+                    FrameDelay = FrameDelay,
                     BackgroundType = BackgroundType,
+                    ImageFormat = ImageFormat,
+                    ColorMappingType = ColorMappingType,
                     ColorMapping = ColorMapping.ToDictionary(x => x.Key, x => x.Value),
+                    BorderColor = BorderColor,
+                    PaletteData = PaletteData.ToArray(),
+                    PositionX = PositionX,
+                    PositionY = PositionY,
                     ClearColor = ClearColor,
                     Unknown2 = Unknown2,
                     ImageIdToIndex = ImageIdToIndex.ToDictionary(x => x.Key, x => x.Value),
@@ -270,7 +351,7 @@ namespace CovertActionTools.Core.Models
 
             public List<AnimationStep> Steps { get; set; } = new();
             public Dictionary<string, int> StepLabels { get; set; } = new();
-            
+
             public string GetSerialisedInstructions()
             {
                 var lines = new List<string>();
@@ -281,7 +362,7 @@ namespace CovertActionTools.Core.Models
                         .Select(x => $"@{x.Key}:")
                         .ToList();
                     lines.AddRange(labels);
-                    
+
                     var instruction = Instructions[i];
                     var instructionString = $"{instruction.Opcode}";
                     if (!string.IsNullOrEmpty(instruction.Label))
@@ -312,7 +393,7 @@ namespace CovertActionTools.Core.Models
                     {
                         instructionString += $"  ; {instruction.Comment}";
                     }
-                    
+
                     lines.Add($"\t{instructionString}");
                 }
 
@@ -359,7 +440,7 @@ namespace CovertActionTools.Core.Models
                     {
                         stepString += $"  ; {step.Comment}";
                     }
-                    
+
                     lines.Add($"\t{stepString}");
                 }
 
@@ -449,22 +530,40 @@ namespace CovertActionTools.Core.Models
                                 dataLabel = lineText.Trim('\r', '\t').Trim();
                                 break;
                             case AnimationInstruction.AnimationOpcode.SetupSprite:
-                                var labelEndIndex = lineText.IndexOf(' ');
-                                dataLabel = lineText.Substring(0, labelEndIndex)
-                                    .Trim('\r', '\t').Trim();
-                                lineText = lineText.Substring(labelEndIndex);
-                                var remainingParameters = lineText.Split(' ')
-                                    .Select(x => x.Trim('\r', '\t').Trim())
-                                    .Where(x => !string.IsNullOrWhiteSpace(x))
-                                    .Select(short.Parse).ToList();
-                                if (remainingParameters.Count != 6)
+                                //either bare (everything comes from the stack) or a step label plus 6 parameters
+                                if (!string.IsNullOrWhiteSpace(lineText))
                                 {
-                                    throw new Exception($"Incorrect number of parameters: {instructionLines[i]}");
-                                }
+                                    var labelEndIndex = lineText.IndexOf(' ');
+                                    if (labelEndIndex == -1)
+                                    {
+                                        throw new Exception($"Incorrect number of parameters: {instructionLines[i]}");
+                                    }
+                                    dataLabel = lineText.Substring(0, labelEndIndex)
+                                        .Trim('\r', '\t').Trim();
+                                    lineText = lineText.Substring(labelEndIndex);
+                                    var remainingParameters = lineText.Split(' ')
+                                        .Select(x => x.Trim('\r', '\t').Trim())
+                                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                                        .Select(short.Parse).ToList();
+                                    if (remainingParameters.Count != 6)
+                                    {
+                                        throw new Exception($"Incorrect number of parameters: {instructionLines[i]}");
+                                    }
 
-                                stackParameters.AddRange(remainingParameters);
+                                    stackParameters.AddRange(remainingParameters);
+                                }
                                 break;
                             case AnimationInstruction.AnimationOpcode.PushToStack:
+                                //a non-numeric argument is a step label pointer
+                                if (short.TryParse(lineText, out var pushValue))
+                                {
+                                    data.AddRange(new[] { (byte)(pushValue & 0xFF), (byte)(((ushort)pushValue & 0xFF00) >> 8) });
+                                }
+                                else
+                                {
+                                    dataLabel = lineText;
+                                }
+                                break;
                             case AnimationInstruction.AnimationOpcode.PushRegisterToStack:
                             case AnimationInstruction.AnimationOpcode.PopStackToRegister:
                                 var n = short.Parse(lineText);
@@ -472,6 +571,7 @@ namespace CovertActionTools.Core.Models
                                 break;
                             case AnimationInstruction.AnimationOpcode.Jump:
                             case AnimationInstruction.AnimationOpcode.ConditionalJump:
+                            case AnimationInstruction.AnimationOpcode.Call:
                                 label = lineText.Trim('\r', '\n').Trim();
                                 break;
                             case AnimationInstruction.AnimationOpcode.WaitForFrames:
@@ -488,11 +588,16 @@ namespace CovertActionTools.Core.Models
                             case AnimationInstruction.AnimationOpcode.Add:
                             case AnimationInstruction.AnimationOpcode.TriggerAudio:
                             case AnimationInstruction.AnimationOpcode.RemoveSprite:
-                                stackParameters.Add(short.Parse(lineText));
+                                //the parameter is optional, without it the value comes from the stack
+                                if (!string.IsNullOrWhiteSpace(lineText))
+                                {
+                                    stackParameters.Add(short.Parse(lineText));
+                                }
                                 break;
                             case AnimationInstruction.AnimationOpcode.PushCopyOfStackValue:
                             case AnimationInstruction.AnimationOpcode.EndImmediate:
                             case AnimationInstruction.AnimationOpcode.End:
+                            case AnimationInstruction.AnimationOpcode.Return:
                                 break;
 
                             default:
@@ -567,6 +672,13 @@ namespace CovertActionTools.Core.Models
                         }
 
                         var typeString = lineText.Substring(0, typeEndIndex);
+                        //older exports used the frame skip names for the speed steps
+                        typeString = typeString switch
+                        {
+                            "SetFrameSkip" => "SetSpeed",
+                            "SetFrameAdjustment" => "AddSpeed",
+                            _ => typeString
+                        };
                         if (!Enum.TryParse(typeString, out AnimationStep.StepType type))
                         {
                             throw new Exception($"Unknown type: {stepLines[i]}");
@@ -600,8 +712,8 @@ namespace CovertActionTools.Core.Models
                             case AnimationStep.StepType.JumpIfCounter:
                                 label = lineText;
                                 break;
-                            case AnimationStep.StepType.SetFrameSkip:
-                            case AnimationStep.StepType.SetFrameAdjustment:
+                            case AnimationStep.StepType.SetSpeed:
+                            case AnimationStep.StepType.AddSpeed:
                             case AnimationStep.StepType.PushCounter:
                                 var val = short.Parse(lineText);
                                 data.AddRange(new[] { (byte)(val & 0xFF), (byte)((val & 0xFF00) >> 8) });
@@ -650,7 +762,7 @@ namespace CovertActionTools.Core.Models
                     Console.WriteLine(e);
                 }
             }
-            
+
             public ControlData Clone()
             {
                 return new ControlData()
@@ -662,7 +774,7 @@ namespace CovertActionTools.Core.Models
                 };
             }
         }
-        
+
         /// <summary>
         /// ID that also determines the filename
         /// </summary>
