@@ -90,6 +90,19 @@ public class AnimationExporterTests : IDisposable
     }
 
     [Fact]
+    public void Export_SingleAnimation_OmitsObsoleteGlobalFrameSkipField()
+    {
+        var model = CreatePackageModel(CreateSampleAnimation("anim1"));
+
+        _exporter.Start(_tempDir, model);
+        _exporter.RunStep();
+
+        var json = File.ReadAllText(Path.Combine(_tempDir, "animation", "anim1", "anim1_global.json"));
+        Assert.Contains("FrameDelay", json);
+        Assert.DoesNotContain("GlobalFrameSkip", json);
+    }
+
+    [Fact]
     public void Export_SingleAnimation_WritesGlobalDataFile()
     {
         var anim = CreateSampleAnimation("anim1");
@@ -106,7 +119,7 @@ public class AnimationExporterTests : IDisposable
         Assert.NotNull(globalData);
         Assert.Equal(99, globalData.BoundingWidth);
         Assert.Equal(79, globalData.BoundingHeight);
-        Assert.Equal(1, globalData.GlobalFrameSkip);
+        Assert.Equal(1, globalData.FrameDelay);
         Assert.Equal(AnimationModel.BackgroundType.ClearToColor, globalData.BackgroundType);
     }
 
@@ -232,7 +245,7 @@ public class AnimationExporterTests : IDisposable
             {
                 BoundingWidth = 99,
                 BoundingHeight = 79,
-                GlobalFrameSkip = 1,
+                FrameDelay = 1,
                 BackgroundType = AnimationModel.BackgroundType.ClearToColor,
                 ClearColor = 0,
                 Unknown2 = 0,

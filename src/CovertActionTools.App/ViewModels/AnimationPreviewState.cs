@@ -1,24 +1,24 @@
-﻿using CovertActionTools.Core.Models;
+using CovertActionTools.Core.Models;
 using CovertActionTools.Core.Processors;
 
 namespace CovertActionTools.App.ViewModels;
 
 public class AnimationPreviewState : IViewModel
 {
+    private const int PreviousAnimationFrames = 1000;
+
     public string SelectedId { get; private set; } = string.Empty;
-    
+
     public int SelectedFrameId { get; set; } = 0;
     public Dictionary<int, (int value, int frameIndex)> InputRegisters { get; set; } = new();
     public string PreviousAnimationId { get; set; } = string.Empty;
-    
-    public bool LimitToGameWindow { get; set; }
-    
+
     private int _cachedFrameId = -1;
     private Dictionary<int, (int value, int frameIndex)> _cachedInputRegisters = new();
     private AnimationState? _cachedState = null;
     private AnimationState? _cachedPreviousAnimationState = null;
     private string _cachedPreviousAnimationId = string.Empty;
-    
+
     public void Reset(string id)
     {
         SelectedId = id;
@@ -29,9 +29,9 @@ public class AnimationPreviewState : IViewModel
         _cachedInputRegisters.Clear();
         _cachedState = null;
         _cachedPreviousAnimationState = null;
+        _cachedPreviousAnimationId = string.Empty;
 
         PreviousAnimationId = string.Empty;
-        LimitToGameWindow = false;
     }
 
     public void SetInputRegister(int registerId, int value, int frameIndex)
@@ -52,16 +52,24 @@ public class AnimationPreviewState : IViewModel
             return (_cachedState!, _cachedPreviousAnimationState);
         }
 
-        _cachedFrameId = SelectedFrameId;
-        _cachedInputRegisters = InputRegisters.ToDictionary(x => x.Key, x => x.Value);
-        _cachedState = animationProcessor.Process(animation, _cachedFrameId, _cachedInputRegisters);
-
+        //the previous animation's background page carries over when the background type asks for it
+        _cachedPreviousAnimationState = null;
         if (!string.IsNullOrEmpty(PreviousAnimationId) && previousAnimation != null)
         {
-            _cachedPreviousAnimationState = animationProcessor.Process(previousAnimation, 1000, new());
+            _cachedPreviousAnimationState = animationProcessor.Process(previousAnimation, PreviousAnimationFrames, new());
         }
-        
+        _cachedPreviousAnimationId = PreviousAnimationId;
+
+        _cachedFrameId = SelectedFrameId;
+        _cachedInputRegisters = InputRegisters.ToDictionary(x => x.Key, x => x.Value);
+        _cachedState = animationProcessor.Process(animation, _cachedFrameId, _cachedInputRegisters, _cachedPreviousAnimationState);
+
         return (_cachedState, _cachedPreviousAnimationState);
+    }
+
+    public void Invalidate()
+    {
+        _cachedState = null;
     }
 
     private bool CacheIsValid()
@@ -70,7 +78,7 @@ public class AnimationPreviewState : IViewModel
         {
             return false;
         }
-        
+
         if (SelectedFrameId != _cachedFrameId)
         {
             return false;
@@ -92,7 +100,7 @@ public class AnimationPreviewState : IViewModel
             {
                 return false;
             }
-            
+
             if (pair.Value.value != value.value || pair.Value.frameIndex != value.frameIndex)
             {
                 return false;

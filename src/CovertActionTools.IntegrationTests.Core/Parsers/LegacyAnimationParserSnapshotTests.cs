@@ -47,7 +47,7 @@ public class LegacyAnimationParserSnapshotTests : IDisposable
     public void ExportSnapshot_Minimal_CustomValues()
     {
         var panData = AnimationIntegrationTestDataGenerator.BuildMinimalPanFile(
-            boundingWidth: 159, boundingHeight: 99, frameSkip: 3, clearColor: 7);
+            boundingWidth: 159, boundingHeight: 99, frameDelay: 3, clearColor: 7);
         var exported = Convert.ToBase64String(panData);
         Assert.Equal(AnimationSnapshotData.PanFile_Minimal_CustomValues, exported);
     }
@@ -109,13 +109,13 @@ public class LegacyAnimationParserSnapshotTests : IDisposable
     }
 
     [Fact]
-    public void ParseSnapshot_CustomValues_HasCorrectFrameSkip()
+    public void ParseSnapshot_CustomValues_HasCorrectFrameDelay()
     {
         WritePanFromSnapshot("TEST", AnimationSnapshotData.PanFile_Minimal_CustomValues);
 
         var animations = RunParser();
 
-        Assert.Equal(3, animations["TEST"].Data.GlobalFrameSkip);
+        Assert.Equal(3, animations["TEST"].Data.FrameDelay);
     }
 
     [Fact]
@@ -135,7 +135,8 @@ public class LegacyAnimationParserSnapshotTests : IDisposable
 
         var animations = RunParser();
 
-        Assert.Equal(15, animations["TEST"].Data.ColorMapping.Count);
+        Assert.Equal(16, animations["TEST"].Data.ColorMapping.Count);
+        Assert.Equal(3, animations["TEST"].Data.ColorMapping[0]);
         for (byte i = 1; i <= 15; i++)
         {
             Assert.Equal(i, animations["TEST"].Data.ColorMapping[i]);

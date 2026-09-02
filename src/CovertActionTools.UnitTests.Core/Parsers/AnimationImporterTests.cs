@@ -134,6 +134,24 @@ public class AnimationImporterTests : IDisposable
     }
 
     [Fact]
+    public void Import_LegacyGlobalFrameSkipField_IsReadIntoFrameDelay()
+    {
+        WriteAnimationFiles("anim1");
+        var globalPath = Path.Combine(_tempDir, "animation", "anim1", "anim1_global.json");
+        var json = File.ReadAllText(globalPath).Replace("\"FrameDelay\": 1", "\"GlobalFrameSkip\": 4");
+        Assert.Contains("GlobalFrameSkip", json);
+        File.WriteAllText(globalPath, json);
+
+        _importer.Start(_tempDir);
+        _importer.RunStep();
+
+        var result = new PackageModel();
+        _importer.SetResult(result);
+
+        Assert.Equal(4, result.Animations["anim1"].Data.FrameDelay);
+    }
+
+    [Fact]
     public void Import_AnimationWithImages_ReadsImages()
     {
         WriteAnimationFiles("anim1", imageIds: new[] { 0, 1 });
@@ -225,7 +243,7 @@ public class AnimationImporterTests : IDisposable
         {
             BoundingWidth = 99,
             BoundingHeight = 79,
-            GlobalFrameSkip = 1,
+            FrameDelay = 1,
             BackgroundType = AnimationModel.BackgroundType.ClearToColor,
             ClearColor = 0,
             Unknown2 = 0,

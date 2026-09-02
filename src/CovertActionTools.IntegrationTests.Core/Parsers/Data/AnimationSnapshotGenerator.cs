@@ -25,7 +25,7 @@ public class AnimationSnapshotGenerator
 
         var result2 = Convert.ToBase64String(
             AnimationIntegrationTestDataGenerator.BuildMinimalPanFile(
-                boundingWidth: 159, boundingHeight: 99, frameSkip: 3, clearColor: 7));
+                boundingWidth: 159, boundingHeight: 99, frameDelay: 3, clearColor: 7));
 
         _output.WriteLine($"PanFile_Minimal_Default = \"{result1}\";");
         _output.WriteLine($"PanFile_Minimal_CustomValues = \"{result2}\";");

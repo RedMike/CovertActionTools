@@ -67,21 +67,18 @@ replicated for round-trip compatibility.
 
 ## Animation engine
 
-**Consecutive jump instructions:** Some PAN files contain two consecutive unconditional jump
-instructions (opcode 0x13) back-to-back. The reason for this is unclear, as the second jump should
-never be reached.
+**Unreachable bytes in the data section:** Retail PAN files carry bytes the engine never executes: a
+second End opcode (0x14) after the real one, unconditional jumps (0x13) directly after another jump,
+and in BRIEFING.PAN a whole step sequence no sprite points at. The engine only follows reachable
+instructions and step pointers, so the parser ignores them and republished files are shorter.
 
-**Multiple consecutive End opcodes:** The End opcode (0x14) can appear multiple times in a row in the
-instruction stream. The parser must handle this correctly by consuming all consecutive 0x14 bytes
-before considering the instruction section complete.
+**Slow building animations:** Building animations use frame delay values of 3 to 5 instead of
+the standard 1. The value is the number of timer ticks each frame lasts, so these play at 4-6 frames
+per second rather than 18. This is the only observed use of non-1 values.
 
-**Non-standard global frame skip:** Building animations use global frame skip values of 3 or 4 instead
-of the standard 1, effectively speeding up their playback. This is the only observed use of non-1
-frame skip values.
-
-**Unused colour mapping:** Every PAN file in the game data includes a 15-byte colour mapping table,
-but no file uses a non-identity mapping (every colour maps to itself). The engine supports remapping,
-but the feature was never used in shipped content.
+**Fixed colour block:** Every PAN file in the game data carries the same 17-byte colour block: entry
+0 is 3 (overwritten with 0 by the engine), colour 5 maps to 0, every other colour maps to itself, and
+the border colour is 0. The engine supports arbitrary mappings, but shipped content never varies it.
 
 ## Text files
 
